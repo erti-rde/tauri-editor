@@ -1,0 +1,97 @@
+{
+	"$schema": "../node_modules/@tauri-apps/cli/schema.json",
+	"build": {
+		"beforeBuildCommand": "pnpm run build",
+		"beforeDevCommand": "pnpm run dev",
+		"devPath": "http://localhost:5173",
+		"distDir": "../build"
+	},
+	"package": {
+		"productName": "citation-machine",
+		"version": "0.2.5"
+	},
+	"tauri": {
+		"allowlist": {
+			"dialog": {
+				"open": true,
+				"save": true
+			},
+			"shell": {
+				"sidecar": true,
+				"scope": [{ "name": "bin/api", "sidecar": true }]
+			},
+			"http": {
+				"all": false,
+				"request": true,
+				"scope": ["http://localhost:8135/*"]
+			},
+			"path": {
+				"all": true
+			},
+			"fs": {
+				"readFile": true,
+				"writeFile": true,
+				"readDir": true,
+				"createDir": true,
+				"exists": true,
+				"removeFile": true,
+				"scope": ["$APPLOCALDATA/pickle_files", "$APPLOCALDATA/pickle_files/*", "$APPLOCALDATA/*"]
+			}
+		},
+		"bundle": {
+			"active": true,
+			"category": "DeveloperTool",
+			"copyright": "",
+			"deb": {
+				"depends": []
+			},
+			"externalBin": ["bin/api"],
+			"icon": [
+				"icons/32x32.png",
+				"icons/128x128.png",
+				"icons/128x128@2x.png",
+				"icons/icon.icns",
+				"icons/icon.ico"
+			],
+			"identifier": "citation-machine",
+			"longDescription": "",
+			"macOS": {
+				"entitlements": null,
+				"exceptionDomain": "",
+				"frameworks": [],
+				"providerShortName": null,
+				"signingIdentity": null
+			},
+			"resources": [],
+			"shortDescription": "",
+			"targets": ["appimage", "msi", "app", "updater"],
+			"windows": {
+				"certificateThumbprint": null,
+				"digestAlgorithm": "sha256",
+				"timestampUrl": ""
+			}
+		},
+		"security": {
+			"csp": null
+		},
+		"updater": {
+			"active": true,
+			"endpoints": ["https://raw.githubusercontent.com/akomiqaia/eye-cite/main/latest.json"],
+			"windows": {
+				"installMode": "basicUi",
+				"installerArgs": []
+			},
+			"dialog": true,
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg0MzEzQkQ2Q0Y0NTY4MTgKUldRWWFFWFAxanN4aExYUHNKVEwrOENGc1pjRVlmTEh4WDhJRXNJY2QvZXo2T0k2dGMrVDNERzQK"
+		},
+		"windows": [
+			{
+				"fullscreen": false,
+				"height": 600,
+				"resizable": true,
+				"title": "citation-machine",
+				"width": 800
+			}
+		]
+	}
+}

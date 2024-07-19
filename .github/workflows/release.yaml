@@ -1,0 +1,109 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*' 
+  workflow_dispatch:
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build changelog
+        id: build_changelog
+        run: |
+          # NOTE: if commits subjects are standardized, you can filter the git log based on feat: and fix:
+          # and then replace "feat:" with "New: " and "fix:" with "Fixed "
+          # when AI gets good, we can also summarized commits into a bullet point list
+          PREV_TAG=$(git tag --list v* | tail -n2 | head -n1)
+          echo "changelog=$(git log $PREV_TAG...${{ github.ref_name }} --pretty=format:"- %s")" >> $GITHUB_OUTPUT
+    outputs:
+      changelog: ${{ steps.build_changelog.outputs.changelog }}
+
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    needs: [changelog]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        # Install libayatana-appindicator3-dev if you use the system tray feature.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Rust setup
+        run: rustup update --no-self-update
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Sync node version and setup cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'pnpm' # Set this to npm, yarn or pnpm.
+
+      - name: Install frontend dependencies
+        # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
+        run: pnpm install # Change this to npm, yarn or pnpm.
+      - name: build python backend for ubuntu and macos
+        if: matrix.platform == 'ubuntu-20.04' || matrix.platform == 'macos-latest'
+        run: |
+          pip install -r requirements.txt
+          pyinstaller --collect-all en_core_web_sm --noconsole -F --clean --name api-$(rustc -Vv | grep host | cut -f2 -d' ') --distpath src-tauri/bin src-backend/server.py
+      - name: build python backend for windows
+        if: matrix.platform == 'windows-latest'
+        run: |
+          python -m venv .venv
+          .venv\Scripts\activate
+          pip install -r requirements.txt
+          pyinstaller --collect-all en_core_web_sm --noconsole --hide-console hide-early -F --clean --name api-$(rustc -Vv | Select-String "host:" | ForEach-Object {$_.Line.split(" ")[1]}) --distpath src-tauri\bin src-backend\server.py
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.EYE_CITE_RELEAE_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }} # This only works if your workflow triggers on new tags.
+          releaseName: 'Citation machine v__VERSION__' # tauri-action replaces \_\_VERSION\_\_ with the app version.
+          releaseBody: 'See the assets to download and install this version.'
+          releaseDraft: false
+          prerelease: false
+          releaseCommitish: 'main'
+          repo: 'eye-cite'
+          owner: 'akomiqaia'
+          includeDebug: true
