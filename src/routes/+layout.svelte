@@ -4,6 +4,7 @@
 	import { appLocalDataDir } from '@tauri-apps/api/path';
 	import { Toast } from '$lib';
 	import '../app.pcss';
+	import '../global.css';
 	import { Loader } from '$lib';
 
 	let serverIsRunning = false;

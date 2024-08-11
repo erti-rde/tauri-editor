@@ -1,0 +1,8 @@
+:root {
+	--footer-status-bar-heightt: 24px;
+	--hover-color: #f0f0f0;
+}
+
+html {
+	overscroll-behavior: none;
+}

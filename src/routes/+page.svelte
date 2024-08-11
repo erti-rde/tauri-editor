@@ -1,43 +1,38 @@
 <script lang="ts">
-	import { SourceSideBar, Editor } from '$lib';
-	import StatusBar from '$lib/statusBar/StatusBar.svelte';
-	// import { findSimilarSentences } from '$utils/api';
-
-	// import type { responseDetails } from '$utils/api';
-
-	// let query = '';
-	// let similarSentences: responseDetails[] = [];
-
-	// async function handleQuery() {
-	// 	similarSentences = await findSimilarSentences(query);
-	// }
+	import { SourceSideBar, Editor, StatusFooter, SidePanel } from '$lib';
 </script>
 
-<div class="flex h-[90vh]">
-	<SourceSideBar />
-	<div class="mr-[10px] flex w-full px-4 py-2">
-		<!-- <div class="flex justify-evenly px-4 py-2">
-			<textarea
-				class="rouned w-[80%] border-2 border-orange-300 bg-orange-50 pt-4"
-				placeholder="Find your cite"
-				bind:value={query}
-			/>
-			<button class="rounded bg-orange-300 px-6 py-2" on:click={handleQuery}>Find</button>
-		</div>
-		<div> -->
+<div class="grid-styles grid h-screen w-screen overscroll-none">
+	<div class="panel">
+		<SidePanel />
+	</div>
+	<div class="explorer">
+		<SourceSideBar />
+	</div>
+	<div class="editor">
 		<Editor />
-		<!-- {#if similarSentences.length > 0}
-				<div>
-					<h2>We found following similarities:</h2>
-					{#each similarSentences as sentence}
-						<ResultCard metadata={sentence} />
-					{/each}
-				</div>
-			{:else}
-				<h2>Results will be shown here:</h2>
-			{/if} -->
-		<!-- </div> -->
 	</div>
 </div>
+<div class="status-bar">
+	<StatusFooter />
+</div>
 
-<StatusBar />
+<style>
+	.grid-styles {
+		grid-template-columns: 40px auto 4fr;
+		grid-template-rows: 1fr var(--footer-status-bar-heightt);
+	}
+	.panel,
+	.explorer,
+	.editor {
+		height: calc(100vh - var(--footer-status-bar-heightt));
+		overflow-y: auto;
+	}
+	.panel,
+	.explorer {
+		border-right: 1px solid rgb(144, 144, 144);
+	}
+	.status-bar {
+		grid-column: span 3;
+	}
+</style>

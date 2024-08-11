@@ -1,12 +1,12 @@
 <script lang="ts">
-  import {createEventDispatcher} from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	import { open } from '@tauri-apps/api/dialog';
-
-	import { setStatus } from '$lib/statusBar/StatusBar.svelte';
+	import { Icon } from '$lib';
+	import { setStatus } from '$lib/statusFooter/StatusFooter.svelte';
 	import { tokeniseSource, createMetadata } from '$utils/api';
 
-  const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher();
 
 	async function handleUpload() {
 		const files = (await open({
@@ -22,7 +22,7 @@
 						const result = await tokeniseSource(filePath, fileName);
 						if (result.status === 'completed') {
 							setStatus({ side: 'right', message: '', type: 'success' });
-              dispatch('sourceAdded');
+							dispatch('sourceAdded');
 						}
 					})
 				));
@@ -32,6 +32,6 @@
 	}
 </script>
 
-<button type="button" class="rounded bg-orange-500 px-4 py-2 font-bold" on:click={handleUpload}
-	>Add Sources</button
+<button class="add-file cursor-pointer p-1" on:click={handleUpload}
+	><Icon icon="FilePlus" size="s" /></button
 >

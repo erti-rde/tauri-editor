@@ -25,7 +25,6 @@
     right-0
     z-50
     flex
-    h-10
     items-center
     justify-between
     border-t
@@ -46,6 +45,9 @@
 </div>
 
 <style>
+	.status-bar {
+		height: var(--footer-status-bar-heightt);
+	}
 	.error {
 		color: red;
 		font-weight: 800;

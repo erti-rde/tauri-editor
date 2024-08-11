@@ -1,6 +1,10 @@
 <script lang="ts">
-	export let icon;
-	export let size: 's' | 'm' | 'l' = 'm'
+	import * as icons from './icons/index';
+	type Size = 's' | 'm' | 'l';
+	type Icon = keyof typeof icons;
+
+	export let icon: Icon;
+	export let size: Size = 'm';
 
 	const sizeMap = {
 		s: 16,
@@ -8,7 +12,8 @@
 		l: 32
 	};
 
-  $: dimensions = sizeMap[size];
+	const dimensions = sizeMap[size];
+	const component = icons[icon];
 </script>
 
-<iconify-icon {icon} width={dimensions} color="red"></iconify-icon>
+<svelte:component this={component} width={dimensions} height={dimensions} />

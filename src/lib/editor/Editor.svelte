@@ -4,11 +4,11 @@
 	import Header from '@editorjs/header';
 	import List from '@editorjs/list';
 	import Undo from 'editorjs-undo';
-  
+
 	import Result from './Result.svelte';
-  
+
 	import { InlineCitation } from './Citation';
-  import { Bibliography } from './Bibliography'
+	import { Bibliography } from './Bibliography';
 
 	import { appLocalDataDir, join as pathJoin } from '@tauri-apps/api/path';
 	import { readTextFile, exists, writeFile } from '@tauri-apps/api/fs';
@@ -21,7 +21,7 @@
 			autofocus: true,
 			tools: {
 				InlineCitation,
-        // bibliography: Bibliography,
+				bibliography: Bibliography,
 				header: {
 					class: Header,
 					config: {
@@ -73,36 +73,36 @@
 			splitContent[0] + `${selectedText}` + ` (${inlineCitation}) ` + `${splitContent[1]}`;
 
 		contentEl.textContent = newContent || content;
-		// const biblioGraphyId = 'magnus-opus-id';
-		// const bibliography = editor.blocks.getById(biblioGraphyId);
-    // const numberOfBlocks = editor.blocks.getBlocksCount();
-    // const biblioGraphyBlock = numberOfBlocks;
-		// if (bibliography) {
-    //   await editor.blocks.insert(
-		// 		'paragraph',
-		// 		{
-		// 			text: fullCitation,
-		// 		},
-		// 		{},
-		// 		biblioGraphyBlock,
-		// 		undefined,
-		// 		undefined,
-		// 		biblioGraphyId
-		// 	); 
-		// } else {
-		// 	await editor.blocks.insert(
-		// 		'header',
-		// 		{
-		// 			text: 'Bibliography',
-		// 			level: 2
-		// 		},
-		// 		{},
-		// 		biblioGraphyBlock,
-		// 		undefined,
-		// 		undefined,
-		// 		biblioGraphyId
-		// 	);
-		// }
+		const biblioGraphyId = 'magnus-opus-id';
+		const bibliography = editor.blocks.getById(biblioGraphyId);
+		const numberOfBlocks = editor.blocks.getBlocksCount();
+		const biblioGraphyBlock = numberOfBlocks;
+		if (bibliography) {
+			await editor.blocks.insert(
+				'paragraph',
+				{
+					text: fullCitation
+				},
+				{},
+				biblioGraphyBlock,
+				undefined,
+				undefined,
+				biblioGraphyId
+			);
+		} else {
+			await editor.blocks.insert(
+				'header',
+				{
+					text: 'Bibliography',
+					level: 2
+				},
+				{},
+				biblioGraphyBlock,
+				undefined,
+				undefined,
+				biblioGraphyId
+			);
+		}
 
 		await saveDocument();
 	}
