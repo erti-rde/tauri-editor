@@ -73,7 +73,7 @@
 					class="inline-block cursor-pointer bg-orange-300 px-5 py-4"
 					on:click={generateCitation}
 				>
-					<Icon icon="lucide:quote" size="l" />
+					<Icon icon="Quote" size="l" />
 				</span>
 			</div>
 			<div class="flex grow flex-col justify-between px-5 py-4">

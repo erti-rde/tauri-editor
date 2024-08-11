@@ -1,12 +1,12 @@
 <script lang="ts">
-  import {createEventDispatcher} from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { Icon } from '$lib';
 	import { getMetadata, deleteMetadata } from '$utils/api';
 	import { validateCitationFields } from '$types/citation';
 	import MetaDataForm from './MetadataFrom.svelte';
 
-	export let fileName;
-  const dispatch = createEventDispatcher();
+	export let fileName: string;
+	const dispatch = createEventDispatcher();
 	let showMetadataForm = false;
 
 	function editMetadata() {
@@ -14,8 +14,8 @@
 	}
 
 	async function deleteSource(fileName: string) {
-    await deleteMetadata(fileName + '.pdf');
-    dispatch('sourceDeleted');
+		await deleteMetadata(fileName + '.pdf');
+		dispatch('sourceDeleted');
 	}
 
 	async function checkMetaData(fileName: string) {
@@ -38,27 +38,27 @@
 	const promise = checkMetaData(fileName);
 </script>
 
-<div>
+<div class="relative flex">
 	{#await promise then data}
 		{#if data.completed}
 			<div class="edit-delete-icons">
 				<button class="w-[20px]" on:click={() => editMetadata()}>
-					<Icon icon="lucide:pencil" size="s" />
+					<Icon icon="Pencil" size="s" />
 				</button>
 				<button class="w-[20px]" on:click={() => deleteSource(fileName)}>
-					<Icon icon="lucide:trash-2" size="s" />
+					<Icon icon="Trash" size="s" />
 				</button>
 			</div>
 		{:else}
 			<button class="w-[20px]" on:click={() => editMetadata()}>
-				<Icon icon="lucide:file-warning" size="s" />
+				<Icon icon="FileWarning" size="s" />
 			</button>
-      <button class="w-[20px]" on:click={() => deleteSource(fileName)}>
-        <Icon icon="lucide:trash-2" size="s" />
-      </button>
+			<button class="w-[20px]" on:click={() => deleteSource(fileName)}>
+				<Icon icon="Trash" size="s" />
+			</button>
 		{/if}
 		{#if showMetadataForm}
-			<MetaDataForm {fileName} on:close={() => showMetadataForm = false} />
+			<MetaDataForm {fileName} on:close={() => (showMetadataForm = false)} />
 		{/if}
 	{/await}
 </div>

@@ -102,7 +102,7 @@
 					<option value="journal">Journal</option>
 				</select>
 				<div class="absolute right-1 top-[50%] h-[24px] w-[24px] translate-y-[-50%]">
-					<Icon icon="lucide:chevron-down" size="m" />
+					<Icon icon="ChevronDown" size="m" />
 				</div>
 			</fieldset>
 			<fieldset class="mb-4 flex items-center gap-5">
@@ -164,7 +164,7 @@
                 items-center justify-center rounded-full p-1 text-orange-800
                 hover:bg-orange-100 focus:shadow-orange-400"
 		>
-			<Icon icon="lucide:x" size="s" />
+			<Icon icon="X" size="s" />
 		</button>
 	</div>
 </div>

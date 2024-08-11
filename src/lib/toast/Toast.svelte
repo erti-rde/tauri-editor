@@ -19,7 +19,7 @@
 	import { createToaster, melt } from '@melt-ui/svelte';
 	import { flip } from 'svelte/animate';
 	import { fly } from 'svelte/transition';
-  import Icon from '$lib/Icon.svelte';
+	import Icon from '$lib/Icon.svelte';
 </script>
 
 <div
@@ -47,8 +47,8 @@
 					</div>
 				</div>
 				<button use:melt={$close(id)} aria-label="close notification">
-          <Icon icon="lucide:x" size="m" />
-        </button>
+					<Icon icon="X" size="m" />
+				</button>
 			</div>
 		</div>
 	{/each}

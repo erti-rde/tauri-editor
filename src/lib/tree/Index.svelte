@@ -48,6 +48,7 @@
 
 	import { Icon } from '$lib';
 	import TreeItemComponent from './TreeItem.svelte';
+	import AddSource from '$lib/sourceSideBar/AddSource.svelte';
 
 	const ctx = createTreeView({
 		defaultExpanded: ['lib-0', 'tree-0']
@@ -58,7 +59,11 @@
 		elements: { tree }
 	} = ctx;
 
-	export let treeItems: TreeItem[] | undefined;
+	let treeItems: TreeItem[] | undefined;
+
+	getSources().then((sources) => {
+		treeItems = sources;
+	});
 
 	async function resetItems() {
 		treeItems = await getSources();
@@ -66,21 +71,20 @@
 </script>
 
 <div class="flex h-[100%] w-[18.75rem] flex-col rounded-xl bg-white text-neutral-900">
-	<div class="flex flex-col gap-1 px-4 pt-4">
-		<h3 class="text-lg font-bold">Sources</h3>
-		<hr />
+	<div class="mt-4 flex justify-end">
+		<AddSource on:sourceAdded={resetItems} />
 	</div>
 
-	<ul class="overflow-auto px-4 pb-4 pt-2" {...$tree}>
+	<ul class="overflow-auto pb-4 pt-2" {...$tree}>
 		{#if treeItems && treeItems.length > 0}
 			{#key treeItems}
 				{#each treeItems as { fileName }, i}
-					<li class="mb-[10px] flex">
-						<div class="mr-[10px] flex items-center">
-							<Icon icon="ph:file-pdf" />
+					<li class="mb-2 flex">
+						<div>
+							<Icon icon="Pdf" />
 						</div>
 
-						<span class="grow overflow-x-hidden whitespace-nowrap">{fileName}</span>
+						<span class="ml-1 flex-shrink overflow-x-hidden whitespace-nowrap">{fileName}</span>
 						<TreeItemComponent {fileName} on:sourceDeleted={resetItems} />
 					</li>
 				{/each}
@@ -100,7 +104,9 @@
 	}
 	:global(li:hover .edit-delete-icons) {
 		display: flex;
-		align-items: center;
-		gap: 10px;
+	}
+
+	.add-file:hover {
+		background-color: var(--hover-color);
 	}
 </style>
