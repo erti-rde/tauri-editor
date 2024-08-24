@@ -19,7 +19,7 @@
 	import { createToaster, melt } from '@melt-ui/svelte';
 	import { flip } from 'svelte/animate';
 	import { fly } from 'svelte/transition';
-	import Icon from '$lib/Icon.svelte';
+	import Icon from '$lib/icon/Icon.svelte';
 </script>
 
 <div

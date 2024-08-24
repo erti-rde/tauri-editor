@@ -5,7 +5,7 @@
 
 	import { getMetadata, updateMetadata } from '$utils/api';
 	import type { Citation } from '$types/citation';
-	import Icon from '$lib/Icon.svelte';
+	import Icon from '$lib/icon/Icon.svelte';
 
 	const dispatch = createEventDispatcher();
 	const {
@@ -73,7 +73,7 @@
 	/>
 	<div
 		class="fixed left-1/2 top-1/2 z-50 max-h-[85vh] w-[90vw] max-w-[450px]
-            -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl bg-white
+            -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl
             p-6 shadow-lg"
 		transition:fade={{
 			duration: 150

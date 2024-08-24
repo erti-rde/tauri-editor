@@ -12,6 +12,17 @@
 	},
 	"tauri": {
 		"allowlist": {
+      "window": {
+        "all": false,
+        "close": true,
+        "hide": true,
+        "show": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "unminimize": true,
+        "startDragging": true
+      },
 			"dialog": {
 				"open": true,
 				"save": true
@@ -87,6 +98,7 @@
 		"windows": [
 			{
 				"fullscreen": false,
+        "decorations": false,
 				"height": 600,
 				"resizable": true,
 				"title": "citation-machine",
