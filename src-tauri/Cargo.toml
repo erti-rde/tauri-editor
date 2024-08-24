@@ -17,7 +17,7 @@ tauri-build = { version = "1.5.1", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.6.0", features = [ "updater", "fs-remove-file", "fs-exists", "fs-create-dir", "fs-read-dir", "fs-write-file", "fs-read-file", "path-all", "http-request", "shell-sidecar", "process-command-api", "dialog-save", "dialog-open"] }
+tauri = { version = "1.6.0", features = [ "window-minimize", "window-unminimize", "window-start-dragging", "window-show", "window-hide", "window-maximize", "window-unmaximize", "window-close", "updater", "fs-remove-file", "fs-exists", "fs-create-dir", "fs-read-dir", "fs-write-file", "fs-read-file", "path-all", "http-request", "shell-sidecar", "process-command-api", "dialog-save", "dialog-open"] }
 command-group = "5.0.1"
 
 [features]

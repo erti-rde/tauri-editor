@@ -1,8 +1,10 @@
 :root {
 	--footer-status-bar-heightt: 24px;
-	--hover-color: #f0f0f0;
+	--hover-color: theme('colors.orange.200');
+  --border-color: theme('colors.slate.400');
 }
 
 html {
 	overscroll-behavior: none;
+  background-color: theme('colors.orange.50');
 }

@@ -70,7 +70,7 @@
 	}
 </script>
 
-<div class="flex h-[100%] w-[18.75rem] flex-col rounded-xl bg-white text-neutral-900">
+<div class="flex h-[100%] w-[18.75rem] flex-col rounded-xl text-neutral-900">
 	<div class="mt-4 flex justify-end">
 		<AddSource on:sourceAdded={resetItems} />
 	</div>
