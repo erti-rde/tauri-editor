@@ -48,7 +48,7 @@
 		<Toast />
 		<slot />
 	{:else}
-		<div class="flex h-[100%] w-screen flex-col items-center justify-center">
+		<div class="flex h-screen w-screen flex-col items-center justify-center">
 			<div>
 				<p class="ml-10 mr-10 text-2xl">
 					ML super power is not running. Please wait until it starts.

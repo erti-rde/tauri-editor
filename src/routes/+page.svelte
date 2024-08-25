@@ -1,15 +1,20 @@
 <script lang="ts">
 	import { SourceSideBar, Editor, StatusFooter, SidePanel } from '$lib';
+	let isExplorerOpen = true;
+
+	function handleToggleExplorer() {
+		isExplorerOpen = !isExplorerOpen;
+	}
 </script>
 
 <div class="grid-styles grid h-screen w-screen overscroll-none">
 	<div class="panel">
-		<SidePanel />
+		<SidePanel on:toggleExplorer={handleToggleExplorer} />
 	</div>
-	<div class="explorer">
-		<SourceSideBar />
+	<div class="explorer" class:hidden={!isExplorerOpen}>
+		<SourceSideBar bind:isOpen={isExplorerOpen} />
 	</div>
-	<div class="editor">
+	<div class="editor overflow-y-auto">
 		<Editor />
 	</div>
 </div>
@@ -26,7 +31,6 @@
 	.explorer,
 	.editor {
 		height: calc(100vh - var(--footer-status-bar-heightt));
-		overflow-y: auto;
 	}
 	.panel,
 	.explorer {
@@ -34,5 +38,8 @@
 	}
 	.status-bar {
 		grid-column: span 3;
+	}
+	.hidden {
+		display: none;
 	}
 </style>

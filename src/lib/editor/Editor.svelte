@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import EditorJS from '@editorjs/editorjs';
+	import EditorJs from '@editorjs/editorjs';
 	import Header from '@editorjs/header';
 	import List from '@editorjs/list';
 	import Undo from 'editorjs-undo';
@@ -13,10 +13,10 @@
 	import { appLocalDataDir, join as pathJoin } from '@tauri-apps/api/path';
 	import { readTextFile, exists, writeFile } from '@tauri-apps/api/fs';
 
-	let editor: EditorJS;
+	let editor: EditorJs;
 
 	onMount(async () => {
-		editor = new EditorJS({
+		editor = new EditorJs({
 			holder: 'editorjs',
 			autofocus: true,
 			tools: {
