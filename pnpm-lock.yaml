@@ -72,6 +72,9 @@ importers:
       cssnano:
         specifier: ^6.1.0
         version: 6.1.0(postcss@8.4.35)
+      editorjs-drag-drop:
+        specifier: ^1.1.14
+        version: 1.1.14
       editorjs-undo:
         specifier: ^2.0.28
         version: 2.0.28
@@ -936,6 +939,9 @@ packages:
 
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
+
+  editorjs-drag-drop@1.1.14:
+    resolution: {integrity: sha512-FpH3ILtfsadWrb/VcRfET7kC2fK3cBnlrTBY4wjm1bLNSxpM/OSmaRToeJJMxaIuwMldkKyuG+qWP4CiOLUu3g==}
 
   editorjs-undo@2.0.28:
     resolution: {integrity: sha512-7MiLdjIsPOXn8+cHDeAt2HapVklg4vcLWWkd2eMMlGI6UVtwYSjdQquDSv9752B/fOEP1C3NMF2sdiCoZV3tTA==}
@@ -2892,6 +2898,8 @@ snapshots:
       domhandler: 5.0.3
 
   eastasianwidth@0.2.0: {}
+
+  editorjs-drag-drop@1.1.14: {}
 
   editorjs-undo@2.0.28:
     dependencies:

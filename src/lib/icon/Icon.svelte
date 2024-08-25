@@ -8,10 +8,12 @@
 	import FilePlus from '~icons/lucide/file-Plus';
 	import Pdf from '~icons/ph/file-pdf-light';
 	import X from '~icons/ph/x';
+  import DoubleChevronLeft from '~icons/lucide/chevrons-left'
+  import DoubleChevronRight from '~icons/lucide/chevrons-right'
 
-  import WindowMinimize from '~icons/mdi/window-minimize';
-  import WindowMaximize from '~icons/mdi/window-maximize';
-  import WindowClose from '~icons/mdi/close';
+	import WindowMinimize from '~icons/mdi/window-minimize';
+	import WindowMaximize from '~icons/mdi/window-maximize';
+	import WindowClose from '~icons/mdi/close';
 
 	const icons = {
 		ChevronDown,
@@ -23,9 +25,11 @@
 		Trash,
 		X,
 		FilePlus,
-    WindowMinimize,
-    WindowMaximize,
-    WindowClose
+		WindowMinimize,
+		WindowMaximize,
+		WindowClose,
+    DoubleChevronLeft,
+    DoubleChevronRight
 	};
 
 	type Size = 's' | 'm' | 'l';
