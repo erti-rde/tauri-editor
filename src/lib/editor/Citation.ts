@@ -1,6 +1,8 @@
 import type { InlineTool, API } from '@editorjs/editorjs';
 
 export class InlineCitation implements InlineTool {
+	_state: string;
+	api: API;
 	button: HTMLButtonElement;
 
 	static get shortcut() {
@@ -15,10 +17,10 @@ export class InlineCitation implements InlineTool {
 
 	set state(state) {
 		this._state = state;
-		this.button.classList.toggle(this.api.styles.inlineToolButtonActive, state);
+		this.button.classList.toggle(this.api.styles.inlineToolButtonActive, !!this._state);
 	}
 	constructor({ api }: { api: API }) {
-		this._state = false;
+		this._state = '';
 		this.api = api;
 		this.button = document.createElement('button');
 	}
@@ -32,17 +34,23 @@ export class InlineCitation implements InlineTool {
 		return this.button;
 	}
 
-	surround(range) {
-		dispatchEvent(
-			new CustomEvent('citation', {
-				detail: { range, currentBlockIndex: this.api.blocks.getCurrentBlockIndex() }
-			})
-		);
+	surround() {
+		dispatchEvent(new CustomEvent('citation', { detail: { selectedText: this._state } }));
 	}
 
-	checkState(selection) {}
+	checkState(selection: Selection) {
+		const { anchorNode, anchorOffset, focusOffset } = selection;
+
+		if (!anchorNode) {
+			return;
+		}
+
+		const anchorElement = anchorNode instanceof Element ? anchorNode : anchorNode.parentElement;
+
+		this._state = anchorElement?.textContent?.slice(anchorOffset, focusOffset) || '';
+	}
 
 	clear() {
-		this.state = false;
+		this.state = '';
 	}
 }
