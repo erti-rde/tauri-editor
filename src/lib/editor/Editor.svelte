@@ -8,10 +8,10 @@
 	import Result from './Result.svelte';
 
 	import { InlineCitation } from './Citation';
-	import { Bibliography } from './Bibliography';
 
 	import { appLocalDataDir, join as pathJoin } from '@tauri-apps/api/path';
 	import { readTextFile, exists, writeFile } from '@tauri-apps/api/fs';
+	import TabsPanel from './TabsPanel.svelte';
 
 	let editor: EditorJs;
 	let openResultPanel = false;
@@ -23,7 +23,6 @@
 			autofocus: true,
 			tools: {
 				InlineCitation,
-				bibliography: Bibliography,
 				header: {
 					class: Header,
 					config: {
@@ -67,6 +66,7 @@
 	}
 
 	async function handleSelect(event: CustomEvent) {
+		openResultPanel = false;
 		const { citation, selectedText } = event.detail;
 		const { inlineCitation, fullCitation } = citation;
 		const currentBlockIndex = editor.blocks.getCurrentBlockIndex();
@@ -91,10 +91,7 @@
 					text: fullCitation
 				},
 				{},
-				biblioGraphyBlock,
-				undefined,
-				undefined,
-				biblioGraphyId
+				biblioGraphyBlock
 			);
 		} else {
 			await editor.blocks.insert(
@@ -115,9 +112,12 @@
 	}
 
 	function selectTextForCitation(event: Event) {
-		const { startOffset, endOffset, commonAncestorContainer } = event.detail.range;
-		selectedText = commonAncestorContainer?.data.slice(startOffset, endOffset);
+		selectedText = (event as CustomEvent).detail.selectedText;
 		openResultPanel = true;
+	}
+
+	function toggleView(event: CustomEvent) {
+		editor.readOnly.toggle();
 	}
 
 	setInterval(() => {
@@ -126,6 +126,7 @@
 </script>
 
 <div>
+	<TabsPanel on:switch={toggleView} />
 	<div id="editorjs"></div>
 	{#if openResultPanel}
 		<Result

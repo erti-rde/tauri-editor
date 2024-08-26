@@ -61,11 +61,6 @@
 		<Tree />
 		<div class="resizer absolute h-full w-2" on:mousedown={startResize}></div>
 	</div>
-	{#if isOpen}
-		<button class="close-button" on:click={toggleSidebar}>
-			<Icon icon="DoubleChevronLeft" />
-		</button>
-	{/if}
 </div>
 
 <style>
@@ -89,26 +84,4 @@
 		cursor: col-resize;
 	}
 
-	.close-button {
-		position: absolute;
-		top: 0px;
-		right: -16px;
-		z-index: 1000;
-		background-color: theme('colors.orange.50');
-		border: 1px solid var(--border-color, var(--border-color));
-		border-radius: 30%;
-		width: 20px;
-		height: 20px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		transition: background-color 0.3s ease;
-	}
-
-	.close-button:hover {
-		background-color: var(--hover-color);
-		width: 24px;
-		height: 24px;
-	}
 </style>

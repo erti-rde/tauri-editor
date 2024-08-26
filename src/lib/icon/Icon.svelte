@@ -14,6 +14,8 @@
 	import WindowMinimize from '~icons/mdi/window-minimize';
 	import WindowMaximize from '~icons/mdi/window-maximize';
 	import WindowClose from '~icons/mdi/close';
+  import BookOpen from "~icons/lucide/book-open";
+  import FilePen from "~icons/lucide/file-pen"
 
 	const icons = {
 		ChevronDown,
@@ -29,7 +31,9 @@
 		WindowMaximize,
 		WindowClose,
     DoubleChevronLeft,
-    DoubleChevronRight
+    DoubleChevronRight,
+    BookOpen,
+    FilePen
 	};
 
 	type Size = 's' | 'm' | 'l';
