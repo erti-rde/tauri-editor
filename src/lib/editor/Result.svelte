@@ -15,7 +15,6 @@
 
 	window.addEventListener('citation', async (event) => {
 		const { startOffset, endOffset, commonAncestorContainer } = event.detail.range;
-		console.log(`🚀 ~ commonAncestorContainer:`, commonAncestorContainer);
 		const currentSelectedText = commonAncestorContainer?.data.slice(startOffset, endOffset);
 		if (selectedText === currentSelectedText) {
 			selectedText = '';
@@ -65,10 +64,10 @@
 <style>
 	.results-wrapper {
 		position: fixed;
-		top: 0;
+		top: var(--title-bar-height);
 		right: 0;
 		width: 30%;
-		height: 100%;
+		height: calc(100% - var(--title-bar-height));
 		background-color: white;
 		box-shadow: -5px 0 5px -5px rgba(0, 0, 0, 0.5);
 		z-index: 5;

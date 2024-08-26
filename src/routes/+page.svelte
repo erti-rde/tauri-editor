@@ -25,12 +25,12 @@
 <style>
 	.grid-styles {
 		grid-template-columns: 40px auto 4fr;
-		grid-template-rows: 1fr var(--footer-status-bar-heightt);
+		grid-template-rows: 1fr var(--footer-status-bar-height);
 	}
 	.panel,
 	.explorer,
 	.editor {
-		height: calc(100vh - var(--footer-status-bar-heightt));
+		height: calc(100vh - var(--footer-status-bar-height));
 	}
 	.panel,
 	.explorer {

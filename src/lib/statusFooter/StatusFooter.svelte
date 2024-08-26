@@ -46,7 +46,7 @@
 
 <style>
 	.status-bar {
-		height: var(--footer-status-bar-heightt);
+		height: var(--footer-status-bar-height);
 	}
 	.error {
 		color: red;
