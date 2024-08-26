@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import EditorJs from '@editorjs/editorjs';
 	import Header from '@editorjs/header';
 	import List from '@editorjs/list';
@@ -14,6 +14,8 @@
 	import { readTextFile, exists, writeFile } from '@tauri-apps/api/fs';
 
 	let editor: EditorJs;
+	let openResultPanel = false;
+	let selectedText = '';
 
 	onMount(async () => {
 		editor = new EditorJs({
@@ -38,6 +40,11 @@
 				new Undo({ editor });
 			}
 		});
+		window.addEventListener('citation', selectTextForCitation);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('citation', selectTextForCitation);
 	});
 
 	async function getDocumentData() {
@@ -107,6 +114,12 @@
 		await saveDocument();
 	}
 
+	function selectTextForCitation(event: Event) {
+		const { startOffset, endOffset, commonAncestorContainer } = event.detail.range;
+		selectedText = commonAncestorContainer?.data.slice(startOffset, endOffset);
+		openResultPanel = true;
+	}
+
 	setInterval(() => {
 		saveDocument();
 	}, 5000);
@@ -114,7 +127,13 @@
 
 <div>
 	<div id="editorjs"></div>
-	<Result on:select={handleSelect} />
+	{#if openResultPanel}
+		<Result
+			{selectedText}
+			on:select={handleSelect}
+			on:close-panel={() => (openResultPanel = false)}
+		/>
+	{/if}
 </div>
 
 <style>

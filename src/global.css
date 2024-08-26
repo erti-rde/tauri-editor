@@ -1,7 +1,8 @@
 :root {
-	--footer-status-bar-heightt: 24px;
+	--footer-status-bar-height: 24px;
 	--hover-color: theme('colors.orange.200');
 	--border-color: theme('colors.slate.400');
+  --title-bar-height: 30px;
 }
 
 html {

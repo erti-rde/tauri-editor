@@ -65,7 +65,7 @@
 
 <style>
 	.titlebar {
-		height: 30px;
+		height: var(--title-bar-height);
 		background: transparent;
 		user-select: none;
 		display: flex;
