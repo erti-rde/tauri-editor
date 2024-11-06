@@ -43,7 +43,7 @@
 	</button>
 </div>
 
-<div class="mt-[30px] fixed">
+<div class="mt-[30px] fixed w-full">
 	{#if serverIsRunning}
 		<Toast />
 		<slot />

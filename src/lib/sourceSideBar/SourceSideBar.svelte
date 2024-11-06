@@ -1,19 +1,17 @@
 <script lang="ts">
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import Tree from '$lib/sourceSideBar/tree/Index.svelte';
-	import { Icon } from '$lib';
+  import type {TreeItem} from './tree/Index.svelte'
 
-	export let isOpen = true;
+	export let directoryEntries: TreeItem[];
 
-	const dispatch = createEventDispatcher();
-
-	$: width = isOpen ? 200 : 0;
+	$: width = directoryEntries.length > 0 ? 200 : 0;
 	let isDragging = false;
 	let startX: number;
 	let startWidth: number;
 	let isTransitioning = false;
 
-	$: if (!isOpen) width = 0;
+	$: if (!directoryEntries) width = 0;
 
 	function startResize(e: MouseEvent) {
 		isDragging = true;
@@ -33,15 +31,6 @@
 		}
 	}
 
-	function toggleSidebar() {
-		isTransitioning = true;
-		isOpen = !isOpen;
-		dispatch('toggle', { isOpen });
-		setTimeout(() => {
-			isTransitioning = false;
-		}, 300); // Match this with your transition duration
-	}
-
 	onMount(() => {
 		window.addEventListener('mousemove', resize);
 		window.addEventListener('mouseup', stopResize);
@@ -58,7 +47,7 @@
 		class:transitioning={isTransitioning}
 		style="width: {width}px;"
 	>
-		<Tree />
+		<Tree treeItems={directoryEntries} />
 		<div class="resizer absolute h-full w-2" on:mousedown={startResize}></div>
 	</div>
 </div>
@@ -83,5 +72,4 @@
 		right: 0;
 		cursor: col-resize;
 	}
-
 </style>

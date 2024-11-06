@@ -3,8 +3,10 @@
 	import { readDir, createDir, exists } from '@tauri-apps/api/fs';
 
 	export type TreeItem = {
-		fileName: string;
+		name: string;
+		path: string;
 		icon: 'folder' | 'file' | string;
+    privateItem?: boolean;
 		children?: TreeItem[];
 	};
 
@@ -20,18 +22,18 @@
 
 			const sources = await readDir(pickleFilesDir);
 			const treeData: {
-				fileName: string;
+				name: string;
 				icon: string;
 			}[] = [];
 			sources.length > 0 &&
 				sources.forEach((source) => {
-					// regex to match a fileName which is between pickle_files and .pdf.pickle
+					// regex to match a name which is between pickle_files and .pdf.pickle
 					const regex = /pickle_files(?:\/|\\)(.*).pdf.pickle/;
 					const match = source.path.match(regex);
 					if (!match) return;
 					const sourceName = match[1];
 					treeData.push({
-						fileName: sourceName,
+						name: sourceName,
 						icon: 'file'
 					});
 				});
@@ -49,7 +51,6 @@
 	import { Icon } from '$lib';
 	import TreeItemComponent from './TreeItem.svelte';
 	import AddSource from '$lib/sourceSideBar/AddSource.svelte';
-
 	const ctx = createTreeView({
 		defaultExpanded: ['lib-0', 'tree-0']
 	});
@@ -59,11 +60,12 @@
 		elements: { tree }
 	} = ctx;
 
-	let treeItems: TreeItem[] | undefined;
+	export let treeItems: TreeItem[] | undefined;
+	console.log(`🚀 ~ treeItems:`, treeItems);
 
-	getSources().then((sources) => {
-		treeItems = sources;
-	});
+	// getSources().then((sources) => {
+	// 	treeItems = sources;
+	// });
 
 	async function resetItems() {
 		treeItems = await getSources();
@@ -78,15 +80,17 @@
 	<ul class="overflow-auto pb-4 pt-2" {...$tree}>
 		{#if treeItems && treeItems.length > 0}
 			{#key treeItems}
-				{#each treeItems as { fileName }, i}
-					<li class="mb-2 flex">
-						<div>
-							<Icon icon="Pdf" />
-						</div>
+				{#each treeItems as { name, icon, children, privateItem }, i}
+					{#if !privateItem}
+						<li class="mb-2 flex">
+							<div>
+								<Icon {icon} />
+							</div>
 
-						<span class="ml-1 flex-shrink overflow-x-hidden whitespace-nowrap">{fileName}</span>
-						<TreeItemComponent {fileName} on:sourceDeleted={resetItems} />
-					</li>
+							<span class="ml-1 flex-shrink overflow-x-hidden whitespace-nowrap">{name}</span>
+							<TreeItemComponent {name} on:sourceDeleted={resetItems} />
+						</li>
+					{/if}
 				{/each}
 			{/key}
 		{:else}

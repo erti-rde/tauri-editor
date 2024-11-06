@@ -5,5 +5,6 @@ import SourceSideBar from './sourceSideBar/SourceSideBar.svelte';
 import Editor from './editor/Editor.svelte';
 import Loader from './loader/Loader.svelte';
 import SidePanel from './side-panel/Panel.svelte';
+import Landing from './landing/Landing.svelte';
 
-export { Icon, Toast, StatusFooter, SourceSideBar, Editor, Loader, SidePanel };
+export { Icon, Toast, StatusFooter, SourceSideBar, Editor, Loader, SidePanel, Landing };

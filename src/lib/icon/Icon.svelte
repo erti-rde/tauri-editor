@@ -17,6 +17,9 @@
   import BookOpen from "~icons/lucide/book-open";
   import FilePen from "~icons/lucide/file-pen"
 
+  import Folder from "~icons/lucide/folder"
+  import File from  "~icons/lucide/file"
+
 	const icons = {
 		ChevronDown,
 		FileWarning,
@@ -33,7 +36,9 @@
     DoubleChevronLeft,
     DoubleChevronRight,
     BookOpen,
-    FilePen
+    FilePen,
+    Folder,
+    File
 	};
 
 	type Size = 's' | 'm' | 'l';
