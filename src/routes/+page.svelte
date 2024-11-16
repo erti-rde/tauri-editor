@@ -1,35 +1,30 @@
 <script lang="ts">
-	import { SourceSideBar, Editor, StatusFooter, SidePanel, Landing } from '$lib';
-  import type {TreeItem} from '../lib/sourceSideBar/tree/Index.svelte'
-  
+	import { Explorer, Editor, StatusFooter, SidePanel, Landing } from '$lib';
+
 	let isExplorerOpen = true;
 	let vaultIsOpen = false;
-  let directoryEntries: TreeItem[] = []
 
 	function handleToggleExplorer() {
 		isExplorerOpen = !isExplorerOpen;
 	}
-
-  function handleDirOpen(e: CustomEvent) {
-    vaultIsOpen = true
-    directoryEntries = e.detail.entries
-  }
 </script>
 
-<div class={vaultIsOpen ? `grid-styles grid h-screen w-screen overscroll-none` : `flex w-full h-full`}>
+<div
+	class={vaultIsOpen ? `grid-styles grid h-screen w-screen overscroll-none` : `flex h-full w-full`}
+>
 	<div class="panel">
 		<SidePanel on:toggleExplorer={handleToggleExplorer} />
 	</div>
 	{#if vaultIsOpen}
-		<div class="explorer" class:hidden={!isExplorerOpen}>
-			<SourceSideBar bind:directoryEntries={directoryEntries}  />
+		<div class:explorer={isExplorerOpen} class:explorer-closed={!isExplorerOpen}>
+			<Explorer {isExplorerOpen} />
 		</div>
 		<div class="editor overflow-y-auto">
 			<Editor />
 		</div>
 	{:else}
-		<div class="flex h-full w-full items-center justify-center my-auto">
-			<Landing on:projectOpen={handleDirOpen} />
+		<div class="my-auto flex h-full w-full items-center justify-center">
+			<Landing on:projectOpen={() => (vaultIsOpen = true)} />
 		</div>
 	{/if}
 </div>
@@ -54,7 +49,7 @@
 	.status-bar {
 		grid-column: span 3;
 	}
-	.hidden {
-		display: none;
+	.explorer-closed {
+		width: 0;
 	}
 </style>

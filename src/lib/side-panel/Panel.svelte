@@ -4,8 +4,6 @@
 
 	const dispatch = createEventDispatcher();
 
-	let current = 'Files';
-
 	function toggleExplorer() {
 		dispatch('toggleExplorer');
 	}
@@ -15,7 +13,6 @@
 	<button
 		class="p-2"
 		on:click={() => {
-			current = 'Files';
 			toggleExplorer();
 		}}
 	>

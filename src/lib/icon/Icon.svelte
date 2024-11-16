@@ -8,17 +8,18 @@
 	import FilePlus from '~icons/lucide/file-Plus';
 	import Pdf from '~icons/ph/file-pdf-light';
 	import X from '~icons/ph/x';
-  import DoubleChevronLeft from '~icons/lucide/chevrons-left'
-  import DoubleChevronRight from '~icons/lucide/chevrons-right'
+	import DoubleChevronLeft from '~icons/lucide/chevrons-left';
+	import DoubleChevronRight from '~icons/lucide/chevrons-right';
 
 	import WindowMinimize from '~icons/mdi/window-minimize';
 	import WindowMaximize from '~icons/mdi/window-maximize';
 	import WindowClose from '~icons/mdi/close';
-  import BookOpen from "~icons/lucide/book-open";
-  import FilePen from "~icons/lucide/file-pen"
+	import BookOpen from '~icons/lucide/book-open';
+	import FilePen from '~icons/lucide/file-pen';
 
-  import Folder from "~icons/lucide/folder"
-  import File from  "~icons/lucide/file"
+	import Folder from '~icons/lucide/folder';
+	import FolderOpen from '~icons/lucide/folder-open';
+	import File from '~icons/lucide/file';
 
 	const icons = {
 		ChevronDown,
@@ -33,12 +34,13 @@
 		WindowMinimize,
 		WindowMaximize,
 		WindowClose,
-    DoubleChevronLeft,
-    DoubleChevronRight,
-    BookOpen,
-    FilePen,
-    Folder,
-    File
+		DoubleChevronLeft,
+		DoubleChevronRight,
+		BookOpen,
+		FilePen,
+		Folder,
+		File,
+		FolderOpen
 	};
 
 	type Size = 's' | 'm' | 'l';

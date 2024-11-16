@@ -1,17 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Tree from '$lib/sourceSideBar/tree/Index.svelte';
-  import type {TreeItem} from './tree/Index.svelte'
+	import Tree from '$lib/explorer/Tree.svelte';
 
-	export let directoryEntries: TreeItem[];
-
-	$: width = directoryEntries.length > 0 ? 200 : 0;
+	export let isExplorerOpen: boolean = false;
+	let width = 200;
 	let isDragging = false;
 	let startX: number;
 	let startWidth: number;
 	let isTransitioning = false;
-
-	$: if (!directoryEntries) width = 0;
 
 	function startResize(e: MouseEvent) {
 		isDragging = true;
@@ -41,13 +37,13 @@
 	});
 </script>
 
-<div class="sidebar-container">
+<div class={isExplorerOpen ? 'sidebar-container' : 'hidden'}>
 	<div
 		class="explorer-scroll relative flex flex-col justify-between px-2"
 		class:transitioning={isTransitioning}
 		style="width: {width}px;"
 	>
-		<Tree treeItems={directoryEntries} />
+		<Tree />
 		<div class="resizer absolute h-full w-2" on:mousedown={startResize}></div>
 	</div>
 </div>

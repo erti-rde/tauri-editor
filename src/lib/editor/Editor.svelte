@@ -9,15 +9,19 @@
 
 	import { InlineCitation } from './Citation';
 
-	import { appLocalDataDir, join as pathJoin } from '@tauri-apps/api/path';
-	import { readTextFile, exists, writeFile } from '@tauri-apps/api/fs';
+	import { fileSystemStore } from '$lib/stores/fileSystem';
+
+	import { join as pathJoin } from '@tauri-apps/api/path';
+	import { readTextFile, exists, writeTextFile } from '@tauri-apps/plugin-fs';
 	import TabsPanel from './TabsPanel.svelte';
 
 	let editor: EditorJs;
 	let openResultPanel = false;
 	let selectedText = '';
+	let currentDir = '';
 
 	onMount(async () => {
+		currentDir = $fileSystemStore.currentPath;
 		editor = new EditorJs({
 			holder: 'editorjs',
 			autofocus: true,
@@ -47,8 +51,7 @@
 	});
 
 	async function getDocumentData() {
-		const sourcesLocation = await appLocalDataDir();
-		const MagnumOpusPath = await pathJoin(sourcesLocation, 'magnum_opus.json');
+		const MagnumOpusPath = await pathJoin(currentDir, 'magnum_opus.json');
 		const fileExists = await exists(MagnumOpusPath);
 		if (!fileExists) {
 			return {};
@@ -60,9 +63,9 @@
 
 	async function saveDocument() {
 		const outputData = await editor.save();
-		const sourcesLocation = await appLocalDataDir();
-		const MagnumOpusPath = await pathJoin(sourcesLocation, 'magnum_opus.json');
-		await writeFile(MagnumOpusPath, JSON.stringify(outputData));
+		const MagnumOpusPath = await pathJoin(currentDir, 'magnum_opus.json');
+		const content = JSON.stringify(outputData);
+		await writeTextFile(MagnumOpusPath, content);
 	}
 
 	async function handleSelect(event: CustomEvent) {
