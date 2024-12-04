@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { Icon } from '$lib';
 	import type { FileItem } from '$lib/stores/fileSystem';
+	import { currentFileStore } from '$lib/stores/openFileStore';
 
 	export let item: FileItem;
 	export let depth: number = 0;
 
 	let isExpanded = false;
 
-	function toggleExpand() {
+	function handleClick() {
 		if (item.is_dir) {
 			isExpanded = !isExpanded;
+		} else {
+			currentFileStore.set(item.path);
 		}
 	}
 
@@ -17,7 +20,7 @@
 </script>
 
 <div class="file-item">
-	<div class="item-header" style={indentation} on:click={toggleExpand} class:is-dir={item.is_dir}>
+	<div class="item-header" style={indentation} class:is-dir={item.is_dir} on:click={handleClick}>
 		<span class="icon">
 			{#if item.is_dir}
 				{#if isExpanded}

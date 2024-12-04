@@ -1,5 +1,9 @@
 <script lang="ts">
 	import ChevronDown from '~icons/lucide/chevron-down';
+	import ChevronLeft from '~icons/lucide/chevron-left';
+	import ChevronRight from '~icons/lucide/chevron-right';
+	import ZoomIn from '~icons/lucide/zoom-in';
+	import ZoomOut from '~icons/lucide/zoom-out';
 	import FileWarning from '~icons/lucide/file-warning';
 	import Files from '~icons/lucide/files';
 	import Pencil from '~icons/lucide/pencil';
@@ -20,9 +24,14 @@
 	import Folder from '~icons/lucide/folder';
 	import FolderOpen from '~icons/lucide/folder-open';
 	import File from '~icons/lucide/file';
+	import FileOutput from '~icons/lucide/file-output';
 
 	const icons = {
 		ChevronDown,
+		ChevronLeft,
+		ChevronRight,
+		ZoomIn,
+		ZoomOut,
 		FileWarning,
 		Files,
 		Pdf,
@@ -40,7 +49,8 @@
 		FilePen,
 		Folder,
 		File,
-		FolderOpen
+		FolderOpen,
+		FileOutput
 	};
 
 	type Size = 's' | 'm' | 'l';

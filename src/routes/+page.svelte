@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Explorer, Editor, StatusFooter, SidePanel, Landing } from '$lib';
+	import { Explorer, Editor, StatusFooter, SidePanel, Landing, PdfReader } from '$lib';
+	import { currentFileStore } from '$lib/stores/openFileStore';
 
 	let isExplorerOpen = true;
 	let vaultIsOpen = false;
@@ -7,6 +8,10 @@
 	function handleToggleExplorer() {
 		isExplorerOpen = !isExplorerOpen;
 	}
+
+	$: isItPdf = () => {
+		return $currentFileStore && $currentFileStore.endsWith('.pdf');
+	};
 </script>
 
 <div
@@ -20,7 +25,11 @@
 			<Explorer {isExplorerOpen} />
 		</div>
 		<div class="editor overflow-y-auto">
-			<Editor />
+			{#if isItPdf()}
+				<PdfReader />
+			{:else}
+				<Editor />
+			{/if}
 		</div>
 	{:else}
 		<div class="my-auto flex h-full w-full items-center justify-center">

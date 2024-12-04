@@ -10,6 +10,10 @@
 		mode = mode === 'editor' ? 'preview' : 'editor';
 		dispatch('switch', { mode });
 	}
+
+	function handleExport() {
+		dispatch('export');
+	}
 </script>
 
 <div class="flex w-full justify-end bg-orange-100">
@@ -22,7 +26,9 @@
 			{/if}
 		</button>
 	</div>
+	<div class="mr-1 py-1 hover:bg-orange-200">
+		<button class="p-1" on:click={handleExport}>
+			<Icon icon="FileOutput" size="s" />
+		</button>
+	</div>
 </div>
-
-<style>
-</style>

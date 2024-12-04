@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use core::future::Future;
 use core::pin::Pin;
 use serde::{Deserialize, Serialize};
@@ -72,4 +73,10 @@ fn read_directory_impl(
 #[tauri::command]
 pub async fn read_directory(path: String) -> Result<Vec<FileItem>, String> {
     read_directory_impl(path).await
+}
+
+#[tauri::command]
+pub async fn read_pdf_file(path: String) -> Result<String, String> {
+    let data = std::fs::read(path).map_err(|e| e.to_string())?;
+    Ok(STANDARD.encode(data))
 }

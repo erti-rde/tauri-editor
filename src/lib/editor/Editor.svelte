@@ -88,7 +88,7 @@
 		const numberOfBlocks = editor.blocks.getBlocksCount();
 		const biblioGraphyBlock = numberOfBlocks;
 		if (bibliography) {
-			await editor.blocks.insert(
+			editor.blocks.insert(
 				'paragraph',
 				{
 					text: fullCitation
@@ -97,7 +97,7 @@
 				biblioGraphyBlock
 			);
 		} else {
-			await editor.blocks.insert(
+			editor.blocks.insert(
 				'header',
 				{
 					text: 'Bibliography',
@@ -119,9 +119,11 @@
 		openResultPanel = true;
 	}
 
-	function toggleView(event: CustomEvent) {
+	function toggleView() {
 		editor.readOnly.toggle();
 	}
+
+	async function exportToPdf() {}
 
 	setInterval(() => {
 		saveDocument();
@@ -129,7 +131,7 @@
 </script>
 
 <div>
-	<TabsPanel on:switch={toggleView} />
+	<TabsPanel on:switch={toggleView} on:export={exportToPdf} />
 	<div id="editorjs"></div>
 	{#if openResultPanel}
 		<Result
