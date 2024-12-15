@@ -27,3 +27,4 @@ tauri-plugin-fs = "2"
 tauri-plugin-store = "2"
 tokio = { version = "1.0", features = ["fs"] }
 base64 = "0.22.1"
+headless_chrome = "1.0.15"

@@ -1,151 +1,210 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
-	import EditorJs from '@editorjs/editorjs';
-	import Header from '@editorjs/header';
-	import List from '@editorjs/list';
-	import Undo from 'editorjs-undo';
-
-	import Result from './Result.svelte';
-
-	import { InlineCitation } from './Citation';
-
-	import { fileSystemStore } from '$lib/stores/fileSystem';
+	import { onMount } from 'svelte';
 
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { readTextFile, exists, writeTextFile } from '@tauri-apps/plugin-fs';
+	import { fileSystemStore } from '$lib/stores/fileSystem';
+	import { invoke } from '@tauri-apps/api/core';
+
+	import { Editor } from '@tiptap/core';
+	import StarterKit from '@tiptap/starter-kit';
+
+	import type { TiptapEditorHTMLElement } from '@tiptap/core';
+
 	import TabsPanel from './TabsPanel.svelte';
 
-	let editor: EditorJs;
-	let openResultPanel = false;
-	let selectedText = '';
+	let element: TiptapEditorHTMLElement;
+	let editor: Editor;
+	let editable = true;
 	let currentDir = '';
 
 	onMount(async () => {
 		currentDir = $fileSystemStore.currentPath;
-		editor = new EditorJs({
-			holder: 'editorjs',
-			autofocus: true,
-			tools: {
-				InlineCitation,
-				header: {
-					class: Header,
-					config: {
-						placeholder: 'Magnum Opus Title'
-					}
-				},
-				list: {
-					class: List
-				}
-			},
 
-			data: await getDocumentData(),
-			onReady: () => {
-				new Undo({ editor });
+		editor = new Editor({
+			element: element,
+			autofocus: 'end',
+			extensions: [StarterKit],
+			content: await getDocumentData(),
+			onTransaction: () => {
+				// force re-render so `editor.isActive` works as expected
+				editor = editor;
+			},
+			onUpdate: async ({ editor }) => {
+				const html = `
+            <html>
+                <head>
+
+                </head>
+                <body>
+                <div class="tiptap">
+                    ${editor.getHTML().replaceAll(/<p><\/p>/g, '<p><br></p>')}
+                </div>
+                    </body>
+            </html>
+        `;
+				const pathToSave = await pathJoin(currentDir, 'magnum_opus.html');
+
+				await writeTextFile(pathToSave, html);
 			}
 		});
-		window.addEventListener('citation', selectTextForCitation);
 	});
 
-	onDestroy(() => {
-		window.removeEventListener('citation', selectTextForCitation);
-	});
+	function toggleView() {
+		editable = !editable;
+		editor.setEditable(editable);
+	}
+
+	async function exportToPdf() {
+		try {
+			await invoke('print_pdf_file', {
+				currentDir
+			});
+		} catch (error) {
+			console.error('Failed to export PDF:', error);
+		}
+	}
 
 	async function getDocumentData() {
-		const MagnumOpusPath = await pathJoin(currentDir, 'magnum_opus.json');
+		const MagnumOpusPath = await pathJoin(currentDir, 'magnum_opus.html');
 		const fileExists = await exists(MagnumOpusPath);
 		if (!fileExists) {
 			return {};
 		}
 
 		const fileData = await readTextFile(MagnumOpusPath);
-		return JSON.parse(fileData);
+		return fileData;
 	}
-
-	async function saveDocument() {
-		const outputData = await editor.save();
-		const MagnumOpusPath = await pathJoin(currentDir, 'magnum_opus.json');
-		const content = JSON.stringify(outputData);
-		await writeTextFile(MagnumOpusPath, content);
-	}
-
-	async function handleSelect(event: CustomEvent) {
-		openResultPanel = false;
-		const { citation, selectedText } = event.detail;
-		const { inlineCitation, fullCitation } = citation;
-		const currentBlockIndex = editor.blocks.getCurrentBlockIndex();
-		const block = editor.blocks.getBlockByIndex(currentBlockIndex);
-		const htmlHolder = block?.holder;
-		const contentEl = htmlHolder?.querySelector('[data-placeholder]') as HTMLElement;
-		const content = contentEl?.textContent;
-		const splitContent = content?.split(selectedText);
-		const newContent =
-			splitContent &&
-			splitContent[0] + `${selectedText}` + ` (${inlineCitation}) ` + `${splitContent[1]}`;
-
-		contentEl.textContent = newContent || content;
-		const biblioGraphyId = 'magnus-opus-id';
-		const bibliography = editor.blocks.getById(biblioGraphyId);
-		const numberOfBlocks = editor.blocks.getBlocksCount();
-		const biblioGraphyBlock = numberOfBlocks;
-		if (bibliography) {
-			editor.blocks.insert(
-				'paragraph',
-				{
-					text: fullCitation
-				},
-				{},
-				biblioGraphyBlock
-			);
-		} else {
-			editor.blocks.insert(
-				'header',
-				{
-					text: 'Bibliography',
-					level: 2
-				},
-				{},
-				biblioGraphyBlock,
-				undefined,
-				undefined,
-				biblioGraphyId
-			);
-		}
-
-		await saveDocument();
-	}
-
-	function selectTextForCitation(event: Event) {
-		selectedText = (event as CustomEvent).detail.selectedText;
-		openResultPanel = true;
-	}
-
-	function toggleView() {
-		editor.readOnly.toggle();
-	}
-
-	async function exportToPdf() {}
-
-	setInterval(() => {
-		saveDocument();
-	}, 5000);
 </script>
 
-<div>
-	<TabsPanel on:switch={toggleView} on:export={exportToPdf} />
-	<div id="editorjs"></div>
-	{#if openResultPanel}
-		<Result
-			{selectedText}
-			on:select={handleSelect}
-			on:close-panel={() => (openResultPanel = false)}
-		/>
+<div class="editor-wrapper">
+	{#if editor}
+		<div class="control-group">
+			<div class="button-group">
+				<TabsPanel on:switch={toggleView} on:export={exportToPdf} />
+
+				<button
+					on:click={() => editor.chain().focus().toggleBold().run()}
+					disabled={!editor.can().chain().focus().toggleBold().run()}
+					class={editor.isActive('bold') ? 'is-active' : ''}
+				>
+					Bold
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleItalic().run()}
+					disabled={!editor.can().chain().focus().toggleItalic().run()}
+					class={editor.isActive('italic') ? 'is-active' : ''}
+				>
+					Italic
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleStrike().run()}
+					disabled={!editor.can().chain().focus().toggleStrike().run()}
+					class={editor.isActive('strike') ? 'is-active' : ''}
+				>
+					Strike
+				</button>
+
+				<button on:click={() => editor.chain().focus().unsetAllMarks().run()}>Clear marks</button>
+				<button on:click={() => editor.chain().focus().clearNodes().run()}>Clear nodes</button>
+				<button
+					on:click={() => editor.chain().focus().setParagraph().run()}
+					class={editor.isActive('paragraph') ? 'is-active' : ''}
+				>
+					Paragraph
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+					class={editor.isActive('heading', { level: 1 }) ? 'is-active' : ''}
+				>
+					H1
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+					class={editor.isActive('heading', { level: 2 }) ? 'is-active' : ''}
+				>
+					H2
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+					class={editor.isActive('heading', { level: 3 }) ? 'is-active' : ''}
+				>
+					H3
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+					class={editor.isActive('heading', { level: 4 }) ? 'is-active' : ''}
+				>
+					H4
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}
+					class={editor.isActive('heading', { level: 5 }) ? 'is-active' : ''}
+				>
+					H5
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}
+					class={editor.isActive('heading', { level: 6 }) ? 'is-active' : ''}
+				>
+					H6
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleBulletList().run()}
+					class={editor.isActive('bulletList') ? 'is-active' : ''}
+				>
+					Bullet list
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleOrderedList().run()}
+					class={editor.isActive('orderedList') ? 'is-active' : ''}
+				>
+					Ordered list
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleCodeBlock().run()}
+					class={editor.isActive('codeBlock') ? 'is-active' : ''}
+				>
+					Code block
+				</button>
+				<button
+					on:click={() => editor.chain().focus().toggleBlockquote().run()}
+					class={editor.isActive('blockquote') ? 'is-active' : ''}
+				>
+					Blockquote
+				</button>
+				<button on:click={() => editor.chain().focus().setHorizontalRule().run()}>
+					Horizontal rule
+				</button>
+				<button on:click={() => editor.chain().focus().setHardBreak().run()}>Hard break</button>
+				<button
+					on:click={() => editor.chain().focus().undo().run()}
+					disabled={!editor.can().chain().focus().undo().run()}
+				>
+					Undo
+				</button>
+				<button
+					on:click={() => editor.chain().focus().redo().run()}
+					disabled={!editor.can().chain().focus().redo().run()}
+				>
+					Redo
+				</button>
+			</div>
+		</div>
 	{/if}
+
+	<div bind:this={element} />
 </div>
 
 <style>
-	div {
-		position: relative;
-		height: 100%;
-		width: 100%;
+	.button-group {
+		border: 1px gray solid;
+		& > button {
+			padding: 5px;
+
+			&.is-active {
+				background-color: theme('colors.orange.300');
+			}
+		}
 	}
 </style>

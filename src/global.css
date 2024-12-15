@@ -2,7 +2,7 @@
 	--footer-status-bar-height: 24px;
 	--hover-color: theme('colors.orange.200');
 	--border-color: theme('colors.slate.400');
-  --title-bar-height: 30px;
+	--title-bar-height: 30px;
 }
 
 html {
@@ -42,6 +42,7 @@ html {
 	}
 }
 
-.ce-toolbar__plus:hover, .ce-toolbar__settings-btn:hover {
-  background-color: var(--hover-color);
+.ce-toolbar__plus:hover,
+.ce-toolbar__settings-btn:hover {
+	background-color: var(--hover-color);
 }
