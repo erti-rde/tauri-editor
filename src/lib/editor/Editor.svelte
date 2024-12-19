@@ -9,10 +9,10 @@
 	import { Editor } from '@tiptap/core';
 	import StarterKit from '@tiptap/starter-kit';
 	import TextAlign from '@tiptap/extension-text-align';
-
 	import type { TiptapEditorHTMLElement } from '@tiptap/core';
 
 	import ToolBar from './ToolBar.svelte';
+	import BubbleMenu from './BubbleMenu.svelte';
 
 	let element: TiptapEditorHTMLElement;
 	let styles: HTMLElement;
@@ -192,6 +192,7 @@
 		<div class="sticky top-0 z-50 transition-shadow duration-200">
 			<ToolBar {editor} on:switch={toggleView} on:export={exportToPdf} />
 		</div>
+		<BubbleMenu {editor} />
 	{/if}
 	<div class="flex size-full justify-center overflow-x-auto bg-[#f9fbfd] px-4">
 		<div class="flex w-[816px] min-w-max justify-center py-4">
