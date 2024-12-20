@@ -9,14 +9,9 @@ use tauri::Manager;
 
 static INIT: Once = Once::new();
 
-pub fn initialize_tracing() {
-    INIT.call_once(|| {
-        tracing_subscriber::fmt::init();
-    });
-}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    initialize_tracing();
 
     tauri::Builder::default()
         .plugin(
