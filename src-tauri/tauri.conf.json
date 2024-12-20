@@ -21,6 +21,11 @@
 			"csp": null
 		}
 	},
+	"plugins": {
+		"sql": {
+			"preload": ["sqlite:magnum_opus_test.db"]
+		}
+	},
 	"bundle": {
 		"active": true,
 		"targets": "all",
@@ -30,6 +35,7 @@
 			"icons/128x128@2x.png",
 			"icons/icon.icns",
 			"icons/icon.ico"
-		]
+		],
+		"resources": ["resources/**/*"]
 	}
 }

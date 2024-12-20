@@ -1,6 +1,11 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import Database from '@tauri-apps/plugin-sql';
+
 	import { Explorer, Editor, StatusFooter, SidePanel, Landing, PdfReader } from '$lib';
 	import { currentFileStore } from '$lib/stores/openFileStore';
+	import { dbStore } from '$lib/stores/db';
+	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
 	let isExplorerOpen = true;
 	let vaultIsOpen = false;
@@ -12,6 +17,22 @@
 	$: isItPdf = () => {
 		return $currentFileStore && $currentFileStore.endsWith('.pdf');
 	};
+
+	async function handleProjectOpening() {
+		vaultIsOpen = true;
+		await extractAndChunkPdfs();
+	}
+
+	onMount(async () => {
+		try {
+			dbStore.setLoading(true);
+			const db = await Database.load('sqlite:magnum_opus_test.db');
+			dbStore.setDb(db);
+		} catch (error) {
+			dbStore.setError(error as Error);
+			console.error('Failed to load database:', error);
+		}
+	});
 </script>
 
 <div
@@ -33,7 +54,7 @@
 		</div>
 	{:else}
 		<div class="my-auto flex h-full w-full items-center justify-center">
-			<Landing on:projectOpen={() => (vaultIsOpen = true)} />
+			<Landing on:projectOpen={handleProjectOpening} />
 		</div>
 	{/if}
 </div>

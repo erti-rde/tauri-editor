@@ -1,7 +1,9 @@
+use crate::ml::ML_STATE;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use core::future::Future;
 use core::pin::Pin;
 use headless_chrome::{types::PrintToPdfOptions, Browser, LaunchOptions};
+use ndarray::{Array2, Axis, Ix2};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -13,6 +15,12 @@ pub struct FileItem {
     path: String,
     is_dir: bool,
     children: Option<Vec<FileItem>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EmbeddingResult {
+    chunk_text: String,
+    embedding: Vec<f32>,
 }
 
 // Helper function to handle the recursive part
@@ -113,4 +121,69 @@ pub async fn print_pdf_file(current_dir: String) -> Result<(), String> {
     println!("PDF successfully created from local web page.");
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn extract_pdf(pdf_path: String) -> Result<String, String> {
+    let bytes = std::fs::read(pdf_path).map_err(|e| format!("Failed to read PDF file: {}", e))?;
+
+    let out = pdf_extract::extract_text_from_mem(&bytes)
+        .map_err(|e| format!("Failed to extract text from PDF: {}", e))?;
+
+    Ok(out)
+}
+
+#[tauri::command]
+pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
+    let ml_state = ML_STATE
+        .get()
+        .ok_or_else(|| "ML state not initialized".to_string())?;
+
+    // Encode our input strings. `encode_batch` will pad each input to be the same length.
+    let encodings = ml_state
+        .tokenizer
+        .encode_batch(chunks.clone(), false)
+        .map_err(|e| e.to_string())?;
+
+    // Get the padded length of each encoding.
+    let padded_token_length = encodings[0].len();
+
+    // Get our token IDs & mask as a flattened array.
+    let ids: Vec<i64> = encodings
+        .iter()
+        .flat_map(|e| e.get_ids().iter().map(|i| *i as i64))
+        .collect();
+    let mask: Vec<i64> = encodings
+        .iter()
+        .flat_map(|e| e.get_attention_mask().iter().map(|i| *i as i64))
+        .collect();
+
+    // Convert our flattened arrays into 2-dimensional tensors of shape [N, L].
+    let a_ids = Array2::from_shape_vec([chunks.len(), padded_token_length], ids).unwrap();
+    let a_mask = Array2::from_shape_vec([chunks.len(), padded_token_length], mask).unwrap();
+
+    // Run the model.
+    let outputs = ml_state
+        .session
+        .run(ort::inputs![a_ids, a_mask].map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+
+    // Extract our embeddings tensor and convert it to a strongly-typed 2-dimensional array.
+    let embeddings = outputs[1]
+        .try_extract_tensor::<f32>()
+        .map_err(|e| e.to_string())?
+        .into_dimensionality::<Ix2>()
+        .unwrap();
+
+    let mut results = Vec::new();
+
+    for (i, chunk) in chunks.iter().enumerate() {
+        let embedding = embeddings.index_axis(Axis(0), i).to_vec();
+        results.push(EmbeddingResult {
+            chunk_text: chunk.clone(),
+            embedding,
+        });
+    }
+
+    Ok(results)
 }

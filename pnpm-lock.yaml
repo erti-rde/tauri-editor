@@ -47,6 +47,9 @@ importers:
       iconify-icon:
         specifier: ^2.1.0
         version: 2.1.0
+      llm-chunk:
+        specifier: ^0.0.1
+        version: 0.0.1
       pdfjs-dist:
         specifier: ^4.8.69
         version: 4.9.155
@@ -1404,6 +1407,9 @@ packages:
 
   linkify-it@5.0.0:
     resolution: {integrity: sha512-5aHCbzQRADcdP+ATqnDuhhJ/MRIqDkZX5pyjFHRRysS8vZ5AbqGEoFIb6pYHPZ+L/OC2Lc+xT8uHVVR5CAK/wQ==}
+
+  llm-chunk@0.0.1:
+    resolution: {integrity: sha512-n9fHgsSiJb7vXZiC5c4XV6rme+tC7WX/cWH6EJvPPmMOMwOZ9xdg/U9LY5Qhmixd3K1PdRB0FVOdzoJF2HUZbg==}
 
   local-pkg@0.5.0:
     resolution: {integrity: sha512-ok6z3qlYyCDS4ZEU27HaU6x/xZa9Whf8jD4ptH5UZTQYZVYeb9bnZ3ojVhiJNLiXK1Hfc0GNbLXcmZ5plLDDBg==}
@@ -3423,6 +3429,8 @@ snapshots:
   linkify-it@5.0.0:
     dependencies:
       uc.micro: 2.1.0
+
+  llm-chunk@0.0.1: {}
 
   local-pkg@0.5.0:
     dependencies:

@@ -63,6 +63,7 @@
 		"@tiptap/pm": "^2.10.3",
 		"@tiptap/starter-kit": "^2.10.3",
 		"iconify-icon": "^2.1.0",
+		"llm-chunk": "^0.0.1",
 		"pdfjs-dist": "^4.8.69"
 	}
 }

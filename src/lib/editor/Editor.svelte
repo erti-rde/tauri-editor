@@ -50,12 +50,16 @@
 				editor = editor;
 			},
 			onUpdate: async ({ editor }) => {
+				const content = editor.getHTML();
+
+				console.log('Saving content:', content); // Debug log
+
 				const html = `
             <html>
                 ${headNode.innerHTML}
                 <body>
                 <div class="tiptap bg-orange-400">
-                    ${editor.getHTML().replaceAll(/<p><\/p>/g, '<p><br></p>')}
+                    ${content.replaceAll(/<p><\/p>/g, '<p><br></p>')}
                 </div>
                     </body>
             </html>
@@ -90,6 +94,8 @@
 		}
 
 		const fileData = await readTextFile(MagnumOpusPath);
+		console.log('Loading content:', fileData); // Debug log
+
 		return fileData;
 	}
 </script>
@@ -98,7 +104,9 @@
 	<style bind:this={styles}>
 		/* Basic editor styles */
 		.tiptap {
-			:first-child {
+			font-family: Arial, sans-serif;
+
+			& :first-child {
 				margin-top: 0;
 			}
 			/* Heading styles */
