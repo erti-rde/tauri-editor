@@ -40,7 +40,14 @@ jobs:
       - name: Setup Visual Studio 2022
         uses: microsoft/setup-msbuild@v1
         with:
-          vs-version: '[17.0,18.0)'
+          vs-version: '17.11'
+
+      - name: Install Visual C++ components
+        run: |
+          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" modify `
+            --installPath "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise" `
+            --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            --quiet --norestart --nocache
 
       - name: install pnpm
         uses: pnpm/action-setup@v4
