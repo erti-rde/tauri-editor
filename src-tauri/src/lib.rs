@@ -3,11 +3,9 @@ mod db;
 mod ml;
 
 use commands::*;
-use std::sync::Once;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
 
-static INIT: Once = Once::new();
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
