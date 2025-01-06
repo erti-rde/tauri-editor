@@ -63,6 +63,11 @@ jobs:
       - name: Install dependencies (Windows only)
         uses: microsoft/setup-msbuild@v2
 
+      - name: Install msvc
+        uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: x64
+
       - name: Rust setup
         run: rustup update --no-self-update
 
