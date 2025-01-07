@@ -69,7 +69,11 @@ jobs:
           arch: x64
 
       - name: Rust setup
-        run: rustup update --no-self-update
+        run: |
+            rustup update --no-self-update
+            rustup toolchain install stable-x86_64-pc-windows-gnu
+            rustup default stable-x86_64-pc-windows-gnu
+
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
