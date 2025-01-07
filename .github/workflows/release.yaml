@@ -67,12 +67,17 @@ jobs:
         uses: TheMrMilchmann/setup-msvc-dev@v3
         with:
           arch: x64
-
+          
+      - name: Print PATH
+        run: echo $env:PATH
+        
       - name: Rust setup
         run: |
             rustup update --no-self-update
+            rustc --print target-list
             rustup toolchain install stable-x86_64-pc-windows-gnu
             rustup default stable-x86_64-pc-windows-gnu
+            rustc --print target-list
 
 
       - name: Rust cache
