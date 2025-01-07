@@ -29,7 +29,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest]
+        include:
+          - platform: "windows-latest"
+            args: "--target x86_64-pc-windows-msvc"
+            
     runs-on: ${{ matrix.platform }}
     needs: [changelog]
     steps:
@@ -60,26 +63,19 @@ jobs:
       #     sudo apt-get update
       #     sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
       
-      - name: Install dependencies (Windows only)
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Install msvc
-        uses: TheMrMilchmann/setup-msvc-dev@v3
-        with:
-          arch: x64
-          
+         
       - name: Print PATH
         run: echo $env:PATH
         
       - name: Rust setup
         run: |
             rustup update --no-self-update
-            rustc --print target-list
-            rustup toolchain install stable-x86_64-pc-windows-gnu
-            rustup default stable-x86_64-pc-windows-gnu
+            rustup target add x86_64-pc-windows-msvc
             rustc --print target-list
 
-
+      - name: Print PATH again
+        run: echo $env:PATH
+        
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
@@ -122,6 +118,7 @@ jobs:
           releaseBody: 'See the assets to download and install this version.'
           releaseDraft: false
           prerelease: false
+          args: ${{ matrix.args }}
           # releaseCommitish: 'main'
           # repo: 'eye-cite'
           # owner: 'akomiqaia'
