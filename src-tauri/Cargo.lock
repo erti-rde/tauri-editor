@@ -7,7 +7,6 @@ name = "Erti"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
- "esaxx-rs 0.1.10 (git+https://github.com/thewh1teagle/esaxx-rs.git?branch=feat/dynamic-msvc-link)",
  "headless_chrome",
  "ndarray",
  "ort",
@@ -1169,14 +1168,6 @@ name = "esaxx-rs"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d817e038c30374a4bcb22f94d0a8a0e216958d4c3dcde369b1439fec4bdda6e6"
-dependencies = [
- "cc",
-]
-
-[[package]]
-name = "esaxx-rs"
-version = "0.1.10"
-source = "git+https://github.com/thewh1teagle/esaxx-rs.git?branch=feat/dynamic-msvc-link#3c8ac57d245ab328f7c71953b7c116a8d1d5498f"
 dependencies = [
  "cc",
 ]
@@ -5196,7 +5187,7 @@ checksum = "3b08cc37428a476fc9e20ac850132a513a2e1ce32b6a31addf2b74fa7033b905"
 dependencies = [
  "aho-corasick",
  "derive_builder",
- "esaxx-rs 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "esaxx-rs",
  "getrandom 0.2.15",
  "indicatif",
  "itertools 0.12.1",
