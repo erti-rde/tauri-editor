@@ -66,9 +66,11 @@ export async function extractAndChunkPdfs() {
 		console.log({ lastInsertResult });
 		documentId = lastInsertResult[0].id as number;
 		const pdfFilePath = await pathJoin(currentDir, file_name);
+		console.log(`🚀 ~ pdfFilePath to tokenise:`, pdfFilePath);
 		const pdfOutput = (await invoke('extract_pdf', {
 			pdfPath: pdfFilePath
 		})) as string;
+    console.log(`🚀 ~ pdfOutput that got tokenised:`, pdfOutput);
 		const chunks = chunk(pdfOutput, { minLength: 100, splitter: 'sentence' });
 		const embeddingResults = (await invoke('embed_chunks', {
 			chunks

@@ -129,12 +129,13 @@ pub async fn extract_pdf(pdf_path: String) -> Result<String, String> {
 
     let out = pdf_extract::extract_text_from_mem(&bytes)
         .map_err(|e| format!("Failed to extract text from PDF: {}", e))?;
-
+    println!("PDF extract output {:?}", out);
     Ok(out)
 }
 
 #[tauri::command]
 pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
+  println!("chunks array {:?}", chunks);
     let ml_state = ML_STATE
         .get()
         .ok_or_else(|| "ML state not initialized".to_string())?;
