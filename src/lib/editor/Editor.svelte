@@ -88,7 +88,9 @@
 
 	async function getDocumentData() {
 		const MagnumOpusPath = await pathJoin(currentDir, 'magnum_opus.html');
+		console.log(`🚀 ~ MagnumOpusPath:`, MagnumOpusPath);
 		const fileExists = await exists(MagnumOpusPath);
+		console.log(`🚀 ~ fileExists:`, fileExists);
 		if (!fileExists) {
 			return {};
 		}
