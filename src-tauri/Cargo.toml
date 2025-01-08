@@ -33,3 +33,6 @@ pdf-extract = "0.7.10"
 ort = "=2.0.0-rc.9"
 ndarray = "0.16.1"
 tokenizers = "0.20.1"
+
+[patch.crates-io]
+esaxx-rs = { git = "https://github.com/thewh1teagle/esaxx-rs.git", branch = "feat/dynamic-msvc-link" }
