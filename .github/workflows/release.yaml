@@ -122,4 +122,4 @@ jobs:
           # releaseCommitish: 'main'
           # repo: 'eye-cite'
           # owner: 'akomiqaia'
-          # includeDebug: true
+          includeDebug: true
