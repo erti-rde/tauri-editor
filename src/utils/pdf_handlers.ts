@@ -42,8 +42,8 @@ async function selectQuery(query: string, params?: any[]) {
 }
 
 export async function extractAndChunkPdfs() {
-	await executeQuery('delete from chunks;');
-	await executeQuery('delete from documents;');
+	// await executeQuery('delete from chunks;');
+	// await executeQuery('delete from documents;');
 	// for testing we will do one file only
 	// TODO: we will need a function that will check the whole dir and run rust function to extract it
 	const fileSystem = get(fileSystemStore);

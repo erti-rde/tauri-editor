@@ -4,6 +4,7 @@
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { readTextFile, exists, writeTextFile } from '@tauri-apps/plugin-fs';
 	import { fileSystemStore } from '$lib/stores/fileSystem';
+  import { currentFileStore } from '$lib/stores/openFileStore';
 	import { invoke } from '@tauri-apps/api/core';
 
 	import { Editor } from '@tiptap/core';
@@ -21,6 +22,7 @@
 	let currentDir = '';
 
 	onMount(async () => {
+    const readerExtension = $currentFileStore?.endsWith(".json") ? 'json' : 'html'
 		const headNode = document.createElement('head');
 		const stylesNode = document.createElement('style');
 		stylesNode.innerHTML = styles.innerHTML;
@@ -44,7 +46,7 @@
 					types: ['heading', 'paragraph']
 				})
 			],
-			content: await getDocumentData(),
+			content: await getDocumentData(readerExtension),
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
@@ -65,8 +67,9 @@
             </html>
         `;
 				const pathToSave = await pathJoin(currentDir, 'magnum_opus.html');
-
+        const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
 				await writeTextFile(pathToSave, html);
+        await writeTextFile(pathToSaveJson, JSON.stringify(editor.getJSON()));
 			}
 		});
 	});
@@ -86,8 +89,8 @@
 		}
 	}
 
-	async function getDocumentData() {
-		const MagnumOpusPath = await pathJoin(currentDir, 'magnum_opus.html');
+	async function getDocumentData(ext: string) {
+		const MagnumOpusPath = await pathJoin(currentDir, `magnum_opus.${ext}`);
 		console.log(`🚀 ~ MagnumOpusPath:`, MagnumOpusPath);
 		const fileExists = await exists(MagnumOpusPath);
 		console.log(`🚀 ~ fileExists:`, fileExists);
@@ -98,7 +101,7 @@
 		const fileData = await readTextFile(MagnumOpusPath);
 		console.log('Loading content:', fileData); // Debug log
 
-		return fileData;
+		return ext == "json" ? JSON.parse(fileData) : fileData;
 	}
 </script>
 
