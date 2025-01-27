@@ -1,100 +1,154 @@
 import { invoke } from '@tauri-apps/api/core';
-import { join as pathJoin } from '@tauri-apps/api/path';
 import { chunk } from 'llm-chunk';
-
 import { get } from 'svelte/store';
-import { dbStore } from '$lib/stores/db';
+
+import { selectQuery, executeQuery } from './db';
 import { fileSystemStore } from '$lib/stores/fileSystem';
+import { setStatus } from '$lib/statusFooter/StatusFooter.svelte';
+import { errorToast, successToast } from './toasts';
+
+import type { FileItem } from '$lib/stores/fileSystem';
 
 interface EmbeddingResult {
 	chunk_text: string;
 	embedding: number[];
 }
 
-async function executeQuery(query: string, params?: any[]) {
-	const dbState = get(dbStore);
-	if (dbState.db) {
-		try {
-			const result = await dbState.db.execute(query, params);
+async function processSinglePdf(filePath: string, fileName: string): Promise<void> {
+	try {
+		// Check if document exists within the transaction
+		const existingDoc = await selectQuery('SELECT id FROM documents WHERE file_name = ?', [
+			fileName
+		]);
 
-			return result;
-		} catch (error) {
-			console.error('Query failed:', error);
-			throw error;
+		const documentId = existingDoc[0].id as string;
+
+		const pdfOutput = (await invoke('extract_pdf', { pdfPath: filePath })) as string;
+		const chunks = chunk(pdfOutput, { minLength: 100, splitter: 'sentence' });
+		const embeddingResults = (await invoke('embed_chunks', { chunks })) as EmbeddingResult[];
+
+		// Prepare all chunk insertions
+		for (const result of embeddingResults) {
+			await executeQuery(
+				`INSERT INTO chunks (document_id, chunk_text, embedding)
+                 VALUES (?, ?, ?)`,
+				[documentId, result.chunk_text, JSON.stringify(result.embedding)]
+			);
 		}
+
+		successToast(`${fileName} processed successfully`);
+	} catch (error) {
+		await executeQuery('ROLLBACK');
+		errorToast(`Failed to process ${fileName}: ${error.message}`);
+		throw error;
 	}
-	throw new Error('Database not initialized');
 }
 
-async function selectQuery(query: string, params?: any[]) {
-	const dbState = get(dbStore);
-	if (dbState.db) {
-		try {
-			const result = await dbState.db.select(query, params);
-
-			return result;
-		} catch (error) {
-			console.error('Query failed:', error);
-			throw error;
+// Helper function to recursively find PDF files
+function findPdfFiles(items: FileItem[]): FileItem[] {
+	let pdfs: FileItem[] = [];
+	for (const item of items) {
+		if (!item.is_dir && item.name.toLowerCase().endsWith('.pdf')) {
+			pdfs.push(item);
+		}
+		if (item.children) {
+			pdfs = pdfs.concat(findPdfFiles(item.children));
 		}
 	}
-	throw new Error('Database not initialized');
+	console.log({ pdfs });
+	return pdfs;
+}
+
+async function getExistingDocuments(): Promise<Set<string>> {
+	const existingDocs = await selectQuery('SELECT file_name FROM documents');
+	return new Set(existingDocs.map((doc) => doc.file_name));
+}
+
+async function createDocumentBatch(pdfFiles: FileItem[]) {
+	try {
+		await executeQuery('BEGIN TRANSACTION');
+
+		for (const fileName of pdfFiles) {
+			const result = await executeQuery('INSERT INTO documents (file_name) VALUES (?)', [
+				fileName.name
+			]);
+			console.log({ result });
+		}
+
+		await executeQuery('COMMIT');
+	} catch (error) {
+		await executeQuery('ROLLBACK');
+		throw error;
+	}
 }
 
 export async function extractAndChunkPdfs() {
 	// await executeQuery('delete from chunks;');
 	// await executeQuery('delete from documents;');
-	// for testing we will do one file only
-	// TODO: we will need a function that will check the whole dir and run rust function to extract it
 	const fileSystem = get(fileSystemStore);
-	const currentDir = fileSystem.currentPath;
-	const file_name = 'yeoh-2001-postcolonial-cities.pdf';
-	// Check if document already exists
-	const existingDoc = await selectQuery('SELECT id FROM documents WHERE file_name = ?', [
-		file_name
-	]);
-	console.log({ existingDoc });
-	let documentId: number;
 
-	if (existingDoc.length > 0) {
-		documentId = existingDoc[0].id;
-	} else {
-		// Insert new document
-		await executeQuery('INSERT INTO documents (file_name) VALUES (?)', [file_name]);
-		// Get the last inserted ID
-		const lastInsertResult = await selectQuery('SELECT last_insert_rowid() as id');
-		console.log({ lastInsertResult });
-		documentId = lastInsertResult[0].id as number;
-		const pdfFilePath = await pathJoin(currentDir, file_name);
-		console.log(`🚀 ~ pdfFilePath to tokenise:`, pdfFilePath);
-		const pdfOutput = (await invoke('extract_pdf', {
-			pdfPath: pdfFilePath
-		})) as string;
-    console.log(`🚀 ~ pdfOutput that got tokenised:`, pdfOutput);
-		const chunks = chunk(pdfOutput, { minLength: 100, splitter: 'sentence' });
-		const embeddingResults = (await invoke('embed_chunks', {
-			chunks
-		})) as EmbeddingResult[];
+	try {
+		// Get all PDF files recursively (you'll need to implement this Rust function)
+		const pdfFiles = findPdfFiles(fileSystem.items);
 
-		// Use a transaction for batch insert
-		await executeQuery('BEGIN TRANSACTION');
+		// Get existing documents from database
+		const existingDocs = await getExistingDocuments();
+		// Filter out already processed PDFs
+		const newPdfs = pdfFiles.filter((file) => !existingDocs.has(file.name));
 
-		try {
-			for (const result of embeddingResults) {
-				await executeQuery(
-					`INSERT INTO chunks (document_id, chunk_text, embedding)
-                     VALUES (?, ?, ?)`,
-					[documentId, result.chunk_text, JSON.stringify(result.embedding)]
-				);
-			}
-
-			await executeQuery('COMMIT');
-		} catch (error) {
-			await executeQuery('ROLLBACK');
-			throw error;
+		if (newPdfs.length === 0) {
+			searchSimilarChunks();
+			return;
 		}
+
+		setStatus({
+			side: 'left',
+			message: `Found ${pdfFiles.length} PDF files (${newPdfs.length} new to process, ${pdfFiles.length - newPdfs.length} already processed)`,
+			type: 'info'
+		});
+
+		await createDocumentBatch(pdfFiles);
+		let processed = 0;
+
+		// Process PDFs concurrently in batches to avoid overwhelming the system
+		const batchSize = 3;
+		// Process PDFs concurrently in batches
+		for (let i = 0; i < newPdfs.length; i += batchSize) {
+			const batch = newPdfs.slice(i, i + batchSize);
+			await Promise.all(
+				batch.map(async (file) => {
+					try {
+						await processSinglePdf(file.path, file.name);
+						processed++;
+						setStatus({
+							side: 'left',
+							message: `Processing PDFs: ${processed}/${pdfFiles.length}`,
+							type: 'info'
+						});
+					} catch (error) {
+						console.error(`Error processing ${file.name}:`, error);
+					}
+				})
+			);
+		}
+
+		setStatus({
+			side: 'left',
+			message: `Completed processing ${processed} PDF files`,
+			type: 'success'
+		});
+
+		setTimeout(() => {
+			setStatus({});
+		}, 1500);
+	} catch (error) {
+		setStatus({
+			side: 'left',
+			message: `Error processing PDFs: ${error.message}`,
+			type: 'error'
+		});
+		console.error('Error processing PDFs:', error);
 	}
-	await searchSimilarChunks('');
 }
 
 export async function searchSimilarChunks(query: string, topK: number = 5) {
