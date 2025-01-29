@@ -135,7 +135,6 @@ pub async fn extract_pdf(pdf_path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
-  println!("chunks array {:?}", chunks);
     let ml_state = ML_STATE
         .get()
         .ok_or_else(|| "ML state not initialized".to_string())?;

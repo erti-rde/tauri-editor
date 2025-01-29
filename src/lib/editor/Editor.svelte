@@ -4,7 +4,7 @@
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { readTextFile, exists, writeTextFile } from '@tauri-apps/plugin-fs';
 	import { fileSystemStore } from '$lib/stores/fileSystem';
-  import { currentFileStore } from '$lib/stores/openFileStore';
+	import { currentFileStore } from '$lib/stores/openFileStore';
 	import { invoke } from '@tauri-apps/api/core';
 
 	import { Editor } from '@tiptap/core';
@@ -14,6 +14,8 @@
 
 	import ToolBar from './ToolBar.svelte';
 	import BubbleMenu from './BubbleMenu.svelte';
+	import Result from './citation/Result.svelte';
+	import { Citation } from './citation/Citation';
 
 	let element: TiptapEditorHTMLElement;
 	let styles: HTMLElement;
@@ -22,7 +24,7 @@
 	let currentDir = '';
 
 	onMount(async () => {
-    const readerExtension = $currentFileStore?.endsWith(".json") ? 'json' : 'html'
+		const readerExtension = $currentFileStore?.endsWith('.json') ? 'json' : 'html';
 		const headNode = document.createElement('head');
 		const stylesNode = document.createElement('style');
 		stylesNode.innerHTML = styles.innerHTML;
@@ -44,7 +46,8 @@
 				StarterKit,
 				TextAlign.configure({
 					types: ['heading', 'paragraph']
-				})
+				}),
+				Citation
 			],
 			content: await getDocumentData(readerExtension),
 			onTransaction: () => {
@@ -67,9 +70,9 @@
             </html>
         `;
 				const pathToSave = await pathJoin(currentDir, 'magnum_opus.html');
-        const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
+				const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
 				await writeTextFile(pathToSave, html);
-        await writeTextFile(pathToSaveJson, JSON.stringify(editor.getJSON()));
+				await writeTextFile(pathToSaveJson, JSON.stringify(editor.getJSON()));
 			}
 		});
 	});
@@ -101,7 +104,31 @@
 		const fileData = await readTextFile(MagnumOpusPath);
 		console.log('Loading content:', fileData); // Debug log
 
-		return ext == "json" ? JSON.parse(fileData) : fileData;
+		return ext == 'json' ? JSON.parse(fileData) : fileData;
+	}
+
+	// Citation handling
+	//
+	let selectedText = '';
+	let showCitationPanel = false;
+
+	function handleCitationRequest(event: CustomEvent) {
+		selectedText = event.detail.selectedText;
+		showCitationPanel = true;
+	}
+
+	function handleCitationSelect(event: CustomEvent) {
+		const { citation } = event.detail;
+		editor.commands.insertCitation({
+			id: 'citation',
+			text: citation.inlineCitation
+		});
+		showCitationPanel = false;
+	}
+
+	function handlePanelClose() {
+		showCitationPanel = false;
+		selectedText = '';
 	}
 </script>
 
@@ -205,7 +232,11 @@
 		<div class="sticky top-0 z-50 transition-shadow duration-200">
 			<ToolBar {editor} on:switch={toggleView} on:export={exportToPdf} />
 		</div>
-		<BubbleMenu {editor} />
+		<BubbleMenu {editor} on:citation-request={handleCitationRequest} />
+	{/if}
+
+	{#if showCitationPanel}
+		<Result {selectedText} on:select={handleCitationSelect} on:close-panel={handlePanelClose} />
 	{/if}
 	<div class="flex size-full justify-center overflow-x-auto bg-[#f9fbfd] px-4">
 		<div class="flex w-[816px] min-w-max justify-center py-4">

@@ -9,7 +9,7 @@ import { errorToast, successToast } from './toasts';
 
 import type { FileItem } from '$lib/stores/fileSystem';
 
-interface EmbeddingResult {
+export interface EmbeddingResult {
 	chunk_text: string;
 	embedding: number[];
 }
@@ -97,7 +97,6 @@ export async function extractAndChunkPdfs() {
 		const newPdfs = pdfFiles.filter((file) => !existingDocs.has(file.name));
 
 		if (newPdfs.length === 0) {
-			searchSimilarChunks();
 			return;
 		}
 
@@ -149,62 +148,4 @@ export async function extractAndChunkPdfs() {
 		});
 		console.error('Error processing PDFs:', error);
 	}
-}
-
-export async function searchSimilarChunks(query: string, topK: number = 5) {
-	query = 'colonial development and postmodernism are related to each other';
-	try {
-		// Get query embedding
-		const queryEmbeddingResult = (await invoke('embed_chunks', {
-			chunks: [query]
-		})) as EmbeddingResult[];
-
-		const queryEmbedding = queryEmbeddingResult[0].embedding;
-
-		// Get all chunks and their embeddings from database
-		const chunks = await selectQuery('SELECT chunk_text, embedding FROM chunks');
-		console.log({ chunks });
-		// Calculate similarities
-		const similarities = chunks.map((chunk: any) => {
-			const chunkEmbedding = JSON.parse(chunk.embedding);
-			const similarity = cosineSimilarity(queryEmbedding, chunkEmbedding);
-			return {
-				text: chunk.chunk_text,
-				similarity
-			};
-		});
-
-		// Sort by similarity in descending order and take top K
-		const topResults = similarities.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
-		console.log({ topResults });
-		return topResults;
-	} catch (error) {
-		console.error('Error in similarity search:', error);
-		throw error;
-	}
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-	if (a.length !== b.length) {
-		throw new Error('Vectors must have same length');
-	}
-
-	let dotProduct = 0;
-	let normA = 0;
-	let normB = 0;
-
-	for (let i = 0; i < a.length; i++) {
-		dotProduct += a[i] * b[i];
-		normA += a[i] * a[i];
-		normB += b[i] * b[i];
-	}
-
-	normA = Math.sqrt(normA);
-	normB = Math.sqrt(normB);
-
-	if (normA === 0 || normB === 0) {
-		return 0;
-	}
-
-	return dotProduct / (normA * normB);
 }

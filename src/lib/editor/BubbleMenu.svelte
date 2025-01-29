@@ -1,14 +1,16 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, createEventDispatcher } from 'svelte';
 
-	import type { Editor } from '@tiptap/core';
+	import { Editor } from '@tiptap/core';
 
 	import Bold from '~icons/lucide/bold';
 	import Italic from '~icons/lucide/italic';
 	import StrikeThrough from '~icons/lucide/strikethrough';
+	import Citation from '~icons/lucide/quote';
 
 	import { BubbleMenuPlugin } from '@tiptap/extension-bubble-menu';
 
+	const dispatch = createEventDispatcher();
 	export let editor: Editor;
 	let element: HTMLElement;
 	const pluginKey = 'SvelteTiptapBubbleMenu';
@@ -23,6 +25,14 @@
 
 		return () => editor.unregisterPlugin(pluginKey);
 	});
+
+	function handleCitationClick() {
+		const selectedText = editor.state.selection.empty
+			? ''
+			: editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to);
+
+		dispatch('citation-request', { selectedText });
+	}
 </script>
 
 <div bind:this={element} style="visibility: hidden;">
@@ -51,6 +61,10 @@
 			on:click={() => editor.chain().focus().toggleStrike().run()}
 		>
 			<StrikeThrough class="h-4 w-4" />
+		</button>
+
+		<button class="bubble-btn" on:click={handleCitationClick}>
+			<Citation class="h-4 w-4" />
 		</button>
 	</div>
 </div>

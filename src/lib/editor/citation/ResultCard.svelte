@@ -3,10 +3,9 @@
 	import {
 		generateHarvardCitation,
 		generateHarvardInTextCitation
-	} from '../../utils/formaters/harvardStyle';
+	} from '$utils/formaters/harvardStyle';
 	import type { Citation } from '$types/citation';
 	import { Icon } from '$lib';
-	import { InlineCitation } from './Citation';
 
 	export let metadata: {
 		similarity: number;
@@ -33,21 +32,9 @@
 		pages: sourceMetadata.pages
 	};
 
-	// function handleFullReferencing() {
-	// 	navigator.clipboard.writeText(generateHarvardCitation(citationMetadata));
-	// }
-
-	// function handleInTextCitation() {
-	// 	navigator.clipboard.writeText(
-	// 		generateHarvardInTextCitation(citationMetadata, metadata.page.toString())
-	// 	);
-	// }
 	const dispatch = createEventDispatcher();
 	function generateCitation() {
-		const inlineCitation = generateHarvardInTextCitation(
-			citationMetadata,
-			metadata.page.toString()
-		);
+		const inlineCitation = generateHarvardInTextCitation(citationMetadata);
 		const fullCitation = generateHarvardCitation(citationMetadata);
 		dispatch('select', {
 			citation: {
@@ -79,16 +66,6 @@
 			<div class="flex grow flex-col justify-between px-5 py-4">
 				<p class="italic">{metadata.sentence}</p>
 			</div>
-			<!-- <div class="mb-[10px] mt-[10px]">
-				<div class="flex w-[150px] flex-col">
-					<button class="rounded bg-orange-300 px-2 py-1" on:click={handleFullReferencing}
-						>Full cite</button
-					>
-					<button class="rounded bg-orange-300 px-2 py-1" on:click={handleInTextCitation}
-						>In-text cite</button
-					>
-				</div>
-			</div> -->
 		</div>
 	</div>
 </div>
