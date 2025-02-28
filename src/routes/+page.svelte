@@ -47,7 +47,7 @@
 	</div>
 	{#if vaultIsOpen}
 		<div class:explorer={isExplorerOpen} class:explorer-closed={!isExplorerOpen}>
-			<Explorer {isExplorerOpen} {panelName} />
+			<Explorer {isExplorerOpen} />
 		</div>
 		<div class="editor overflow-y-auto">
 			{#if isItPdf()}

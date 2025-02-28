@@ -1,9 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
+	import { onMount, createEventDispatcher } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { load as loadStore } from '@tauri-apps/plugin-store';
 	import type { Store } from '@tauri-apps/plugin-store';
+	import { Icon } from '$lib';
+
+	export let isOpen = false;
+
+	const dispatch = createEventDispatcher();
 
 	// Store for settings
 	let store: Store;
@@ -12,6 +16,7 @@
 	let selectedLocale = '';
 	let citationStyles: { name: string; download_url: string }[] = [];
 	let locales: { [key: string]: string[] } = {};
+	let activeTab = 'general';
 
 	// Load citation styles and locales from resources folder
 	async function loadResources() {
@@ -40,87 +45,329 @@
 
 	// Save settings
 	async function saveSettings() {
-		// Save citation style
-		let oldStyle = (await store.get('selectedStyle')) as string;
-		let cslXml = await store.get('cslXml');
+		try {
+			// Save citation style
+			let oldStyle = (await store.get('selectedStyle')) as string;
+			let oldStyleXml = (await store.get('cslXml')) as string;
 
-		if (oldStyle !== selectedStyle || !cslXml) {
-			await store.set('selectedStyle', selectedStyle);
-			const style = citationStyles.find((style) => style.name === selectedStyle);
-			const styleXml = await fetch(style.download_url).then((res) => res.text());
-			await store.set('cslXml', styleXml);
+			if (oldStyle !== selectedStyle || !oldStyleXml) {
+				await store.set('selectedStyle', selectedStyle);
+				const style = citationStyles.find((style) => style.name === selectedStyle);
+				if (style) {
+					console.log('Fetching new style XML from:', style.download_url);
+					try {
+						const response = await fetch(style.download_url);
+						if (!response.ok) {
+							throw new Error(`Failed to fetch style: ${response.status}`);
+						}
+						const styleXml = await response.text();
+
+						// Verify that we received valid XML
+						if (!styleXml || !styleXml.trim().startsWith('<')) {
+							console.error('Invalid style XML received:', styleXml?.substring(0, 100));
+							throw new Error('Invalid style XML');
+						}
+
+						console.log('Style XML fetched successfully');
+						await store.set('cslXml', styleXml);
+					} catch (error) {
+						console.error('Error fetching style:', error);
+						// If fetch fails, keep the old style selected
+						await store.set('selectedStyle', oldStyle);
+						throw error;
+					}
+				}
+			}
+
+			// Save locale
+			let oldLocale = (await store.get('selectedLocale')) as string;
+			let oldLocaleXml = (await store.get('localeXml')) as string;
+
+			if (oldLocale !== selectedLocale || !oldLocaleXml) {
+				await store.set('selectedLocale', selectedLocale);
+				// Construct the URL for the locale XML file
+				const localeUrl = `https://raw.githubusercontent.com/citation-style-language/locales/master/locales-${selectedLocale}.xml`;
+
+				try {
+					console.log('Fetching locale from:', localeUrl);
+					const response = await fetch(localeUrl);
+					if (!response.ok) {
+						throw new Error(`Failed to fetch locale: ${response.status}`);
+					}
+					const localeXml = await response.text();
+
+					// Verify that we received valid XML
+					if (!localeXml || !localeXml.trim().startsWith('<')) {
+						console.error('Invalid locale XML received:', localeXml?.substring(0, 100));
+						throw new Error('Invalid locale XML');
+					}
+
+					console.log('Locale XML fetched successfully');
+					await store.set('localeXml', localeXml);
+				} catch (error) {
+					console.error('Error fetching locale:', error);
+					// If fetch fails, keep the old locale selected
+					await store.set('selectedLocale', oldLocale);
+					throw error;
+				}
+			}
+
+			await store.set('wordCount', wordCount);
+
+			// Signal to reload citation engine
+			window.dispatchEvent(new CustomEvent('settings-updated'));
+
+			closeModal();
+		} catch (error) {
+			console.error('Error saving settings:', error);
+			alert('There was an error saving your settings. Please try again.');
 		}
+	}
 
-		// Save locale
-		let oldLocale = (await store.get('selectedLocale')) as string;
-		let localeXml = await store.get('localeXml');
+	function closeModal() {
+		dispatch('close');
+	}
 
-		if (oldLocale !== selectedLocale || !localeXml) {
-			await store.set('selectedLocale', selectedLocale);
-			// Construct the URL for the locale XML file
-			const localeUrl = `https://raw.githubusercontent.com/citation-style-language/locales/master/locales-${selectedLocale}.xml`;
-			const localeXml = await fetch(localeUrl).then((res) => res.text());
-			await store.set('localeXml', localeXml);
-		}
-
-		await store.set('wordCount', wordCount);
+	function setActiveTab(tab: string) {
+		activeTab = tab;
 	}
 
 	onMount(async () => {
 		store = await loadStore('settings-store.json');
-		wordCount = (await store.get('wordCount')) as number;
-		selectedStyle = (await store.get('selectedStyle')) as string;
+		wordCount = ((await store.get('wordCount')) as number) || 0;
+		selectedStyle = ((await store.get('selectedStyle')) as string) || '';
 		selectedLocale = ((await store.get('selectedLocale')) as string) || 'en-GB';
+		console.log({
+			wordCount,
+			selectedStyle,
+			selectedLocale
+		});
 		await loadResources();
 	});
 </script>
 
-<div class="settings-container p-4">
-	<h2 class="mb-6 text-xl font-bold">Settings</h2>
-
-	<div class="setting-section mb-6">
-		<h3 class="mb-2 text-lg font-semibold">Word Count</h3>
-		<input type="number" bind:value={wordCount} min="0" class="w-full rounded border p-2" />
-	</div>
-
-	<div class="setting-section mb-6">
-		<h3 class="mb-2 text-lg font-semibold">Citation Style</h3>
-		<select bind:value={selectedStyle} class="w-full rounded border p-2">
-			<option value="">Select a style</option>
-			{#each citationStyles as style}
-				<option value={style.name}>{style.name}</option>
-			{/each}
-		</select>
-	</div>
-
-	<!-- choose language locale -->
-	<div class="setting-section mb-6">
-		<h3 class="mb-2 text-lg font-semibold">Language</h3>
-		<select bind:value={selectedLocale} class="w-full rounded border p-2">
-			{#each Object.entries(locales) as [code, [native]]}
-				<option value={code}>{native}</option>
-			{/each}
-		</select>
-	</div>
-
-	<button
-		on:click={saveSettings}
-		class="rounded bg-orange-500 px-4 py-2 text-white hover:bg-orange-600"
+{#if isOpen}
+	<div
+		class="z-100 fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+		style="z-index: 100;"
 	>
-		Save Settings
-	</button>
-</div>
+		<button
+			class="absolute inset-0 z-0 h-full w-full bg-black bg-opacity-50"
+			on:click={closeModal}
+			aria-label="Close settings dialog"
+		/>
+		<dialog
+			open
+			class="relative z-10 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800"
+			aria-labelledby="settings-title"
+		>
+			<!-- Header -->
+			<div
+				class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700"
+			>
+				<h2 id="settings-title" class="text-xl font-semibold text-gray-800 dark:text-gray-100">
+					Settings
+				</h2>
+				<button
+					class="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+					on:click={closeModal}
+				>
+					<Icon icon="X" />
+				</button>
+			</div>
 
-<style>
-	input,
-	select {
-		background-color: var(--bg-color);
-		border-color: var(--border-color);
-	}
+			<!-- Content -->
+			<div class="flex flex-1 overflow-hidden">
+				<!-- Sidebar -->
+				<div class="dark:bg-gray-850 w-48 border-r border-gray-200 bg-gray-50 dark:border-gray-700">
+					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'appearance', label: 'Appearance' }] as tab}
+						<button
+							class="w-full border-l-2 px-4 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 {activeTab ===
+							tab.id
+								? 'border-orange-500 bg-gray-100 font-medium dark:bg-gray-700'
+								: 'border-transparent'}"
+							on:click={() => setActiveTab(tab.id)}
+						>
+							{tab.label}
+						</button>
+					{/each}
+				</div>
 
-	input:focus,
-	select:focus {
-		outline: none;
-		border-color: var(--focus-color);
-	}
-</style>
+				<!-- Settings panels -->
+				<div class="relative flex-1 bg-white dark:bg-gray-800">
+					<!-- General Settings -->
+					<div
+						class="absolute inset-0 overflow-y-auto {activeTab === 'general'
+							? 'block'
+							: 'hidden'} p-5"
+					>
+						<div class="mb-8">
+							<h3
+								class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100"
+							>
+								General Settings
+							</h3>
+
+							<div class="mb-6">
+								<label
+									for="word-count"
+									class="mb-2 block font-medium text-gray-700 dark:text-gray-300"
+								>
+									Word Count Target
+								</label>
+								<div class="relative">
+									<input
+										id="word-count"
+										type="number"
+										bind:value={wordCount}
+										min="0"
+										class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-orange-500 dark:focus:ring-orange-500"
+									/>
+								</div>
+								<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+									Set your target word count for documents
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Citation Settings -->
+					<div
+						class="absolute inset-0 overflow-y-auto {activeTab === 'citations'
+							? 'block'
+							: 'hidden'} p-5"
+					>
+						<div class="mb-8">
+							<h3
+								class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100"
+							>
+								Citation Settings
+							</h3>
+
+							<div class="mb-6">
+								<label
+									for="citation-style"
+									class="mb-2 block font-medium text-gray-700 dark:text-gray-300"
+								>
+									Citation Style
+								</label>
+								<div class="relative">
+									<select
+										id="citation-style"
+										bind:value={selectedStyle}
+										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-orange-500 dark:focus:ring-orange-500"
+									>
+										<option value="" disabled>Select a style</option>
+										{#each citationStyles as style}
+											<option value={style.name}>{style.name}</option>
+										{/each}
+									</select>
+									<div
+										class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
+									>
+										<svg
+											class="h-5 w-5 text-gray-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 9l-7 7-7-7"
+											></path>
+										</svg>
+									</div>
+								</div>
+								<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+									Choose your preferred citation style for references
+								</p>
+							</div>
+							<div class="mb-6">
+								<label
+									for="language"
+									class="mb-2 block font-medium text-gray-700 dark:text-gray-300"
+								>
+									Citation Language
+								</label>
+								<div class="relative">
+									<select
+										id="language"
+										bind:value={selectedLocale}
+										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-orange-500 dark:focus:ring-orange-500"
+									>
+										{#each Object.entries(locales) as [code, [native]]}
+											<option value={code}>{native}</option>
+										{/each}
+									</select>
+									<div
+										class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
+									>
+										<svg
+											class="h-5 w-5 text-gray-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 9l-7 7-7-7"
+											></path>
+										</svg>
+									</div>
+								</div>
+								<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+									Set the language for the citation
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Appearance Settings -->
+					<div
+						class="absolute inset-0 overflow-y-auto {activeTab === 'appearance'
+							? 'block'
+							: 'hidden'} p-5"
+					>
+						<div class="mb-8">
+							<h3
+								class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100"
+							>
+								Appearance Settings
+							</h3>
+
+							<div
+								class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700"
+							>
+								<p class="italic text-gray-600 dark:text-gray-300">
+									Appearance settings will be available in a future update.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Footer -->
+			<div
+				class="dark:bg-gray-850 flex justify-end space-x-3 border-t border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700"
+			>
+				<button
+					class="rounded-md border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+					on:click={closeModal}
+				>
+					Cancel
+				</button>
+				<button
+					class="rounded-md border border-orange-500 bg-orange-500 px-4 py-2 text-white transition-colors hover:bg-orange-600"
+					on:click={saveSettings}
+				>
+					Save changes
+				</button>
+			</div>
+		</dialog>
+	</div>
+{/if}

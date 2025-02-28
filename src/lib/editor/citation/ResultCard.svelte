@@ -4,15 +4,15 @@
 	import { Icon } from '$lib';
 	import { citationStore } from '$lib/stores/citationStore';
 
-	export let metadata: {
+	export let sentenceMetadata: {
 		similarity: number;
 		sentence: string;
-		page: number;
+		doi: string;
 		metadata: CitationItem;
 	};
 	const dispatch = createEventDispatcher();
 	function generateCitation() {
-		const inlineCitation = citationStore.getInlineCitation(metadata.metadata.id);
+		const inlineCitation = citationStore.getInlineCitation(sentenceMetadata.metadata.id);
 
 		dispatch('select', {
 			citation: {
@@ -27,9 +27,9 @@
 		<div class="br-bottom flex flex-col">
 			<div class="flex justify-around">
 				<span class="inline-block bg-orange-100 px-5 py-4"
-					>{Math.round(metadata.similarity * 100)}</span
+					>{Math.round(sentenceMetadata.similarity * 100)}</span
 				>
-				<span class="inline-block bg-orange-50 px-5 py-4">{metadata.metadata.title}</span>
+				<span class="inline-block bg-orange-50 px-5 py-4">{sentenceMetadata.metadata.title}</span>
 				<button
 					class="inline-block cursor-pointer bg-orange-300 px-5 py-4"
 					on:click={generateCitation}
@@ -38,7 +38,7 @@
 				</button>
 			</div>
 			<div class="flex grow flex-col justify-between px-5 py-4">
-				<p class="italic">{metadata.sentence}</p>
+				<p class="italic">{sentenceMetadata.sentence}</p>
 			</div>
 		</div>
 	</div>
