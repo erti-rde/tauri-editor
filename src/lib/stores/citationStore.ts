@@ -25,7 +25,7 @@ export interface CitationItem {
 	volume?: string;
 	issue?: string;
 	publisher?: string;
-	[key: string]: any; // Allow for other CSL-JSON properties
+	[key: string]: string | number | boolean | object | Array<unknown> | undefined; // Allow for other CSL-JSON properties
 }
 
 interface CitationState {
@@ -82,7 +82,9 @@ function createCitationStore() {
 
 		if (state.engine) {
 			const bib = state.engine.makeBibliography();
-			bibliography = bib[1].join('\n');
+			if (bib !== false) {
+				bibliography = bib[1].join('\n');
+			}
 		}
 		return bibliography;
 	}

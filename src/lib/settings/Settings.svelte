@@ -93,7 +93,7 @@
 		</select>
 	</div>
 
-	<!-- choose language localle -->
+	<!-- choose language locale -->
 	<div class="setting-section mb-6">
 		<h3 class="mb-2 text-lg font-semibold">Language</h3>
 		<select bind:value={selectedLocale} class="w-full rounded border p-2">
