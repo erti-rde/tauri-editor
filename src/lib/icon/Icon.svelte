@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChevronUp from '~icons/lucide/chevron-up';
 	import ChevronDown from '~icons/lucide/chevron-down';
 	import ChevronLeft from '~icons/lucide/chevron-left';
 	import ChevronRight from '~icons/lucide/chevron-right';
@@ -27,8 +28,10 @@
 	import FileOutput from '~icons/lucide/file-output';
 
 	import Settings from '~icons/lucide/settings';
+	import ExternalLink from '~icons/lucide/external-link';
 
 	const icons = {
+		ChevronUp,
 		ChevronDown,
 		ChevronLeft,
 		ChevronRight,
@@ -53,7 +56,8 @@
 		File,
 		FolderOpen,
 		FileOutput,
-		Settings
+		Settings,
+		ExternalLink
 	};
 
 	type Size = 's' | 'm' | 'l';

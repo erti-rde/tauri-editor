@@ -184,11 +184,10 @@
 
 <style>
 	.results-wrapper {
-		position: fixed;
-		top: var(--title-bar-height);
+		position: absolute;
 		right: 0;
 		width: 30%;
-		height: calc(100% - var(--title-bar-height));
+		height: calc(100% - var(--footer-status-bar-height) - var(--editor-toolbar-height));
 		background-color: white;
 		box-shadow: -5px 0 5px -5px rgba(0, 0, 0, 0.5);
 		z-index: 5;
