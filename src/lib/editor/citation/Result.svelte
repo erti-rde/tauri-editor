@@ -10,7 +10,6 @@
 	import type { EmbeddingResult } from '$utils/pdf_handlers';
 	import { selectQuery } from '$utils/db';
 	import { citationStore } from '$lib/stores/citationStore';
-	import type { CitationItem } from '$lib/stores/citationStore';
 
 	export let selectedText: string;
 	let open = true;
@@ -65,7 +64,7 @@
 			const queryEmbedding = queryEmbeddingResult[0].embedding;
 
 			// Get all chunks and their embeddings from database
-			const chunks = await selectQuery(`
+			const chunks = (await selectQuery(`
 			 SELECT
 				chunks.chunk_text,
 				chunks.embedding,
@@ -74,10 +73,10 @@
 			   chunks
 			JOIN
 			   documents ON chunks.document_id = documents.id
-			`);
+			`)) as { chunk_text: string; embedding: []; doi: string }[];
 
 			// Calculate similarities
-			const similarities = chunks.map((chunk: any) => {
+			const similarities = chunks.map((chunk) => {
 				const chunkEmbedding = JSON.parse(chunk.embedding);
 				const similarity = cosineSimilarity(queryEmbedding, chunkEmbedding);
 

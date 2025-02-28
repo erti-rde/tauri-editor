@@ -1,6 +1,8 @@
 import { Extension } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
 
+import type { Command, CommandProps, RawCommands } from '@tiptap/core';
+
 export interface CitationAttrs {
 	id: string | null;
 	text: string | null;
@@ -14,8 +16,8 @@ export const Citation = Extension.create({
 	addCommands() {
 		return {
 			insertCitation:
-				(attrs: CitationAttrs) =>
-				({ chain, state }) => {
+				(attrs: CitationAttrs): Command =>
+				({ chain, state }: CommandProps) => {
 					const pos = state.selection.to;
 					const { doc } = state;
 
@@ -34,6 +36,6 @@ export const Citation = Extension.create({
 						.setTextSelection(pos + (needsSpace ? 1 : 0) + citationText.length)
 						.run();
 				}
-		};
+		} as Partial<RawCommands>;
 	}
 });
