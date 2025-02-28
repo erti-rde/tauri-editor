@@ -40,6 +40,12 @@ function createCitationStore() {
 		engine: null,
 		citationSources: {}
 	});
+	if (typeof window !== 'undefined') {
+		window.addEventListener('settings-updated', () => {
+			console.log('Settings updated, reinitializing citation store');
+			initializeCitationStore();
+		});
+	}
 
 	async function initializeCitationStore() {
 		try {
@@ -58,18 +64,46 @@ function createCitationStore() {
 	function getInlineCitation(id: string) {
 		let inlineCitation = '';
 		const state = get(citationStore);
-		if (state.engine && state.citationSources[id]) {
+
+		if (!state.engine) {
+			console.error('CSL Engine not initialized');
+			return `[Citation engine not ready]`;
+		}
+
+		if (!state.citationSources[id]) {
+			console.error(`Citation source not found for ID: ${id}`);
+			return `[Citation not found: ${id}]`;
+		}
+
+		try {
+			// Create a proper citation object
 			const citation = {
 				citationItems: [{ id }],
 				properties: {
 					noteIndex: 0
 				}
 			};
+      			// Process the citation with careful error handling
 			const result = state.engine.processCitationCluster(citation, [], []);
-			console.log({ result });
-			if (result && result[1] && result[1].length > 0) {
+
+			if (
+				result &&
+				Array.isArray(result) &&
+				result[1] &&
+				Array.isArray(result[1]) &&
+				result[1].length > 0
+			) {
 				inlineCitation = result[1][0][1];
+				if (!inlineCitation || typeof inlineCitation !== 'string') {
+					console.error('Invalid citation result format:', result);
+					inlineCitation = `[Invalid citation format]`;
+				}
+			} else {
+				console.error('Invalid result from processCitationCluster:', result);
+				inlineCitation = `[Processing error]`;
 			}
+		} catch (error) {
+			console.error('Error processing citation:', error);
 		}
 
 		return inlineCitation;
@@ -99,29 +133,57 @@ function createCitationStore() {
 }
 
 async function getInitialState() {
-	const store: Store = await loadStore('settings-store.json');
+	try {
+		const store: Store = await loadStore('settings-store.json');
 
-	const styleXml = (await store.get('cslXml')) as string;
-	const localeXml = (await store.get('localeXml')) as string;
+		const styleXml = (await store.get('cslXml')) as string;
+		const localeXml = (await store.get('localeXml')) as string;
 
-	const itemsJson = await readTextFile('resources/csl/citationSources.json', {
-		baseDir: BaseDirectory.Resource
-	});
-	const citationSources: Record<string, CitationItem> = JSON.parse(itemsJson);
+		console.log('CSL Engine Initialization:');
+		console.log('Style XML exists:', !!styleXml);
+		console.log('Locale XML exists:', !!localeXml);
 
-	const createCslSystem = () => ({
-		retrieveLocale: () => {
-			// Return the locale XML - for now using the one you provided
-			return localeXml;
-		},
-		retrieveItem: (id: string) => {
-			return citationSources[id];
+		// Log the first 100 chars to check content format
+		console.log('Style XML snippet:', styleXml?.substring(0, 100));
+		console.log('Locale XML snippet:', localeXml?.substring(0, 100));
+
+		const itemsJson = await readTextFile('resources/csl/citationSources.json', {
+			baseDir: BaseDirectory.Resource
+		});
+		const citationSources: Record<string, CitationItem> = JSON.parse(itemsJson);
+
+		console.log('Citation sources loaded:', Object.keys(citationSources).length);
+
+		const createCslSystem = () => ({
+			retrieveLocale: () => {
+				console.log('Retrieving locale...');
+				return localeXml;
+			},
+			retrieveItem: (id: string) => {
+				console.log('Retrieving item:', id);
+				console.log('Item exists:', !!citationSources[id]);
+				return citationSources[id];
+			}
+		});
+
+		const sys = createCslSystem();
+
+		// Create engine with try/catch to catch any initialization errors
+		let engine;
+		try {
+			engine = new CSL.Engine(sys, styleXml);
+			console.log('CSL Engine created successfully');
+		} catch (error) {
+			console.error('Error creating CSL Engine:', error);
+			throw error;
 		}
-	});
 
-	const sys = createCslSystem();
-	return {
-		engine: new CSL.Engine(sys, styleXml),
-		citationSources
-	};
+		return {
+			engine,
+			citationSources
+		};
+	} catch (error) {
+		console.error('Error in getInitialState:', error);
+		throw error;
+	}
 }

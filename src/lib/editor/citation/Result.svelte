@@ -7,9 +7,11 @@
 	import { Loader } from '$lib';
 
 	import { invoke } from '@tauri-apps/api/core';
-	import type { EmbeddingResult } from '$utils/pdf_handlers';
 	import { selectQuery } from '$utils/db';
 	import { citationStore } from '$lib/stores/citationStore';
+
+	import type { EmbeddingResult } from '$utils/pdf_handlers';
+	import type { CitationItem } from '$lib/stores/citationStore';
 
 	export let selectedText: string;
 	let open = true;
@@ -33,8 +35,10 @@
 
 	async function handleQuery(query: string): Promise<
 		{
+			metadata: CitationItem;
 			sentence: string;
 			similarity: number;
+			doi: string;
 		}[]
 	> {
 		const similarSentences = await searchSimilarChunks(query);
@@ -73,7 +77,7 @@
 			   chunks
 			JOIN
 			   documents ON chunks.document_id = documents.id
-			`)) as { chunk_text: string; embedding: []; doi: string }[];
+			`)) as { chunk_text: string; embedding: string; doi: string }[];
 
 			// Calculate similarities
 			const similarities = chunks.map((chunk) => {
@@ -166,8 +170,8 @@
 			</div>
 		{:then similarSentences}
 			{#if similarSentences.length > 0}
-				{#each similarSentences as sentence}
-					<ResultCard metadata={sentence} on:select={handleSelect} />
+				{#each similarSentences as sentenceMetadata}
+					<ResultCard {sentenceMetadata} on:select={handleSelect} />
 				{/each}
 			{:else}
 				<p class="p-4">No results found</p>
