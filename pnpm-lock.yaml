@@ -24,7 +24,7 @@ importers:
         specifier: ~2
         version: 2.2.0
       '@tauri-apps/plugin-store':
-        specifier: ~2
+        specifier: ~2.1.0
         version: 2.1.0
       '@tauri-apps/plugin-updater':
         specifier: ~2
@@ -44,6 +44,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: ^2.10.3
         version: 2.10.3
+      citeproc:
+        specifier: ^2.4.63
+        version: 2.4.63
       iconify-icon:
         specifier: ^2.1.0
         version: 2.1.0
@@ -1013,6 +1016,9 @@ packages:
   chokidar@3.6.0:
     resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
     engines: {node: '>= 8.10.0'}
+
+  citeproc@2.4.63:
+    resolution: {integrity: sha512-68F95Bp4UbgZU/DBUGQn0qV3HDZLCdI9+Bb2ByrTaNJDL5VEm9LqaiNaxljsvoaExSLEXe1/r6n2Z06SCzW3/Q==}
 
   code-red@1.0.4:
     resolution: {integrity: sha512-7qJWqItLA8/VPVlKJlFXU+NBlo/qyfs39aJcuMT/2ere32ZqvF5OSxgdM5xOfJJ7O429gg2HM47y8v9P+9wrNw==}
@@ -3017,6 +3023,8 @@ snapshots:
       readdirp: 3.6.0
     optionalDependencies:
       fsevents: 2.3.3
+
+  citeproc@2.4.63: {}
 
   code-red@1.0.4:
     dependencies:

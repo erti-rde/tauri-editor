@@ -9,9 +9,13 @@
 
 	let isExplorerOpen = true;
 	let vaultIsOpen = false;
+	let panelName = 'fileExplorer';
 
-	function handleToggleExplorer() {
-		isExplorerOpen = !isExplorerOpen;
+	function handleToggleSidePanel(e: CustomEvent) {
+		if (e.detail.panelName === panelName || !isExplorerOpen) {
+			isExplorerOpen = !isExplorerOpen;
+		}
+		panelName = e.detail.panelName;
 	}
 
 	$: isItPdf = () => {
@@ -39,11 +43,11 @@
 	class={vaultIsOpen ? `grid-styles grid h-screen w-screen overscroll-none` : `flex h-full w-full`}
 >
 	<div class="panel">
-		<SidePanel on:toggleExplorer={handleToggleExplorer} />
+		<SidePanel on:toggleSidePanel={handleToggleSidePanel} />
 	</div>
 	{#if vaultIsOpen}
 		<div class:explorer={isExplorerOpen} class:explorer-closed={!isExplorerOpen}>
-			<Explorer {isExplorerOpen} />
+			<Explorer {isExplorerOpen} {panelName} />
 		</div>
 		<div class="editor overflow-y-auto">
 			{#if isItPdf()}

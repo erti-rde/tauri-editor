@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Tree from '$lib/explorer/Tree.svelte';
+	import { Settings } from '$lib';
 
 	export let isExplorerOpen: boolean = false;
+	export let panelName: string;
+
 	let width = 200;
 	let isDragging = false;
 	let startX: number;
@@ -43,7 +46,11 @@
 		class:transitioning={isTransitioning}
 		style="width: {width}px;"
 	>
-		<Tree />
+		{#if panelName === 'fileExplorer'}
+			<Tree />
+		{:else if panelName === 'settings'}
+			<Settings />
+		{/if}
 		<div class="resizer absolute h-full w-2" on:mousedown={startResize}></div>
 	</div>
 </div>

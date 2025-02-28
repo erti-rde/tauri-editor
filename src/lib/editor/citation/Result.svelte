@@ -9,6 +9,8 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import type { EmbeddingResult } from '$utils/pdf_handlers';
 	import { selectQuery } from '$utils/db';
+	import { citationStore } from '$lib/stores/citationStore';
+	import type { CitationItem } from '$lib/stores/citationStore';
 
 	export let selectedText: string;
 	let open = true;
@@ -63,35 +65,62 @@
 			const queryEmbedding = queryEmbeddingResult[0].embedding;
 
 			// Get all chunks and their embeddings from database
-			const chunks = await selectQuery('SELECT chunk_text, embedding FROM chunks');
+			const chunks = await selectQuery(`
+			 SELECT
+				chunks.chunk_text,
+				chunks.embedding,
+				documents.doi
+			FROM
+			   chunks
+			JOIN
+			   documents ON chunks.document_id = documents.id
+			`);
+
 			// Calculate similarities
 			const similarities = chunks.map((chunk: any) => {
 				const chunkEmbedding = JSON.parse(chunk.embedding);
 				const similarity = cosineSimilarity(queryEmbedding, chunkEmbedding);
+
 				return {
 					sentence: chunk.chunk_text,
 					similarity,
-					// Test metadata to be replaced by new one from database
-					metadata: {
-						type: 'book',
-						author: {
-							first_name: 'James',
-							last_name: 'Smith'
-						},
-						title: 'Climate Change: A Global Perspective',
-						year: 2022,
-						publisher: 'Academic Press',
-						location: 'London',
-						edition: '3rd',
-						pages: '45-67'
-					}
+					doi: chunk.doi
 				};
 			});
 
 			// Sort by similarity in descending order and take top K
 			const topResults = similarities.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
-			console.log({ topResults });
-			return topResults;
+			const citationSources = citationStore.getAllSourcesAsJson();
+			// Add metadata to top results only
+			const resultsWithMetadata = topResults.map((result) => {
+				let metadata = null;
+
+				if (result.doi && citationSources[result.doi]) {
+					metadata = citationSources[result.doi];
+				}
+				// If no matching citation found, use placeholder metadata
+				if (!metadata) {
+					metadata = {
+						id: `unknown-${Date.now()}`,
+						type: 'article-journal',
+						title: ['Unknown Source'],
+						author: [
+							{
+								family: 'Unknown',
+								given: 'Author'
+							}
+						]
+					};
+				}
+
+				return {
+					...result,
+					metadata
+				};
+			});
+
+			console.log({ resultsWithMetadata });
+			return resultsWithMetadata;
 		} catch (error) {
 			console.error('Error in similarity search:', error);
 			throw error;

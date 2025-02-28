@@ -1,0 +1,3946 @@
+[
+	{
+		"name": "Academy of Management Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/academy-of-management-review.csl"
+	},
+	{
+		"name": "Accident Analysis and Prevention",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/accident-analysis-and-prevention.csl"
+	},
+	{
+		"name": "ACI Materials Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aci-materials-journal.csl"
+	},
+	{
+		"name": "ACM SIG Proceedings (\"et al.\" for 15+ authors)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acm-sig-proceedings-long-author-list.csl"
+	},
+	{
+		"name": "ACM SIG Proceedings (\"et al.\" for 3+ authors)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acm-sig-proceedings.csl"
+	},
+	{
+		"name": "ACM SIGCHI Proceedings - Extended Abstract Format",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acm-sigchi-proceedings-extended-abstract-format.csl"
+	},
+	{
+		"name": "ACM SIGCHI Proceedings (2016)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acm-sigchi-proceedings.csl"
+	},
+	{
+		"name": "ACM SIGGRAPH",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acm-siggraph.csl"
+	},
+	{
+		"name": "ACME: An International Journal for Critical Geographies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acme-an-international-journal-for-critical-geographies.csl"
+	},
+	{
+		"name": "Acta Amazonica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-amazonica.csl"
+	},
+	{
+		"name": "Acta Anaesthesiologica Scandinavica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-anaesthesiologica-scandinavica.csl"
+	},
+	{
+		"name": "Acta Anaesthesiologica Taiwanica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-anaesthesiologica-taiwanica.csl"
+	},
+	{
+		"name": "Acta Botanica Croatica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-botanica-croatica.csl"
+	},
+	{
+		"name": "Acta Chiropterologica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-chiropterologica.csl"
+	},
+	{
+		"name": "Acta chirurgiae orthopaedicae et traumatologiae Čechoslovaca",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-chirurgiae-orthopaedicae-et-traumatologiae-cechoslovaca.csl"
+	},
+	{
+		"name": "Acta hydrotechnica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-hydrotechnica.csl"
+	},
+	{
+		"name": "Acta Ichthyologica et Piscatoria",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-ichthyologica-et-piscatoria.csl"
+	},
+	{
+		"name": "Acta Médica Peruana",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-medica-peruana.csl"
+	},
+	{
+		"name": "Acta Médica Portuguesa",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-medica-portuguesa.csl"
+	},
+	{
+		"name": "Acta Naturae",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-naturae.csl"
+	},
+	{
+		"name": "Acta Neurobiologiae Experimentalis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-neurobiologiae-experimentalis.csl"
+	},
+	{
+		"name": "Acta Neurochirurgica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-neurochirurgica.csl"
+	},
+	{
+		"name": "Acta Ophthalmologica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-ophthalmologica.csl"
+	},
+	{
+		"name": "Acta Ornithologica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-ornithologica.csl"
+	},
+	{
+		"name": "Acta Orthopædica Belgica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-orthopaedica-belgica.csl"
+	},
+	{
+		"name": "Acta Orthopaedica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-orthopaedica.csl"
+	},
+	{
+		"name": "Acta Paediatrica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-paediatrica.csl"
+	},
+	{
+		"name": "Acta Palaeontologica Polonica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-palaeontologica-polonica.csl"
+	},
+	{
+		"name": "Acta Pharmaceutica Sinica B",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-pharmaceutica-sinica-b.csl"
+	},
+	{
+		"name": "Acta Pharmaceutica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-pharmaceutica.csl"
+	},
+	{
+		"name": "Acta Philosophica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-philosophica.csl"
+	},
+	{
+		"name": "Acta Physica Sinica (物理学报)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-physica-sinica.csl"
+	},
+	{
+		"name": "Acta Physiologica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-physiologica.csl"
+	},
+	{
+		"name": "Acta Polytechnica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-polytechnica.csl"
+	},
+	{
+		"name": "Acta Radiologica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-radiologica.csl"
+	},
+	{
+		"name": "Acta Scientiae Veterinariae",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-scientiae-veterinariae.csl"
+	},
+	{
+		"name": "Acta Societatis Botanicorum Poloniae",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-societatis-botanicorum-poloniae.csl"
+	},
+	{
+		"name": "Acta Universitatis Agriculturae et Silviculturae Mendelianae Brunensis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-universitatis-agriculturae-et-silviculturae-mendelianae-brunensis.csl"
+	},
+	{
+		"name": "Acta Universitatis Agriculturae Sueciae (Swedish University of Agricultural Sciences)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-universitatis-agriculturae-sueciae.csl"
+	},
+	{
+		"name": "Acta Zoologica Academiae Scientiarum Hungaricae",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/acta-zoologica-academiae-scientiarum-hungaricae.csl"
+	},
+	{
+		"name": "Administrative Science Quarterly",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/administrative-science-quarterly.csl"
+	},
+	{
+		"name": "Advanced Engineering Materials",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advanced-engineering-materials.csl"
+	},
+	{
+		"name": "Advanced Functional Materials",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advanced-functional-materials.csl"
+	},
+	{
+		"name": "Advanced Healthcare Materials",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advanced-healthcare-materials.csl"
+	},
+	{
+		"name": "Advanced Materials",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advanced-materials.csl"
+	},
+	{
+		"name": "Advanced Optical Materials",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advanced-optical-materials.csl"
+	},
+	{
+		"name": "Advanced Pharmaceutical Bulletin",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advanced-pharmaceutical-bulletin.csl"
+	},
+	{
+		"name": "Advanced Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advanced-science.csl"
+	},
+	{
+		"name": "Advances in Alzheimer's Disease",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advances-in-alzheimers-disease.csl"
+	},
+	{
+		"name": "Advances in Complex Systems",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/advances-in-complex-systems.csl"
+	},
+	{
+		"name": "Aerosol and Air Quality Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aerosol-and-air-quality-research.csl"
+	},
+	{
+		"name": "Aerosol Science and Technology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aerosol-science-and-technology.csl"
+	},
+	{
+		"name": "Aerospace Medicine and Human Performance",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aerospace-medicine-and-human-performance.csl"
+	},
+	{
+		"name": "African Journal of Marine Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/african-journal-of-marine-science.csl"
+	},
+	{
+		"name": "African Online Scientific Information Systems - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/african-online-scientific-information-systems-harvard.csl"
+	},
+	{
+		"name": "African Online Scientific Information Systems - Vancouver",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/african-online-scientific-information-systems-vancouver.csl"
+	},
+	{
+		"name": "African Zoology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/african-zoology.csl"
+	},
+	{
+		"name": "Afro-Ásia (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/afro-asia.csl"
+	},
+	{
+		"name": "Age and Ageing",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/age-and-ageing.csl"
+	},
+	{
+		"name": "Ageing &amp; Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ageing-and-society.csl"
+	},
+	{
+		"name": "Aging and Disease",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aging-and-disease.csl"
+	},
+	{
+		"name": "Aging Cell",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aging-cell.csl"
+	},
+	{
+		"name": "Aging",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aging.csl"
+	},
+	{
+		"name": "Agora",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/agora.csl"
+	},
+	{
+		"name": "Agriculturae Conspectus Scientificus",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/agriculturae-conspectus-scientificus.csl"
+	},
+	{
+		"name": "AIB studi (Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aib-studi.csl"
+	},
+	{
+		"name": "AIDS",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aids.csl"
+	},
+	{
+		"name": "AIMS Press",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aims-press.csl"
+	},
+	{
+		"name": "Aix-Marseille Université - Département d'études asiatiques (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aix-marseille-universite-departement-d-etudes-asiatiques.csl"
+	},
+	{
+		"name": "Al-Jami'ah - Journal of Islamic Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/al-jamiah-journal-of-islamic-studies.csl"
+	},
+	{
+		"name": "Alcohol and Alcoholism",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/alcohol-and-alcoholism.csl"
+	},
+	{
+		"name": "Alcoholism: Clinical and Experimental Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/alcoholism-clinical-and-experimental-research.csl"
+	},
+	{
+		"name": "Alkoholizmus a drogové závislosti",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/alkoholizmus-a-drogove-zavislosti.csl"
+	},
+	{
+		"name": "Allergology International",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/allergology-international.csl"
+	},
+	{
+		"name": "Allergy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/allergy.csl"
+	},
+	{
+		"name": "Alternatif Politika",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/alternatif-politika.csl"
+	},
+	{
+		"name": "Alternatives to Animal Experimentation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/alternatives-to-animal-experimentation.csl"
+	},
+	{
+		"name": "AMBIO",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ambio.csl"
+	},
+	{
+		"name": "Ameghiniana",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ameghiniana.csl"
+	},
+	{
+		"name": "American Anthropological Association",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-anthropological-association.csl"
+	},
+	{
+		"name": "American Association for Cancer Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-association-for-cancer-research.csl"
+	},
+	{
+		"name": "American Association of Petroleum Geologists",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-association-of-petroleum-geologists.csl"
+	},
+	{
+		"name": "American Chemical Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-chemical-society.csl"
+	},
+	{
+		"name": "American College of Clinical Pharmacy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-college-of-clinical-pharmacy.csl"
+	},
+	{
+		"name": "American Fisheries Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-fisheries-society.csl"
+	},
+	{
+		"name": "American Geophysical Union",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-geophysical-union.csl"
+	},
+	{
+		"name": "American Heart Association",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-heart-association.csl"
+	},
+	{
+		"name": "American Institute of Aeronautics and Astronautics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-institute-of-aeronautics-and-astronautics.csl"
+	},
+	{
+		"name": "American Institute of Physics 4th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-institute-of-physics.csl"
+	},
+	{
+		"name": "American Journal of Agricultural Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-agricultural-economics.csl"
+	},
+	{
+		"name": "American Journal of Archaeology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-archaeology.csl"
+	},
+	{
+		"name": "American Journal of Botany",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-botany.csl"
+	},
+	{
+		"name": "American Journal of Cancer Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-cancer-research.csl"
+	},
+	{
+		"name": "American Journal of Climate Change",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-climate-change.csl"
+	},
+	{
+		"name": "American Journal of Clinical Pathology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-clinical-pathology.csl"
+	},
+	{
+		"name": "American Journal of Enology and Viticulture",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-enology-and-viticulture.csl"
+	},
+	{
+		"name": "American Journal of Epidemiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-epidemiology.csl"
+	},
+	{
+		"name": "American Journal of Health Behavior",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-health-behavior.csl"
+	},
+	{
+		"name": "American Journal of Hypertension",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-hypertension.csl"
+	},
+	{
+		"name": "American Journal of Medical Genetics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-medical-genetics.csl"
+	},
+	{
+		"name": "American Journal of Neuroradiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-neuroradiology.csl"
+	},
+	{
+		"name": "American Journal of Orthodontics &amp; Dentofacial Orthopedics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-orthodontics-and-dentofacial-orthopedics.csl"
+	},
+	{
+		"name": "American Journal of Plant Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-plant-sciences.csl"
+	},
+	{
+		"name": "American Journal of Political Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-political-science.csl"
+	},
+	{
+		"name": "American Journal of Respiratory and Critical Care Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-respiratory-and-critical-care-medicine.csl"
+	},
+	{
+		"name": "American Journal of Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-science.csl"
+	},
+	{
+		"name": "American Journal of Sociology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-sociology.csl"
+	},
+	{
+		"name": "American Journal of Sonography",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-sonography.csl"
+	},
+	{
+		"name": "American Journal of Surgical Pathology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-surgical-pathology.csl"
+	},
+	{
+		"name": "American Journal of Translational Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-journal-of-translational-research.csl"
+	},
+	{
+		"name": "American Marketing Association",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-marketing-association.csl"
+	},
+	{
+		"name": "American Medical Association 10th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association-10th-edition.csl"
+	},
+	{
+		"name": "American Medical Association 11th edition (sorted alphabetically)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association-alphabetical.csl"
+	},
+	{
+		"name": "American Medical Association 11th edition (brackets)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association-brackets.csl"
+	},
+	{
+		"name": "American Medical Association 11th edition (no \"et al.\")",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association-no-et-al.csl"
+	},
+	{
+		"name": "American Medical Association 11th edition (no URL, sorted alphabetically)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association-no-url-alphabetical.csl"
+	},
+	{
+		"name": "American Medical Association 11th edition (no URL)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association-no-url.csl"
+	},
+	{
+		"name": "American Medical Association 11th edition (parentheses)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association-parentheses.csl"
+	},
+	{
+		"name": "American Medical Association 11th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-medical-association.csl"
+	},
+	{
+		"name": "American Meteorological Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-meteorological-society.csl"
+	},
+	{
+		"name": "American Mineralogist",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-mineralogist.csl"
+	},
+	{
+		"name": "American Nuclear Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-nuclear-society.csl"
+	},
+	{
+		"name": "American Physical Society - et al. (if more than 3 authors)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-physical-society-et-al.csl"
+	},
+	{
+		"name": "American Physical Society (without titles)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-physics-society-without-titles.csl"
+	},
+	{
+		"name": "American Physical Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-physics-society.csl"
+	},
+	{
+		"name": "American Physiological Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-physiological-society.csl"
+	},
+	{
+		"name": "American Phytopathological Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-phytopathological-society.csl"
+	},
+	{
+		"name": "American Political Science Association",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-political-science-association.csl"
+	},
+	{
+		"name": "American School of Classical Studies at Athens",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-school-of-classical-studies-at-athens.csl"
+	},
+	{
+		"name": "American Society for Horticultural Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-society-for-horticultural-science.csl"
+	},
+	{
+		"name": "American Society for Microbiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-society-for-microbiology.csl"
+	},
+	{
+		"name": "American Society for Pharmacology and Experimental Therapeutics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-society-for-pharmacology-and-experimental-therapeutics.csl"
+	},
+	{
+		"name": "American Society of Agricultural and Biological Engineers",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-society-of-agricultural-and-biological-engineers.csl"
+	},
+	{
+		"name": "American Society of Civil Engineers",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-society-of-civil-engineers.csl"
+	},
+	{
+		"name": "American Society of Mechanical Engineers",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-society-of-mechanical-engineers.csl"
+	},
+	{
+		"name": "American Sociological Association 6th/7th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-sociological-association.csl"
+	},
+	{
+		"name": "American Statistical Association",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-statistical-association.csl"
+	},
+	{
+		"name": "American Veterinary Medical Association",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/american-veterinary-medical-association.csl"
+	},
+	{
+		"name": "Amerindia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/amerindia.csl"
+	},
+	{
+		"name": "Amphibia-Reptilia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/amphibia-reptilia.csl"
+	},
+	{
+		"name": "Amsterdam University Press - Academic",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/amsterdam-university-press-academic.csl"
+	},
+	{
+		"name": "Anabases",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anabases.csl"
+	},
+	{
+		"name": "Anaesthesia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anaesthesia.csl"
+	},
+	{
+		"name": "Anais da Academia Brasileira de Ciências",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anais-da-academia-brasileira-de-ciencias.csl"
+	},
+	{
+		"name": "Analytical Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/analytical-sciences.csl"
+	},
+	{
+		"name": "Anatomical Sciences Education",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anatomical-sciences-education.csl"
+	},
+	{
+		"name": "Ancilla Iuris",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ancilla-iuris.csl"
+	},
+	{
+		"name": "Andean Geology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/andean-geology.csl"
+	},
+	{
+		"name": "Anesthesia and Analgesia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anesthesia-and-analgesia.csl"
+	},
+	{
+		"name": "Anesthesiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anesthesiology.csl"
+	},
+	{
+		"name": "Angewandte Chemie International Edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/angewandte-chemie.csl"
+	},
+	{
+		"name": "Angiologia (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/angiologia.csl"
+	},
+	{
+		"name": "Angiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/angiology.csl"
+	},
+	{
+		"name": "Anglia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anglia.csl"
+	},
+	{
+		"name": "Animal Conservation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/animal-conservation.csl"
+	},
+	{
+		"name": "Animal Migration",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/animal-migration.csl"
+	},
+	{
+		"name": "Animal Welfare",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/animal-welfare.csl"
+	},
+	{
+		"name": "animal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/animal.csl"
+	},
+	{
+		"name": "Annalen des Naturhistorischen Museums in Wien",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annalen-des-naturhistorischen-museums-in-wien.csl"
+	},
+	{
+		"name": "Annales de démographie historique",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annales-de-demographie-historique.csl"
+	},
+	{
+		"name": "Annales. Histoire, Sciences sociales (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annales.csl"
+	},
+	{
+		"name": "Annals of Allergy, Asthma &amp; Immunology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-allergy-asthma-and-immunology.csl"
+	},
+	{
+		"name": "Annals of Applied Biology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-applied-biology.csl"
+	},
+	{
+		"name": "Annals of Behavioral Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-behavioral-medicine.csl"
+	},
+	{
+		"name": "Annals of Biomedical Engineering",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-biomedical-engineering.csl"
+	},
+	{
+		"name": "Annals of Botany",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-botany.csl"
+	},
+	{
+		"name": "Annals of Eye Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-eye-science.csl"
+	},
+	{
+		"name": "Annals of Joint",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-joint.csl"
+	},
+	{
+		"name": "Annals of Laboratory Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-laboratory-medicine.csl"
+	},
+	{
+		"name": "Annals of Neurology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-neurology.csl"
+	},
+	{
+		"name": "Annals of Oncology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-oncology.csl"
+	},
+	{
+		"name": "Annals of Public and Cooperative Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-public-and-cooperative-economics.csl"
+	},
+	{
+		"name": "Annals of Surgery",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-surgery.csl"
+	},
+	{
+		"name": "Annals of the Association of American Geographers",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-the-association-of-american-geographers.csl"
+	},
+	{
+		"name": "Annals of the New York Academy of Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-the-new-york-academy-of-sciences.csl"
+	},
+	{
+		"name": "Annals of Work Exposures and Health",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annals-of-work-exposures-and-health.csl"
+	},
+	{
+		"name": "Annual Review of Astronomy and Astrophysics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-review-of-astronomy-and-astrophysics.csl"
+	},
+	{
+		"name": "Annual Review of Linguistics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-review-of-linguistics.csl"
+	},
+	{
+		"name": "Annual Review of Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-review-of-medicine.csl"
+	},
+	{
+		"name": "Annual Review of Nuclear and Particle Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-review-of-nuclear-and-particle-science.csl"
+	},
+	{
+		"name": "Annual Reviews (sorted alphabetically)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-reviews-alphabetical.csl"
+	},
+	{
+		"name": "Annual Reviews (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-reviews-author-date.csl"
+	},
+	{
+		"name": "Annual Reviews (sorted by order of appearance, without titles)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-reviews-without-titles.csl"
+	},
+	{
+		"name": "Annual Reviews (sorted by order of appearance)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/annual-reviews.csl"
+	},
+	{
+		"name": "Antarctic Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/antarctic-science.csl"
+	},
+	{
+		"name": "Anthropologie et Sociétés (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anthropologie-et-societes.csl"
+	},
+	{
+		"name": "Anti-Trafficking Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anti-trafficking-review.csl"
+	},
+	{
+		"name": "Anticancer Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/anticancer-research.csl"
+	},
+	{
+		"name": "Antipode",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/antipode.csl"
+	},
+	{
+		"name": "Antiquités africaines",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/antiquites-africaines.csl"
+	},
+	{
+		"name": "Antiquity",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/antiquity.csl"
+	},
+	{
+		"name": "American Psychological Association 5th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-5th-edition.csl"
+	},
+	{
+		"name": "American Psychological Association 6th edition (no ampersand)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-6th-edition-no-ampersand.csl"
+	},
+	{
+		"name": "American Psychological Association 6th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-6th-edition.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (annotated bibliography)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-annotated-bibliography.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (curriculum vitae, sorted by descending date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-cv.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (Basque/Euskara)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-eu.csl"
+	},
+	{
+		"name": "American Psychological Association 6th edition (Provost) (Français - Canada)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-fr-provost.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (no ampersand)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-no-ampersand.csl"
+	},
+	{
+		"name": "American Psychological Association 6th edition (no DOIs, no issue numbers)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-no-doi-no-issue.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (no initials)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-no-initials.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (numeric, brackets)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript-brackets.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (numeric, superscript)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-numeric-superscript.csl"
+	},
+	{
+		"name": "American Psychological Association 6th edition (\"doi:\" DOI prefix)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-old-doi-prefix.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (single-spaced bibliography)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-single-spaced.csl"
+	},
+	{
+		"name": "American Psychological Association 6th edition (Türkçe)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-tr.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition (with abstract)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa-with-abstract.csl"
+	},
+	{
+		"name": "American Psychological Association 7th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl"
+	},
+	{
+		"name": "Aporia: The Nursing Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aporia-the-nursing-journal.csl"
+	},
+	{
+		"name": "Applied Clay Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/applied-clay-science.csl"
+	},
+	{
+		"name": "Applied Spectroscopy Reviews",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/applied-spectroscopy-reviews.csl"
+	},
+	{
+		"name": "Applied Spectroscopy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/applied-spectroscopy.csl"
+	},
+	{
+		"name": "Aquatic Conservation: Marine and Freshwater Ecosystems",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aquatic-conservation.csl"
+	},
+	{
+		"name": "Aquatic Invasions",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aquatic-invasions.csl"
+	},
+	{
+		"name": "Aquatic Living Resources",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aquatic-living-resources.csl"
+	},
+	{
+		"name": "Aquitania (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/aquitania.csl"
+	},
+	{
+		"name": "Arachne",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arachne.csl"
+	},
+	{
+		"name": "Arachnologische Mitteilungen",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arachnologische-mitteilungen.csl"
+	},
+	{
+		"name": "Arachnology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arachnology.csl"
+	},
+	{
+		"name": "Árbók Hins íslenzka fornleifafélags (Íslenska)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arbok-hins-islenzka-fornleifafelags.csl"
+	},
+	{
+		"name": "Arcadia Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arcadia-science.csl"
+	},
+	{
+		"name": "Archaeologia Austriaca",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archaeologia-austriaca.csl"
+	},
+	{
+		"name": "Archaeometry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archaeometry.csl"
+	},
+	{
+		"name": "Archaeonautica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archaeonautica.csl"
+	},
+	{
+		"name": "Archeologia Classica (Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archeologia-classica.csl"
+	},
+	{
+		"name": "Archeologické rozhledy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archeologicke-rozhledy.csl"
+	},
+	{
+		"name": "Archéologie médiévale (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archeologie-medievale.csl"
+	},
+	{
+		"name": "Archéologies et Sciences de l'Antiquité (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archeologies-et-sciences-de-lantiquite.csl"
+	},
+	{
+		"name": "ArcheoSciences (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archeosciences.csl"
+	},
+	{
+		"name": "Archiv für die civilistische Praxis (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archiv-fur-die-civilistische-praxis.csl"
+	},
+	{
+		"name": "Archiv für Geschichte der Philosophie",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archiv-fur-geschichte-der-philosophie.csl"
+	},
+	{
+		"name": "Archives of Hand and Microsurgery",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archives-of-hand-and-microsurgery.csl"
+	},
+	{
+		"name": "Archives of Medical Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archives-of-medical-research.csl"
+	},
+	{
+		"name": "Archives of Physical Medicine and Rehabilitation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archives-of-physical-medicine-and-rehabilitation.csl"
+	},
+	{
+		"name": "Archivos de Bronconeumología",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archivos-de-bronconeumologia.csl"
+	},
+	{
+		"name": "Archivos de la Sociedad Española de Oftalmología (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archivos-de-la-sociedad-espanola-de-oftalmologia.csl"
+	},
+	{
+		"name": "Archivum Latinitatis Medii Aevi (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/archivum-latinitatis-medii-aevi.csl"
+	},
+	{
+		"name": "Arctic, Antarctic, and Alpine Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arctic-antarctic-and-alpine-research.csl"
+	},
+	{
+		"name": "Arctic",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arctic.csl"
+	},
+	{
+		"name": "Arhiv za higijenu rada i toksikologiju (Archives of Industrial Hygiene and Toxicology)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arhiv-za-higijenu-rada-i-toksikologiju.csl"
+	},
+	{
+		"name": "Arkivoc",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arkivoc.csl"
+	},
+	{
+		"name": "Art History",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/art-history.csl"
+	},
+	{
+		"name": "Art Libraries Society of North America: ARLIS/NA Reviews",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/art-libraries-society-of-north-america-arlisna-reviews.csl"
+	},
+	{
+		"name": "Artery Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/artery-research.csl"
+	},
+	{
+		"name": "Arthritis &amp; Rheumatism",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arthritis-and-rheumatism.csl"
+	},
+	{
+		"name": "Arthropod Systematics &amp; Phylogeny",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arthropod-systematics-and-phylogeny.csl"
+	},
+	{
+		"name": "Arts University Bournemouth",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arts-university-bournemouth.csl"
+	},
+	{
+		"name": "Arzneimitteltherapie",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/arzneimitteltherapie.csl"
+	},
+	{
+		"name": "American Society of Agronomy, Crop Science Society of America, Soil Science Society of America",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/asa-cssa-sssa.csl"
+	},
+	{
+		"name": "ASAIO Journal (American Society for Artificial Internal Organs)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/asaio-journal.csl"
+	},
+	{
+		"name": "Asia &amp; the Pacific Policy Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/asia-and-the-pacific-policy-studies.csl"
+	},
+	{
+		"name": "Asia Pacific Journal of Human Resources",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/asia-pacific-journal-of-human-resources.csl"
+	},
+	{
+		"name": "Asian Journal of Neurosurgery",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/asian-journal-of-neurosurgery.csl"
+	},
+	{
+		"name": "Asian Myrmecology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/asian-myrmecology.csl"
+	},
+	{
+		"name": "Asian Studies Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/asian-studies-review.csl"
+	},
+	{
+		"name": "Escola de Comando e Estado-Maior do Exército - ABNT (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-eceme.csl"
+	},
+	{
+		"name": "Escola de Comando e Estado-Maior do Exército - Instituto Meira Mattos - ABNT (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-instituto-meira-mattos.csl"
+	},
+	{
+		"name": "Instituto de Pesquisa Econômica Aplicada - ABNT (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ipea.csl"
+	},
+	{
+		"name": "Associação Brasileira de Normas Técnicas (note, Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-note.csl"
+	},
+	{
+		"name": "Associação Brasileira de Normas Técnicas (numérico, Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-numerico.csl"
+	},
+	{
+		"name": "Universidade Federal de Minas Gerais - Faculdade de Ciências Econômicas - ABNT (autoria completa) (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ufmg-face-full.csl"
+	},
+	{
+		"name": "Universidade Federal de Minas Gerais - Faculdade de Ciências Econômicas - ABNT (autoria abreviada) (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ufmg-face-initials.csl"
+	},
+	{
+		"name": "Universidade Federal do Paraná - ABNT (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ufpr.csl"
+	},
+	{
+		"name": "Universidade Federal do Rio Grande do Sul - ABNT (autoria abreviada) (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ufrgs-initials.csl"
+	},
+	{
+		"name": "Universidade Federal do Rio Grande do Sul - ABNT (autoria abreviada, nota, com Ibid.) (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ufrgs-note-initials-with-ibid.csl"
+	},
+	{
+		"name": "Universidade Federal do Rio Grande do Sul - ABNT (autoria completa) (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ufrgs.csl"
+	},
+	{
+		"name": "Universidade Federal de Sergipe - ABNT (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-ufs.csl"
+	},
+	{
+		"name": "Universidade Federal do Estado do Rio de Janeiro - Educação Infantil e Políticas Públicas - ABNT (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-unirio-eipp.csl"
+	},
+	{
+		"name": "Universidade de São Paulo - Faculdade de Medicina Veterinária e Zootecnia - ABNT (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas-usp-fmvz.csl"
+	},
+	{
+		"name": "Associação Brasileira de Normas Técnicas (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-brasileira-de-normas-tecnicas.csl"
+	},
+	{
+		"name": "ANPET - Congresso de Pesquisa e Ensino em Transportes (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/associacao-nacional-de-pesquisa-e-ensino-em-transportes.csl"
+	},
+	{
+		"name": "Association de Science Régionale de Langue Française (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/association-de-science-regionale-de-langue-francaise.csl"
+	},
+	{
+		"name": "Association for Computational Linguistics - Conference Proceedings",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/association-for-computational-linguistics.csl"
+	},
+	{
+		"name": "Association for Computing Machinery",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/association-for-computing-machinery.csl"
+	},
+	{
+		"name": "Atlande (author-date, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/atlande.csl"
+	},
+	{
+		"name": "Atlas of Genetics and Cytogenetics in Oncology and Haematology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/atlas-of-genetics-and-cytogenetics-in-oncology-and-haematology.csl"
+	},
+	{
+		"name": "Acta Universitatis Carolinae Iuridica (Čeština)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/auci.csl"
+	},
+	{
+		"name": "Ausonius Éditions",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ausonius-editions.csl"
+	},
+	{
+		"name": "Austral Ecology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/austral-ecology.csl"
+	},
+	{
+		"name": "Austral Entomology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/austral-entomology.csl"
+	},
+	{
+		"name": "Australasian Journal of Philosophy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australasian-journal-of-philosophy.csl"
+	},
+	{
+		"name": "Australian Archaeology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-archaeology.csl"
+	},
+	{
+		"name": "Australian Critical Care",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-critical-care.csl"
+	},
+	{
+		"name": "Australian Dental Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-dental-journal.csl"
+	},
+	{
+		"name": "Australian Guide to Legal Citation 3rd edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-guide-to-legal-citation-3rd-edition.csl"
+	},
+	{
+		"name": "Australian Guide to Legal Citation 4th edition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-guide-to-legal-citation.csl"
+	},
+	{
+		"name": "Australian Historical Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-historical-studies.csl"
+	},
+	{
+		"name": "Australian Journal of Earth Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-journal-of-earth-sciences.csl"
+	},
+	{
+		"name": "Australian Journal of Grape and Wine Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-journal-of-grape-and-wine-research.csl"
+	},
+	{
+		"name": "Australian Road Research Board",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-road-research-board.csl"
+	},
+	{
+		"name": "Australian Veterinary Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/australian-veterinary-journal.csl"
+	},
+	{
+		"name": "Austrian Journal of Development Studies (Journal für Entwicklungspolitik)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/austrian-journal-of-development-studies.csl"
+	},
+	{
+		"name": "Austrian Legal (Deutsch - Österreich)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/austrian-legal.csl"
+	},
+	{
+		"name": "Avian Conservation and Ecology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/avian-conservation-and-ecology.csl"
+	},
+	{
+		"name": "Avian Diseases",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/avian-diseases.csl"
+	},
+	{
+		"name": "Avian Pathology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/avian-pathology.csl"
+	},
+	{
+		"name": "Ayer (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ayer.csl"
+	},
+	{
+		"name": "AZR - Abkürzungs- und Zitierregeln der österreichischen Rechtssprache und europarechtlicher Rechtsquellen (Deutsch - Österreich)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/azr-abkurzungs-und-zitierregeln-der-osterreichischen-rechtssprache-und-europarechtlicher-rechtsquellen.csl"
+	},
+	{
+		"name": "Babes-Bolyai University - Faculty of Orthodox Theology (no ibid., Română)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/babes-bolyai-university-faculty-of-orthodox-theology.csl"
+	},
+	{
+		"name": "BABESCH - Annual Papers on Mediterranean Archaeology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/babesch-annual-papers-on-mediterranean-archaeology.csl"
+	},
+	{
+		"name": "Baghdad Science Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/baghdad-science-journal.csl"
+	},
+	{
+		"name": "Baishideng Publishing Group",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/baishideng-publishing-group.csl"
+	},
+	{
+		"name": "Bakhtiniana: Journal of Discourse Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bakhtiniana-journal-of-discourse-studies.csl"
+	},
+	{
+		"name": "Barbara Budrich (deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/barbara-budrich.csl"
+	},
+	{
+		"name": "Begell House - APA",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/begell-house-apa.csl"
+	},
+	{
+		"name": "Begell House - Chicago Manual of Style",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/begell-house-chicago-author-date.csl"
+	},
+	{
+		"name": "Behaviour",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/behaviour.csl"
+	},
+	{
+		"name": "Beilstein Journal of Organic Chemistry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/beilstein-journal-of-organic-chemistry.csl"
+	},
+	{
+		"name": "Beltz - Pädagogik (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/beltz-padagogik.csl"
+	},
+	{
+		"name": "Berghahn Books (author-date, English - UK)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/berghahn-books-author-date-en-gb.csl"
+	},
+	{
+		"name": "Berlin School of Economics and Law - International Marketing Management",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/berlin-school-of-economics-and-law-international-marketing-management.csl"
+	},
+	{
+		"name": "Bern University of Applied Sciences - School of Agricultural, Forest and Food Sciences HAFL (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bern-university-of-applied-sciences-school-of-agricultural-forest-and-food-sciences-hafl.csl"
+	},
+	{
+		"name": "Betriebswirtschaftliche Forschung und Praxis (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/betriebswirtschaftliche-forschung-und-praxis.csl"
+	},
+	{
+		"name": "Biblio 3W (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biblio-3w.csl"
+	},
+	{
+		"name": "Bibliotheca Hertziana - Max Planck Institute for Art History",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bibliotheca-hertziana-max-planck-institute-for-art-history.csl"
+	},
+	{
+		"name": "Bibliothecae.it (Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bibliothecae-it.csl"
+	},
+	{
+		"name": "Bibliothek &#8211; Forschung und Praxis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bibliothek-forschung-und-praxis.csl"
+	},
+	{
+		"name": "Bibliothek für Bildungsgeschichtliche Forschung (BBF) (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bibliothek-fur-bildungsgeschichtliche-forschung.csl"
+	},
+	{
+		"name": "Bibliothèque d'archéologie méditerranéenne et africaine (BiAMA) (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bibliotheque-d-archeologie-mediterraneenne-et-africaine-biama.csl"
+	},
+	{
+		"name": "Bibliothèque universitaire de médecine - Vancouver",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bibliotheque-universitaire-de-medecine-vancouver.csl"
+	},
+	{
+		"name": "BibTeX generic citation style",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bibtex.csl"
+	},
+	{
+		"name": "Biens symboliques / Symbolic Goods",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biens-symboliques-symbolic-goods.csl"
+	},
+	{
+		"name": "Bio-protocol",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bio-protocol.csl"
+	},
+	{
+		"name": "Bioarchaeology International",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bioarchaeology-international.csl"
+	},
+	{
+		"name": "Bioarchaeology of the Near East",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bioarchaeology-of-the-near-east.csl"
+	},
+	{
+		"name": "Biochemical Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biochemical-journal.csl"
+	},
+	{
+		"name": "Biochemical Society Transactions",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biochemical-society-transactions.csl"
+	},
+	{
+		"name": "Biochemistry and Molecular Biology Education",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biochemistry-and-molecular-biology-education.csl"
+	},
+	{
+		"name": "Biochemistry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biochemistry.csl"
+	},
+	{
+		"name": "Biochimica et Biophysica Acta",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biochimica-et-biophysica-acta.csl"
+	},
+	{
+		"name": "Bioelectromagnetics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bioelectromagnetics.csl"
+	},
+	{
+		"name": "Biofuel Research Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biofuel-research-journal.csl"
+	},
+	{
+		"name": "Bioinformatics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bioinformatics.csl"
+	},
+	{
+		"name": "Biologia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biologia.csl"
+	},
+	{
+		"name": "Biological and Pharmaceutical Bulletin",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biological-and-pharmaceutical-bulletin.csl"
+	},
+	{
+		"name": "Biological Journal of the Linnean Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biological-journal-of-the-linnean-society.csl"
+	},
+	{
+		"name": "Biological Psychiatry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biological-psychiatry.csl"
+	},
+	{
+		"name": "Biological Reviews",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biological-reviews.csl"
+	},
+	{
+		"name": "Биологические мембраны",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biologiceskie-membrany.csl"
+	},
+	{
+		"name": "Biology of Reproduction",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biology-of-reproduction.csl"
+	},
+	{
+		"name": "Biomarkers",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biomarkers.csl"
+	},
+	{
+		"name": "BioMed Central",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biomed-central.csl"
+	},
+	{
+		"name": "BioMed Research International",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biomed-research-international.csl"
+	},
+	{
+		"name": "Biometrics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biometrics.csl"
+	},
+	{
+		"name": "Biomolecular Concepts",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biomolecular-concepts.csl"
+	},
+	{
+		"name": "Biophysical Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biophysical-journal.csl"
+	},
+	{
+		"name": "Biophysics and Physicobiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biophysics-and-physicobiology.csl"
+	},
+	{
+		"name": "Biopolymers",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biopolymers.csl"
+	},
+	{
+		"name": "BioResources",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bioresources.csl"
+	},
+	{
+		"name": "BioScience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bioscience.csl"
+	},
+	{
+		"name": "BioSocieties",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biosocieties.csl"
+	},
+	{
+		"name": "Biostatistics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biostatistics.csl"
+	},
+	{
+		"name": "Biota Neotropica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biota-neotropica.csl"
+	},
+	{
+		"name": "BioTechniques",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biotechniques.csl"
+	},
+	{
+		"name": "Biotechnology and Bioengineering",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biotechnology-and-bioengineering.csl"
+	},
+	{
+		"name": "Biotechnology and Bioprocess Engineering",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biotechnology-and-bioprocess-engineering.csl"
+	},
+	{
+		"name": "Biotropica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biotropica.csl"
+	},
+	{
+		"name": "b.i.t.online (note, Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bitonline.csl"
+	},
+	{
+		"name": "Biuletyn Polskiego Towarzystwa Językoznawczego (Polski)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/biuletyn-polskiego-towarzystwa-jezykoznawczego.csl"
+	},
+	{
+		"name": "Blood",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/blood.csl"
+	},
+	{
+		"name": "Bloomsbury Academic",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bloomsbury-academic.csl"
+	},
+	{
+		"name": "Bluebook Inline",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bluebook-inline.csl"
+	},
+	{
+		"name": "Bluebook Law Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bluebook-law-review.csl"
+	},
+	{
+		"name": "BMJ",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bmj.csl"
+	},
+	{
+		"name": "Body &amp; Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/body-and-society.csl"
+	},
+	{
+		"name": "Boletín de la Sociedad Geológica Mexicana (Español - Mexico)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/boletin-de-la-sociedad-geologica-mexicana.csl"
+	},
+	{
+		"name": "Boletín de Pediatría (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/boletin-de-pediatria.csl"
+	},
+	{
+		"name": "Bollettino d'archeologia online (Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bollettino-d-archeologia-online.csl"
+	},
+	{
+		"name": "Boreal Environment Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/boreal-environment-research.csl"
+	},
+	{
+		"name": "Bőrgyógyászati és Venerológiai Szemle (Magyar)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/borgyogyaszati-es-venerologiai-szemle.csl"
+	},
+	{
+		"name": "Bourgogne-Franche-Comté Nature (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bourgogne-franche-comte-nature.csl"
+	},
+	{
+		"name": "Brachytherapy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brachytherapy.csl"
+	},
+	{
+		"name": "Brain, Behavior and Evolution",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brain-behavior-and-evolution.csl"
+	},
+	{
+		"name": "Brazilian Journal of Experimental Design, Data Analysis and Inferential Statistics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brazilian-journal-of-experimental-design-data-analysis-and-inferential-statistics.csl"
+	},
+	{
+		"name": "Brazilian Journal of Infectious Diseases",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brazilian-journal-of-infectious-diseases.csl"
+	},
+	{
+		"name": "Brazilian Journal of Psychiatry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brazilian-journal-of-psychiatry.csl"
+	},
+	{
+		"name": "Brazilian Journal of Veterinary Research and Animal Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brazilian-journal-of-veterinary-research-and-animal-science.csl"
+	},
+	{
+		"name": "Brazilian Oral Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brazilian-oral-research.csl"
+	},
+	{
+		"name": "BrewingScience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/brewingscience.csl"
+	},
+	{
+		"name": "Briefings in Bioinformatics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/briefings-in-bioinformatics.csl"
+	},
+	{
+		"name": "Bristol University Press",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bristol-university-press.csl"
+	},
+	{
+		"name": "British Journal of Anaesthesia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-anaesthesia.csl"
+	},
+	{
+		"name": "British Journal of Cancer",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-cancer.csl"
+	},
+	{
+		"name": "British Journal of Dermatology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-dermatology.csl"
+	},
+	{
+		"name": "British Journal of Haematology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-haematology.csl"
+	},
+	{
+		"name": "British Journal of Industrial Relations",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-industrial-relations.csl"
+	},
+	{
+		"name": "British Journal of Nutrition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-nutrition.csl"
+	},
+	{
+		"name": "British Journal of Pharmacology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-pharmacology.csl"
+	},
+	{
+		"name": "British Journal of Political Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-political-science.csl"
+	},
+	{
+		"name": "British Journal of Surgery",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-journal-of-surgery.csl"
+	},
+	{
+		"name": "British Psychological Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/british-psychological-society.csl"
+	},
+	{
+		"name": "Budownictwo i Architektura",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/budownictwo-i-architektura-pl.csl"
+	},
+	{
+		"name": "Building Structure (中文)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/building-structure.csl"
+	},
+	{
+		"name": "Buletin Agrohorti",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/buletin-agrohorti.csl"
+	},
+	{
+		"name": "Bulletin de correspondance hellénique",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-de-correspondance-hellenique.csl"
+	},
+	{
+		"name": "Bulletin de la Société Entomologique de France",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-de-la-societe-entomologique-de-france.csl"
+	},
+	{
+		"name": "Bulletin de la Société préhistorique française (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-de-la-societe-prehistorique-francaise.csl"
+	},
+	{
+		"name": "Bulletin du Centre d’études médiévales d’Auxerre (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-du-centre-detudes-medievales-dauxerre.csl"
+	},
+	{
+		"name": "Bulletin of Geosciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-of-geosciences.csl"
+	},
+	{
+		"name": "Bulletin of Insectology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-of-insectology.csl"
+	},
+	{
+		"name": "Bulletin of Marine Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-of-marine-science.csl"
+	},
+	{
+		"name": "Bulletin of the American Schools of Oriental Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-of-the-american-schools-of-oriental-research.csl"
+	},
+	{
+		"name": "Bulletin of the Seismological Society of America",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bulletin-of-the-seismological-society-of-america.csl"
+	},
+	{
+		"name": "Bursa Uludağ Üniversitesi - Eğitim Bilimleri Enstitüsü",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bursa-uludag-universitesi-egitim-bilimleri-enstitusu.csl"
+	},
+	{
+		"name": "Bursa Uludağ Üniversitesi - Sağlık Bilimleri Enstitüsü",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/bursa-uludag-universitesi-saglik-bilimleri-enstitusu.csl"
+	},
+	{
+		"name": "Business and Human Rights Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/business-and-human-rights-journal.csl"
+	},
+	{
+		"name": "Business Ethics: A European Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/business-ethics-a-european-review.csl"
+	},
+	{
+		"name": "BYZANTINA SYMMEIKTA",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/byzantina-symmeikta.csl"
+	},
+	{
+		"name": "Byzantine and Modern Greek Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/byzantine-and-modern-greek-studies.csl"
+	},
+	{
+		"name": "Cahiers d'ethnomusicologie (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cahiers-d-ethnomusicologie.csl"
+	},
+	{
+		"name": "Cahiers du Centre Gustave-Glotz (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cahiers-du-centre-gustave-glotz.csl"
+	},
+	{
+		"name": "Cahiers Mondes Anciens (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cahiers-mondes-anciens.csl"
+	},
+	{
+		"name": "California Agriculture",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/california-agriculture.csl"
+	},
+	{
+		"name": "Cambridge Journal of Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cambridge-journal-of-economics.csl"
+	},
+	{
+		"name": "Cambridge Quarterly of Healthcare Ethics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cambridge-quarterly-of-healthcare-ethics.csl"
+	},
+	{
+		"name": "Cambridge University Press, CambridgeA (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cambridge-university-press-author-date-cambridge-a.csl"
+	},
+	{
+		"name": "Cambridge University Press, CambridgeB (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cambridge-university-press-author-date.csl"
+	},
+	{
+		"name": "Cambridge University Press - Law (note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cambridge-university-press-law-note.csl"
+	},
+	{
+		"name": "Cambridge University Press (note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cambridge-university-press-note.csl"
+	},
+	{
+		"name": "Cambridge University Press (numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cambridge-university-press-numeric.csl"
+	},
+	{
+		"name": "Campus adventiste du Salève - Faculté adventiste de théologie (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/campus-adventiste-du-saleve-faculte-adventiste-de-theologie.csl"
+	},
+	{
+		"name": "Canadian Biosystems Engineering",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-biosystems-engineering.csl"
+	},
+	{
+		"name": "Canadian Geotechnical Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-geotechnical-journal.csl"
+	},
+	{
+		"name": "Canadian Journal of Chemistry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-chemistry.csl"
+	},
+	{
+		"name": "Canadian Journal of Criminology and Criminal Justice",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-criminology-and-criminal-justice.csl"
+	},
+	{
+		"name": "Canadian Journal of Dietetic Practice and Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-dietetic-practice-and-research.csl"
+	},
+	{
+		"name": "Canadian Journal of Earth Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-earth-sciences.csl"
+	},
+	{
+		"name": "Canadian Journal of Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-economics.csl"
+	},
+	{
+		"name": "Canadian Journal of Fisheries and Aquatic Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-fisheries-and-aquatic-sciences.csl"
+	},
+	{
+		"name": "Canadian Journal of Physics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-physics.csl"
+	},
+	{
+		"name": "Canadian Journal of Public Health",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-public-health.csl"
+	},
+	{
+		"name": "Canadian Journal of Soil Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-journal-of-soil-science.csl"
+	},
+	{
+		"name": "Canadian Public Policy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-public-policy.csl"
+	},
+	{
+		"name": "Canadian Urological Association Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/canadian-urological-association-journal.csl"
+	},
+	{
+		"name": "Cancer Biomarkers",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cancer-biomarkers.csl"
+	},
+	{
+		"name": "Cancer Drug Resistance",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cancer-drug-resistance.csl"
+	},
+	{
+		"name": "Cancer Translational Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cancer-translational-medicine.csl"
+	},
+	{
+		"name": "Carcinogenesis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/carcinogenesis.csl"
+	},
+	{
+		"name": "Cardiff University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cardiff-university-harvard.csl"
+	},
+	{
+		"name": "Cardiff University - Vancouver",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cardiff-university-vancouver.csl"
+	},
+	{
+		"name": "Cardiocore (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cardiocore.csl"
+	},
+	{
+		"name": "Časopis pro právní vědu a praxi",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/casopis-pro-pravni-vedu-a-praxi.csl"
+	},
+	{
+		"name": "Cath Lab Digest",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cath-lab-digest.csl"
+	},
+	{
+		"name": "Catholic Biblical Association (full note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/catholic-biblical-association.csl"
+	},
+	{
+		"name": "Cell journals (numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cell-numeric.csl"
+	},
+	{
+		"name": "Cell Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cell-research.csl"
+	},
+	{
+		"name": "Cell Structure and Function",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cell-structure-and-function.csl"
+	},
+	{
+		"name": "Cell Transplantation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cell-transplantation.csl"
+	},
+	{
+		"name": "Cell",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cell.csl"
+	},
+	{
+		"name": "Cellular and Molecular Bioengineering",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cellular-and-molecular-bioengineering.csl"
+	},
+	{
+		"name": "Cellular and Molecular Gastroenterology and Hepatology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cellular-and-molecular-gastroenterology-and-hepatology.csl"
+	},
+	{
+		"name": "Centaurus",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/centaurus.csl"
+	},
+	{
+		"name": "Centre de recherche sur les civilisations de l’Asie orientale (Français - Auteur, Date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/centre-de-recherche-sur-les-civilisations-de-l-asie-orientale-auteur-date.csl"
+	},
+	{
+		"name": "Centre de recherche sur les civilisations de l'Asie orientale (Français - note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/centre-de-recherche-sur-les-civilisations-de-l-asie-orientale.csl"
+	},
+	{
+		"name": "Cerebral Cortex",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cerebral-cortex.csl"
+	},
+	{
+		"name": "Česká zemědělská univerzita v Praze - Fakulta agrobiologie, potravinových a přírodních zdrojů",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ceska-zemedelska-univerzita-v-praze-fakulta-agrobiologie-potravinovych-a-prirodnich-zdroju.csl"
+	},
+	{
+		"name": "Changer d'époque (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/changer-d-epoque.csl"
+	},
+	{
+		"name": "The Chaucer Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chaucer-review.csl"
+	},
+	{
+		"name": "Chemical and Pharmaceutical Bulletin",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chemical-and-pharmaceutical-bulletin.csl"
+	},
+	{
+		"name": "Chemical Biology &amp; Drug Design",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chemical-biology-and-drug-design.csl"
+	},
+	{
+		"name": "Chemical Engineering Progress",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chemical-engineering-progress.csl"
+	},
+	{
+		"name": "Chemical Engineering &amp; Technology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chemical-engineering-technology.csl"
+	},
+	{
+		"name": "Chemical Senses",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chemical-senses.csl"
+	},
+	{
+		"name": "Chemie Ingenieur Technik",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chemie-ingenieur-technik.csl"
+	},
+	{
+		"name": "Chemistry Education Research and Practice",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chemistry-education-research-and-practice.csl"
+	},
+	{
+		"name": "Chest",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chest.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (note, annotated bibliography)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-annotated-bibliography.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 16th edition (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-author-date-16th-edition.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 16th edition (author-date, Euskara)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-author-date-basque.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 16th edition (author-date, Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-author-date-de.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (author-date, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-author-date-fr.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (author-date, no em-dash in bibliography)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-author-date-no-em-dash.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-author-date.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 16th edition (figures and illustrations)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-figures.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 16th edition (full note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-fullnote-bibliography-16th-edition.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (full note, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-fullnote-bibliography-fr.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (full note, no em-dash in bibliography)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-fullnote-bibliography-no-em-dash.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (full note, short title subsequent)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-fullnote-bibliography-short-title-subsequent.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (full note, with Ibid.)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-fullnote-bibliography-with-ibid.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (full note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-fullnote-bibliography.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (library list)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-library-list.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 16th edition (note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-note-bibliography-16th-edition.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (note, with Ibid.)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-note-bibliography-with-ibid.csl"
+	},
+	{
+		"name": "Chicago Manual of Style 17th edition (note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chicago-note-bibliography.csl"
+	},
+	{
+		"name": "CHIMIA",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chimia.csl"
+	},
+	{
+		"name": "China Information",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/china-information.csl"
+	},
+	{
+		"name": "China National Standard GB/T 7714-2015 (author-date, 中文)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/china-national-standard-gb-t-7714-2015-author-date.csl"
+	},
+	{
+		"name": "China National Standard GB/T 7714-2015 (note, 中文)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/china-national-standard-gb-t-7714-2015-note.csl"
+	},
+	{
+		"name": "China National Standard GB/T 7714-2015 (numeric, 中文)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/china-national-standard-gb-t-7714-2015-numeric.csl"
+	},
+	{
+		"name": "China National Standard GB/T 7714-1987 (numeric, 中文)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chinese-gb7714-1987-numeric.csl"
+	},
+	{
+		"name": "China National Standard GB/T 7714-2005 (author-date, 中文)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chinese-gb7714-2005-author-date.csl"
+	},
+	{
+		"name": "China National Standard GB/T 7714-2005 (numeric, 中文)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chinese-gb7714-2005-numeric.csl"
+	},
+	{
+		"name": "Chinese Journal of Aeronautics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chinese-journal-of-aeronautics.csl"
+	},
+	{
+		"name": "Chinese Medical Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chinese-medical-journal.csl"
+	},
+	{
+		"name": "Chinese Science Bulletin",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chinese-science-bulletin.csl"
+	},
+	{
+		"name": "Chroniques des activités archéologiques de l'Ecole française de Rome",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chroniques-des-activites-archeologiques-de-l-ecole-francaise-de-rome.csl"
+	},
+	{
+		"name": "Chungara Revista de Antropología Chilena (Español - Chile)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/chungara-revista-de-antropologia-chilena.csl"
+	},
+	{
+		"name": "Circulation Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/circulation-journal.csl"
+	},
+	{
+		"name": "Circulation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/circulation.csl"
+	},
+	{
+		"name": "Cirugia Cardiovascular (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cirugia-cardiovascular.csl"
+	},
+	{
+		"name": "Citation Compass (Kildekompasset) - APA (note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/citation-compass-apa-note.csl"
+	},
+	{
+		"name": "Citizen Science: Theory and Practice",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/citizen-science-theory-and-practice.csl"
+	},
+	{
+		"name": "Civiltà Italiana (Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/civilta-italiana.csl"
+	},
+	{
+		"name": "Civitas: Revista de Ciências Sociais",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/civitas-revista-de-ciencias-sociais.csl"
+	},
+	{
+		"name": "Cladistics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cladistics.csl"
+	},
+	{
+		"name": "CLARA Architecture/Recherche (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clara-architecture-recherche.csl"
+	},
+	{
+		"name": "Clay Minerals",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clay-minerals.csl"
+	},
+	{
+		"name": "Clays and Clay Minerals",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clays-and-clay-minerals.csl"
+	},
+	{
+		"name": "Climate Change Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/climate-change-economics.csl"
+	},
+	{
+		"name": "Clínica e Investigación en Arteriosclerosis (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinica-e-investigacion-en-arteriosclerosis.csl"
+	},
+	{
+		"name": "Clinical Anatomy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-anatomy.csl"
+	},
+	{
+		"name": "Clinical Dysmorphology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-dysmorphology.csl"
+	},
+	{
+		"name": "Clinical Gastroenterology and Hepatology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-gastroenterology-and-hepatology.csl"
+	},
+	{
+		"name": "Clinical Hemorheology and Microcirculation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-hemorheology-and-microcirculation.csl"
+	},
+	{
+		"name": "Clinical Infectious Diseases",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-infectious-diseases.csl"
+	},
+	{
+		"name": "Clinical Journal of Sport Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-journal-of-sport-medicine.csl"
+	},
+	{
+		"name": "Clinical Journal of the American Society of Nephrology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-journal-of-the-american-society-of-nephrology.csl"
+	},
+	{
+		"name": "Clinical Management Issues",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-management-issues.csl"
+	},
+	{
+		"name": "Clinical Nuclear Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-nuclear-medicine.csl"
+	},
+	{
+		"name": "Clinical Oral Implants Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-oral-implants-research.csl"
+	},
+	{
+		"name": "Clinical Orthopaedics and Related Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-orthopaedics-and-related-research.csl"
+	},
+	{
+		"name": "Clinical Otolaryngology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-otolaryngology.csl"
+	},
+	{
+		"name": "Clinical Pharmacology &amp; Therapeutics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-pharmacology-and-therapeutics.csl"
+	},
+	{
+		"name": "Clinical Physiology and Functional Imaging",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-physiology-and-functional-imaging.csl"
+	},
+	{
+		"name": "Clinical Radiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-radiology.csl"
+	},
+	{
+		"name": "Clinical Spine Surgery",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clinical-spine-surgery.csl"
+	},
+	{
+		"name": "Clio Medica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/clio-medica.csl"
+	},
+	{
+		"name": "CNS &amp; Neurological Disorders - Drug Targets",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cns-and-neurological-disorders-drug-targets.csl"
+	},
+	{
+		"name": "CNS Spectrums",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cns-spectrums.csl"
+	},
+	{
+		"name": "Cold Spring Harbor Laboratory Press",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cold-spring-harbor-laboratory-press.csl"
+	},
+	{
+		"name": "Collection de l'Ecole française de Rome (full note, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/collection-de-l-ecole-francaise-de-rome-full-note.csl"
+	},
+	{
+		"name": "Collection de l'Ecole française de Rome (note, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/collection-de-l-ecole-francaise-de-rome-note.csl"
+	},
+	{
+		"name": "Collection du Centre Jean-Bérard (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/collection-du-centre-jean-berard.csl"
+	},
+	{
+		"name": "Collections électroniques de l'INHA (author-date, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/collections-electroniques-de-l-inha-author-date.csl"
+	},
+	{
+		"name": "Collections électroniques de l'INHA (full note, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/collections-electroniques-de-l-inha-full-note.csl"
+	},
+	{
+		"name": "Collège Montmorency (note, Français - Canada)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/college-montmorency.csl"
+	},
+	{
+		"name": "College of Naturopathic Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/college-of-naturopathic-medicine.csl"
+	},
+	{
+		"name": "Colombian Journal of Anesthesiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/colombian-journal-of-anesthesiology.csl"
+	},
+	{
+		"name": "Colorado State University - School of Biomedical Engineering",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/colorado-state-university-school-of-biomedical-engineering.csl"
+	},
+	{
+		"name": "Comisión Económica para América Latina y el Caribe (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/comision-economica-para-america-latina-y-el-caribe.csl"
+	},
+	{
+		"name": "Common Market Law Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/common-market-law-review.csl"
+	},
+	{
+		"name": "Communication et Langages",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/communication-et-langages.csl"
+	},
+	{
+		"name": "Comparativ",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/comparativ.csl"
+	},
+	{
+		"name": "Comparative Politics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/comparative-politics.csl"
+	},
+	{
+		"name": "Comparative Population Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/comparative-population-studies.csl"
+	},
+	{
+		"name": "Comptes Rendus (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/comptes-rendus-author-date.csl"
+	},
+	{
+		"name": "Comptes Rendus (numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/comptes-rendus-numeric.csl"
+	},
+	{
+		"name": "Computer Supported Cooperative Work",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/computer-supported-cooperative-work.csl"
+	},
+	{
+		"name": "Computer und Recht (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/computer-und-recht.csl"
+	},
+	{
+		"name": "Conservation &amp; Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/conservation-and-society.csl"
+	},
+	{
+		"name": "Conservation Biology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/conservation-biology.csl"
+	},
+	{
+		"name": "Conservation Letters",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/conservation-letters.csl"
+	},
+	{
+		"name": "Conservation Physiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/conservation-physiology.csl"
+	},
+	{
+		"name": "Constructivist Foundations",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/constructivist-foundations.csl"
+	},
+	{
+		"name": "Contemporary Accounting Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/contemporary-accounting-research.csl"
+	},
+	{
+		"name": "Continuity and Change",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/continuity-and-change.csl"
+	},
+	{
+		"name": "Contributions to the Archaeology of Egypt, Nubia and the Levant",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/contributions-to-the-archaeology-of-egypt-nubia-and-the-levant.csl"
+	},
+	{
+		"name": "Copeia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/copeia.csl"
+	},
+	{
+		"name": "Copernicus Publications",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/copernicus-publications.csl"
+	},
+	{
+		"name": "Coral Reefs",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/coral-reefs.csl"
+	},
+	{
+		"name": "Cornea",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cornea.csl"
+	},
+	{
+		"name": "Corrosion",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/corrosion.csl"
+	},
+	{
+		"name": "Council of Science Editors, Citation-Sequence 8th edition(numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/council-of-science-editors-8th-edition.csl"
+	},
+	{
+		"name": "Council of Science Editors, Citation-Name (numeric, sorted alphabetically)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/council-of-science-editors-alphabetical.csl"
+	},
+	{
+		"name": "Council of Science Editors, Name-Year (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/council-of-science-editors-author-date.csl"
+	},
+	{
+		"name": "Council of Science Editors, Citation-Sequence (numeric, brackets)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/council-of-science-editors-brackets.csl"
+	},
+	{
+		"name": "Council of Science Editors, Citation-Sequence 9th edition (numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/council-of-science-editors.csl"
+	},
+	{
+		"name": "Cranfield University (numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cranfield-university-numeric.csl"
+	},
+	{
+		"name": "Creativity and Innovation Management",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/creativity-and-innovation-management.csl"
+	},
+	{
+		"name": "Critical Care Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/critical-care-medicine.csl"
+	},
+	{
+		"name": "Critical Reviews in Plant Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/critical-reviews-in-plant-sciences.csl"
+	},
+	{
+		"name": "Critical Reviews in Solid State and Materials Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/critical-reviews-in-solid-state-and-materials-sciences.csl"
+	},
+	{
+		"name": "Crop Breeding and Applied Biotechnology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/crop-breeding-and-applied-biotechnology.csl"
+	},
+	{
+		"name": "Crustaceana",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/crustaceana.csl"
+	},
+	{
+		"name": "Cuadernos de Filología Clásica. Estudios Griegos e Indoeuropeos (autor-año, Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cuadernos-de-filologia-clasica.csl"
+	},
+	{
+		"name": "Cultivos Tropicales (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cultivos-tropicales.csl"
+	},
+	{
+		"name": "cultural geographies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cultural-geographies.csl"
+	},
+	{
+		"name": "Cultural Studies of Science Education",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cultural-studies-of-science-education.csl"
+	},
+	{
+		"name": "Culture, Medicine, and Psychiatry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/culture-medicine-and-psychiatry.csl"
+	},
+	{
+		"name": "Cureus",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cureus.csl"
+	},
+	{
+		"name": "Current Alzheimer Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-alzheimer-research.csl"
+	},
+	{
+		"name": "Current Gene Therapy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-gene-therapy.csl"
+	},
+	{
+		"name": "Current Neurology - Aktualności Neurologiczne",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-neurology-aktualnosci-neurologiczne.csl"
+	},
+	{
+		"name": "Current Opinion in Endocrinology, Diabetes and Obesity",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-opinion-in-endocrinology-diabetes-and-obesity.csl"
+	},
+	{
+		"name": "Current Opinion journals",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-opinion.csl"
+	},
+	{
+		"name": "Current Organic Synthesis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-organic-synthesis.csl"
+	},
+	{
+		"name": "Current Pharmaceutical Design",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-pharmaceutical-design.csl"
+	},
+	{
+		"name": "Current Proteomics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-proteomics.csl"
+	},
+	{
+		"name": "Current Protocols journals",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-protocols.csl"
+	},
+	{
+		"name": "Current Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-science.csl"
+	},
+	{
+		"name": "Current Topics in Medicinal Chemistry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/current-topics-in-medicinal-chemistry.csl"
+	},
+	{
+		"name": "Currents in Biblical Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/currents-in-biblical-research.csl"
+	},
+	{
+		"name": "Cybium",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cybium.csl"
+	},
+	{
+		"name": "Cytometry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/cytometry.csl"
+	},
+	{
+		"name": "Czech Journal of International Relations",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/czech-journal-of-international-relations.csl"
+	},
+	{
+		"name": "Data Science Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/data-science-journal.csl"
+	},
+	{
+		"name": "Database",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/database.csl"
+	},
+	{
+		"name": "De Buck (Nederlands)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/de-buck.csl"
+	},
+	{
+		"name": "De Montfort University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/de-montfort-university-harvard.csl"
+	},
+	{
+		"name": "Decision Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/decision-sciences.csl"
+	},
+	{
+		"name": "Demographic Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/demographic-research.csl"
+	},
+	{
+		"name": "der moderne staat (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/der-moderne-staat.csl"
+	},
+	{
+		"name": "Dermatology Online Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/dermatology-online-journal.csl"
+	},
+	{
+		"name": "Deutsche Gesellschaft für Psychologie 5. Auflage (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/deutsche-gesellschaft-fur-psychologie.csl"
+	},
+	{
+		"name": "Deutsche Sprache (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/deutsche-sprache.csl"
+	},
+	{
+		"name": "Deutsche Zeitschrift für Sportmedizin",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/deutsche-zeitschrift-fur-sportmedizin.csl"
+	},
+	{
+		"name": "Deutsches Archäologisches Institut",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/deutsches-archaologisches-institut.csl"
+	},
+	{
+		"name": "Deutsches Ärzteblatt",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/deutsches-arzteblatt.csl"
+	},
+	{
+		"name": "Developing World Bioethics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/developing-world-bioethics.csl"
+	},
+	{
+		"name": "Development and Change",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/development-and-change.csl"
+	},
+	{
+		"name": "Development Policy Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/development-policy-review.csl"
+	},
+	{
+		"name": "Developmental Dynamics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/developmental-dynamics.csl"
+	},
+	{
+		"name": "Developmental Medicine &amp; Child Neurology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/developmental-medicine-and-child-neurology.csl"
+	},
+	{
+		"name": "Developmental Neurobiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/developmental-neurobiology.csl"
+	},
+	{
+		"name": "Diabetologia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/diabetologia.csl"
+	},
+	{
+		"name": "Diagnóstico Prenatal (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/diagnostico-prenatal.csl"
+	},
+	{
+		"name": "Dialisis y Trasplante (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/dialisis-y-trasplante.csl"
+	},
+	{
+		"name": "Diatom Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/diatom-research.csl"
+	},
+	{
+		"name": "Die Bachelorarbeit (Samac et al.) (in-text, Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/die-bachelorarbeit-samac-et-al-in-text.csl"
+	},
+	{
+		"name": "Die Bachelorarbeit (Samac et al.) (note, Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/die-bachelorarbeit-samac-et-al-note.csl"
+	},
+	{
+		"name": "Digestive and Liver Disease",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/digestive-and-liver-disease.csl"
+	},
+	{
+		"name": "Digital Humanities im deutschsprachigen Raum (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/digital-humanities-im-deutschsprachigen-raum.csl"
+	},
+	{
+		"name": "Digital Scholarship in the Humanities",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/digital-scholarship-in-the-humanities.csl"
+	},
+	{
+		"name": "DIN 1505-2 (alphanumeric, Deutsch) - standard superseded by ISO-690",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/din-1505-2-alphanumeric.csl"
+	},
+	{
+		"name": "DIN 1505-2 (numeric, sorted alphabetically, Deutsch) - standard superseded by ISO-690",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/din-1505-2-numeric-alphabetical.csl"
+	},
+	{
+		"name": "DIN 1505-2 (numeric, Deutsch) - standard superseded by ISO-690",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/din-1505-2-numeric.csl"
+	},
+	{
+		"name": "DIN 1505-2 (author-date, Deutsch) - standard superseded by ISO-690",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/din-1505-2.csl"
+	},
+	{
+		"name": "Diplo",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/diplo.csl"
+	},
+	{
+		"name": "Disability and Rehabilitation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/disability-and-rehabilitation.csl"
+	},
+	{
+		"name": "Discover Food",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/discover-food.csl"
+	},
+	{
+		"name": "Discovery Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/discovery-medicine.csl"
+	},
+	{
+		"name": "DNA Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/dna-research.csl"
+	},
+	{
+		"name": "Documents d'archéologie française (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/documents-d-archeologie-francaise.csl"
+	},
+	{
+		"name": "Donau-Universität Krems - Department für E-Governance in Wirtschaft und Verwaltung (Deutsch - Österreich)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/donau-universitat-krems-department-fur-e-governance-in-wirthschaft-und-verwaltung.csl"
+	},
+	{
+		"name": "Drug Development Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/drug-development-research.csl"
+	},
+	{
+		"name": "Drug Testing and Analysis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/drug-testing-and-analysis.csl"
+	},
+	{
+		"name": "Drugs of Today",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/drugs-of-today.csl"
+	},
+	{
+		"name": "Duale Hochschule Baden-Württemberg - Department of International Business",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/duale-hochschule-baden-wurttemberg-department-of-international-business.csl"
+	},
+	{
+		"name": "Durban University of Technology - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/durban-university-of-technology-harvard.csl"
+	},
+	{
+		"name": "E3S Web of Conferences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/e3s-web-of-conferences.csl"
+	},
+	{
+		"name": "Ear and Hearing",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ear-and-hearing.csl"
+	},
+	{
+		"name": "Early Christianity",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/early-christianity.csl"
+	},
+	{
+		"name": "Early Medieval Europe",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/early-medieval-europe.csl"
+	},
+	{
+		"name": "Early Music History",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/early-music-history.csl"
+	},
+	{
+		"name": "Earth Surface Processes and Landforms",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/earth-surface-processes-and-landforms.csl"
+	},
+	{
+		"name": "Earthquake Engineering &amp; Structural Dynamics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/earthquake-engineering-and-structural-dynamics.csl"
+	},
+	{
+		"name": "Earthquake Spectra",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/earthquake-spectra.csl"
+	},
+	{
+		"name": "Ecclesial Practices",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecclesial-practices.csl"
+	},
+	{
+		"name": "École de technologie supérieure - APA (Français - Canada)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecole-de-technologie-superieure-apa.csl"
+	},
+	{
+		"name": "École Pratique des Hautes Études - Sciences historiques et philologiques (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecole-pratique-des-hautes-etudes-sciences-historiques-et-philologiques.csl"
+	},
+	{
+		"name": "Ecological Entomology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecological-entomology.csl"
+	},
+	{
+		"name": "Ecological Restoration",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecological-restoration.csl"
+	},
+	{
+		"name": "Ecology and Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecology-and-society.csl"
+	},
+	{
+		"name": "Ecology Letters",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecology-letters.csl"
+	},
+	{
+		"name": "Ecology of Freshwater Fish",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecology-of-freshwater-fish.csl"
+	},
+	{
+		"name": "Ecology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecology.csl"
+	},
+	{
+		"name": "Econometrica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/econometrica.csl"
+	},
+	{
+		"name": "Economía y Política (Español - Chile)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/economia-y-politica.csl"
+	},
+	{
+		"name": "Economic Commission for Latin America and the Caribbean",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/economic-commission-for-latin-america-and-the-caribbean.csl"
+	},
+	{
+		"name": "Economic Geology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/economic-geology.csl"
+	},
+	{
+		"name": "Économie et Statistique (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/economie-et-statistique.csl"
+	},
+	{
+		"name": "Écoscience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecoscience.csl"
+	},
+	{
+		"name": "Ecosistemas (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecosistemas.csl"
+	},
+	{
+		"name": "Ecosystems",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ecosystems.csl"
+	},
+	{
+		"name": "Edward Elgar Publishing - Business and Social Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/edward-elgar-business-and-social-sciences.csl"
+	},
+	{
+		"name": "Effective Altruism Wiki",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/effective-altruism-wiki.csl"
+	},
+	{
+		"name": "Egretta (Deutsch - Österreich)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/egretta.csl"
+	},
+	{
+		"name": "Einaudi (Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/einaudi.csl"
+	},
+	{
+		"name": "Eksploatacja i Niezawodnosc - Maintenance and Reliability",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eksploatacja-i-niezawodnosc.csl"
+	},
+	{
+		"name": "Profesional de la información (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/el-profesional-de-la-informacion.csl"
+	},
+	{
+		"name": "Electrophoresis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/electrophoresis.csl"
+	},
+	{
+		"name": "Elementa",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elementa.csl"
+	},
+	{
+		"name": "eLife",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elife.csl"
+	},
+	{
+		"name": "Elsevier - American Chemical Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-american-chemical-society.csl"
+	},
+	{
+		"name": "Elsevier - Harvard (without titles)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-harvard-without-titles.csl"
+	},
+	{
+		"name": "Elsevier - Harvard (with titles)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-harvard.csl"
+	},
+	{
+		"name": "Elsevier - Harvard 2",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-harvard2.csl"
+	},
+	{
+		"name": "Elsevier - Vancouver (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-vancouver-author-date.csl"
+	},
+	{
+		"name": "Elsevier - Vancouver (no \"et al.\")",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-vancouver-no-et-al.csl"
+	},
+	{
+		"name": "Elsevier - Vancouver",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-vancouver.csl"
+	},
+	{
+		"name": "Elsevier (numeric, with titles, sorted alphabetically)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-with-titles-alphabetical.csl"
+	},
+	{
+		"name": "Elsevier (numeric, with titles)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-with-titles.csl"
+	},
+	{
+		"name": "Elsevier (numeric, without titles)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/elsevier-without-titles.csl"
+	},
+	{
+		"name": "EMBnet.journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/embnet-journal.csl"
+	},
+	{
+		"name": "EMBO Press",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/embo-press.csl"
+	},
+	{
+		"name": "Emerald - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/emerald-harvard.csl"
+	},
+	{
+		"name": "Emu - Austral Ornithology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/emu-austral-ornithology.csl"
+	},
+	{
+		"name": "Endocrine Connections",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/endocrine-connections.csl"
+	},
+	{
+		"name": "Endocrine Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/endocrine-journal.csl"
+	},
+	{
+		"name": "Endocrine Press",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/endocrine-press.csl"
+	},
+	{
+		"name": "Endoscopia (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/endoscopia.csl"
+	},
+	{
+		"name": "Energy Research &amp; Social Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/energy-research-and-social-science.csl"
+	},
+	{
+		"name": "eNeuro",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eneuro.csl"
+	},
+	{
+		"name": "Enfances Familles Générations (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/enfances-familles-generations.csl"
+	},
+	{
+		"name": "Enfermería Clínica (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/enfermeria-clinica.csl"
+	},
+	{
+		"name": "Enfermería Intensiva (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/enfermeria-intensiva.csl"
+	},
+	{
+		"name": "Engineered Regeneration",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/engineered-regeneration.csl"
+	},
+	{
+		"name": "Engineering in Life Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/engineering-in-life-sciences.csl"
+	},
+	{
+		"name": "Engineering, Technology &amp; Applied Science Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/engineering-technology-and-applied-science-research.csl"
+	},
+	{
+		"name": "ENS de Lyon - Centre d'ingénierie documentaire (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ens-de-lyon-centre-d-ingenierie-documentaire.csl"
+	},
+	{
+		"name": "ENTECHO (Čeština)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/entecho.csl"
+	},
+	{
+		"name": "Entomologia Experimentalis et Applicata",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/entomologia-experimentalis-et-applicata.csl"
+	},
+	{
+		"name": "Entomological Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/entomological-review.csl"
+	},
+	{
+		"name": "Entomological Society of America",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/entomological-society-of-america.csl"
+	},
+	{
+		"name": "Environment and Planning",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environment-and-planning.csl"
+	},
+	{
+		"name": "Environment and Urbanization",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environment-and-urbanization.csl"
+	},
+	{
+		"name": "Environmental &amp; Engineering Geoscience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environmental-and-engineering-geoscience.csl"
+	},
+	{
+		"name": "Environmental Chemistry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environmental-chemistry.csl"
+	},
+	{
+		"name": "Environmental Conservation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environmental-conservation.csl"
+	},
+	{
+		"name": "Environmental Health Perspectives",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environmental-health-perspectives.csl"
+	},
+	{
+		"name": "Environmental Microbiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environmental-microbiology.csl"
+	},
+	{
+		"name": "Environmental Values",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environmental-values.csl"
+	},
+	{
+		"name": "Environnement, Risques &amp; Santé",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/environnement-risques-et-sante.csl"
+	},
+	{
+		"name": "Ephemerides Theologicae Lovanienses",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ephemerides-theologicae-lovanienses.csl"
+	},
+	{
+		"name": "Épidémiologie et Santé Animale",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/epidemiologie-et-sante-animale.csl"
+	},
+	{
+		"name": "Epidemiology &amp; Infection",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/epidemiology-and-infection.csl"
+	},
+	{
+		"name": "Epidemiology &amp; Psychiatric Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/epidemiology-psychiatric-sciences.csl"
+	},
+	{
+		"name": "Epilepsia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/epilepsia.csl"
+	},
+	{
+		"name": "Equine Veterinary Education",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/equine-veterinary-education.csl"
+	},
+	{
+		"name": "Equine Veterinary Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/equine-veterinary-journal.csl"
+	},
+	{
+		"name": "Ergo",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ergo.csl"
+	},
+	{
+		"name": "ergoscience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ergoscience.csl"
+	},
+	{
+		"name": "Errata: Publicação sobre processos editoriais (Português - Brasil)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/errata.csl"
+	},
+	{
+		"name": "Escuela Nacional de Antropología e Historia (autor-fecha, Español - México)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/escuela-nacional-de-antropologia-e-historia-author-date.csl"
+	},
+	{
+		"name": "Escuela Nacional de Antropología e Historia (nota completa, Español - México)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/escuela-nacional-de-antropologia-e-historia-full-note.csl"
+	},
+	{
+		"name": "Escuela Nacional de Antropología e Historia (nota corta, Español - México)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/escuela-nacional-de-antropologia-e-historia-short-note.csl"
+	},
+	{
+		"name": "Estonian Journal of Earth Sciences",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/estonian-journal-of-earth-sciences.csl"
+	},
+	{
+		"name": "Estuaries and Coasts",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/estuaries-and-coasts.csl"
+	},
+	{
+		"name": "Estudios de Cultura Maya (Español - México)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/estudios-de-cultura-maya.csl"
+	},
+	{
+		"name": "Estudios de Fonética Experimental",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/estudios-de-fonetica-experimental.csl"
+	},
+	{
+		"name": "Estudios Hispánicos (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/estudios-hispanicos.csl"
+	},
+	{
+		"name": "Ethics (for book reviews)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ethics-book-reviews.csl"
+	},
+	{
+		"name": "Ethnobiology and Conservation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ethnobiology-and-conservation.csl"
+	},
+	{
+		"name": "Ethnobiology Letters",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ethnobiology-letters.csl"
+	},
+	{
+		"name": "ethnographiques.org (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ethnographiques-org.csl"
+	},
+	{
+		"name": "Ethnologie française (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ethnologie-francaise.csl"
+	},
+	{
+		"name": "Ethnomusicology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ethnomusicology.csl"
+	},
+	{
+		"name": "ETRI Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/etri-journal.csl"
+	},
+	{
+		"name": "ÉTS - École de technologie supérieure (Français - Canada)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ets-ecole-de-technologie-superieure.csl"
+	},
+	{
+		"name": "Études françaises (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/etudes-francaises.csl"
+	},
+	{
+		"name": "EUNOMÍA. Revista en Cultura de la Legalidad (Español)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eunomia-revista-en-cultura-de-la-legalidad.csl"
+	},
+	{
+		"name": "Eurasian Journal of Medical Investigation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eurasian-journal-of-medical-investigation.csl"
+	},
+	{
+		"name": "Eurasian Journal of Medicine and Oncology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eurasian-journal-of-medicine-and-oncology.csl"
+	},
+	{
+		"name": "EuroIntervention",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eurointervention.csl"
+	},
+	{
+		"name": "Europace",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/europace.csl"
+	},
+	{
+		"name": "European Cells &amp; Materials",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-cells-and-materials.csl"
+	},
+	{
+		"name": "European Journal for Philosophy of Religion",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-for-philosophy-of-religion.csl"
+	},
+	{
+		"name": "European Journal of Anaesthesiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-anaesthesiology.csl"
+	},
+	{
+		"name": "European Journal of Clinical Microbiology &amp; Infectious Diseases",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-clinical-microbiology-and-infectious-diseases.csl"
+	},
+	{
+		"name": "European Journal of Emergency Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-emergency-medicine.csl"
+	},
+	{
+		"name": "European Journal of Endocrinology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-endocrinology.csl"
+	},
+	{
+		"name": "European Journal of Entomology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-entomology.csl"
+	},
+	{
+		"name": "European Journal of Human Genetics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-human-genetics.csl"
+	},
+	{
+		"name": "European Journal of Immunology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-immunology.csl"
+	},
+	{
+		"name": "European Journal of Information Systems",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-information-systems.csl"
+	},
+	{
+		"name": "European Journal of International Law",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-international-law.csl"
+	},
+	{
+		"name": "European Journal of Microbiology &amp; Immunology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-microbiology-and-immunology.csl"
+	},
+	{
+		"name": "European Journal of Neuroscience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-neuroscience.csl"
+	},
+	{
+		"name": "European Journal of Ophthalmology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-ophthalmology.csl"
+	},
+	{
+		"name": "European Journal of Paediatric Neurology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-paediatric-neurology.csl"
+	},
+	{
+		"name": "European Journal of Pain",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-pain.csl"
+	},
+	{
+		"name": "European Journal of Political Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-political-research.csl"
+	},
+	{
+		"name": "European Journal of Public Health",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-public-health.csl"
+	},
+	{
+		"name": "European Journal of Soil Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-soil-science.csl"
+	},
+	{
+		"name": "European Journal of Taxonomy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-taxonomy.csl"
+	},
+	{
+		"name": "European Journal of Theology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-theology.csl"
+	},
+	{
+		"name": "European Journal of Ultrasound (Ultraschall in der Medizin)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-ultrasound.csl"
+	},
+	{
+		"name": "European Journal of Vascular and Endovascular Surgery",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-of-vascular-and-endovascular-surgery.csl"
+	},
+	{
+		"name": "European Journal Physical Medicine and Rehabilitation",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-journal-physical-medicine-and-rehabilitation.csl"
+	},
+	{
+		"name": "European Respiratory Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-respiratory-journal.csl"
+	},
+	{
+		"name": "European Retail Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-retail-research.csl"
+	},
+	{
+		"name": "European Review of Agricultural Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-review-of-agricultural-economics.csl"
+	},
+	{
+		"name": "European Review of International Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-review-of-international-studies.csl"
+	},
+	{
+		"name": "European Society of Cardiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-society-of-cardiology.csl"
+	},
+	{
+		"name": "European Union - Interinstitutional Style Guide (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-union-interinstitutional-style-guide-author-date.csl"
+	},
+	{
+		"name": "European Union - Interinstitutional Style Guide (note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/european-union-interinstitutional-style-guide.csl"
+	},
+	{
+		"name": "EVA Berlin Konferenz (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eva-berlin-konferenz.csl"
+	},
+	{
+		"name": "Evidence-Based Complementary and Alternative Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/evidence-based-complementary-and-alternative-medicine.csl"
+	},
+	{
+		"name": "Evolution &amp; Development",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/evolution-and-development.csl"
+	},
+	{
+		"name": "Evolution Letters",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/evolution-letters.csl"
+	},
+	{
+		"name": "Evolution",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/evolution.csl"
+	},
+	{
+		"name": "Evolutionary Anthropology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/evolutionary-anthropology.csl"
+	},
+	{
+		"name": "Evolutionary Ecology Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/evolutionary-ecology-research.csl"
+	},
+	{
+		"name": "EXCLI Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/excli-journal.csl"
+	},
+	{
+		"name": "exercer (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/exercer.csl"
+	},
+	{
+		"name": "Experimental Biology and Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/experimental-biology-and-medicine.csl"
+	},
+	{
+		"name": "Experimental Biomedical Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/experimental-biomedical-research.csl"
+	},
+	{
+		"name": "Expert Reviews in Molecular Medicine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/expert-reviews-in-molecular-medicine.csl"
+	},
+	{
+		"name": "Exploration of Targeted Anti-tumor Therapy",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/exploration-of-targeted-anti-tumor-therapy.csl"
+	},
+	{
+		"name": "eXPRESS Polymer Letters",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/express-polymer-letters.csl"
+	},
+	{
+		"name": "Extracellular Vesicles and Circulating Nucleic Acids",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/extracellular-vesicles-and-circulating-nucleic-acids.csl"
+	},
+	{
+		"name": "Eye",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/eye.csl"
+	},
+	{
+		"name": "FACETS",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/facets.csl"
+	},
+	{
+		"name": "Fachhochschule Kiel - Fachbereich Medien (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fachhochschule-kiel-fachbereich-medien.csl"
+	},
+	{
+		"name": "Fachhochschule Südwestfalen (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fachhochschule-sudwestfalen.csl"
+	},
+	{
+		"name": "Fachhochschule Vorarlberg (author-date)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fachhochschule-vorarlberg-author-date.csl"
+	},
+	{
+		"name": "Fachhochschule Vorarlberg (note)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fachhochschule-vorarlberg-note.csl"
+	},
+	{
+		"name": "Facial Plastic Surgery Clinics of North America",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/facial-plastic-surgery-clinics-of-north-america.csl"
+	},
+	{
+		"name": "Facoltà Teologica dell'Italia Settentrionale - Milano (titoli di riviste non abbreviati, Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/facolta-teologica-dell-italia-settentrionale-milano.csl"
+	},
+	{
+		"name": "Family Business Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/family-business-review.csl"
+	},
+	{
+		"name": "Farmeconomia. Health Economics and Therapeutic Pathways",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/farmeconomia.csl"
+	},
+	{
+		"name": "Fatigue &amp; Fracture of Engineering Materials &amp; Structures",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fatigue-and-fracture-of-engineering-materials-and-structures.csl"
+	},
+	{
+		"name": "Feminist Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/feminist-economics.csl"
+	},
+	{
+		"name": "Feminist Theory",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/feminist-theory.csl"
+	},
+	{
+		"name": "Ferdinand Porsche Fernfachhochschule (Deutsch - Österreich)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ferdinand-porsche-fern-fachhochschule.csl"
+	},
+	{
+		"name": "Ferdinand Porsche FERNFH - Betriebswirtschaft und Wirtschaftspsychologie - DGPS (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/ferdinand-porsche-fernfh-betriebswirtschaft-und-wirtschaftspsychologie-dgps.csl"
+	},
+	{
+		"name": "Fertility and Sterility",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fertility-and-sterility.csl"
+	},
+	{
+		"name": "Finance and Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/finance-and-society.csl"
+	},
+	{
+		"name": "FinanzArchiv - Public Finance Analysis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/finanzarchiv.csl"
+	},
+	{
+		"name": "Fine Focus",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fine-focus.csl"
+	},
+	{
+		"name": "First Break",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/first-break.csl"
+	},
+	{
+		"name": "First Monday",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/first-monday.csl"
+	},
+	{
+		"name": "Fishery Bulletin",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fishery-bulletin.csl"
+	},
+	{
+		"name": "Flavour and Fragrance Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/flavour-and-fragrance-journal.csl"
+	},
+	{
+		"name": "Florida Entomologist",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/florida-entomologist.csl"
+	},
+	{
+		"name": "Focaal&#8212;Journal of Global and Historical Anthropology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/focaal-journal-of-global-and-historical-anthropology.csl"
+	},
+	{
+		"name": "Sascha Foerster - Geisteswissenschaft (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/foerster-geisteswissenschaft.csl"
+	},
+	{
+		"name": "FOLD&amp;R (Fasti On Line Documents &amp; Research)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fold-and-r.csl"
+	},
+	{
+		"name": "Folia Biologica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/folia-biologica.csl"
+	},
+	{
+		"name": "Folia Morphologia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/folia-morphologia.csl"
+	},
+	{
+		"name": "Food and Agriculture Organization of the United Nations (numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/food-and-agriculture-organization-of-the-united-nations-numeric.csl"
+	},
+	{
+		"name": "Food and Agriculture Organization of the United Nations",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/food-and-agriculture-organization-of-the-united-nations.csl"
+	},
+	{
+		"name": "Food Science and Biotechnology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/food-science-and-biotechnology.csl"
+	},
+	{
+		"name": "Forensic Anthropology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/forensic-anthropology.csl"
+	},
+	{
+		"name": "Forensic Science Review",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/forensic-science-review.csl"
+	},
+	{
+		"name": "Forest Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/forest-science.csl"
+	},
+	{
+		"name": "Forestry",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/forestry.csl"
+	},
+	{
+		"name": "Forschungsjournal Soziale Bewegungen FJSB(German)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/forschungsjournal-soziale-bewegungen-fjsb.csl"
+	},
+	{
+		"name": "Forum: Qualitative Social Research (English)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/forum-qualitative-social-research.csl"
+	},
+	{
+		"name": "Forum: Qualitative Sozialforschung (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/forum-qualitative-sozialforschung.csl"
+	},
+	{
+		"name": "Frattura ed Integrità Strutturale - Fracture and Structural Integrity",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frattura-ed-integrita-strutturale-fracture-and-structural-integrity.csl"
+	},
+	{
+		"name": "Free Radical Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/free-radical-research.csl"
+	},
+	{
+		"name": "Freie Hochschule Stuttgart (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/freie-hochschule-stuttgart.csl"
+	},
+	{
+		"name": "Freie Universität Berlin - Geographische Wissenschaften (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/freie-universitat-berlin-geographische-wissenschaften.csl"
+	},
+	{
+		"name": "French Politics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/french-politics.csl"
+	},
+	{
+		"name": "France (tous les auteurs, numérotation, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/french1.csl"
+	},
+	{
+		"name": "France (auteurs et al., numérotation, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/french2.csl"
+	},
+	{
+		"name": "France (tous les auteurs, auteur-date, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/french3.csl"
+	},
+	{
+		"name": "France (auteurs et al., auteur-date, Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/french4.csl"
+	},
+	{
+		"name": "Freshwater Biology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/freshwater-biology.csl"
+	},
+	{
+		"name": "Freshwater Crayfish",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/freshwater-crayfish.csl"
+	},
+	{
+		"name": "Freshwater Science",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/freshwater-science.csl"
+	},
+	{
+		"name": "Friedrich-Schiller-Universität Jena - Medizinische Fakultät (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/friedrich-schiller-universitat-jena-medizinische-fakultat.csl"
+	},
+	{
+		"name": "Frontiers in Bioscience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frontiers-in-bioscience.csl"
+	},
+	{
+		"name": "Frontiers in Ecology and the Environment",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frontiers-in-ecology-and-the-environment.csl"
+	},
+	{
+		"name": "Frontiers in Optics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frontiers-in-optics.csl"
+	},
+	{
+		"name": "Frontiers in Physics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frontiers-in-physics.csl"
+	},
+	{
+		"name": "Frontiers medical journals",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frontiers-medical-journals.csl"
+	},
+	{
+		"name": "Frontiers of Biogeography",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frontiers-of-biogeography.csl"
+	},
+	{
+		"name": "Frontiers journals",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/frontiers.csl"
+	},
+	{
+		"name": "Fundamental and Applied Limnology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/fundamental-and-applied-limnology.csl"
+	},
+	{
+		"name": "Future Medicine journals",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/future-medicine.csl"
+	},
+	{
+		"name": "Future Science Group",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/future-science-group.csl"
+	},
+	{
+		"name": "G. Giappichelli Editore (Italiano)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/g-giappichelli-editore.csl"
+	},
+	{
+		"name": "Gaceta Sanitaria",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gaceta-sanitaria.csl"
+	},
+	{
+		"name": "GAIA",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gaia.csl"
+	},
+	{
+		"name": "Galatasaray Üniversitesi Sosyal Bilimler Enstitüsü",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/galatasaray-universitesi-sosyal-bilimler-enstitusu.csl"
+	},
+	{
+		"name": "Gallia Préhistoire (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gallia-prehistoire.csl"
+	},
+	{
+		"name": "Gallia (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gallia.csl"
+	},
+	{
+		"name": "Gastroenterology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gastroenterology.csl"
+	},
+	{
+		"name": "Gastrointestinal Endoscopy Clinics of North America",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gastrointestinal-endoscopy-clinics-of-north-america.csl"
+	},
+	{
+		"name": "Gastrointestinal Intervention",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gastrointestinal-intervention.csl"
+	},
+	{
+		"name": "Gayana",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gayana.csl"
+	},
+	{
+		"name": "Gazeta Médica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gazeta-medica.csl"
+	},
+	{
+		"name": "Geistes- und Kulturwissenschaften (Heilmann) (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geistes-und-kulturwissenschaften-heilmann.csl"
+	},
+	{
+		"name": "Gender &amp; Society",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gender-and-society.csl"
+	},
+	{
+		"name": "GENDER. Zeitschrift für Geschlecht, Kultur und Gesellschaft (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gender-zeitschrift-fur-geschlecht-kultur-und-gesellschaft.csl"
+	},
+	{
+		"name": "Generic Style Rules for Linguistics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/generic-style-rules-for-linguistics.csl"
+	},
+	{
+		"name": "Genes, Brain and Behavior",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/genes-brain-and-behavior.csl"
+	},
+	{
+		"name": "Genes to Cells",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/genes-to-cells.csl"
+	},
+	{
+		"name": "Genèses: Sciences sociales et histoire (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geneses.csl"
+	},
+	{
+		"name": "Genetics and Molecular Biology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/genetics-and-molecular-biology.csl"
+	},
+	{
+		"name": "Gengo Kenkyu, Journal of the Linguistic Society of Japan",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gengo-kenkyu-journal-of-the-linguistic-society-of-japan.csl"
+	},
+	{
+		"name": "Genome Biology and Evolution",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/genome-biology-and-evolution.csl"
+	},
+	{
+		"name": "Genomics &amp; Informatics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/genomics-and-informatics.csl"
+	},
+	{
+		"name": "Geoarchaeology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geoarchaeology.csl"
+	},
+	{
+		"name": "Geobiology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geobiology.csl"
+	},
+	{
+		"name": "Geochemical Perspectives Letters",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geochemical-perspectives-letters.csl"
+	},
+	{
+		"name": "Geochimica et Cosmochimica Acta",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geochimica-et-cosmochimica-acta.csl"
+	},
+	{
+		"name": "Geochronometria",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geochronometria.csl"
+	},
+	{
+		"name": "Geografia Fisica e Dinamica Quaternaria",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geografia-fisica-e-dinamica-quaternaria.csl"
+	},
+	{
+		"name": "Geografie Sborník ČGS",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geografie-sbornik-cgs.csl"
+	},
+	{
+		"name": "Geographical Analysis",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geographical-analysis.csl"
+	},
+	{
+		"name": "Géographie et cultures (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geographie-et-cultures.csl"
+	},
+	{
+		"name": "Geographische Zeitschrift",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geographische-zeitschrift.csl"
+	},
+	{
+		"name": "Geological Magazine",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geological-magazine.csl"
+	},
+	{
+		"name": "Geophysical Journal International",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geophysical-journal-international.csl"
+	},
+	{
+		"name": "Geophysics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geophysics.csl"
+	},
+	{
+		"name": "Geopolitics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geopolitics.csl"
+	},
+	{
+		"name": "Georg-August-Universität Göttingen - Institut für Ethnologie und Ethnologische Sammlung (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/georg-august-universitat-gottingen-institut-fur-ethnologie-und-ethnologische-sammlung.csl"
+	},
+	{
+		"name": "Geriatrics &amp; Gerontology International",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geriatrics-and-gerontology-international.csl"
+	},
+	{
+		"name": "Gériatrie et Psychologie Neuropsychiatrie du Vieillissement",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geriatrie-et-psychologie-neuropsychiatrie-du-vieillissement.csl"
+	},
+	{
+		"name": "German Council of Economic Experts",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/german-council-of-economic-experts.csl"
+	},
+	{
+		"name": "German Journal of Agricultural Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/german-journal-of-agricultural-economics.csl"
+	},
+	{
+		"name": "German Yearbook of International Law",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/german-yearbook-of-international-law.csl"
+	},
+	{
+		"name": "Geschichte und Gesellschaft",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/geschichte-und-gesellschaft.csl"
+	},
+	{
+		"name": "Gesellschaft fur Popularmusikforschung (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gesellschaft-fur-popularmusikforschung.csl"
+	},
+	{
+		"name": "Gewerblicher Rechtsschutz und Urheberrecht (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gewerblicher-rechtsschutz-und-urheberrecht.csl"
+	},
+	{
+		"name": "GigaScience",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gigascience.csl"
+	},
+	{
+		"name": "Global Ecology and Biogeography",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/global-ecology-and-biogeography.csl"
+	},
+	{
+		"name": "Glossa",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/glossa.csl"
+	},
+	{
+		"name": "Gnosis: Journal of Gnostic Studies",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gnosis-journal-of-gnostic-studies.csl"
+	},
+	{
+		"name": "Russian GOST R 7.0.5-2008 (numeric, sorted alphabetically, Ру́сский)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gost-r-7-0-5-2008-numeric-alphabetical.csl"
+	},
+	{
+		"name": "Russian GOST R 7.0.5-2008 (numeric)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gost-r-7-0-5-2008-numeric.csl"
+	},
+	{
+		"name": "Russian GOST R 7.0.5-2008 (Ру́сский)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/gost-r-7-0-5-2008.csl"
+	},
+	{
+		"name": "Government and Opposition",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/government-and-opposition.csl"
+	},
+	{
+		"name": "Grasas y Aceites",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/grasas-y-aceites.csl"
+	},
+	{
+		"name": "Griffith College - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/griffith-college-harvard.csl"
+	},
+	{
+		"name": "Groundwater",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/groundwater.csl"
+	},
+	{
+		"name": "Groupe d'anthropologie et d'archéologie funéraire (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/groupe-danthropologie-et-darcheologie-funeraire.csl"
+	},
+	{
+		"name": "Guide des citations, références et abréviations juridiques 6e édition (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/guide-des-citations-references-et-abreviations-juridiques.csl"
+	},
+	{
+		"name": "Guide pour la rédaction et la présentation des thèses à l'usage des doctorants (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/guide-pour-la-redaction-et-la-presentation-des-theses-a-lusage-des-doctorants.csl"
+	},
+	{
+		"name": "Haaga-Helia ammattikorkeakoulu - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/haaga-helia-university-of-applied-sciences-harvard.csl"
+	},
+	{
+		"name": "Haematologica",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/haematologica.csl"
+	},
+	{
+		"name": "Haemophilia",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/haemophilia.csl"
+	},
+	{
+		"name": "Haffner Style Manual",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/haffner-style-manual.csl"
+	},
+	{
+		"name": "Hainan Medical University Journal Publisher",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/hainan-medical-university-journal-publisher.csl"
+	},
+	{
+		"name": "Hamburg School of Food Science (diploma, Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/hamburg-school-of-food-science.csl"
+	},
+	{
+		"name": "HAND",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/hand.csl"
+	},
+	{
+		"name": "Handbook of Clinical Neurology",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/handbook-of-clinical-neurology.csl"
+	},
+	{
+		"name": "Anglia Ruskin University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-anglia-ruskin-university.csl"
+	},
+	{
+		"name": "Bournemouth University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-bournemouth-university.csl"
+	},
+	{
+		"name": "Cape Peninsula University of Technology - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-cape-peninsula-university-of-technology.csl"
+	},
+	{
+		"name": "Cite Them Right 10th edition - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-cite-them-right-10th-edition.csl"
+	},
+	{
+		"name": "Cite Them Right 11th edition - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-cite-them-right-11th-edition.csl"
+	},
+	{
+		"name": "Cite Them Right 12th edition - Harvard (no \"et al.\")",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-cite-them-right-no-et-al.csl"
+	},
+	{
+		"name": "Cite Them Right 12th edition - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-cite-them-right.csl"
+	},
+	{
+		"name": "Coventry University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-coventry-university.csl"
+	},
+	{
+		"name": "Cranfield University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-cranfield-university.csl"
+	},
+	{
+		"name": "Deakin University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-deakin-university.csl"
+	},
+	{
+		"name": "Dundalk Institute of Technology - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-dundalk-institute-of-technology.csl"
+	},
+	{
+		"name": "Durham University Business School - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-durham-university-business-school.csl"
+	},
+	{
+		"name": "Edge Hill University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-edge-hill-university.csl"
+	},
+	{
+		"name": "European Archaeology - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-european-archaeology.csl"
+	},
+	{
+		"name": "Fachhochschule Salzburg - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-fachhochschule-salzburg.csl"
+	},
+	{
+		"name": "Falmouth University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-falmouth-university.csl"
+	},
+	{
+		"name": "Gesellschaft für Bildung und Forschung in Europa - Harvard (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-gesellschaft-fur-bildung-und-forschung-in-europa.csl"
+	},
+	{
+		"name": "Imperial College London - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-imperial-college-london.csl"
+	},
+	{
+		"name": "Institut für Praxisforschung - Harvard (Bahr &amp; Frackmann) (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-institut-fur-praxisforschung-de.csl"
+	},
+	{
+		"name": "King's College London - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-kings-college-london.csl"
+	},
+	{
+		"name": "Leeds Beckett University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-leeds-beckett-university.csl"
+	},
+	{
+		"name": "Leeds Metropolitan University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-leeds-metropolitan-university.csl"
+	},
+	{
+		"name": "University of Limerick (Cite it Right) - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-limerick.csl"
+	},
+	{
+		"name": "London South Bank University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-london-south-bank-university.csl"
+	},
+	{
+		"name": "Manchester Business School - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-manchester-business-school.csl"
+	},
+	{
+		"name": "Manchester Metropolitan University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-manchester-metropolitan-university.csl"
+	},
+	{
+		"name": "Melbourne Polytechnic - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-melbourne-polytechnic.csl"
+	},
+	{
+		"name": "Newcastle University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-newcastle-university.csl"
+	},
+	{
+		"name": "North-West University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-north-west-university.csl"
+	},
+	{
+		"name": "Pontificia Universidad Católica del Ecuador (Español) - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-pontificia-universidad-catolica-del-ecuador.csl"
+	},
+	{
+		"name": "Robert Gordon University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-robert-gordon-university.csl"
+	},
+	{
+		"name": "Staffordshire University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-staffordshire-university.csl"
+	},
+	{
+		"name": "Stellenbosch University - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-stellenbosch-university.csl"
+	},
+	{
+		"name": "Swinburne University of Technology - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-swinburne-university-of-technology.csl"
+	},
+	{
+		"name": "The University of Northampton - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-the-university-of-northampton.csl"
+	},
+	{
+		"name": "The University of Sheffield - School of East Asian Studies - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-the-university-of-sheffield-school-of-east-asian-studies.csl"
+	},
+	{
+		"name": "The University of Sheffield - Town and Regional Planning - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-the-university-of-sheffield-town-and-regional-planning.csl"
+	},
+	{
+		"name": "Theologisches Seminar Adelshofen - Harvard (Deutsch)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-theologisches-seminar-adelshofen.csl"
+	},
+	{
+		"name": "Universiti Teknologi Malaysia - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-universiti-teknologi-malaysia.csl"
+	},
+	{
+		"name": "Universiti Tunku Abdul Rahman - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-universiti-tunku-abdul-rahman.csl"
+	},
+	{
+		"name": "University for the Creative Arts - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-for-the-creative-arts.csl"
+	},
+	{
+		"name": "University of Abertay Dundee - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-abertay-dundee.csl"
+	},
+	{
+		"name": "University of Bath - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-bath.csl"
+	},
+	{
+		"name": "University of Birmingham - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-birmingham.csl"
+	},
+	{
+		"name": "University of Brighton School of Environment &amp; Technology - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-brighton-school-of-environment-and-technology.csl"
+	},
+	{
+		"name": "University of Cape Town - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-cape-town.csl"
+	},
+	{
+		"name": "University of Exeter - Geography - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-exeter-geography.csl"
+	},
+	{
+		"name": "University of Greenwich - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-greenwich.csl"
+	},
+	{
+		"name": "University of Kent - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-kent.csl"
+	},
+	{
+		"name": "University of Leeds - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-leeds.csl"
+	},
+	{
+		"name": "University of Technology Sydney - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-technology-sydney.csl"
+	},
+	{
+		"name": "University of the West of England (Bristol) - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-the-west-of-england.csl"
+	},
+	{
+		"name": "University of the West of Scotland - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-the-west-of-scotland.csl"
+	},
+	{
+		"name": "University of Westminster - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-westminster.csl"
+	},
+	{
+		"name": "University of Wolverhampton - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-university-of-wolverhampton.csl"
+	},
+	{
+		"name": "Xi'an Jiaotong-Liverpool University (XJTLU) - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-xi-an-jiaotong-liverpool-university.csl"
+	},
+	{
+		"name": "York St John University - Harvard (pre September 2019 entry)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/harvard-york-st-john-university.csl"
+	},
+	{
+		"name": "Haute école de gestion de Genève (ISO 690)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/haute-ecole-de-gestion-de-geneve-iso-690.csl"
+	},
+	{
+		"name": "Haute Ecole pédagogique Fribourg (Français)",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/haute-ecole-pedagogique-fribourg.csl"
+	},
+	{
+		"name": "Hawaii International Conference on System Sciences Proceedings",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/hawaii-international-conference-on-system-sciences-proceedings.csl"
+	},
+	{
+		"name": "Health and Human Rights Journal",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/health-and-human-rights-journal.csl"
+	},
+	{
+		"name": "Health &amp; Social Care in the Community",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/health-and-social-care-in-the-community.csl"
+	},
+	{
+		"name": "Health Economics, Policy and Law",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/health-economics-policy-and-law.csl"
+	},
+	{
+		"name": "Health Economics",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/health-economics.csl"
+	},
+	{
+		"name": "Health Education England - Harvard",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/health-education-england-harvard.csl"
+	},
+	{
+		"name": "Health Education Research",
+		"download_url": "https://raw.githubusercontent.com/citation-style-language/styles/master/health-education-research.csl"
+	}
+]

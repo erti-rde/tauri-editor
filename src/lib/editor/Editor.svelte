@@ -5,6 +5,7 @@
 	import { readTextFile, exists, writeTextFile } from '@tauri-apps/plugin-fs';
 	import { fileSystemStore } from '$lib/stores/fileSystem';
 	import { currentFileStore } from '$lib/stores/openFileStore';
+	import { citationStore } from '$lib/stores/citationStore';
 	import { invoke } from '@tauri-apps/api/core';
 
 	import { Editor } from '@tiptap/core';
@@ -24,6 +25,7 @@
 	let currentDir = '';
 
 	onMount(async () => {
+		await citationStore.initializeCitationStore();
 		const readerExtension = $currentFileStore?.endsWith('.json') ? 'json' : 'html';
 		const headNode = document.createElement('head');
 		const stylesNode = document.createElement('style');
@@ -60,15 +62,15 @@
 				console.log('Saving content:', content); // Debug log
 
 				const html = `
-            <html>
-                ${headNode.innerHTML}
-                <body>
-                <div class="tiptap bg-orange-400">
-                    ${content.replaceAll(/<p><\/p>/g, '<p><br></p>')}
-                </div>
-                    </body>
-            </html>
-        `;
+	           <html>
+	               ${headNode.innerHTML}
+	               <body>
+	               <div class="tiptap bg-orange-400">
+	                   ${content.replaceAll(/<p><\/p>/g, '<p><br></p>')}
+	               </div>
+	                   </body>
+	           </html>
+	       `;
 				const pathToSave = await pathJoin(currentDir, 'magnum_opus.html');
 				const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
 				await writeTextFile(pathToSave, html);
@@ -108,7 +110,7 @@
 	}
 
 	// Citation handling
-	//
+
 	let selectedText = '';
 	let showCitationPanel = false;
 

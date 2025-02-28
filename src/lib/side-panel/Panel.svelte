@@ -1,23 +1,33 @@
 <script lang="ts">
-	import { Icon } from '$lib';
 	import { createEventDispatcher } from 'svelte';
+	import { Icon } from '$lib';
+
 
 	const dispatch = createEventDispatcher();
 
-	function toggleExplorer() {
-		dispatch('toggleExplorer');
+	function toggleSidePanel(panelName: string) {
+		dispatch('toggleSidePanel', {
+			panelName
+		});
 	}
 </script>
 
-<div class="flex w-full justify-center">
-	<button
-		class="p-2"
-		on:click={() => {
-			toggleExplorer();
-		}}
-	>
-		<Icon icon="Files" />
-	</button>
+<div class="flex h-full w-full flex-col justify-between">
+	<div>
+		<button
+			class="p-2"
+			on:click={() => {
+				toggleSidePanel('fileExplorer');
+			}}
+		>
+			<Icon icon="Files" />
+		</button>
+	</div>
+	<div>
+		<button class="p-2" on:click={() => toggleSidePanel('settings')}>
+			<Icon icon="Settings" />
+		</button>
+	</div>
 </div>
 
 <style>

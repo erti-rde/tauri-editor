@@ -1,45 +1,22 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import {
-		generateHarvardCitation,
-		generateHarvardInTextCitation
-	} from '$utils/formaters/harvardStyle';
-	import type { Citation } from '$types/citation';
+	import type { CitationItem } from '$lib/stores/citationStore';
 	import { Icon } from '$lib';
+	import { citationStore } from '$lib/stores/citationStore';
 
 	export let metadata: {
 		similarity: number;
 		sentence: string;
 		page: number;
-		metadata: Citation;
+		metadata: CitationItem;
 	};
-	const sourceMetadata = metadata.metadata;
-	const citationMetadata: Citation = {
-		type: sourceMetadata.type as Citation['type'],
-		author: {
-			first_name: sourceMetadata.author.first_name,
-			last_name: sourceMetadata.author.last_name
-		},
-		title: sourceMetadata.title,
-		year: sourceMetadata.year,
-		publisher: sourceMetadata.publisher,
-		location: sourceMetadata.location,
-		edition: sourceMetadata.edition,
-		articleTitle: sourceMetadata.articleTitle,
-		journalTitle: sourceMetadata.journalTitle,
-		volume: sourceMetadata.volume,
-		issue: sourceMetadata.issue,
-		pages: sourceMetadata.pages
-	};
-
 	const dispatch = createEventDispatcher();
 	function generateCitation() {
-		const inlineCitation = generateHarvardInTextCitation(citationMetadata);
-		const fullCitation = generateHarvardCitation(citationMetadata);
+		const inlineCitation = citationStore.getInlineCitation(metadata.metadata.id);
+
 		dispatch('select', {
 			citation: {
-				inlineCitation,
-				fullCitation
+				inlineCitation
 			}
 		});
 	}
@@ -52,16 +29,13 @@
 				<span class="inline-block bg-orange-100 px-5 py-4"
 					>{Math.round(metadata.similarity * 100)}</span
 				>
-				<span class="inline-block bg-orange-50 px-5 py-4"
-					>{metadata.metadata.title} - {metadata.metadata.author.first_name}
-					{metadata.metadata.author.last_name}</span
-				>
-				<span
+				<span class="inline-block bg-orange-50 px-5 py-4">{metadata.metadata.title}</span>
+				<button
 					class="inline-block cursor-pointer bg-orange-300 px-5 py-4"
 					on:click={generateCitation}
 				>
 					<Icon icon="Quote" size="l" />
-				</span>
+				</button>
 			</div>
 			<div class="flex grow flex-col justify-between px-5 py-4">
 				<p class="italic">{metadata.sentence}</p>

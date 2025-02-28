@@ -26,6 +26,8 @@
 	import File from '~icons/lucide/file';
 	import FileOutput from '~icons/lucide/file-output';
 
+	import Settings from '~icons/lucide/settings';
+
 	const icons = {
 		ChevronDown,
 		ChevronLeft,
@@ -50,7 +52,8 @@
 		Folder,
 		File,
 		FolderOpen,
-		FileOutput
+		FileOutput,
+		Settings
 	};
 
 	type Size = 's' | 'm' | 'l';
