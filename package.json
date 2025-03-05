@@ -62,9 +62,11 @@
 		"@tiptap/extension-text-align": "^2.10.3",
 		"@tiptap/pm": "^2.10.3",
 		"@tiptap/starter-kit": "^2.10.3",
+		"@tiptap/suggestion": "^2.11.5",
 		"citeproc": "^2.4.63",
 		"iconify-icon": "^2.1.0",
 		"llm-chunk": "^0.0.1",
-		"pdfjs-dist": "^4.8.69"
+		"pdfjs-dist": "^4.8.69",
+		"tippy.js": "^6.3.7"
 	}
 }

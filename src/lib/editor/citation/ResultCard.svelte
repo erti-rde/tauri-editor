@@ -15,9 +15,10 @@
 	let isExpanded = false;
 
 	function generateCitation() {
-		const inlineCitation = citationStore.getInlineCitation(sentenceMetadata.metadata.id);
+		const inlineCitation = citationStore.getInlineCitation([sentenceMetadata.metadata.id]);
 		dispatch('select', {
 			citation: {
+				id: sentenceMetadata.metadata.id,
 				inlineCitation
 			}
 		});

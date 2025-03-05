@@ -41,7 +41,6 @@
 						'focus:outline-none bg-white border border-[#C7C7C7] flex flex-col min-h-[1054px] w-[816px] pt-10 pr-14 pb-10 cursor-text'
 				}
 			},
-			injectCSS: false,
 			element: element,
 			autofocus: 'end',
 			extensions: [
@@ -55,6 +54,14 @@
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
+			},
+			onSelectionUpdate: ({ editor }) => {
+				// INFO: Check if the cursor is inside a citation node
+				// TODO: Implement logic to handle citation node opening when it's active
+				const isInCitation = editor.isActive('citation');
+				if (isInCitation) {
+					console.log('Cursor is inside a citation node');
+				}
 			},
 			onUpdate: async ({ editor }) => {
 				const content = editor.getHTML();
@@ -122,8 +129,8 @@
 	function handleCitationSelect(event: CustomEvent) {
 		const { citation } = event.detail;
 		editor.commands.insertCitation({
-			id: 'citation',
-			text: citation.inlineCitation
+			id: citation.id,
+			label: citation.inlineCitation
 		});
 		showCitationPanel = false;
 	}
