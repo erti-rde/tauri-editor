@@ -158,18 +158,14 @@
 		/>
 		<dialog
 			open
-			class="relative z-10 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800"
+			class="relative z-10 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] flex-col overflow-hidden rounded-lg bg-white shadow-xl"
 			aria-labelledby="settings-title"
 		>
 			<!-- Header -->
-			<div
-				class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700"
-			>
-				<h2 id="settings-title" class="text-xl font-semibold text-gray-800 dark:text-gray-100">
-					Settings
-				</h2>
+			<div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+				<h2 id="settings-title" class="text-xl font-semibold text-gray-800">Settings</h2>
 				<button
-					class="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+					class="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
 					on:click={closeModal}
 				>
 					<Icon icon="X" />
@@ -179,12 +175,12 @@
 			<!-- Content -->
 			<div class="flex flex-1 overflow-hidden">
 				<!-- Sidebar -->
-				<div class="dark:bg-gray-850 w-48 border-r border-gray-200 bg-gray-50 dark:border-gray-700">
+				<div class="w-48 border-r border-gray-200 bg-gray-50">
 					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'appearance', label: 'Appearance' }] as tab}
 						<button
-							class="w-full border-l-2 px-4 py-3 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 {activeTab ===
+							class="w-full border-l-2 px-4 py-3 text-left transition-colors hover:bg-gray-100 {activeTab ===
 							tab.id
-								? 'border-orange-500 bg-gray-100 font-medium dark:bg-gray-700'
+								? 'border-orange-500 bg-gray-100 font-medium'
 								: 'border-transparent'}"
 							on:click={() => setActiveTab(tab.id)}
 						>
@@ -194,7 +190,7 @@
 				</div>
 
 				<!-- Settings panels -->
-				<div class="relative flex-1 bg-white dark:bg-gray-800">
+				<div class="relative flex-1 bg-white">
 					<!-- General Settings -->
 					<div
 						class="absolute inset-0 overflow-y-auto {activeTab === 'general'
@@ -202,17 +198,12 @@
 							: 'hidden'} p-5"
 					>
 						<div class="mb-8">
-							<h3
-								class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100"
-							>
+							<h3 class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">
 								General Settings
 							</h3>
 
 							<div class="mb-6">
-								<label
-									for="word-count"
-									class="mb-2 block font-medium text-gray-700 dark:text-gray-300"
-								>
+								<label for="word-count" class="mb-2 block font-medium text-gray-700">
 									Word Count Target
 								</label>
 								<div class="relative">
@@ -221,12 +212,10 @@
 										type="number"
 										bind:value={wordCount}
 										min="0"
-										class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-orange-500 dark:focus:ring-orange-500"
+										class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
 									/>
 								</div>
-								<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-									Set your target word count for documents
-								</p>
+								<p class="mt-1 text-sm text-gray-500">Set your target word count for documents</p>
 							</div>
 						</div>
 					</div>
@@ -238,24 +227,19 @@
 							: 'hidden'} p-5"
 					>
 						<div class="mb-8">
-							<h3
-								class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100"
-							>
+							<h3 class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">
 								Citation Settings
 							</h3>
 
 							<div class="mb-6">
-								<label
-									for="citation-style"
-									class="mb-2 block font-medium text-gray-700 dark:text-gray-300"
-								>
+								<label for="citation-style" class="mb-2 block font-medium text-gray-700">
 									Citation Style
 								</label>
 								<div class="relative">
 									<select
 										id="citation-style"
 										bind:value={selectedStyle}
-										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-orange-500 dark:focus:ring-orange-500"
+										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
 									>
 										<option value="" disabled>Select a style</option>
 										{#each citationStyles as style}
@@ -280,22 +264,19 @@
 										</svg>
 									</div>
 								</div>
-								<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+								<p class="mt-1 text-sm text-gray-500">
 									Choose your preferred citation style for references
 								</p>
 							</div>
 							<div class="mb-6">
-								<label
-									for="language"
-									class="mb-2 block font-medium text-gray-700 dark:text-gray-300"
-								>
+								<label for="language" class="mb-2 block font-medium text-gray-700">
 									Citation Language
 								</label>
 								<div class="relative">
 									<select
 										id="language"
 										bind:value={selectedLocale}
-										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-orange-500 dark:focus:ring-orange-500"
+										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
 									>
 										{#each Object.entries(locales) as [code, [native]]}
 											<option value={code}>{native}</option>
@@ -319,9 +300,7 @@
 										</svg>
 									</div>
 								</div>
-								<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-									Set the language for the citation
-								</p>
+								<p class="mt-1 text-sm text-gray-500">Set the language for the citation</p>
 							</div>
 						</div>
 					</div>
@@ -333,16 +312,12 @@
 							: 'hidden'} p-5"
 					>
 						<div class="mb-8">
-							<h3
-								class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100"
-							>
+							<h3 class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">
 								Appearance Settings
 							</h3>
 
-							<div
-								class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700"
-							>
-								<p class="italic text-gray-600 dark:text-gray-300">
+							<div class="rounded-md border border-gray-200 bg-gray-50 p-4">
+								<p class="italic text-gray-600">
 									Appearance settings will be available in a future update.
 								</p>
 							</div>
@@ -352,11 +327,9 @@
 			</div>
 
 			<!-- Footer -->
-			<div
-				class="dark:bg-gray-850 flex justify-end space-x-3 border-t border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700"
-			>
+			<div class="flex justify-end space-x-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
 				<button
-					class="rounded-md border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+					class="rounded-md border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-100"
 					on:click={closeModal}
 				>
 					Cancel
