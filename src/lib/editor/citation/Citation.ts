@@ -51,7 +51,7 @@ export const Citation = Node.create({
 				props: {
 					items: Object.values(citationStore.getAllSourcesAsJson()),
 					initialSelection: JSON.parse(attrs.id),
-					command: ({ id }) => {
+					command: ({ id }: { id: string }) => {
 						console.log('Command executed with id:', id);
 						// Handle updating the citation with new IDs
 						const { state: editorState } = this.editor;
@@ -179,7 +179,6 @@ export const Citation = Node.create({
 				// Setup keyboard handler for the editor view
 				this.storage.handleKeyDown = this.storage.component.onKeyDown;
 
-
 				this.editor.view.dom.addEventListener(
 					'keydown',
 					(this.storage.handleKeyDown = (event: KeyboardEvent) => {
@@ -211,7 +210,6 @@ export const Citation = Node.create({
 					{ capture: true } // Use capture phase to intercept events before they reach the editor
 				);
 				this.storage.active = true;
-
 			}
 		}
 		// Case 2: We're leaving a citation node
