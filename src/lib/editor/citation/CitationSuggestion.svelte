@@ -20,6 +20,17 @@
 		}
 	}
 
+	// Helper function to check if an item has valid author data
+	function hasValidAuthor(item: CitationItem): boolean {
+		return !!(
+			item &&
+			item.author &&
+			Array.isArray(item.author) &&
+			item.author.length > 0 &&
+			item.author.some((author) => author.given || author.family)
+		);
+	}
+
 	export function onKeyDown({ event }: { event: KeyboardEvent }) {
 		console.log({ event });
 		// Prevent default action for navigation keys to avoid editor interaction
@@ -41,7 +52,10 @@
 
 			case 'Enter':
 				if (items[focusedIndex]) {
-					toggleItemSelection(items[focusedIndex]);
+					// Only allow selecting items with valid authors
+					if (hasValidAuthor(items[focusedIndex])) {
+						toggleItemSelection(items[focusedIndex]);
+					}
 				}
 				return true;
 
@@ -70,6 +84,11 @@
 	function toggleItemSelection(item: CitationItem) {
 		if (!item) return;
 
+		// Don't allow selecting items with invalid authors
+		if (!hasValidAuthor(item)) {
+			return;
+		}
+
 		if (selectedItems.has(item.id)) {
 			selectedItems.delete(item.id);
 		} else {
@@ -80,8 +99,9 @@
 
 	// Insert all selected citations
 	function insertSelectedCitations() {
-		if (selectedItems.size === 0 && items[focusedIndex]) {
+		if (selectedItems.size === 0) {
 			command({ id: null });
+			return;
 		}
 
 		if (selectedItems.size > 0) {
@@ -108,50 +128,86 @@
 		<div class="list-container max-h-[300px] overflow-y-auto py-2">
 			<ul class="m-0 list-none p-0" role="listbox" aria-multiselectable="true">
 				{#each items as item, index (item.id)}
+					{@const isInvalid = !hasValidAuthor(item)}
 					<li
 						id="citation-item-{index}"
 						role="option"
 						aria-selected={selectedItems.has(item.id)}
 						class="cursor-pointer border-l-[3px] border-transparent px-4 py-3 transition-colors"
-						class:bg-teal-50={focusedIndex === index}
-						class:border-l-teal-500={focusedIndex === index}
+						class:bg-teal-50={focusedIndex === index && !isInvalid}
+						class:bg-red-50={focusedIndex === index && isInvalid}
+						class:border-l-teal-500={focusedIndex === index && !isInvalid}
+						class:border-l-red-400={focusedIndex === index && isInvalid}
 						tabindex="-1"
 						on:click={() => toggleItemSelection(item)}
 						on:keydown={(e) => handleKeyDown(e, item)}
 					>
 						<div class="flex items-start gap-3">
-							<div
-								class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2"
-								class:bg-teal-500={selectedItems.has(item.id)}
-								class:border-slate-300={!selectedItems.has(item.id)}
-								class:border-teal-500={selectedItems.has(item.id)}
-								aria-hidden="true"
-							>
-								{#if selectedItems.has(item.id)}
-									<svg viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5 text-white">
+							{#if isInvalid}
+								<!-- Warning indicator for invalid sources -->
+								<div
+									class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-red-300 text-red-500"
+									aria-hidden="true"
+								>
+									<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path
-											fill-rule="evenodd"
-											d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-											clip-rule="evenodd"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
 										/>
 									</svg>
-								{/if}
-							</div>
+								</div>
+							{:else}
+								<!-- Normal checkbox for valid sources -->
+								<div
+									class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2"
+									class:bg-teal-500={selectedItems.has(item.id)}
+									class:border-slate-300={!selectedItems.has(item.id)}
+									class:border-teal-500={selectedItems.has(item.id)}
+									aria-hidden="true"
+								>
+									{#if selectedItems.has(item.id)}
+										<svg viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5 text-white">
+											<path
+												fill-rule="evenodd"
+												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									{/if}
+								</div>
+							{/if}
+
 							<div class="flex flex-1 flex-col gap-1">
 								<div class="flex items-baseline justify-between">
-									<span class="font-semibold text-gray-900">
-										{#if item && item.author}
-											{#each item.author as author, index}
-												{`${author.given} ${author.family}${index !== item.author.length - 1 ? ', ' : ''}`}
+									<span class="flex items-center gap-1 font-semibold text-gray-900">
+										{#if hasValidAuthor(item)}
+											{#each item.author as author, idx}
+												{`${author.given || ''} ${author.family || ''}${idx !== item.author.length - 1 ? ', ' : ''}`}
 											{/each}
 										{:else}
-											Unknown Author
+											<span class="flex items-center text-red-500">
+												Unknown Author
+												<span
+													class="ml-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-xs text-red-400"
+												>
+													Missing Data
+												</span>
+											</span>
 										{/if}
 									</span>
 								</div>
 								<span class="text-[0.95em] italic leading-relaxed text-gray-700">
 									{item.title || 'Untitled'}
 								</span>
+
+								{#if isInvalid}
+									<p class="mt-1 text-xs text-red-500">
+										This source is missing author information and cannot be cited until the source
+										information is updated.
+									</p>
+								{/if}
 							</div>
 						</div>
 					</li>
@@ -175,19 +231,25 @@
 					>
 						Tab
 					</kbd>
-					<span>to insert</span>
+					<span>to {selectedItems.size > 0 ? 'Insert' : 'Remove'}</span>
 				</span>
 			</div>
-			<button
-				class="rounded border border-teal-600 bg-teal-500 px-3 py-1.5 text-sm font-medium text-white transition-colors
-				hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-opacity-50
-				disabled:cursor-not-allowed disabled:border-slate-400 disabled:bg-slate-300 disabled:text-slate-50"
-				disabled={selectedItems.size === 0 && !items[focusedIndex]}
-				on:click={insertSelectedCitations}
-				aria-label="Insert selected citations"
-			>
-				Insert
-			</button>
+			<div class="flex gap-2">
+				<button
+					class="rounded border border-teal-600 bg-teal-500 px-3 py-1.5 text-sm font-medium text-white transition-colors
+          hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-opacity-50
+          disabled:cursor-not-allowed disabled:border-slate-400 disabled:bg-slate-300 disabled:text-slate-50"
+					disabled={selectedItems.size === 0 && initialSelection.length === 0}
+					on:click={insertSelectedCitations}
+					aria-label="Insert selected citations"
+				>
+					{#if initialSelection.length > 0}
+						{selectedItems.size > 0 ? 'Insert' : 'Remove'}
+					{:else}
+						Insert
+					{/if}
+				</button>
+			</div>
 		</div>
 	{:else}
 		<div class="px-4 py-6 text-center italic text-gray-500">No citations found</div>
