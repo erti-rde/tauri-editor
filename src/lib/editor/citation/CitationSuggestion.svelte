@@ -2,12 +2,12 @@
 	import type { CitationItem } from '$lib/stores/citationStore';
 
 	export let items: CitationItem[];
-	export let command: (props: { id: string }) => string;
+	export let command: (props: { id: string | null }) => void;
 	export let initialSelection: string[] = [];
 
 	let selectedItems: Set<string> = new Set(initialSelection);
-	// Track current keyboard focus index
 	let focusedIndex = 0;
+
 	$: {
 		if (initialSelection.length > 0 && items.length > 0) {
 			// Find the index of the first selected item
@@ -19,7 +19,7 @@
 			}
 		}
 	}
-	// Handle keyboard navigation
+
 	export function onKeyDown({ event }: { event: KeyboardEvent }) {
 		console.log({ event });
 		// Prevent default action for navigation keys to avoid editor interaction
@@ -57,7 +57,6 @@
 		return false;
 	}
 
-	// Scroll to ensure the focused item is visible
 	function scrollToFocusedItem() {
 		setTimeout(() => {
 			const element = document.getElementById(`citation-item-${focusedIndex}`);
@@ -76,18 +75,16 @@
 		} else {
 			selectedItems.add(item.id);
 		}
-		selectedItems = selectedItems; // Trigger reactivity
+		selectedItems = selectedItems;
 	}
 
 	// Insert all selected citations
 	function insertSelectedCitations() {
 		if (selectedItems.size === 0 && items[focusedIndex]) {
-			// If no items are selected, select the currently focused one
-			selectedItems.add(items[focusedIndex].id);
+			command({ id: null });
 		}
 
 		if (selectedItems.size > 0) {
-			// Convert the Set to an Array for processing
 			const selectedIds = Array.from(selectedItems);
 			command({ id: JSON.stringify(selectedIds) });
 		}

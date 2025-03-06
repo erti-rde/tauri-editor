@@ -51,39 +51,53 @@ export const Citation = Node.create({
 				props: {
 					items: Object.values(citationStore.getAllSourcesAsJson()),
 					initialSelection: JSON.parse(attrs.id),
-					command: ({ id }: { id: string }) => {
+					command: ({ id }: { id: string | null }) => {
 						console.log('Command executed with id:', id);
-						// Handle updating the citation with new IDs
 						const { state: editorState } = this.editor;
 						const { selection } = editorState;
 						const { from, to } = selection;
+						if (!id) {
+							// if no id is provided, delete the citation node
+							this.editor
+								.chain()
+								.focus()
+								.deleteRange({
+									from,
+									to
+								})
+								.run();
+						} else {
+							// Handle updating the citation with new IDs
 
-						// Get the formatted citation text
-						const citationIds = JSON.parse(id);
-						const citationText = citationStore.getInlineCitation(citationIds);
+							// Get the formatted citation text
+							const citationIds = JSON.parse(id);
+							const citationText = citationStore.getInlineCitation(citationIds);
 
-						// Update the citation
-						this.editor
-							.chain()
-							.focus()
-							.setNodeSelection(from)
-							.insertContentAt(
-								{ from, to },
-								{
-									type: 'citation',
-									attrs: {
-										id: id,
-										label: citationText
+							// Update the citation
+							this.editor
+								.chain()
+								.focus()
+								.setNodeSelection(from)
+								.insertContentAt(
+									{ from, to },
+									{
+										type: 'citation',
+										attrs: {
+											id: id,
+											label: citationText
+										}
 									}
-								}
-							)
-							.run();
+								)
+								.run();
+						}
 
 						// Close the popup after selection
 						if (this.storage.popup && this.storage.popup[0]) {
 							this.storage.popup[0].destroy();
 							this.storage.popup = null;
 						}
+            
+						console.log({ state: this.storage });
 					}
 				}
 			});
@@ -324,11 +338,7 @@ export const Citation = Node.create({
 					state.doc.nodesBetween(anchor - 1, anchor, (node, pos) => {
 						if (node.type.name === this.name) {
 							isCitation = true;
-							tr.insertText(
-								this.options.deleteTriggerWithBackspace ? '' : '@',
-								pos,
-								pos + node.nodeSize
-							);
+							tr.insertText('@', pos, pos + node.nodeSize);
 							return false;
 						}
 					});
