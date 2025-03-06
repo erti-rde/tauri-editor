@@ -55,14 +55,6 @@
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
 			},
-			onSelectionUpdate: ({ editor }) => {
-				// INFO: Check if the cursor is inside a citation node
-				// TODO: Implement logic to handle citation node opening when it's active
-				const isInCitation = editor.isActive('citation');
-				if (isInCitation) {
-					console.log('Cursor is inside a citation node');
-				}
-			},
 			onUpdate: async ({ editor }) => {
 				const content = editor.getHTML();
 

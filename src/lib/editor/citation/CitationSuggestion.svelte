@@ -3,37 +3,55 @@
 
 	export let items: CitationItem[];
 	export let command: (props: { id: string }) => string;
+	export let initialSelection: string[] = [];
 
-	// Track which items are currently selected
-	let selectedItems: Set<string> = new Set();
-
+	let selectedItems: Set<string> = new Set(initialSelection);
 	// Track current keyboard focus index
 	let focusedIndex = 0;
-
+	$: {
+		if (initialSelection.length > 0 && items.length > 0) {
+			// Find the index of the first selected item
+			const firstSelectedIndex = items.findIndex((item) => initialSelection.includes(item.id));
+			if (firstSelectedIndex >= 0) {
+				focusedIndex = firstSelectedIndex;
+				// Scroll to this item after render
+				setTimeout(() => scrollToFocusedItem(), 0);
+			}
+		}
+	}
 	// Handle keyboard navigation
 	export function onKeyDown({ event }: { event: KeyboardEvent }) {
-		if (event.key === 'ArrowUp') {
-			focusedIndex = (focusedIndex - 1 + items.length) % items.length;
-			scrollToFocusedItem();
-			return true;
+		console.log({ event });
+		// Prevent default action for navigation keys to avoid editor interaction
+		if (['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
+			event.preventDefault();
+			event.stopPropagation();
 		}
 
-		if (event.key === 'ArrowDown') {
-			focusedIndex = (focusedIndex + 1) % items.length;
-			scrollToFocusedItem();
-			return true;
-		}
+		switch (event.key) {
+			case 'ArrowUp':
+				focusedIndex = (focusedIndex - 1 + items.length) % items.length;
+				scrollToFocusedItem();
+				return true;
 
-		if (event.key === 'Enter') {
-			toggleItemSelection(items[focusedIndex]);
+			case 'ArrowDown':
+				focusedIndex = (focusedIndex + 1) % items.length;
+				scrollToFocusedItem();
+				return true;
 
-			return true;
-		}
+			case 'Enter':
+				if (items[focusedIndex]) {
+					toggleItemSelection(items[focusedIndex]);
+				}
+				return true;
 
-		if (event.key === 'Tab') {
-			// Insert citations and close the popup
-			insertSelectedCitations();
-			return true;
+			case 'Tab':
+				insertSelectedCitations();
+				return true;
+
+			case 'Escape':
+				// Just return true to let parent component handle closing
+				return true;
 		}
 
 		return false;
@@ -77,6 +95,8 @@
 
 	function handleKeyDown(event: KeyboardEvent, item: CitationItem) {
 		if (event.key === 'Enter') {
+			event.preventDefault();
+			event.stopPropagation();
 			toggleItemSelection(item);
 		}
 	}
@@ -90,7 +110,7 @@
 	{#if items.length > 0}
 		<div class="list-container max-h-[300px] overflow-y-auto py-2">
 			<ul class="m-0 list-none p-0" role="listbox" aria-multiselectable="true">
-				{#each items as item, index}
+				{#each items as item, index (item.id)}
 					<li
 						id="citation-item-{index}"
 						role="option"
@@ -98,7 +118,6 @@
 						class="cursor-pointer border-l-[3px] border-transparent px-4 py-3 transition-colors"
 						class:bg-teal-50={focusedIndex === index}
 						class:border-l-teal-500={focusedIndex === index}
-						class:bg-teal-100={selectedItems.has(item.id)}
 						tabindex="-1"
 						on:click={() => toggleItemSelection(item)}
 						on:keydown={(e) => handleKeyDown(e, item)}
