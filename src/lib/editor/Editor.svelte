@@ -76,6 +76,15 @@
 				await writeTextFile(pathToSaveJson, JSON.stringify(editor.getJSON()));
 			}
 		});
+
+		window.addEventListener('settings-updated', async (event: CustomEvent) => {
+			const { localeHasChanged, styleHasChanged } = event.detail;
+
+			if (localeHasChanged || styleHasChanged) {
+				await citationStore.initializeCitationStore();
+				editor.commands.updateAllCitation();
+			}
+		});
 	});
 
 	function toggleView() {

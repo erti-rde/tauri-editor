@@ -7,7 +7,7 @@
 	export let sentenceMetadata: {
 		similarity: number;
 		sentence: string;
-		doi: string;
+		id: string;
 		metadata: CitationItem;
 	};
 
@@ -42,8 +42,8 @@
 
 	// Get URL from DOI or other source if available
 	function getSourceUrl() {
-		if (sentenceMetadata.doi) {
-			return `https://doi.org/${sentenceMetadata.doi}`;
+		if (sentenceMetadata.metadata.doi) {
+			return `https://doi.org/${sentenceMetadata.metadata.doi}`;
 		}
 		return null;
 	}

@@ -8,7 +8,7 @@ import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 export interface CitationItem {
 	id: string;
 	type: string;
-	title?: string[];
+	title?: string;
 	author?: Array<{
 		family: string;
 		given: string;
@@ -40,17 +40,11 @@ function createCitationStore() {
 		engine: null,
 		citationSources: {}
 	});
-	if (typeof window !== 'undefined') {
-		window.addEventListener('settings-updated', () => {
-			console.log('Settings updated, reinitializing citation store');
-			initializeCitationStore();
-		});
-	}
 
 	async function initializeCitationStore() {
 		try {
-			const initialState = await getInitialState();
-			set(initialState);
+			const state = await getInitialState();
+			set(state);
 		} catch (error) {
 			console.error('Failed to initialize citation store:', error);
 			throw error;
@@ -146,8 +140,8 @@ async function getInitialState() {
 		console.log('Locale XML exists:', !!localeXml);
 
 		// Log the first 100 chars to check content format
-		console.log('Style XML snippet:', styleXml?.substring(0, 100));
-		console.log('Locale XML snippet:', localeXml?.substring(0, 100));
+		console.log('Style XML snippet:', styleXml?.substring(0, 300));
+		console.log('Locale XML snippet:', localeXml?.substring(0, 300));
 
 		const itemsJson = await readTextFile('resources/csl/citationSources.json', {
 			baseDir: BaseDirectory.Resource

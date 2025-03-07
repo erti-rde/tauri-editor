@@ -46,9 +46,13 @@
 	// Save settings
 	async function saveSettings() {
 		try {
+			let styleHasChanged = false;
+			let localeHasChanged = false;
+			let wordCountHasChanged = false;
 			// Save citation style
 			let oldStyle = (await store.get('selectedStyle')) as string;
 			let oldStyleXml = (await store.get('cslXml')) as string;
+			let oldWordCount = (await store.get('wordCount')) as number;
 
 			if (oldStyle !== selectedStyle || !oldStyleXml) {
 				await store.set('selectedStyle', selectedStyle);
@@ -70,6 +74,7 @@
 
 						console.log('Style XML fetched successfully');
 						await store.set('cslXml', styleXml);
+						styleHasChanged = true;
 					} catch (error) {
 						console.error('Error fetching style:', error);
 						// If fetch fails, keep the old style selected
@@ -104,6 +109,7 @@
 
 					console.log('Locale XML fetched successfully');
 					await store.set('localeXml', localeXml);
+					localeHasChanged = true;
 				} catch (error) {
 					console.error('Error fetching locale:', error);
 					// If fetch fails, keep the old locale selected
@@ -112,10 +118,17 @@
 				}
 			}
 
-			await store.set('wordCount', wordCount);
+			if (oldWordCount !== wordCount) {
+				await store.set('wordCount', wordCount);
+				wordCountHasChanged = true;
+			}
 
-			// Signal to reload citation engine
-			window.dispatchEvent(new CustomEvent('settings-updated'));
+
+			window.dispatchEvent(
+				new CustomEvent('settings-updated', {
+					detail: { localeHasChanged, styleHasChanged, wordCountHasChanged }
+				})
+			);
 
 			closeModal();
 		} catch (error) {

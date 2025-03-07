@@ -38,7 +38,7 @@
 			metadata: CitationItem;
 			sentence: string;
 			similarity: number;
-			doi: string;
+			id: string;
 		}[]
 	> {
 		const similarSentences = await searchSimilarChunks(query);
@@ -72,12 +72,12 @@
 			 SELECT
 				chunks.chunk_text,
 				chunks.embedding,
-				documents.doi
+				documents.id
 			FROM
 			   chunks
 			JOIN
 			   documents ON chunks.document_id = documents.id
-			`)) as { chunk_text: string; embedding: string; doi: string }[];
+			`)) as { chunk_text: string; embedding: string; id: string }[];
 
 			// Calculate similarities
 			const similarities = chunks.map((chunk) => {
@@ -87,7 +87,7 @@
 				return {
 					sentence: chunk.chunk_text,
 					similarity,
-					doi: chunk.doi
+					id: chunk.id
 				};
 			});
 
@@ -98,15 +98,15 @@
 			const resultsWithMetadata = topResults.map((result) => {
 				let metadata = null;
 
-				if (result.doi && citationSources[result.doi]) {
-					metadata = citationSources[result.doi];
+				if (result.id && citationSources[result.id]) {
+					metadata = citationSources[result.id];
 				}
 				// If no matching citation found, use placeholder metadata
 				if (!metadata) {
 					metadata = {
 						id: `unknown-${Date.now()}`,
 						type: 'article-journal',
-						title: ['Unknown Source'],
+						title: 'Unknown Title',
 						author: [
 							{
 								family: 'Unknown',

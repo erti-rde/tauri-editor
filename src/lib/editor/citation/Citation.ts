@@ -13,6 +13,7 @@ declare module '@tiptap/core' {
 	interface Commands<ReturnType> {
 		citation: {
 			insertCitation: (props: CitationNodeAttrs) => ReturnType;
+			updateAllCitation: () => ReturnType;
 		};
 	}
 }
@@ -96,7 +97,7 @@ export const Citation = Node.create({
 							this.storage.popup[0].destroy();
 							this.storage.popup = null;
 						}
-            
+
 						console.log({ state: this.storage });
 					}
 				}
@@ -369,6 +370,28 @@ export const Citation = Node.create({
 							{ type: 'text', text: ' ' }
 						])
 						.run();
+				},
+			updateAllCitation:
+				(): Command =>
+				({ tr }) => {
+					let updated = false;
+					tr.doc.descendants((node, pos) => {
+						if (node.type.name === 'citation') {
+							const citationId = node.attrs.id ? JSON.parse(node.attrs.id) : null;
+
+							if (citationId) {
+								const newCitationText = citationStore.getInlineCitation(citationId);
+								tr.setNodeMarkup(pos, undefined, {
+									...node.attrs,
+									label: newCitationText
+								});
+								updated = true;
+							}
+						}
+						return true;
+					});
+
+					return updated;
 				}
 		} as Partial<RawCommands>;
 	},
