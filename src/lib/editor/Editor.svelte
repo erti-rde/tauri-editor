@@ -41,7 +41,6 @@
 						'focus:outline-none bg-white border border-[#C7C7C7] flex flex-col min-h-[1054px] w-[816px] pt-10 pr-14 pb-10 cursor-text'
 				}
 			},
-			injectCSS: false,
 			element: element,
 			autofocus: 'end',
 			extensions: [
@@ -75,6 +74,15 @@
 				const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
 				await writeTextFile(pathToSave, html);
 				await writeTextFile(pathToSaveJson, JSON.stringify(editor.getJSON()));
+			}
+		});
+
+		window.addEventListener('settings-updated', async (event: CustomEvent) => {
+			const { localeHasChanged, styleHasChanged } = event.detail;
+
+			if (localeHasChanged || styleHasChanged) {
+				await citationStore.initializeCitationStore();
+				editor.commands.updateAllCitation();
 			}
 		});
 	});
@@ -122,8 +130,8 @@
 	function handleCitationSelect(event: CustomEvent) {
 		const { citation } = event.detail;
 		editor.commands.insertCitation({
-			id: 'citation',
-			text: citation.inlineCitation
+			id: citation.id,
+			label: citation.inlineCitation
 		});
 		showCitationPanel = false;
 	}

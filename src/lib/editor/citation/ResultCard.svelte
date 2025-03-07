@@ -7,7 +7,7 @@
 	export let sentenceMetadata: {
 		similarity: number;
 		sentence: string;
-		doi: string;
+		id: string;
 		metadata: CitationItem;
 	};
 
@@ -15,9 +15,10 @@
 	let isExpanded = false;
 
 	function generateCitation() {
-		const inlineCitation = citationStore.getInlineCitation(sentenceMetadata.metadata.id);
+		const inlineCitation = citationStore.getInlineCitation([sentenceMetadata.metadata.id]);
 		dispatch('select', {
 			citation: {
+				id: JSON.stringify([sentenceMetadata.metadata.id]),
 				inlineCitation
 			}
 		});
@@ -41,8 +42,8 @@
 
 	// Get URL from DOI or other source if available
 	function getSourceUrl() {
-		if (sentenceMetadata.doi) {
-			return `https://doi.org/${sentenceMetadata.doi}`;
+		if (sentenceMetadata.metadata.doi) {
+			return `https://doi.org/${sentenceMetadata.metadata.doi}`;
 		}
 		return null;
 	}

@@ -8,7 +8,7 @@ import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 export interface CitationItem {
 	id: string;
 	type: string;
-	title?: string[];
+	title?: string;
 	author?: Array<{
 		family: string;
 		given: string;
@@ -40,17 +40,11 @@ function createCitationStore() {
 		engine: null,
 		citationSources: {}
 	});
-	if (typeof window !== 'undefined') {
-		window.addEventListener('settings-updated', () => {
-			console.log('Settings updated, reinitializing citation store');
-			initializeCitationStore();
-		});
-	}
 
 	async function initializeCitationStore() {
 		try {
-			const initialState = await getInitialState();
-			set(initialState);
+			const state = await getInitialState();
+			set(state);
 		} catch (error) {
 			console.error('Failed to initialize citation store:', error);
 			throw error;
@@ -61,7 +55,7 @@ function createCitationStore() {
 		return get(citationStore).citationSources;
 	}
 
-	function getInlineCitation(id: string) {
+	function getInlineCitation(ids: string[]) {
 		let inlineCitation = '';
 		const state = get(citationStore);
 
@@ -70,20 +64,22 @@ function createCitationStore() {
 			return `[Citation engine not ready]`;
 		}
 
-		if (!state.citationSources[id]) {
-			console.error(`Citation source not found for ID: ${id}`);
-			return `[Citation not found: ${id}]`;
+		// Verify all IDs exist
+		const missingIds = ids.filter((id) => !state.citationSources[id]);
+		if (missingIds.length > 0) {
+			console.error(`Some citation sources not found: ${missingIds.join(', ')}`);
+			return `[Citations not found: ${missingIds.join(', ')}]`;
 		}
 
 		try {
 			// Create a proper citation object
 			const citation = {
-				citationItems: [{ id }],
+				citationItems: ids.map((id) => ({ id })),
 				properties: {
 					noteIndex: 0
 				}
 			};
-      			// Process the citation with careful error handling
+			// Process the citation with careful error handling
 			const result = state.engine.processCitationCluster(citation, [], []);
 
 			if (
@@ -144,8 +140,8 @@ async function getInitialState() {
 		console.log('Locale XML exists:', !!localeXml);
 
 		// Log the first 100 chars to check content format
-		console.log('Style XML snippet:', styleXml?.substring(0, 100));
-		console.log('Locale XML snippet:', localeXml?.substring(0, 100));
+		console.log('Style XML snippet:', styleXml?.substring(0, 300));
+		console.log('Locale XML snippet:', localeXml?.substring(0, 300));
 
 		const itemsJson = await readTextFile('resources/csl/citationSources.json', {
 			baseDir: BaseDirectory.Resource
