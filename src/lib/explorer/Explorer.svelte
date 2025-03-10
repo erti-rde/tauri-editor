@@ -2,9 +2,13 @@
 	import { onMount } from 'svelte';
 	import Tree from '$lib/explorer/Tree.svelte';
 
-	export let isExplorerOpen: boolean = false;
+	interface Props {
+		isExplorerOpen?: boolean;
+	}
 
-	let width = 200;
+	let { isExplorerOpen = false }: Props = $props();
+
+	let width = $state(200);
 	let isDragging = false;
 	let startX: number;
 	let startWidth: number;
@@ -45,8 +49,8 @@
 		style="width: {width}px;"
 	>
 		<Tree />
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="resizer absolute h-full w-2" on:mousedown={startResize}></div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="resizer absolute h-full w-2" onmousedown={startResize}></div>
 	</div>
 </div>
 

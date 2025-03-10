@@ -1,13 +1,16 @@
+import { mount } from 'svelte';
 import tippy from 'tippy.js';
-import CitationSuggestion from './CitationSuggestion.svelte';
-import { citationStore } from '$lib/stores/citationStore';
 
+import type { Command, CommandProps, RawCommands } from '@tiptap/core';
 import { Node } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
 import Suggestion from '@tiptap/suggestion';
 
-import type { Instance, Props } from 'tippy.js';
-import type { Command, CommandProps, RawCommands } from '@tiptap/core';
+import { citationStore } from '$lib/stores/citationStore';
+
+import SvelteRenderer from '../../core/SvelteRenderer';
+import CitationSuggestion from './CitationSuggestion.svelte';
+import { suggestion } from './Suggestion.svelte';
 
 declare module '@tiptap/core' {
 	interface Commands<ReturnType> {
@@ -37,7 +40,9 @@ export const Citation = Node.create({
 			component: null,
 			popup: null,
 			active: false,
-			handleKeyDown: null
+			handleKeyDown: null,
+			renderer: null,
+			target: null
 		};
 	},
 	onSelectionUpdate() {
@@ -46,61 +51,69 @@ export const Citation = Node.create({
 		// Case 1: We're entering a citation node
 		if (isInCitation && !this.storage.active) {
 			const attrs = this.editor.getAttributes('citation');
-			// Create the component
-			this.storage.component = new CitationSuggestion({
-				target: document.createElement('div'),
-				props: {
-					items: Object.values(citationStore.getAllSourcesAsJson()),
-					initialSelection: JSON.parse(attrs.id),
-					command: ({ id }: { id: string | null }) => {
-						console.log('Command executed with id:', id);
-						const { state: editorState } = this.editor;
-						const { selection } = editorState;
-						const { from, to } = selection;
-						if (!id) {
-							// if no id is provided, delete the citation node
-							this.editor
-								.chain()
-								.focus()
-								.deleteRange({
-									from,
-									to
-								})
-								.run();
-						} else {
-							// Handle updating the citation with new IDs
 
-							// Get the formatted citation text
-							const citationIds = JSON.parse(id);
-							const citationText = citationStore.getInlineCitation(citationIds);
+			this.storage.target = document.createElement('div');
+			const props = {
+				items: Object.values(citationStore.getAllSourcesAsJson()),
+				initialSelection: JSON.parse(attrs.id),
+				cl: (id: string | null) => {
+					console.log('Command executed with id:', id);
+					const { state: editorState } = this.editor;
+					const { selection } = editorState;
+					const { from, to } = selection;
+					if (!id) {
+						// if no id is provided, delete the citation node
+						this.editor
+							.chain()
+							.focus()
+							.deleteRange({
+								from,
+								to
+							})
+							.run();
+					} else {
+						// Handle updating the citation with new IDs
 
-							// Update the citation
-							this.editor
-								.chain()
-								.focus()
-								.setNodeSelection(from)
-								.insertContentAt(
-									{ from, to },
-									{
-										type: 'citation',
-										attrs: {
-											id: id,
-											label: citationText
-										}
+						// Get the formatted citation text
+						const citationIds = JSON.parse(id);
+						const citationText = citationStore.getInlineCitation(citationIds);
+
+						// Update the citation
+						this.editor
+							.chain()
+							.focus()
+							.setNodeSelection(from)
+							.insertContentAt(
+								{ from, to },
+								{
+									type: 'citation',
+									attrs: {
+										id: id,
+										label: citationText
 									}
-								)
-								.run();
-						}
-
-						// Close the popup after selection
-						if (this.storage.popup && this.storage.popup[0]) {
-							this.storage.popup[0].destroy();
-							this.storage.popup = null;
-						}
-
-						console.log({ state: this.storage });
+								}
+							)
+							.run();
 					}
+
+					// Close the popup after selection
+					if (this.storage.popup && this.storage.popup[0]) {
+						this.storage.popup[0].destroy();
+						this.storage.popup = null;
+					}
+
+					console.log({ state: this.storage });
 				}
+			};
+			// Create the component
+			this.storage.component = mount(CitationSuggestion, {
+				target: this.storage.target,
+				props
+			});
+
+			this.storage.renderer = new SvelteRenderer(this.storage.component, {
+				element: this.storage.target,
+				props
 			});
 
 			// Get the current citation node DOM element
@@ -185,7 +198,7 @@ export const Citation = Node.create({
 				this.storage.popup = tippy([document.body], {
 					getReferenceClientRect: () => rect,
 					appendTo: () => document.body,
-					content: this.storage.component.$$.root,
+					content: this.storage.renderer.dom,
 					showOnCreate: true,
 					interactive: true,
 					trigger: 'manual',
@@ -238,8 +251,10 @@ export const Citation = Node.create({
 			}
 
 			if (this.storage.component) {
-				this.storage.component.$destroy();
+				this.storage.renderer.destroy();
 				this.storage.component = null;
+				this.storage.target.remove();
+				this.storage.target = null;
 			}
 			if (this.storage.handleKeyDown) {
 				try {
@@ -398,119 +413,9 @@ export const Citation = Node.create({
 	addProseMirrorPlugins() {
 		return [
 			Suggestion({
-				editor: this.editor,
 				char: '@',
 				pluginKey: CitationPluginKey,
-				command: ({ editor, range, props }) => {
-					// Get the formatted citation text from our store
-					const citationIds = JSON.parse(props.id as string) as string[];
-					const citationText = citationStore.getInlineCitation(citationIds);
-
-					// Check if we need to extend range for spaces
-					const nodeAfter = editor.view.state.selection.$to.nodeAfter;
-					const overrideSpace = nodeAfter?.text?.startsWith(' ');
-
-					if (overrideSpace) {
-						range.to += 1;
-					}
-
-					// Insert the citation
-					editor
-						.chain()
-						.focus()
-						.insertContentAt(range, [
-							{
-								type: 'citation',
-								attrs: {
-									id: props.id,
-									label: citationText
-								}
-							},
-							{
-								type: 'text',
-								text: ' '
-							}
-						])
-						.run();
-
-					// Move cursor to end of insertion
-					editor.view.dom.ownerDocument.defaultView?.getSelection()?.collapseToEnd();
-				},
-				allow: ({ state, range }) => {
-					const $from = state.doc.resolve(range.from);
-					const type = state.schema.nodes.citation;
-
-					return !!$from.parent.type.contentMatch.matchType(type);
-				},
-				items: ({ query }) => {
-					const sources = citationStore.getAllSourcesAsJson();
-
-					if (!query) return Object.values(sources);
-
-					return Object.values(sources).filter((source) => {
-						const titleMatch =
-							source.title?.toString().toLowerCase().includes(query.toLowerCase()) || false;
-
-						const authorMatch =
-							Array.isArray(source.author) && source.author.length > 0
-								? source.author.some(
-										(author) =>
-											author.given.toLowerCase().includes(query.toLowerCase()) ||
-											author.family.toLowerCase().includes(query.toLowerCase())
-									)
-								: false;
-
-						return titleMatch || authorMatch;
-					});
-				},
-				render: () => {
-					let component: CitationSuggestion;
-					let popup: Instance<Props>[] | null = null;
-
-					return {
-						onStart: (props) => {
-							// Create the component
-							component = new CitationSuggestion({
-								target: document.createElement('div'),
-								props
-							});
-
-							if (!props.clientRect) return;
-
-							// Create the popup with tippy
-							popup = tippy([document.body], {
-								getReferenceClientRect: () => props.clientRect?.() || new DOMRect(0, 0, 0, 0),
-								appendTo: () => document.body,
-								content: component.$$.root,
-								showOnCreate: true,
-								interactive: true,
-								trigger: 'manual',
-								placement: 'bottom-start'
-							});
-						},
-						onUpdate: (props) => {
-							component.$set(props);
-
-							if (!props.clientRect || !popup?.[0]) return;
-
-							popup[0].setProps({
-								getReferenceClientRect: () => props.clientRect?.() || new DOMRect(0, 0, 0, 0)
-							});
-						},
-						onKeyDown: (props) => {
-							if (props.event.key === 'Escape') {
-								popup?.[0]?.hide();
-								return true;
-							}
-
-							return (component.onKeyDown && component.onKeyDown(props)) || false;
-						},
-						onExit: () => {
-							popup?.[0]?.destroy();
-							component?.$destroy();
-						}
-					};
-				}
+				...suggestion(this.editor)
 			})
 		];
 	}

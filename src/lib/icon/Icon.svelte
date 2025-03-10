@@ -63,8 +63,12 @@
 	type Size = 's' | 'm' | 'l';
 	type Icon = keyof typeof icons;
 
-	export let icon: Icon;
-	export let size: Size = 'm';
+	interface Props {
+		icon: Icon;
+		size?: Size;
+	}
+
+	let { icon, size = 'm' }: Props = $props();
 
 	const sizeMap = {
 		s: 16,
@@ -74,6 +78,8 @@
 
 	const dimensions = sizeMap[size];
 	const component = icons[icon];
+
+	const SvelteComponent = $derived(component);
 </script>
 
-<svelte:component this={component} style="width: {dimensions}px; height: {dimensions}px;" />
+<SvelteComponent style="width: {dimensions}px; height: {dimensions}px;" />

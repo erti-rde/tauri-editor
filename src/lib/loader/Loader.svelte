@@ -1,7 +1,7 @@
 <span class="loader"></span>
 
 <style>
-  .loader {
+	.loader {
 		width: 48px;
 		height: 48px;
 		border-radius: 50%;
@@ -15,13 +15,13 @@
 		position: absolute;
 		inset: 0px;
 		border-radius: 50%;
-		border: 5px solid theme('colors.teal.700');
+		border: 5px solid var(--color-teal-700);
 		animation: prixClipFix 2s linear infinite;
 	}
 	.loader::after {
 		inset: 8px;
 		transform: rotate3d(90, 90, 0, 180deg);
-		border-color: theme('colors.orange.500');
+		border-color: var(--color-orange-500);
 	}
 
 	@keyframes rotate {
@@ -45,5 +45,4 @@
 			clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%, 100% 100%, 100% 100%);
 		}
 	}
-
 </style>

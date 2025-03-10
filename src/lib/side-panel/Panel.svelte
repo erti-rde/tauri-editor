@@ -1,16 +1,14 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { Icon } from '$lib';
 	import Settings from '$lib/settings/Settings.svelte';
 
-	const dispatch = createEventDispatcher();
-	let showSettings = false;
-
-	function toggleSidePanel(panelName: string) {
-		dispatch('toggleSidePanel', {
-			panelName
-		});
+	interface Props {
+		toggleSidePanel: (panelName: string) => void;
 	}
+
+	const { toggleSidePanel }: Props = $props();
+
+	let showSettings = $state(false);
 
 	function toggleSettings() {
 		showSettings = !showSettings;
@@ -23,23 +21,18 @@
 
 <div class="flex h-full w-full flex-col justify-between">
 	<div>
-		<button
-			class="p-2"
-			on:click={() => {
-				toggleSidePanel('fileExplorer');
-			}}
-		>
+		<button class="p-2" onclick={() => toggleSidePanel('fileExplorer')}>
 			<Icon icon="Files" />
 		</button>
 	</div>
 	<div>
-		<button class="p-2" on:click={toggleSettings}>
+		<button class="p-2" onclick={toggleSettings}>
 			<Icon icon="Settings" />
 		</button>
 	</div>
 </div>
 
-<Settings isOpen={showSettings} on:close={closeSettings} />
+<Settings isOpen={showSettings} {closeSettings} />
 
 <style>
 	button:hover {

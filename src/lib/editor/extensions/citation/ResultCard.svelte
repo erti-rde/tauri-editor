@@ -1,27 +1,29 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { Icon } from '$lib';
 	import { citationStore } from '$lib/stores/citationStore';
 
-	export let sentenceMetadata: {
-		similarity: number;
-		sentence: string;
-		id: string;
-		metadata: CitationItem;
-	};
+	interface Props {
+		sentenceMetadata: {
+			similarity: number;
+			sentence: string;
+			id: string;
+			metadata: CitationItem;
+		};
+		selectCitation: (citation: { id: string; inlineCitation: string }) => void;
+	}
 
-	const dispatch = createEventDispatcher();
-	let isExpanded = false;
+	let { sentenceMetadata, selectCitation }: Props = $props();
+
+	let isExpanded = $state(false);
 
 	function generateCitation() {
 		const inlineCitation = citationStore.getInlineCitation([sentenceMetadata.metadata.id]);
-		dispatch('select', {
-			citation: {
-				id: JSON.stringify([sentenceMetadata.metadata.id]),
-				inlineCitation
-			}
-		});
+
+		return {
+			id: JSON.stringify([sentenceMetadata.metadata.id]),
+			inlineCitation
+		};
 	}
 
 	function toggleExpand() {
@@ -42,8 +44,8 @@
 
 	// Get URL from DOI or other source if available
 	function getSourceUrl() {
-		if (sentenceMetadata.metadata.doi) {
-			return `https://doi.org/${sentenceMetadata.metadata.doi}`;
+		if (sentenceMetadata.metadata.DOI) {
+			return `https://doi.org/${sentenceMetadata.metadata.DOI}`;
 		}
 		return null;
 	}
@@ -66,7 +68,7 @@
 	</div>
 
 	<!-- Citation text preview -->
-	<div class="border-y border-gray-100 bg-gray-50 px-3 pb-0.5 pt-1.5 text-xs text-gray-700">
+	<div class="border-y border-gray-100 bg-gray-50 px-3 pt-1.5 pb-0.5 text-xs text-gray-700">
 		<!-- Text content -->
 		<div class="relative">
 			<p class:line-clamp-2={!isExpanded} class="mb-1 pr-14 italic">
@@ -76,8 +78,8 @@
 			<!-- Fixed position expander button -->
 			{#if needsExpander}
 				<button
-					class="absolute right-0 top-0 flex items-center bg-gray-50 p-1 text-sm text-gray-500 hover:text-gray-700"
-					on:click={toggleExpand}
+					class="absolute top-0 right-0 flex items-center bg-gray-50 p-1 text-sm text-gray-500 hover:text-gray-700"
+					onclick={toggleExpand}
 					aria-label={isExpanded ? 'Show less' : 'Show more'}
 				>
 					<span class="mr-1">{isExpanded ? 'Less' : 'More'}</span>
@@ -95,7 +97,7 @@
 	<div class="flex justify-start space-x-2 p-1.5">
 		<button
 			class="flex items-center space-x-1 rounded bg-orange-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-200"
-			on:click={generateCitation}
+			onclick={() => selectCitation(generateCitation())}
 		>
 			<Icon icon="Quote" size="s" />
 			<span class="ml-1">Cite</span>

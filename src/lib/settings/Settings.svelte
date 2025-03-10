@@ -1,22 +1,26 @@
 <script lang="ts">
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { load as loadStore } from '@tauri-apps/plugin-store';
 	import type { Store } from '@tauri-apps/plugin-store';
 	import { Icon } from '$lib';
+	import { clickOutside } from '$utils/clickOutside.svelte';
 
-	export let isOpen = false;
+	interface Props {
+		isOpen: boolean;
+		closeSettings: () => void;
+	}
 
-	const dispatch = createEventDispatcher();
+	const { isOpen = false, closeSettings }: Props = $props();
 
-	// Store for settings
 	let store: Store;
-	let wordCount = 0;
-	let selectedStyle = '';
-	let selectedLocale = '';
-	let citationStyles: { name: string; download_url: string }[] = [];
-	let locales: { [key: string]: string[] } = {};
-	let activeTab = 'general';
+
+	let wordCount = $state(0);
+	let selectedStyle = $state('');
+	let selectedLocale = $state('');
+	let citationStyles: { name: string; download_url: string }[] = $state([]);
+	let locales: { [key: string]: string[] } = $state({});
+	let activeTab = $state('general');
 
 	// Load citation styles and locales from resources folder
 	async function loadResources() {
@@ -123,22 +127,17 @@
 				wordCountHasChanged = true;
 			}
 
-
 			window.dispatchEvent(
 				new CustomEvent('settings-updated', {
 					detail: { localeHasChanged, styleHasChanged, wordCountHasChanged }
 				})
 			);
 
-			closeModal();
+			closeSettings();
 		} catch (error) {
 			console.error('Error saving settings:', error);
 			alert('There was an error saving your settings. Please try again.');
 		}
-	}
-
-	function closeModal() {
-		dispatch('close');
 	}
 
 	function setActiveTab(tab: string) {
@@ -161,25 +160,22 @@
 
 {#if isOpen}
 	<div
-		class="z-100 fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+		class="fixed inset-0 z-100 flex items-center justify-center bg-black/50"
 		style="z-index: 100;"
 	>
-		<button
-			class="absolute inset-0 z-0 h-full w-full bg-black bg-opacity-50"
-			on:click={closeModal}
-			aria-label="Close settings dialog"
-		/>
 		<dialog
 			open
 			class="relative z-10 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] flex-col overflow-hidden rounded-lg bg-white shadow-xl"
 			aria-labelledby="settings-title"
+			use:clickOutside
+			onoutclick={closeSettings}
 		>
 			<!-- Header -->
 			<div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
 				<h2 id="settings-title" class="text-xl font-semibold text-gray-800">Settings</h2>
 				<button
 					class="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
-					on:click={closeModal}
+					onclick={closeSettings}
 				>
 					<Icon icon="X" />
 				</button>
@@ -195,7 +191,7 @@
 							tab.id
 								? 'border-orange-500 bg-gray-100 font-medium'
 								: 'border-transparent'}"
-							on:click={() => setActiveTab(tab.id)}
+							onclick={() => setActiveTab(tab.id)}
 						>
 							{tab.label}
 						</button>
@@ -330,7 +326,7 @@
 							</h3>
 
 							<div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-								<p class="italic text-gray-600">
+								<p class="text-gray-600 italic">
 									Appearance settings will be available in a future update.
 								</p>
 							</div>
@@ -343,13 +339,13 @@
 			<div class="flex justify-end space-x-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
 				<button
 					class="rounded-md border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-100"
-					on:click={closeModal}
+					onclick={closeSettings}
 				>
 					Cancel
 				</button>
 				<button
 					class="rounded-md border border-orange-500 bg-orange-500 px-4 py-2 text-white transition-colors hover:bg-orange-600"
-					on:click={saveSettings}
+					onclick={saveSettings}
 				>
 					Save changes
 				</button>

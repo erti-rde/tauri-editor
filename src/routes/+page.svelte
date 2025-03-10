@@ -7,20 +7,20 @@
 	import { dbStore } from '$lib/stores/db';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
-	let isExplorerOpen = true;
-	let vaultIsOpen = false;
+	let isExplorerOpen = $state(true);
+	let vaultIsOpen = $state(false);
 	let panelName = 'fileExplorer';
 
-	function handleToggleSidePanel(e: CustomEvent) {
-		if (e.detail.panelName === panelName || !isExplorerOpen) {
+	function toggleSidePanel(newSidePanelName: string) {
+		if (newSidePanelName === panelName || !isExplorerOpen) {
 			isExplorerOpen = !isExplorerOpen;
 		}
-		panelName = e.detail.panelName;
+		panelName = newSidePanelName;
 	}
 
-	$: isItPdf = () => {
+	let isItPdf = $derived(() => {
 		return $currentFileStore && $currentFileStore.endsWith('.pdf');
-	};
+	});
 
 	async function handleProjectOpening() {
 		vaultIsOpen = true;
@@ -43,7 +43,7 @@
 	class={vaultIsOpen ? `grid-styles grid h-screen w-screen overscroll-none` : `flex h-full w-full`}
 >
 	<div class="panel">
-		<SidePanel on:toggleSidePanel={handleToggleSidePanel} />
+		<SidePanel {toggleSidePanel} />
 	</div>
 	{#if vaultIsOpen}
 		<div class:explorer={isExplorerOpen} class:explorer-closed={!isExplorerOpen}>
@@ -58,7 +58,7 @@
 		</div>
 	{:else}
 		<div class="my-auto flex h-full w-full items-center justify-center">
-			<Landing on:projectOpen={handleProjectOpening} />
+			<Landing {handleProjectOpening} />
 		</div>
 	{/if}
 </div>
