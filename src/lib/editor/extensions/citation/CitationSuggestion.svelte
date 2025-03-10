@@ -1,24 +1,17 @@
 <script lang="ts">
 	import type { CitationItem } from '$lib/stores/citationStore';
+	import { run } from 'svelte/legacy';
+	import { SvelteSet } from 'svelte/reactivity';
 
-	export let items: CitationItem[];
-	export let command: (props: { id: string | null }) => void;
-	export let initialSelection: string[] = [];
-
-	let selectedItems: Set<string> = new Set(initialSelection);
-	let focusedIndex = 0;
-
-	$: {
-		if (initialSelection.length > 0 && items.length > 0) {
-			// Find the index of the first selected item
-			const firstSelectedIndex = items.findIndex((item) => initialSelection.includes(item.id));
-			if (firstSelectedIndex >= 0) {
-				focusedIndex = firstSelectedIndex;
-				// Scroll to this item after render
-				setTimeout(() => scrollToFocusedItem(), 0);
-			}
-		}
+	interface Props {
+		items: CitationItem[];
+		cl: (itemId: string | null) => void;
+		initialSelection?: string[];
 	}
+
+	let { items, initialSelection = [], cl }: Props = $props();
+	let selectedItems: Set<string> = $state(new SvelteSet(initialSelection));
+	let focusedIndex = $state(0);
 
 	// Helper function to check if an item has valid author data
 	function hasValidAuthor(item: CitationItem): boolean {
@@ -32,7 +25,6 @@
 	}
 
 	export function onKeyDown({ event }: { event: KeyboardEvent }) {
-		console.log({ event });
 		// Prevent default action for navigation keys to avoid editor interaction
 		if (['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
 			event.preventDefault();
@@ -100,13 +92,13 @@
 	// Insert all selected citations
 	function insertSelectedCitations() {
 		if (selectedItems.size === 0) {
-			command({ id: null });
+			cl(null);
 			return;
 		}
 
 		if (selectedItems.size > 0) {
 			const selectedIds = Array.from(selectedItems);
-			command({ id: JSON.stringify(selectedIds) });
+			cl(JSON.stringify(selectedIds));
 		}
 	}
 
@@ -117,8 +109,20 @@
 			toggleItemSelection(item);
 		}
 	}
+	run(() => {
+		if (initialSelection.length > 0 && items.length > 0) {
+			// Find the index of the first selected item
+			const firstSelectedIndex = items.findIndex((item) => initialSelection.includes(item.id));
+			if (firstSelectedIndex >= 0) {
+				focusedIndex = firstSelectedIndex;
+				// Scroll to this item after render
+				setTimeout(() => scrollToFocusedItem(), 0);
+			}
+		}
+	});
 </script>
 
+<!-- <NodeViewWrapper> -->
 <div
 	class="citation-suggestions flex w-[380px] flex-col overflow-hidden rounded-lg bg-white shadow-md"
 	role="dialog"
@@ -139,8 +143,8 @@
 						class:border-l-teal-500={focusedIndex === index && !isInvalid}
 						class:border-l-red-400={focusedIndex === index && isInvalid}
 						tabindex="-1"
-						on:click={() => toggleItemSelection(item)}
-						on:keydown={(e) => handleKeyDown(e, item)}
+						onclick={() => toggleItemSelection(item)}
+						onkeydown={(e) => handleKeyDown(e, item)}
 					>
 						<div class="flex items-start gap-3">
 							{#if isInvalid}
@@ -198,7 +202,7 @@
 										{/if}
 									</span>
 								</div>
-								<span class="text-[0.95em] italic leading-relaxed text-gray-700">
+								<span class="text-[0.95em] leading-relaxed text-gray-700 italic">
 									{item.title || 'Untitled'}
 								</span>
 
@@ -236,11 +240,11 @@
 			</div>
 			<div class="flex gap-2">
 				<button
-					class="rounded border border-teal-600 bg-teal-500 px-3 py-1.5 text-sm font-medium text-white transition-colors
-          hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-opacity-50
+					class="focus:ring-opacity-50 rounded border border-teal-600 bg-teal-500 px-3 py-1.5 text-sm font-medium text-white
+          transition-colors hover:bg-teal-600 focus:ring-2 focus:ring-teal-400 focus:outline-none
           disabled:cursor-not-allowed disabled:border-slate-400 disabled:bg-slate-300 disabled:text-slate-50"
 					disabled={selectedItems.size === 0 && initialSelection.length === 0}
-					on:click={insertSelectedCitations}
+					onclick={insertSelectedCitations}
 					aria-label="Insert selected citations"
 				>
 					{#if initialSelection.length > 0}
@@ -252,9 +256,11 @@
 			</div>
 		</div>
 	{:else}
-		<div class="px-4 py-6 text-center italic text-gray-500">No citations found</div>
+		<div class="px-4 py-6 text-center text-gray-500 italic">No citations found</div>
 	{/if}
 </div>
+
+<!-- </NodeViewWrapper> -->
 
 <style>
 	/* Custom scrollbar for webkit browsers */
@@ -263,17 +269,17 @@
 	}
 
 	.list-container::-webkit-scrollbar-track {
-		background: theme('colors.slate.100');
+		background: var(--color-slate-100);
 		border-radius: 8px;
 	}
 
 	.list-container::-webkit-scrollbar-thumb {
-		background-color: theme('colors.slate.300');
+		background-color: var(--color-slate-300);
 		border-radius: 8px;
-		border: 2px solid theme('colors.slate.100');
+		border: 2px solid var(--color-slate-100);
 	}
 
 	.list-container::-webkit-scrollbar-thumb:hover {
-		background-color: theme('colors.slate.400');
+		background-color: var(--color-slate-400);
 	}
 </style>

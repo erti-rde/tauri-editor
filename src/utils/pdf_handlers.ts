@@ -5,7 +5,7 @@ import { get } from 'svelte/store';
 import { selectQuery, executeQuery } from './db';
 import { fileSystemStore } from '$lib/stores/fileSystem';
 import { setStatus } from '$lib/statusFooter/StatusFooter.svelte';
-import { errorToast, successToast } from './toasts';
+import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 
 import type { FileItem } from '$lib/stores/fileSystem';
 

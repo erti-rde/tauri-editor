@@ -1,10 +1,11 @@
-<script>
+<script lang="ts">
 	import { Toast } from '$lib';
-	import '../app.pcss';
 	import '../global.css';
+
+	let { children } = $props();
 </script>
 
 <div class="fixed w-full">
 	<Toast />
-	<slot />
+	{@render children()}
 </div>

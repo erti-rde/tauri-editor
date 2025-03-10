@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { documentDir } from '@tauri-apps/api/path';
 
 	import { fileSystemStore } from '$lib/stores/fileSystem';
 
-	const dispatch = createEventDispatcher();
+	interface Props {
+		handleProjectOpening: () => void;
+	}
+
+	const { handleProjectOpening }: Props = $props();
 
 	async function handleFolderOpen() {
 		// Open a selection dialog for directories
@@ -17,14 +20,14 @@
 		if (selected) {
 			const dirPath = selected as string;
 			await fileSystemStore.readDirectory(dirPath);
-			dispatch('projectOpen');
+			handleProjectOpening();
 		}
 	}
 </script>
 
 <div>
 	<p>To get started open your project</p>
-	<button class="w-100px bg-orange-200 p-2" on:click={handleFolderOpen}>Open</button>
+	<button class="w-100px bg-orange-200 p-2" onclick={handleFolderOpen}>Open</button>
 </div>
 
 <style>

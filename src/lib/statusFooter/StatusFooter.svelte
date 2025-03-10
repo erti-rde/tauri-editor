@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
 	import { writable } from 'svelte/store';
 	export type StatusType = {
 		side: 'left' | 'right';
@@ -20,9 +20,9 @@
 <div
 	class="status-bar
     fixed
+    right-0
     bottom-0
     left-0
-    right-0
     z-50
     flex
     items-center
@@ -31,6 +31,7 @@
     border-teal-900
     bg-teal-900
     px-4
+    text-xs
     text-white"
 >
 	<div class="flex items-center gap-2">

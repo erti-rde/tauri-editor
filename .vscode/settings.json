@@ -1,7 +1,6 @@
 {
-  "cSpell.words": [
-    "editorjs",
-    "iconify",
-    "tailwindcss"
-  ]
+	"cSpell.words": ["editorjs", "iconify", "lucide", "tailwindcss"],
+	"files.associations": {
+		"*.css": "tailwindcss"
+	}
 }

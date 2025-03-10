@@ -2,11 +2,16 @@
 	import { Icon } from '$lib';
 	import type { FileItem } from '$lib/stores/fileSystem';
 	import { currentFileStore } from '$lib/stores/openFileStore';
+	import TreeItem from './TreeItem.svelte';
 
-	export let item: FileItem;
-	export let depth: number = 0;
+	interface Props {
+		item: FileItem;
+		depth?: number;
+	}
 
-	let isExpanded = false;
+	let { item, depth = 0 }: Props = $props();
+
+	let isExpanded = $state(false);
 
 	function handleClick() {
 		if (item.is_dir) {
@@ -16,11 +21,11 @@
 		}
 	}
 
-	$: indentation = `padding-left: ${depth * 1.25}rem`;
+	let indentation = $derived(`padding-left: ${depth * 1.25}rem`);
 </script>
 
 <div class="file-item">
-	<div class="item-header" style={indentation} class:is-dir={item.is_dir} on:click={handleClick}>
+	<div class="item-header" style={indentation} class:is-dir={item.is_dir} onclick={handleClick}>
 		<span class="icon">
 			{#if item.is_dir}
 				{#if isExpanded}
@@ -37,7 +42,7 @@
 
 	{#if item.is_dir && isExpanded && item.children}
 		{#each item.children as child}
-			<svelte:self item={child} depth={depth + 1} />
+			<TreeItem item={child} depth={depth + 1} />
 		{/each}
 	{/if}
 </div>

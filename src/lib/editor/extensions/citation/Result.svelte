@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { createEventDispatcher } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import ResultCard from './ResultCard.svelte';
@@ -12,26 +10,15 @@
 
 	import type { EmbeddingResult } from '$utils/pdf_handlers';
 	import type { CitationItem } from '$lib/stores/citationStore';
+	import { clickOutside } from '$utils/clickOutside.svelte';
 
-	export let selectedText: string;
-	let open = true;
-	let panelElement: HTMLElement;
-
-	onMount(() => {
-		document.addEventListener('mousedown', handleClickOutside);
-	});
-
-	onDestroy(() => {
-		document.removeEventListener('mousedown', handleClickOutside);
-	});
-
-	function handleClickOutside(event: MouseEvent) {
-		if (open && panelElement && !panelElement.contains(event.target as Node)) {
-			open = false;
-			selectedText = '';
-			dispatch('close-panel');
-		}
+	interface Props {
+		selectedText: string;
+		closePanel: () => void;
+		selectCitation: (citation: { id: string; inlineCitation: string }) => void;
 	}
+
+	let { selectedText, closePanel, selectCitation }: Props = $props();
 
 	async function handleQuery(query: string): Promise<
 		{
@@ -42,20 +29,10 @@
 		}[]
 	> {
 		const similarSentences = await searchSimilarChunks(query);
-		console.log({ similarSentences });
 		return similarSentences;
 	}
 
 	const results = handleQuery(selectedText);
-
-	const dispatch = createEventDispatcher();
-
-	function handleSelect(event: CustomEvent) {
-		const { citation } = event.detail;
-		dispatch('select', { citation, selectedText });
-		selectedText = '';
-		open = false;
-	}
 
 	async function searchSimilarChunks(query: string, topK: number = 5) {
 		query = selectedText;
@@ -78,7 +55,6 @@
 			JOIN
 			   documents ON chunks.document_id = documents.id
 			`)) as { chunk_text: string; embedding: string; id: string }[];
-
 			// Calculate similarities
 			const similarities = chunks.map((chunk) => {
 				const chunkEmbedding = JSON.parse(chunk.embedding);
@@ -156,31 +132,30 @@
 	}
 </script>
 
-{#if open}
-	<div
-		class="results-wrapper"
-		bind:this={panelElement}
-		transition:fly={{ delay: 0, duration: 500, x: 100, y: 0, easing: quintOut }}
-	>
-		<h3 class="p-4">Top Matching results:</h3>
-		{#await results}
-			<div class="flex h-[50%] w-[100%] flex-col items-center justify-center">
-				<p class="p-4">Searching for citation:</p>
-				<Loader />
-			</div>
-		{:then similarSentences}
-			{#if similarSentences.length > 0}
-				{#each similarSentences as sentenceMetadata}
-					<ResultCard {sentenceMetadata} on:select={handleSelect} />
-				{/each}
-			{:else}
-				<p class="p-4">No results found</p>
-			{/if}
-		{:catch error}
-			<p class="p-4">Error: {error.message}</p>
-		{/await}
-	</div>
-{/if}
+<div
+	class="results-wrapper"
+	transition:fly={{ delay: 0, duration: 500, x: 100, y: 0, easing: quintOut }}
+	use:clickOutside
+	onoutclick={closePanel}
+>
+	<h3 class="p-4">Top Matching results:</h3>
+	{#await results}
+		<div class="flex h-[50%] w-[100%] flex-col items-center justify-center">
+			<p class="p-4">Searching for citation:</p>
+			<Loader />
+		</div>
+	{:then similarSentences}
+		{#if similarSentences.length > 0}
+			{#each similarSentences as sentenceMetadata}
+				<ResultCard {sentenceMetadata} {selectCitation} />
+			{/each}
+		{:else}
+			<p class="p-4">No results found</p>
+		{/if}
+	{:catch error}
+		<p class="p-4">Error: {error.message}</p>
+	{/await}
+</div>
 
 <style>
 	.results-wrapper {

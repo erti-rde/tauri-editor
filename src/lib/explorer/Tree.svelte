@@ -2,7 +2,7 @@
 	import FileItem from './TreeItem.svelte';
 	import { fileSystemStore } from '$lib/stores/fileSystem';
 
-	let rootPath = '';
+	let rootPath = $state('');
 
 	rootPath = $fileSystemStore.currentPath;
 </script>

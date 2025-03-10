@@ -4,19 +4,24 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import { currentFileStore } from '$lib/stores/openFileStore';
 
-	let pdfUrl = '';
-	let loading = false;
-	let error: string | null = null;
-	let mounted = false;
-	let currentPath: string | null = null; // Track current PDF path
+	let pdfUrl = $state('');
+	let loading = $state(false);
+	let error: string | null = $state(null);
+	let mounted = $state(false);
+	let currentPath: string | null = $state(null); // Track current PDF path
 
 	onMount(() => {
 		mounted = true;
-
 		return () => {
 			mounted = false;
 		};
 	});
+
+  $effect(() => {
+    if ($currentFileStore && currentPath !== $currentFileStore) {
+      renderPdf($currentFileStore);
+    }
+  });
 
 	async function renderPdf(pdfPath: string) {
 		// Prevent re-rendering the same PDF
@@ -48,10 +53,6 @@
 		}
 	}
 
-	// More controlled reactive statement
-	$: if (mounted && $currentFileStore && currentPath !== $currentFileStore) {
-		renderPdf($currentFileStore);
-	}
 	function base64ToUint8Array(base64String: string) {
 		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
 		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -77,7 +78,7 @@
 				width="100%"
 				height="100%"
 				style="border: none;"
-			/>
+			></iframe>
 		</div>
 	{/if}
 </div>

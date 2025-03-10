@@ -1,3 +1,52 @@
+@import 'tailwindcss';
+
+@theme {
+	/* convert this to vars */
+	--color-teal-50: #f0fdfa;
+	--color-teal-100: #ccfbf1;
+	--color-teal-200: #99f6e4;
+	--color-teal-300: #5eead4;
+	--color-teal-400: #2dd4bf;
+	--color-teal-500: #14b8a6;
+	--color-teal-600: #0fb5a2;
+	--color-teal-700: #08919b;
+	--color-teal-800: #047481;
+	--color-teal-900: #065666;
+	--color-orange-50: #fff9ed;
+	--color-orange-100: #fef2d6;
+	--color-orange-200: #fce0ac;
+	--color-orange-300: #f9c978;
+	--color-orange-400: #f7b155;
+	--color-orange-500: #f38d1c;
+	--color-orange-600: #e47312;
+	--color-orange-700: #bd5711;
+	--color-orange-800: #964516;
+	--color-orange-900: #793a15;
+	--color-orange-950: #411c09;
+}
+
+@layer components {
+	h1,
+	.h1 {
+		@apply text-5xl leading-snug font-semibold;
+	}
+
+	h2,
+	.h2 {
+		@apply text-3xl leading-relaxed font-semibold;
+	}
+
+	h3,
+	.h3 {
+		@apply text-xl leading-relaxed font-medium tracking-tight;
+	}
+
+	p,
+	.p {
+		@apply text-lg leading-relaxed;
+	}
+}
+
 :root {
 	--footer-status-bar-height: theme('space.6');
 	--hover-color: theme('colors.orange.200');
@@ -7,7 +56,10 @@
 
 html {
 	overscroll-behavior: none;
-	background-color: theme('colors.orange.50');
+	background-color: var(--color-orange-50);
+}
+body {
+	@apply antialiased;
 }
 
 @media (min-width: 651px) {
@@ -49,21 +101,43 @@ html {
 
 .editor {
 	[data-type='citation'] {
-		background-color: theme("colors.teal.50");
-		border-radius: theme("space.1");
-		padding: 0 theme("space.1");
+		background-color: theme('colors.teal.50');
+		border-radius: theme('space.1');
+		padding: 0 theme('space.1');
 		color: theme('colors.teal.500');
 		font-weight: 500;
-    /* TODO: comment it out once we have implemented the suggestion menu opening on click */
+		/* TODO: comment it out once we have implemented the suggestion menu opening on click */
 		/* cursor: pointer; */
-		border: 1px solid theme("colors.teal.100");
+		border: 1px solid theme('colors.teal.100');
 	}
 
 	[data-type='citation']:hover {
-		background-color: theme("colors.teal.100");
+		background-color: theme('colors.teal.100');
 	}
 
 	[data-type='citation'].ProseMirror-selectednode {
 		text-decoration: underline;
 	}
+}
+
+.tiptap {
+  ul,
+			ol {
+				list-style: reset;
+				padding: 0 1rem;
+				margin: 1.25rem 1rem 1.25rem 0.4rem;
+
+				li p {
+					margin-top: 0.25em;
+					margin-bottom: 0.25em;
+				}
+			}
+
+			ul li {
+				list-style-type: disc;
+			}
+
+			ol li {
+				list-style-type: decimal;
+			}
 }
