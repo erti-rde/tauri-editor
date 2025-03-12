@@ -11,5 +11,8 @@ export default defineConfig({
 			compiler: 'svelte',
 			defaultClass: 'icon'
 		})
-	]
+	],
+	optimizeDeps: {
+		include: ['pdfjs-dist']
+	}
 });

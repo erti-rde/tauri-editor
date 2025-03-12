@@ -1,17 +1,26 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Database from '@tauri-apps/plugin-sql';
-
-	import { Explorer, Editor, StatusFooter, SidePanel, Landing, PdfReader } from '$lib';
-	import { currentFileStore } from '$lib/stores/openFileStore';
+	import { onMount } from 'svelte';
+	import {
+		Editor,
+		Explorer,
+		Landing,
+		PdfReader,
+		SidePanel,
+		StatusFooter,
+		MetadataEditor
+	} from '$lib';
 	import { dbStore } from '$lib/stores/db';
+	import { currentFileStore } from '$lib/stores/openFileStore';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
+
+	import type { PanelNames } from '$types/page';
 
 	let isExplorerOpen = $state(true);
 	let vaultIsOpen = $state(false);
-	let panelName = 'fileExplorer';
+	let panelName: PanelNames = $state('fileExplorer');
 
-	function toggleSidePanel(newSidePanelName: string) {
+	function toggleSidePanel(newSidePanelName: PanelNames) {
 		if (newSidePanelName === panelName || !isExplorerOpen) {
 			isExplorerOpen = !isExplorerOpen;
 		}
@@ -50,7 +59,9 @@
 			<Explorer {isExplorerOpen} />
 		</div>
 		<div class="editor overflow-y-auto">
-			{#if isItPdf()}
+			{#if panelName == 'metadataExplorer'}
+				<MetadataEditor />
+			{:else if isItPdf()}
 				<PdfReader />
 			{:else}
 				<Editor />
@@ -75,10 +86,6 @@
 	.explorer,
 	.editor {
 		height: calc(100vh - var(--footer-status-bar-height));
-	}
-	.panel,
-	.explorer {
-		border-right: 1px solid rgb(144, 144, 144);
 	}
 	.status-bar {
 		grid-column: span 3;

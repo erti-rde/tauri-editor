@@ -1,34 +1,35 @@
 <script lang="ts">
-	import ChevronUp from '~icons/lucide/chevron-up';
 	import ChevronDown from '~icons/lucide/chevron-down';
 	import ChevronLeft from '~icons/lucide/chevron-left';
 	import ChevronRight from '~icons/lucide/chevron-right';
-	import ZoomIn from '~icons/lucide/zoom-in';
-	import ZoomOut from '~icons/lucide/zoom-out';
+	import ChevronUp from '~icons/lucide/chevron-up';
+	import DoubleChevronLeft from '~icons/lucide/chevrons-left';
+	import DoubleChevronRight from '~icons/lucide/chevrons-right';
+	import FilePlus from '~icons/lucide/file-Plus';
 	import FileWarning from '~icons/lucide/file-warning';
 	import Files from '~icons/lucide/files';
 	import Pencil from '~icons/lucide/pencil';
 	import Quote from '~icons/lucide/quote';
 	import Trash from '~icons/lucide/trash-2';
-	import FilePlus from '~icons/lucide/file-Plus';
+	import ZoomIn from '~icons/lucide/zoom-in';
+	import ZoomOut from '~icons/lucide/zoom-out';
 	import Pdf from '~icons/ph/file-pdf-light';
 	import X from '~icons/ph/x';
-	import DoubleChevronLeft from '~icons/lucide/chevrons-left';
-	import DoubleChevronRight from '~icons/lucide/chevrons-right';
 
-	import WindowMinimize from '~icons/mdi/window-minimize';
-	import WindowMaximize from '~icons/mdi/window-maximize';
-	import WindowClose from '~icons/mdi/close';
 	import BookOpen from '~icons/lucide/book-open';
 	import FilePen from '~icons/lucide/file-pen';
+	import WindowClose from '~icons/mdi/close';
+	import WindowMaximize from '~icons/mdi/window-maximize';
+	import WindowMinimize from '~icons/mdi/window-minimize';
 
-	import Folder from '~icons/lucide/folder';
-	import FolderOpen from '~icons/lucide/folder-open';
 	import File from '~icons/lucide/file';
 	import FileOutput from '~icons/lucide/file-output';
+	import Folder from '~icons/lucide/folder';
+	import FolderOpen from '~icons/lucide/folder-open';
 
-	import Settings from '~icons/lucide/settings';
 	import ExternalLink from '~icons/lucide/external-link';
+	import Settings from '~icons/lucide/settings';
+	import Books from '~icons/mdi/bookshelf';
 
 	const icons = {
 		ChevronUp,
@@ -57,7 +58,8 @@
 		FolderOpen,
 		FileOutput,
 		Settings,
-		ExternalLink
+		ExternalLink,
+		Books
 	};
 
 	type Size = 's' | 'm' | 'l';

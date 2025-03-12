@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import { dbStore } from '$lib/stores/db';
 
-export async function executeQuery(query: string, params?: string[]) {
+export async function executeQuery(query: string, params?: (string | number)[]) {
 	const dbState = get(dbStore);
 	if (dbState.db) {
 		try {
@@ -16,7 +16,7 @@ export async function executeQuery(query: string, params?: string[]) {
 	throw new Error('Database not initialized');
 }
 
-export async function selectQuery(query: string, params?: string[]) {
+export async function selectQuery(query: string, params?: (string | number)[]) {
 	const dbState = get(dbStore);
 	if (dbState.db) {
 		try {

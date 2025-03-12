@@ -61,7 +61,7 @@
 		"@tiptap/suggestion": "^2.11.5",
 		"citeproc": "^2.4.63",
 		"llm-chunk": "^0.0.1",
-		"pdfjs-dist": "^4.8.69",
+		"pdfjs-dist": "4.9.155",
 		"tippy.js": "^6.3.7"
 	},
 	"pnpm": {
