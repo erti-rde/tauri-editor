@@ -6,11 +6,8 @@ use commands::*;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
 
-
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-
     tauri::Builder::default()
         .plugin(
             tauri_plugin_sql::Builder::new()
@@ -48,7 +45,6 @@ pub fn run() {
             read_directory,
             read_pdf_file,
             print_pdf_file,
-            extract_pdf,
             embed_chunks,
         ])
         .run(tauri::generate_context!())

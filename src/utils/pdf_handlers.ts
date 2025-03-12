@@ -6,41 +6,90 @@ import { selectQuery, executeQuery } from './db';
 import { fileSystemStore } from '$lib/stores/fileSystem';
 import { setStatus } from '$lib/statusFooter/StatusFooter.svelte';
 import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+import { readFile } from '@tauri-apps/plugin-fs';
 
 import type { FileItem } from '$lib/stores/fileSystem';
+
+import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
+import type { CitationItem } from '$lib/stores/citationStore';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs-2/build/pdf.worker.min.mjs';
 
 export interface EmbeddingResult {
 	chunk_text: string;
 	embedding: number[];
 }
 
-async function processSinglePdf(filePath: string, fileName: string): Promise<void> {
+async function processSinglePdf(filePath: string, fileName: string, fileId: number) {
 	try {
-		// Check if document exists within the transaction
-		const existingDoc = await selectQuery('SELECT id FROM documents WHERE file_name = ?', [
-			fileName
-		]);
+		const pdfBytes = await readFile(filePath);
+		const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
-		const documentId = existingDoc[0].id as string;
-
-		const pdfOutput = (await invoke('extract_pdf', { pdfPath: filePath })) as string;
+		const pdfOutput = await extractTextFromPDf(pdfDoc);
+		const pdfMetadata = await getPdfMetadata(pdfDoc, fileId, fileName);
+		console.log({ pdfMetadata });
 		const chunks = chunk(pdfOutput, { minLength: 100, splitter: 'sentence' });
 		const embeddingResults = (await invoke('embed_chunks', { chunks })) as EmbeddingResult[];
 
 		// Prepare all chunk insertions
-		for (const result of embeddingResults) {
-			await executeQuery(
-				`INSERT INTO chunks (document_id, chunk_text, embedding)
-                 VALUES (?, ?, ?)`,
-				[documentId, result.chunk_text, JSON.stringify(result.embedding)]
+		// Create an array of promises for all insertions
+		const insertPromises = embeddingResults.map((result) =>
+			executeQuery(
+				`INSERT INTO chunks (file_id, chunk_text, embedding)
+																	VALUES (?, ?, ?)`,
+				[fileId, result.chunk_text, JSON.stringify(result.embedding)]
+			)
+		);
+		if (pdfMetadata) {
+			insertPromises.push(
+				executeQuery(
+					`INSERT INTO source_metadata (file_id, metadata)
+																	VALUES (?, ?)`,
+					[fileId, JSON.stringify(pdfMetadata)]
+				)
 			);
 		}
 
+		// Execute all insertions in parallel
+		await Promise.all(insertPromises);
+
 		successToast(`${fileName} processed successfully`);
 	} catch (error) {
-		await executeQuery('ROLLBACK');
 		errorToast(`Failed to process ${fileName}: ${error.message}`);
 		throw error;
+	}
+}
+
+async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName: string) {
+	try {
+		let metadata: CitationItem | undefined = undefined;
+
+		const firstPage = await pdfDoc.getPage(1);
+		const content = await firstPage.getTextContent();
+		const firstPageText = content.items.map((item) => item.str).join(' ');
+
+		// get doi
+		const query = await fetch(
+			`http://api.crossref.org/works?query=${encodeURIComponent(firstPageText)}&rows=1&sort=score&select=DOI`
+		);
+
+		const data = await query.json();
+		if (data.status == 'ok') {
+			console.log(data);
+			const itemID = data.message.items[0].DOI;
+			const getCitaitonWithDoi = await fetch(`https://doi.org/${itemID}`, {
+				headers: {
+					Accept: 'application/vnd.citationstyles.csl+json'
+				}
+			});
+			metadata = (await getCitaitonWithDoi.json()) as CitationItem;
+			metadata.id = fileId.toString();
+		}
+
+		return metadata;
+	} catch (error) {
+		console.error(`Failed to get metadata for ${fileName}: ${error.message}`);
 	}
 }
 
@@ -55,27 +104,55 @@ function findPdfFiles(items: FileItem[]): FileItem[] {
 			pdfs = pdfs.concat(findPdfFiles(item.children));
 		}
 	}
-	console.log({ pdfs });
 	return pdfs;
 }
 
-async function getExistingDocuments(): Promise<Set<string>> {
-	const existingDocs = await selectQuery('SELECT file_name FROM documents');
-	return new Set(existingDocs.map((doc) => doc.file_name));
+async function getExistingFiles() {
+	return (await selectQuery(`
+    SELECT
+   	  files.id, file_name
+    FROM
+  		files
+		`)) as {
+		id: number;
+		file_name: string;
+	}[];
 }
 
-async function createDocumentBatch(pdfFiles: FileItem[]) {
+async function createFileBatch(pdfFiles: FileItem[]) {
 	try {
+		const insertedFiles = [];
 		await executeQuery('BEGIN TRANSACTION');
 
-		for (const fileName of pdfFiles) {
-			const result = await executeQuery('INSERT INTO documents (file_name) VALUES (?)', [
-				fileName.name
-			]);
-			console.log({ result });
+		for (const file of pdfFiles) {
+			const result = await executeQuery('INSERT INTO files (file_name) VALUES (?)', [file.name]);
+
+			insertedFiles.push({ ...file, id: result.lastInsertId });
 		}
 
 		await executeQuery('COMMIT');
+		return insertedFiles;
+	} catch (error) {
+		await executeQuery('ROLLBACK');
+		throw error;
+	}
+}
+
+async function extractTextFromPDf(pdf: PDFDocumentProxy) {
+	try {
+		const totalPageCount = pdf.numPages;
+		// Extract text from each page
+		const pageTextPromises = Array.from({ length: totalPageCount }, async (_, i) => {
+			const pageNum = i + 1;
+			const page = await pdf.getPage(pageNum);
+			const textContent = await page.getTextContent();
+
+			return textContent.items.map((item) => item.str).join('');
+		});
+
+		const content = await Promise.all(pageTextPromises);
+
+		return content.join('');
 	} catch (error) {
 		await executeQuery('ROLLBACK');
 		throw error;
@@ -83,18 +160,17 @@ async function createDocumentBatch(pdfFiles: FileItem[]) {
 }
 
 export async function extractAndChunkPdfs() {
-	// await executeQuery('delete from chunks;');
-	// await executeQuery('delete from documents;');
 	const fileSystem = get(fileSystemStore);
-
 	try {
 		// Get all PDF files recursively (you'll need to implement this Rust function)
 		const pdfFiles = findPdfFiles(fileSystem.items);
 
-		// Get existing documents from database
-		const existingDocs = await getExistingDocuments();
+		// Get existing files from database
+		const existingFiles = await getExistingFiles();
+
 		// Filter out already processed PDFs
-		const newPdfs = pdfFiles.filter((file) => !existingDocs.has(file.name));
+		const existingFileNames = new Set(existingFiles.map((file) => file.file_name));
+		let newPdfs = pdfFiles.filter((file) => !existingFileNames.has(file.name));
 
 		if (newPdfs.length === 0) {
 			return;
@@ -106,7 +182,8 @@ export async function extractAndChunkPdfs() {
 			type: 'info'
 		});
 
-		await createDocumentBatch(pdfFiles);
+		newPdfs = await createFileBatch(newPdfs);
+
 		let processed = 0;
 
 		// Process PDFs concurrently in batches to avoid overwhelming the system
@@ -117,7 +194,7 @@ export async function extractAndChunkPdfs() {
 			await Promise.all(
 				batch.map(async (file) => {
 					try {
-						await processSinglePdf(file.path, file.name);
+						await processSinglePdf(file.path, file.name, file.id as number);
 						processed++;
 						setStatus({
 							side: 'left',

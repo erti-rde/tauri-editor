@@ -2,6 +2,7 @@ import { writable } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
 
 export interface FileItem {
+	id?: number;
 	name: string;
 	path: string;
 	is_dir: boolean;
@@ -16,7 +17,7 @@ interface FileSystemStore {
 }
 
 function createFileSystemStore() {
-	const { subscribe, set, update } = writable<FileSystemStore>({
+	const { subscribe, update } = writable<FileSystemStore>({
 		items: [],
 		currentPath: '',
 		loading: false,

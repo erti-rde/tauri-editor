@@ -42,7 +42,7 @@
 	});
 </script>
 
-<div class={isExplorerOpen ? 'sidebar-container' : 'hidden'}>
+<div class={isExplorerOpen ? 'sidebar-container border-r' : 'hidden'}>
 	<div
 		class="explorer-scroll relative flex flex-col justify-between px-2"
 		class:transitioning={isTransitioning}

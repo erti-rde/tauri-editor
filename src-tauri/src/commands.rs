@@ -124,16 +124,6 @@ pub async fn print_pdf_file(current_dir: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn extract_pdf(pdf_path: String) -> Result<String, String> {
-    let bytes = std::fs::read(pdf_path).map_err(|e| format!("Failed to read PDF file: {}", e))?;
-
-    let out = pdf_extract::extract_text_from_mem(&bytes)
-        .map_err(|e| format!("Failed to extract text from PDF: {}", e))?;
-    println!("PDF extract output {:?}", out);
-    Ok(out)
-}
-
-#[tauri::command]
 pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
     let ml_state = ML_STATE
         .get()

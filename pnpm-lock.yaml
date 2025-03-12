@@ -54,7 +54,7 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
       pdfjs-dist:
-        specifier: ^4.8.69
+        specifier: ^4.9.155
         version: 4.9.155
       tippy.js:
         specifier: ^6.3.7
