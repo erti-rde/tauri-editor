@@ -64,17 +64,27 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
 async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName: string) {
 	try {
 		let metadata: CitationItem | undefined = undefined;
+		const { info } = await pdfDoc.getMetadata();
+		console.log({ info });
+		let query = 'http://api.crossref.org/works?rows=1&sort=score&select=DOI';
+		if (info?.Author && info?.Title) {
+			// If we have author and title, we can make a more accurate search query
+			query += `&query.author=${encodeURIComponent(info.Author)}&query.title=${encodeURIComponent(info.Title)}`;
+		} else if (info?.author && info?.title) {
+			// Handle lowercase keys
+			query += `&query.author=${encodeURIComponent(info.author)}&query.title=${encodeURIComponent(info.title)}`;
+		} else {
+			const firstPage = await pdfDoc.getPage(1);
+			console.log({ firstPage });
+			const content = await firstPage.getTextContent();
+			const firstPageText = content.items.map((item) => item.str).join(' ');
 
-		const firstPage = await pdfDoc.getPage(1);
-		const content = await firstPage.getTextContent();
-		const firstPageText = content.items.map((item) => item.str).join(' ');
+			query += `&query=${encodeURIComponent(firstPageText)}`;
+		}
 
 		// get doi
-		const query = await fetch(
-			`http://api.crossref.org/works?query=${encodeURIComponent(firstPageText)}&rows=1&sort=score&select=DOI`
-		);
-
-		const data = await query.json();
+		const res = await fetch(query);
+		const data = await res.json();
 		if (data.status == 'ok') {
 			console.log(data);
 			const itemID = data.message.items[0].DOI;
