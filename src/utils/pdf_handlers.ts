@@ -97,6 +97,19 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName
 			metadata.id = fileId.toString();
 		}
 
+		if (metadata && typeof metadata?.title !== 'string') {
+			// If title is an array, extract the first string value
+			if (Array.isArray(metadata.title)) {
+				metadata.title = metadata.title[0]?.toString();
+			} else {
+				metadata.title = JSON.stringify(metadata.title);
+			}
+		}
+
+		if (metadata?.reference) {
+			delete metadata.reference;
+		}
+
 		return metadata;
 	} catch (error) {
 		console.error(`Failed to get metadata for ${fileName}: ${error.message}`);
