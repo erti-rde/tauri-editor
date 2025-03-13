@@ -30,6 +30,18 @@
 	import ExternalLink from '~icons/lucide/external-link';
 	import Settings from '~icons/lucide/settings';
 	import Books from '~icons/mdi/bookshelf';
+	import Search from '~icons/lucide/search';
+	import Filter from '~icons/lucide/filter';
+	import Edit from '~icons/lucide/edit';
+	import Save from '~icons/lucide/save';
+	import FileText from '~icons/lucide/file-text';
+	import ScrollText from '~icons/lucide/scroll-text';
+	import FileSpreadsheet from '~icons/lucide/file-spreadsheet';
+	import Globe from '~icons/lucide/globe';
+	import GraduationCap from '~icons/lucide/graduation-cap';
+	import Presentation from '~icons/lucide/presentation';
+	import Video from '~icons/lucide/video';
+	import type { ClassValue } from 'svelte/elements';
 
 	const icons = {
 		ChevronUp,
@@ -59,7 +71,18 @@
 		FileOutput,
 		Settings,
 		ExternalLink,
-		Books
+		Books,
+		Search,
+		Filter,
+		Edit,
+		Save,
+		FileText,
+		ScrollText,
+		FileSpreadsheet,
+		Globe,
+		GraduationCap,
+		Presentation,
+		Video
 	};
 
 	type Size = 's' | 'm' | 'l';
@@ -68,9 +91,10 @@
 	interface Props {
 		icon: Icon;
 		size?: Size;
+		class?: ClassValue;
 	}
 
-	let { icon, size = 'm' }: Props = $props();
+	let { icon, size = 'm', class: className }: Props = $props();
 
 	const sizeMap = {
 		s: 16,
@@ -84,4 +108,4 @@
 	const SvelteComponent = $derived(component);
 </script>
 
-<SvelteComponent style="width: {dimensions}px; height: {dimensions}px;" />
+<SvelteComponent style="width: {dimensions}px; height: {dimensions}px;" class={className} />
