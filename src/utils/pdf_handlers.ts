@@ -44,9 +44,9 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
 		if (pdfMetadata) {
 			insertPromises.push(
 				executeQuery(
-					`INSERT INTO source_metadata (file_id, metadata)
-																	VALUES (?, ?)`,
-					[fileId, JSON.stringify(pdfMetadata)]
+					`INSERT INTO source_metadata (file_id, zotero_type, metadata)
+																	VALUES (?, ?, ?)`,
+					[fileId, convertCslTypetoZoteroType(pdfMetadata.type), JSON.stringify(pdfMetadata)]
 				)
 			);
 		}
@@ -60,7 +60,16 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
 		throw error;
 	}
 }
-
+function convertCslTypetoZoteroType(type: String) {
+	// Convert types with hyphens or underscores to camelCase
+	return type
+		.split(/[-_]/)
+		.map((word, index) => {
+			if (index === 0) return word.toLowerCase();
+			return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+		})
+		.join('');
+}
 async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName: string) {
 	try {
 		let metadata: CitationItem | undefined = undefined;
