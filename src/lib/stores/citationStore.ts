@@ -25,6 +25,7 @@ export interface CitationItem {
 	volume?: string;
 	issue?: string;
 	publisher?: string;
+  zotero_type?: string;
 	[key: string]: string | number | boolean | object | Array<unknown> | undefined; // Allow for other CSL-JSON properties
 }
 
