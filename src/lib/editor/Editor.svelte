@@ -6,8 +6,8 @@
 	import { currentFileStore } from '$lib/stores/openFileStore';
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
-	
-  import { invoke } from '@tauri-apps/api/core';
+
+	import { invoke } from '@tauri-apps/api/core';
 
 	import TextAlign from '@tiptap/extension-text-align';
 	import StarterKit from '@tiptap/starter-kit';
@@ -83,7 +83,7 @@
 
 	function toggleView() {
 		editable = !editable;
- 		$editor.setEditable(editable);
+		$editor.setEditable(editable);
 	}
 
 	async function exportToPdf() {
@@ -123,7 +123,7 @@
 		showCitationPanel = true;
 	}
 
-	function handleCitationSelect(citation : { id: string, inlineCitation: string }) {
+	function handleCitationSelect(citation: { id: string; inlineCitation: string }) {
 		$editor.commands.insertCitation({
 			id: citation.id,
 			label: citation.inlineCitation
@@ -137,7 +137,7 @@
 	}
 </script>
 
-{#if editor}
+{#if $editor}
 	<div class="min-h-screen bg-[#FAFBFD]">
 		<div class="sticky top-0 z-50 transition-shadow duration-200">
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} />
@@ -147,13 +147,13 @@
 				<EditorContent editor={$editor} />
 				<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
 			</div>
-      {#if showCitationPanel}
-        <Result
-          {selectedText}
-          selectCitation={handleCitationSelect}
-          closePanel={handlePanelClose}
-        />
-      {/if}
+			{#if showCitationPanel}
+				<Result
+					{selectedText}
+					selectCitation={handleCitationSelect}
+					closePanel={handlePanelClose}
+				/>
+			{/if}
 		</div>
 	</div>
 {/if}

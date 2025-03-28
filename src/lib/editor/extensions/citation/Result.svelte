@@ -49,11 +49,11 @@
 			 SELECT
 				chunks.chunk_text,
 				chunks.embedding,
-				documents.id
+				files.id
 			FROM
 			   chunks
 			JOIN
-			   documents ON chunks.document_id = documents.id
+			   files ON chunks.file_id = files.id
 			`)) as { chunk_text: string; embedding: string; id: string }[];
 			// Calculate similarities
 			const similarities = chunks.map((chunk) => {
