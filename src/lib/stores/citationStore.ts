@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 import CSL from 'citeproc';
 import type { Store } from '@tauri-apps/plugin-store';
 import { load as loadStore } from '@tauri-apps/plugin-store';
-import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { selectQuery } from '$utils/db';
 
 // Define types for our citation data
 export interface CitationItem {
@@ -25,7 +25,7 @@ export interface CitationItem {
 	volume?: string;
 	issue?: string;
 	publisher?: string;
-  zotero_type?: string;
+	zotero_type?: string;
 	[key: string]: string | number | boolean | object | Array<unknown> | undefined; // Allow for other CSL-JSON properties
 }
 
@@ -144,10 +144,24 @@ async function getInitialState() {
 		console.log('Style XML snippet:', styleXml?.substring(0, 300));
 		console.log('Locale XML snippet:', localeXml?.substring(0, 300));
 
-		const itemsJson = await readTextFile('resources/csl/citationSources.json', {
-			baseDir: BaseDirectory.Resource
+		const itemsJson2 = (await selectQuery(`
+		  SELECT
+				 files.id, files.file_name, sm.metadata
+			FROM
+			 files
+			LEFT JOIN
+			  source_metadata sm ON files.id = sm.file_id
+		`)) as {
+			id: number;
+			file_name: string;
+			metadata: string;
+		}[];
+
+		const citationSources: Record<string, CitationItem> = {};
+
+		itemsJson2.forEach((item) => {
+			citationSources[item.id] = { file_name: item.file_name, ...JSON.parse(item.metadata) };
 		});
-		const citationSources: Record<string, CitationItem> = JSON.parse(itemsJson);
 
 		console.log('Citation sources loaded:', Object.keys(citationSources).length);
 
