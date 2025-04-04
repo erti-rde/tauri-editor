@@ -1,36 +1,37 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-	import { selectQuery } from '$utils/db';
+	import { selectQuery, executeQuery } from '$utils/db';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { Icon } from '$lib';
-	// TODO: Implement more visual guides for users
-	// ** for example when hovering on item in metadataeditor higlight the file in the file Explorer
-	// ** or when user clicks on file in the explorer highligh item listing in the source
-	// import { currentFileStore } from '$lib/stores/openFileStore';
-	// import { fileSystemStore } from '$lib/stores/fileSystem';
-	
+	import { augmentSchema } from './adapaterCslZotero';
+	import type { AugmentedZoteroSchema } from './adapaterCslZotero';
+
 	type Source = {
 		id: number;
 		file_name: string;
 		metadata: CitationItem;
 	};
-	let sources: Source[] = [];
-	let loading = true;
-	let searchQuery = '';
-	let selectedSourceId: number | null = null;
-	let sidebarOpen = false;
-	let schema: any = null;
+
+	let sources: Source[] = $state([]);
+	let editingSource: CitationItem | null = $state(null);
+
+	let loading = $state(true);
+	let searchQuery = $state('');
+	let selectedSourceId: number | null = $state(null);
+	let sidebarOpen = $state(false);
 
 	onMount(async () => {
-		await Promise.all([loadSources(), loadSchema()]);
+		await Promise.all([loadSources(), handleSchema()]);
 
 		loading = false;
 	});
 	async function loadSources() {
 		let files = (await selectQuery(`
 	           SELECT
-	             files.id, files.file_name, sm.metadata
+	             files.id, files.file_name, sm.metadata, sm.zotero_type
 	           FROM
 	             files
 	           LEFT JOIN
@@ -39,21 +40,25 @@
 			id: number;
 			file_name: string;
 			metadata: string;
+			zotero_type: string;
 		}[];
+
 		sources = files.map((file) => ({
-			id: file.id,
-			file_name: file.file_name,
-			metadata: JSON.parse(file.metadata)
+			...file,
+			metadata: { ...JSON.parse(file.metadata), zotero_type: file.zotero_type }
 		}));
 	}
+	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
-	async function loadSchema() {
+	async function handleSchema() {
 		// Schema was fetched from https://api.zotero.org/schema
 		// current version 33
 		const schemaJson = await readTextFile('resources/csl/schema.json', {
 			baseDir: BaseDirectory.Resource
 		});
-		schema = JSON.parse(schemaJson);
+		const schema = JSON.parse(schemaJson);
+
+		augmentedSchema = augmentSchema(schema);
 	}
 
 	function getAuthorDisplay(source: Source) {
@@ -66,70 +71,46 @@
 		return null;
 	}
 
-	function getTypeIcon(type: string | null) {
-		if (!type) return 'FileQuestion';
-
-		const typeIconMap = {
-			book: 'BookOpen',
-			journalArticle: 'ScrollText',
-			report: 'FileSpreadsheet',
-			webpage: 'Globe',
-			thesis: 'GraduationCap',
-			presentation: 'Presentation',
-			video: 'Video'
-		};
-
-		return typeIconMap[type] || 'File';
-	}
-
-	function getTypeClass(type: string | null) {
-		if (!type) return 'text-gray-400';
-
-		const typeColorMap = {
-			book: 'text-blue-500',
-			journalArticle: 'text-green-500',
-			report: 'text-amber-500',
-			webpage: 'text-purple-500',
-			thesis: 'text-indigo-500'
-		};
-
-		return typeColorMap[type] || 'text-gray-500';
-	}
 	function handleSourceSelect(sourceId: number) {
 		selectedSourceId = sourceId;
+		const source = sources.find((s) => s.id === sourceId);
+
+		if (source) {
+			editingSource = source.metadata;
+			if (source.file_name) {
+				editingSource.id = source.id;
+			}
+		} else {
+			editingSource = null;
+		}
+
 		sidebarOpen = true;
 	}
 
 	function handleSidebarClose() {
 		sidebarOpen = false;
-		// Optionally, after a delay, unselect the source
-		// setTimeout(() => selectedSourceId = null, 300);
-	}
-	async function handleSourceUpdate(
-		event: CustomEvent<{ sourceId: number; metadata: CitationItem }>
-	) {
-		const { sourceId, metadata } = event.detail;
-
-		// Update the source in the local array
-		sources = sources.map((source) => (source.id === sourceId ? { ...source, metadata } : source));
-
-		// Update in the database
-		// TODO: Implement database update logic
-		// await executeQuery(
-		// 	`UPDATE source_metadata SET metadata = ? WHERE file_id = ?`,
-		// 	[JSON.stringify(metadata), sourceId]
-		// );
+		editingSource = null;
 	}
 
-	$: filteredSources = searchQuery
-		? sources.filter(
-				(s) =>
-					(s.metadata?.title || s.file_name).toLowerCase().includes(searchQuery.toLowerCase()) ||
-					(getAuthorDisplay(s) || '').toLowerCase().includes(searchQuery.toLowerCase())
-			)
-		: sources;
+	async function handleSourceUpdate(sourceId: number, metadata: CitationItem) {
+		await executeQuery(`REPLACE INTO source_metadata (file_id, metadata) VALUES (?, ?)`, [
+			sourceId,
+			JSON.stringify(metadata)
+		]);
 
-	$: selectedSource = sources.find((s) => s.id === selectedSourceId) || null;
+		editingSource = null;
+		sidebarOpen = false;
+	}
+
+	const filteredSources = $derived.by(() => {
+		return searchQuery
+			? sources.filter(
+					(s) =>
+						(s.metadata?.title || s.file_name).toLowerCase().includes(searchQuery.toLowerCase()) ||
+						(getAuthorDisplay(s) || '').toLowerCase().includes(searchQuery.toLowerCase())
+				)
+			: sources;
+	});
 </script>
 
 <div class="flex h-full w-full">
@@ -177,21 +158,14 @@
 					<div
 						class="grid cursor-pointer grid-cols-12 gap-3 px-3 py-3 transition-colors hover:bg-gray-50"
 						class:bg-blue-50={selectedSourceId === source.id}
-						on:click={() => handleSourceSelect(source.id)}
+						onclick={() => handleSourceSelect(source.id)}
 					>
-						<!-- Type icon -->
-						<div class="col-span-1 flex items-center">
-							<div class={`${getTypeClass(source.metadata?.type)}`}>
-								<Icon icon={getTypeIcon(source.metadata?.type)} class="h-5 w-5" />
-							</div>
-						</div>
-
 						<!-- Title -->
 						<div class="col-span-5 flex items-center">
 							<div class="truncate">
 								<span class="font-medium">{source.metadata?.title || source.file_name}</span>
 								{#if !source.metadata?.title}
-									<Icon icon="AlertCircle" class="ml-1 inline h-3.5 w-3.5 text-amber-500" />
+									<Icon icon="FileWarning" class="ml-1 inline h-3.5 w-3.5 text-amber-500" />
 								{/if}
 							</div>
 						</div>
@@ -202,7 +176,6 @@
 								<span class="truncate">{getAuthorDisplay(source)}</span>
 							{:else}
 								<span class="flex items-center text-xs text-gray-400">
-									<Icon icon="AlertCircle" class="mr-1 inline h-3.5 w-3.5 text-amber-500" />
 									<span>No author</span>
 								</span>
 							{/if}
@@ -219,14 +192,14 @@
 	</div>
 
 	<!-- Sidebar for editing source -->
-	{#if schema}
+	{#if sidebarOpen && editingSource && augmentedSchema}
 		<SourceSidebar
-			bind:open={sidebarOpen}
-			source={selectedSource}
-			{schema}
-			on:close={handleSidebarClose}
-			on:update={handleSourceUpdate}
+			bind:source={editingSource}
+			{augmentedSchema}
+			onclose={handleSidebarClose}
+			onupdate={handleSourceUpdate}
 		/>
+		<!-- <SourceSidebar schemaJson={schema} initialCslItem={selectedSource?.metadata} /> -->
 	{/if}
 </div>
 

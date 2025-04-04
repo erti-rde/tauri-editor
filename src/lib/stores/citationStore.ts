@@ -6,7 +6,7 @@ import { selectQuery } from '$utils/db';
 
 // Define types for our citation data
 export interface CitationItem {
-	id: string;
+	id: string | number;
 	type: string;
 	title?: string;
 	author?: Array<{
