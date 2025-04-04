@@ -13,7 +13,8 @@ const config = {
 		alias: {
 			$lib: 'src/lib',
 			$utils: 'src/utils',
-			$types: 'src/types'
+			$types: 'src/types',
+			$ui: 'src/lib/ui'
 		}
 	}
 };
