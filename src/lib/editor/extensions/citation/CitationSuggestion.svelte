@@ -131,7 +131,7 @@
 	{#if items.length > 0}
 		<div class="list-container max-h-[300px] overflow-y-auto py-2">
 			<ul class="m-0 list-none p-0" role="listbox" aria-multiselectable="true">
-				{#each items as item, index (item.id)}
+				{#each items as item, index (index)}
 					{@const isInvalid = !hasValidAuthor(item)}
 					<li
 						id="citation-item-{index}"
