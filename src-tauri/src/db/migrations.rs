@@ -26,8 +26,7 @@ pub fn get_migrations() -> Vec<Migration> {
 
             CREATE TABLE source_metadata (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                file_id INTEGER NULL,
-                zotero_type TEXT NULL,
+                file_id INTEGER NULL UNIQUE,
                 metadata TEXT NULL, -- Stringified JSON
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

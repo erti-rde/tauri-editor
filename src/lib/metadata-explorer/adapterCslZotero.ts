@@ -1,3 +1,5 @@
+import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+
 interface OriginalZoteroField {
 	field: string;
 	baseField?: string;
@@ -52,6 +54,8 @@ export interface AugmentedZoteroItemType {
 export interface AugmentedZoteroSchema {
 	itemTypes: AugmentedZoteroItemType[]; // The main array of augmented types
 	typeFields: { value: string; label: string }[]; // Array of item types
+	zoteroToCslTypeMap: Map<string, string>;
+	cslToZoteroTypeMap: Map<string, string>;
 }
 
 // Build map from Zotero field name to potential CSL fields
@@ -180,6 +184,25 @@ function buildZoteroToCslTypeMap(schema: OriginalZoteroSchema): Map<string, stri
 	return map;
 }
 
+function buildCslToZoteroTypeMap(schema: OriginalZoteroSchema): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const [cslType, zoteroType] of Object.entries(schema.csl.types)) {
+    if (zoteroType.length == 1) {
+      // Add the original mapping
+      map.set(cslType, zoteroType[0]);
+      
+      // Handle reversed hyphenated types
+      if (cslType.includes('-')) {
+        const parts = cslType.split('-');
+        const reversedType = `${parts[1]}-${parts[0]}`;
+        map.set(reversedType, zoteroType[0]);
+      }
+    }
+  }
+  
+  return map;
+}
+
 function formatFieldName(fieldName: string): string {
 	const result = fieldName.replace(/([A-Z])/g, ' $1');
 	return result.charAt(0).toUpperCase() + result.slice(1);
@@ -227,11 +250,18 @@ function getInputType(fieldName: string): string {
 	}
 }
 
-export function augmentSchema(schema: OriginalZoteroSchema): AugmentedZoteroSchema {
+export async function augmentSchema(): Promise<AugmentedZoteroSchema> {
+	// Schema was fetched from https://api.zotero.org/schema
+	// current version 33
+	const schemaJson = await readTextFile('resources/csl/schema.json', {
+		baseDir: BaseDirectory.Resource
+	});
+	const schema: OriginalZoteroSchema = JSON.parse(schemaJson);
+
 	const reverseFieldMap = buildReverseFieldMap(schema);
 	const reverseCreatorMap = new Map<string, string>(Object.entries(schema.csl.names)); // Zotero Creator -> CSL Variable
 	const zoteroToCslTypeMap = buildZoteroToCslTypeMap(schema);
-
+	const cslToZoteroTypeMap = buildCslToZoteroTypeMap(schema);
 	const augmentedItemTypes: AugmentedZoteroItemType[] = [];
 
 	// Process each item type definition
@@ -286,7 +316,8 @@ export function augmentSchema(schema: OriginalZoteroSchema): AugmentedZoteroSche
 	// Construct the final augmented schema object
 	const finalAugmentedSchema: AugmentedZoteroSchema = {
 		// version: schema.version,
-
+		zoteroToCslTypeMap,
+		cslToZoteroTypeMap,
 		itemTypes: augmentedItemTypes, // Keep the array structure
 		typeFields: augmentedItemTypes
 			.map((item) => {
