@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { selectQuery, executeQuery } from '$utils/db';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { Icon } from '$lib';
-	import { augmentSchema } from './adapaterCslZotero';
-	import type { AugmentedZoteroSchema } from './adapaterCslZotero';
+	import { augmentSchema } from './adapterCslZotero';
+	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 
 	type Source = {
 		id: number;
@@ -22,16 +21,17 @@
 	let searchQuery = $state('');
 	let selectedSourceId: number | null = $state(null);
 	let sidebarOpen = $state(false);
+	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
 	onMount(async () => {
-		await Promise.all([loadSources(), handleSchema()]);
-
+		augmentedSchema = await augmentSchema()
+		await loadSources();		
 		loading = false;
 	});
 	async function loadSources() {
 		let files = (await selectQuery(`
 	           SELECT
-	             files.id, files.file_name, sm.metadata, sm.zotero_type
+	             files.id, files.file_name, sm.metadata
 	           FROM
 	             files
 	           LEFT JOIN
@@ -40,26 +40,18 @@
 			id: number;
 			file_name: string;
 			metadata: string;
-			zotero_type: string;
 		}[];
 
-		sources = files.map((file) => ({
-			...file,
-			metadata: { ...JSON.parse(file.metadata), zotero_type: file.zotero_type }
-		}));
-	}
-	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
-
-	async function handleSchema() {
-		// Schema was fetched from https://api.zotero.org/schema
-		// current version 33
-		const schemaJson = await readTextFile('resources/csl/schema.json', {
-			baseDir: BaseDirectory.Resource
+		sources = files.map((file) => {
+			// TODO: check if the metadata type is present or not. We could try to fetch data from online again
+			// if we know the type determine zotero type from it and save it to db
+			return {
+				...file,
+				metadata: JSON.parse(file.metadata)
+			};
 		});
-		const schema = JSON.parse(schemaJson);
-
-		augmentedSchema = augmentSchema(schema);
 	}
+
 
 	function getAuthorDisplay(source: Source) {
 		if (!source.metadata) return null;
@@ -74,7 +66,6 @@
 	function handleSourceSelect(sourceId: number) {
 		selectedSourceId = sourceId;
 		const source = sources.find((s) => s.id === sourceId);
-
 		if (source) {
 			editingSource = source.metadata;
 			if (source.file_name) {
@@ -93,10 +84,10 @@
 	}
 
 	async function handleSourceUpdate(sourceId: number, metadata: CitationItem) {
-		await executeQuery(`REPLACE INTO source_metadata (file_id, metadata) VALUES (?, ?)`, [
-			sourceId,
-			JSON.stringify(metadata)
-		]);
+		await executeQuery(
+			`INSERT OR REPLACE INTO source_metadata (file_id, metadata, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
+			[sourceId, JSON.stringify(metadata)]
+		);
 
 		editingSource = null;
 		sidebarOpen = false;
@@ -199,7 +190,6 @@
 			onclose={handleSidebarClose}
 			onupdate={handleSourceUpdate}
 		/>
-		<!-- <SourceSidebar schemaJson={schema} initialCslItem={selectedSource?.metadata} /> -->
 	{/if}
 </div>
 

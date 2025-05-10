@@ -7,7 +7,9 @@ import { fileSystemStore } from '$lib/stores/fileSystem';
 import { setStatus } from '$lib/statusFooter/StatusFooter.svelte';
 import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 import { readFile } from '@tauri-apps/plugin-fs';
+import { augmentSchema } from '$lib/metadata-explorer/adapterCslZotero';
 
+import type { AugmentedZoteroSchema } from '$lib/metadata-explorer/adapterCslZotero';
 import type { FileItem } from '$lib/stores/fileSystem';
 
 import * as pdfjsLib from 'pdfjs-dist';
@@ -16,38 +18,48 @@ import type { CitationItem } from '$lib/stores/citationStore';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs-2/build/pdf.worker.min.mjs';
 
+// Initialize as a private variable to reduce global scope
+let cslToZoteroTypeMap: Map<string, string> | undefined;
+
 export interface EmbeddingResult {
 	chunk_text: string;
 	embedding: number[];
 }
 
+/**
+ * Process a single PDF file by extracting text, retrieving metadata,
+ * chunking the text, and storing in the database
+ * @param filePath Path to the PDF file
+ * @param fileName Name of the PDF file
+ * @param fileId Database ID for the file
+ */
 async function processSinglePdf(filePath: string, fileName: string, fileId: number) {
+	let pdfDoc: PDFDocumentProxy | undefined;
 	try {
 		const pdfBytes = await readFile(filePath);
-		const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+		pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
 		const pdfOutput = await extractTextFromPDf(pdfDoc);
 		const pdfMetadata = await getPdfMetadata(pdfDoc, fileId, fileName);
-		console.log({ pdfMetadata });
+
 		const chunks = chunk(pdfOutput, { minLength: 100, splitter: 'sentence' });
 		const embeddingResults = (await invoke('embed_chunks', { chunks })) as EmbeddingResult[];
 
-		// Prepare all chunk insertions
-		// Create an array of promises for all insertions
+		// Prepare all insertions
 		const insertPromises = embeddingResults.map((result) =>
-			executeQuery(
-				`INSERT INTO chunks (file_id, chunk_text, embedding)
-																	VALUES (?, ?, ?)`,
-				[fileId, result.chunk_text, JSON.stringify(result.embedding)]
-			)
+			executeQuery(`INSERT INTO chunks (file_id, chunk_text, embedding) VALUES (?, ?, ?)`, [
+				fileId,
+				result.chunk_text,
+				JSON.stringify(result.embedding)
+			])
 		);
+		
 		if (pdfMetadata) {
 			insertPromises.push(
-				executeQuery(
-					`INSERT INTO source_metadata (file_id, zotero_type, metadata)
-																	VALUES (?, ?, ?)`,
-					[fileId, convertCslTypetoZoteroType(pdfMetadata.type), JSON.stringify(pdfMetadata)]
-				)
+				executeQuery(`INSERT INTO source_metadata (file_id, metadata) VALUES (?, ?)`, [
+					fileId,
+					JSON.stringify(pdfMetadata)
+				])
 			);
 		}
 
@@ -56,26 +68,33 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
 
 		successToast(`${fileName} processed successfully`);
 	} catch (error) {
-		errorToast(`Failed to process ${fileName}: ${error.message}`);
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		errorToast(`Failed to process ${fileName}: ${errorMessage}`);
 		throw error;
+	} finally {
+		// Ensure PDF document is properly closed to prevent memory leaks
+		try {
+			pdfDoc?.destroy();
+		} catch (e) {
+			// Silently handle destroy errors
+		}
 	}
 }
-function convertCslTypetoZoteroType(type: String) {
-	// Convert types with hyphens or underscores to camelCase
-	return type
-		.split(/[-_]/)
-		.map((word, index) => {
-			if (index === 0) return word.toLowerCase();
-			return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-		})
-		.join('');
-}
+
+/**
+ * Extract metadata from a PDF document and attempt to find DOI information
+ * @param pdfDoc PDF document to extract metadata from
+ * @param fileId Database ID for the file
+ * @param fileName Name of the PDF file for error reporting
+ */
 async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName: string) {
 	try {
 		let metadata: CitationItem | undefined = undefined;
 		const { info } = await pdfDoc.getMetadata();
-		console.log({ info });
-		let query = 'http://api.crossref.org/works?rows=1&sort=score&select=DOI';
+		
+		let query = 'https://api.crossref.org/works?rows=1&sort=score&select=DOI';
+		
+		// Build query based on available metadata
 		if (info?.Author && info?.Title) {
 			// If we have author and title, we can make a more accurate search query
 			query += `&query.author=${encodeURIComponent(info.Author)}&query.title=${encodeURIComponent(info.Title)}`;
@@ -83,49 +102,69 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName
 			// Handle lowercase keys
 			query += `&query.author=${encodeURIComponent(info.author)}&query.title=${encodeURIComponent(info.title)}`;
 		} else {
+			// Fallback to text extraction from the first page
 			const firstPage = await pdfDoc.getPage(1);
-			console.log({ firstPage });
 			const content = await firstPage.getTextContent();
 			const firstPageText = content.items.map((item) => item.str).join(' ');
-
-			query += `&query=${encodeURIComponent(firstPageText)}`;
+			
+			// Limit query length to avoid excessively long URLs
+			query += `&query=${encodeURIComponent(firstPageText.substring(0, 1000))}`;
+			
+			// Clean up page resources
+			firstPage.cleanup();
 		}
 
-		// get doi
+		// Retrieve DOI information
 		const res = await fetch(query);
 		const data = await res.json();
-		if (data.status == 'ok') {
-			console.log(data);
+		
+		if (data.status === 'ok' && data.message?.items?.length > 0) {
 			const itemID = data.message.items[0].DOI;
-			const getCitaitonWithDoi = await fetch(`https://doi.org/${itemID}`, {
+			const getCitationWithDoi = await fetch(`https://doi.org/${itemID}`, {
 				headers: {
 					Accept: 'application/vnd.citationstyles.csl+json'
 				}
 			});
-			metadata = (await getCitaitonWithDoi.json()) as CitationItem;
+			
+			metadata = (await getCitationWithDoi.json()) as CitationItem;
 			metadata.id = fileId.toString();
+			
+			if (!cslToZoteroTypeMap) {
+				const augmentedSchema: AugmentedZoteroSchema = await augmentSchema();
+				cslToZoteroTypeMap = augmentedSchema.cslToZoteroTypeMap;
+			}
+			
+			metadata.zotero_type = cslToZoteroTypeMap.get(metadata.type) || '';
 		}
 
-		if (metadata && typeof metadata?.title !== 'string') {
-			// If title is an array, extract the first string value
+		// Handle potential non-string title formats
+		if (metadata && typeof metadata.title !== 'string') {
 			if (Array.isArray(metadata.title)) {
-				metadata.title = metadata.title[0]?.toString();
+				metadata.title = metadata.title[0]?.toString() || fileName;
 			} else {
-				metadata.title = JSON.stringify(metadata.title);
+				metadata.title = fileName;
 			}
 		}
 
+		// Remove reference field to reduce storage size
 		if (metadata?.reference) {
 			delete metadata.reference;
 		}
 
 		return metadata;
 	} catch (error) {
-		console.error(`Failed to get metadata for ${fileName}: ${error.message}`);
+		// Log error but allow processing to continue with empty metadata
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		console.error(`Failed to get metadata for ${fileName}: ${errorMessage}`);
+		return {};
 	}
 }
 
-// Helper function to recursively find PDF files
+/**
+ * Recursively find PDF files in the file system
+ * @param items List of file items to search
+ * @returns Array of PDF files found
+ */
 function findPdfFiles(items: FileItem[]): FileItem[] {
 	let pdfs: FileItem[] = [];
 	for (const item of items) {
@@ -139,38 +178,40 @@ function findPdfFiles(items: FileItem[]): FileItem[] {
 	return pdfs;
 }
 
-async function getExistingFiles() {
+/**
+ * Retrieve existing processed files from the database
+ */
+async function getExistingFiles(): Promise<Array<{ id: number; file_name: string }>> {
 	return (await selectQuery(`
     SELECT
    	  files.id, file_name
     FROM
   		files
-		`)) as {
-		id: number;
-		file_name: string;
-	}[];
+		`)) as Array<{ id: number; file_name: string }>;
 }
 
-async function createFileBatch(pdfFiles: FileItem[]) {
-	try {
-		const insertedFiles = [];
-		await executeQuery('BEGIN TRANSACTION');
+/**
+ * Create database entries for a batch of PDF files
+ * @param pdfFiles List of PDF files to create entries for
+ * @returns List of files with their database IDs
+ */
+async function createFileBatch(pdfFiles: FileItem[]): Promise<Array<FileItem & { id: number }>> {
+	const insertedFiles = [];
 
-		for (const file of pdfFiles) {
-			const result = await executeQuery('INSERT INTO files (file_name) VALUES (?)', [file.name]);
-
-			insertedFiles.push({ ...file, id: result.lastInsertId });
-		}
-
-		await executeQuery('COMMIT');
-		return insertedFiles;
-	} catch (error) {
-		await executeQuery('ROLLBACK');
-		throw error;
+	for (const file of pdfFiles) {
+		const result = await executeQuery('INSERT INTO files (file_name) VALUES (?)', [file.name]);
+		insertedFiles.push({ ...file, id: result.lastInsertId });
 	}
+
+	return insertedFiles;
 }
 
-async function extractTextFromPDf(pdf: PDFDocumentProxy) {
+/**
+ * Extract text content from a PDF document
+ * @param pdf PDF document to extract text from
+ * @returns Concatenated text content from all pages
+ */
+async function extractTextFromPDf(pdf: PDFDocumentProxy): Promise<string> {
 	try {
 		const totalPageCount = pdf.numPages;
 		// Extract text from each page
@@ -179,22 +220,27 @@ async function extractTextFromPDf(pdf: PDFDocumentProxy) {
 			const page = await pdf.getPage(pageNum);
 			const textContent = await page.getTextContent();
 
+			// Release page resources after extraction
+			page.cleanup();
+			
 			return textContent.items.map((item) => item.str).join('');
 		});
 
 		const content = await Promise.all(pageTextPromises);
-
-		return content.join('');
+		return content.join(' ');
 	} catch (error) {
 		await executeQuery('ROLLBACK');
 		throw error;
 	}
 }
 
-export async function extractAndChunkPdfs() {
+/**
+ * Main function to extract text from PDFs, chunk it, and store in the database
+ */
+export async function extractAndChunkPdfs(): Promise<void> {
 	const fileSystem = get(fileSystemStore);
 	try {
-		// Get all PDF files recursively (you'll need to implement this Rust function)
+		// Get all PDF files recursively
 		const pdfFiles = findPdfFiles(fileSystem.items);
 
 		// Get existing files from database
@@ -220,7 +266,6 @@ export async function extractAndChunkPdfs() {
 
 		// Process PDFs concurrently in batches to avoid overwhelming the system
 		const batchSize = 3;
-		// Process PDFs concurrently in batches
 		for (let i = 0; i < newPdfs.length; i += batchSize) {
 			const batch = newPdfs.slice(i, i + batchSize);
 			await Promise.all(
@@ -230,11 +275,13 @@ export async function extractAndChunkPdfs() {
 						processed++;
 						setStatus({
 							side: 'left',
-							message: `Processing PDFs: ${processed}/${pdfFiles.length}`,
+							message: `Processing PDFs: ${processed}/${newPdfs.length}`,
 							type: 'info'
 						});
 					} catch (error) {
-						console.error(`Error processing ${file.name}:`, error);
+						// Continue processing other files even if one fails
+						const errorMessage = error instanceof Error ? error.message : String(error);
+						console.error(`Error processing ${file.name}:`, errorMessage);
 					}
 				})
 			);
@@ -248,11 +295,12 @@ export async function extractAndChunkPdfs() {
 
 		setTimeout(() => {
 			setStatus({});
-		}, 1500);
+		}, 3000); // Increased time to 3 seconds for better visibility
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
 		setStatus({
 			side: 'left',
-			message: `Error processing PDFs: ${error.message}`,
+			message: `Error processing PDFs: ${errorMessage}`,
 			type: 'error'
 		});
 		console.error('Error processing PDFs:', error);

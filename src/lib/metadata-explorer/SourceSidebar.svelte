@@ -7,7 +7,7 @@
 	import { CalendarDate } from '@internationalized/date';
 
 	import type { DateValue } from '@internationalized/date';
-	import type { AugmentedZoteroSchema } from './adapaterCslZotero';
+	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 
 	interface Props {
 		source: CitationItem;
@@ -16,12 +16,6 @@
 		augmentedSchema: AugmentedZoteroSchema;
 	}
 	const { source = $bindable(), onclose, augmentedSchema, onupdate }: Props = $props();
-	// Form state
-	// TODO: If source does not have an id and we have a file in the project get that files ID from the database to assign to metadata.
-	// let editedMetadata: CitationItem = $state({
-	// 	id: Math.random().toString(36).substring(2, 9),
-	// 	type: 'document'
-	// });
 
 	const currentFormFields = $derived.by(() => {
 		return (
@@ -39,6 +33,7 @@
 
 	function handleSourceTypeChange(value: string) {
 		source.zotero_type = value;
+		source.type = augmentedSchema.zoteroToCslTypeMap.get(value) || '';
 	}
 
 	function handleDateValueChange(fieldName: string, value: DateValue) {
