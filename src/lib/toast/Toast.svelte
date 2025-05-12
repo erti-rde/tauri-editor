@@ -8,7 +8,7 @@
 
 	export const toasts = $state<ToastData[]>([]);
 
-	export function addToast(data: Omit<ToastData, 'id'>) {
+	function addToast(data: Omit<ToastData, 'id'>) {
 		const id = Math.random().toString(36).substr(2, 9);
 		const toast = { ...data, id };
 
@@ -21,7 +21,7 @@
 		return id;
 	}
 
-	export function removeToast(id: string) {
+	function removeToast(id: string) {
 		const index = toasts.findIndex((toast) => toast.id === id);
 		if (index !== -1) {
 			toasts.splice(index, 1);
@@ -51,34 +51,38 @@
 	import { flip } from 'svelte/animate';
 </script>
 
-<div class="absolute top-0 right-0 z-50 m-4 flex flex-col items-end gap-2 md:top-auto md:bottom-0">
-	{#each toasts as toast (toast.id)}
-		<div
-			class="rounded-lg bg-neutral-800 text-white shadow-md"
-			in:fly={{ x: 20, duration: 300 }}
-			out:fade={{ duration: 200 }}
-			animate:flip={{ duration: 200 }}
-		>
+{#if toasts.length > 0}
+	<div
+		class="absolute top-0 right-0 z-50 m-4 flex flex-col items-end gap-2 md:top-auto md:bottom-0"
+	>
+		{#each toasts as toast (toast.id)}
 			<div
-				class="relative flex w-[24rem] max-w-[calc(100vw-2rem)] items-center justify-between gap-4 p-5"
+				class="rounded-lg bg-neutral-800 text-white shadow-md"
+				in:fly={{ x: 20, duration: 300 }}
+				out:fade={{ duration: 200 }}
+				animate:flip={{ duration: 200 }}
 			>
-				<div>
-					<h3 class="flex items-center gap-2 font-semibold">
-						{toast.title}
-						<span class="size-1.5 rounded-full {toast.color}"></span>
-					</h3>
-					<div>
-						{toast.description}
-					</div>
-				</div>
-				<button
-					onclick={() => removeToast(toast.id as string)}
-					aria-label="dismiss alert"
-					class="transition-opacity hover:opacity-70"
+				<div
+					class="relative flex w-[24rem] max-w-[calc(100vw-2rem)] items-center justify-between gap-4 p-5"
 				>
-					<Icon icon="X" size="m" />
-				</button>
+					<div>
+						<h3 class="flex items-center gap-2 font-semibold">
+							{toast.title}
+							<span class="size-1.5 rounded-full {toast.color}"></span>
+						</h3>
+						<div>
+							{toast.description}
+						</div>
+					</div>
+					<button
+						onclick={() => removeToast(toast.id as string)}
+						aria-label="dismiss alert"
+						class="transition-opacity hover:opacity-70"
+					>
+						<Icon icon="X" size="m" />
+					</button>
+				</div>
 			</div>
-		</div>
-	{/each}
-</div>
+		{/each}
+	</div>
+{/if}
