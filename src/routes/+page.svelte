@@ -11,7 +11,7 @@
 		MetadataEditor
 	} from '$lib';
 	import { dbStore } from '$lib/stores/db';
-	import { currentFileStore } from '$lib/stores/openFileStore';
+	import { fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
 	import type { PanelNames } from '$types/page';
@@ -28,7 +28,7 @@
 	}
 
 	let isItPdf = $derived(() => {
-		return $currentFileStore && $currentFileStore.endsWith('.pdf');
+		return fileSystemState.currentFile && fileSystemState.currentFile.endsWith('.pdf');
 	});
 
 	async function handleProjectOpening() {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import FileItem from './TreeItem.svelte';
-	import { fileSystemStore } from '$lib/stores/fileSystem';
+	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 
 	let rootPath = $state('');
 

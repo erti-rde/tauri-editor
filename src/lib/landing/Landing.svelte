@@ -2,7 +2,7 @@
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { documentDir } from '@tauri-apps/api/path';
 
-	import { fileSystemStore } from '$lib/stores/fileSystem';
+	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 
 	interface Props {
 		handleProjectOpening: () => void;

@@ -2,8 +2,7 @@
 	import { onMount } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
-	import { fileSystemStore } from '$lib/stores/fileSystem';
-	import { currentFileStore } from '$lib/stores/openFileStore';
+	import { fileSystemStore, fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
@@ -28,7 +27,7 @@
 
 	onMount(async () => {
 		await citationStore.initializeCitationStore();
-		const readerExtension = $currentFileStore?.endsWith('.json') ? 'json' : 'html';
+		const readerExtension = fileSystemState.currentFile?.endsWith('.json') ? 'json' : 'html';
 		const headNode = document.createElement('head');
 		currentDir = $fileSystemStore.currentPath;
 

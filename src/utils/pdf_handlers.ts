@@ -3,14 +3,14 @@ import { chunk } from 'llm-chunk';
 import { get } from 'svelte/store';
 
 import { dbStore } from '$lib/stores/db'; 
-import { fileSystemStore } from '$lib/stores/fileSystem';
+import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 import { removeStatus, setStatus } from '$lib/statusFooter/StatusFooter.svelte';
 import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { augmentSchema } from '$lib/metadata-explorer/adapterCslZotero';
 
 import type { AugmentedZoteroSchema } from '$lib/metadata-explorer/adapterCslZotero';
-import type { FileItem } from '$lib/stores/fileSystem';
+import type { FileItem } from '$lib/stores/fileSystem.svelte';
 
 import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
