@@ -3,10 +3,10 @@
 	export type StatusType = {
 		side: 'left' | 'right';
 		message: string;
-		type: 'info' | 'error' | 'success';
+		type: 'info' | 'error' ;
 	};
 
-	const statusData = writable({
+	const statusData = writable<StatusType | undefined>({
 		side: 'left',
 		message: '',
 		type: 'info'
@@ -15,6 +15,10 @@
 	export function setStatus(status: StatusType) {
 		statusData.set(status);
 	}
+
+  export function removeStatus() {
+    statusData.set(undefined);
+  }
 </script>
 
 <div
@@ -34,15 +38,17 @@
     text-xs
     text-white"
 >
-	<div class="flex items-center gap-2">
-		{#if $statusData.type === 'error'}
-			<span class="error">X</span>
-			{$statusData.message}
-		{:else if $statusData.message}
-			<span class="loader"></span>
-			{$statusData.message}
-		{/if}
-	</div>
+	{#if $statusData}
+		<div class="flex items-center gap-2">
+			{#if $statusData.type === 'error'}
+				<span class="error">X</span>
+				{$statusData.message}
+			{:else if $statusData.message}
+				<span class="loader"></span>
+				{$statusData.message}
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
