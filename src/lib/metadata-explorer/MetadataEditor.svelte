@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { selectQuery, executeQuery } from '$utils/db';
+  import {dbStore} from '$lib/stores/db';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { Icon } from '$lib';
 	import { augmentSchema } from './adapterCslZotero';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 
+  const { executeQuery } = dbStore;
+  
 	type Source = {
 		id: number;
 		file_name: string;
@@ -29,7 +31,7 @@
 		loading = false;
 	});
 	async function loadSources() {
-		let files = (await selectQuery(`
+		let files = (await executeQuery(`
 	           SELECT
 	             files.id, files.file_name, sm.metadata
 	           FROM

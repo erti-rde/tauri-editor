@@ -2,7 +2,9 @@ import { writable, get } from 'svelte/store';
 import CSL from 'citeproc';
 import type { Store } from '@tauri-apps/plugin-store';
 import { load as loadStore } from '@tauri-apps/plugin-store';
-import { selectQuery } from '$utils/db';
+import { dbStore } from '$lib/stores/db';
+
+const {executeQuery} = dbStore
 
 // Define types for our citation data
 export interface CitationItem {
@@ -144,7 +146,7 @@ async function getInitialState() {
 		console.log('Style XML snippet:', styleXml?.substring(0, 300));
 		console.log('Locale XML snippet:', localeXml?.substring(0, 300));
 
-		const itemsJson2 = (await selectQuery(`
+		const itemsJson2 = (await executeQuery(`
 		  SELECT
 				 files.id, files.file_name, sm.metadata
 			FROM

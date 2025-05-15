@@ -2,9 +2,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { chunk } from 'llm-chunk';
 import { get } from 'svelte/store';
 
-import { selectQuery, executeQuery } from './db';
+import { dbStore } from '$lib/stores/db'; 
 import { fileSystemStore } from '$lib/stores/fileSystem';
-import { setStatus } from '$lib/statusFooter/StatusFooter.svelte';
+import { removeStatus, setStatus } from '$lib/statusFooter/StatusFooter.svelte';
 import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { augmentSchema } from '$lib/metadata-explorer/adapterCslZotero';
@@ -18,7 +18,7 @@ import type { CitationItem } from '$lib/stores/citationStore';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs-2/build/pdf.worker.min.mjs';
 
-// Initialize as a private variable to reduce global scope
+const { executeQuery } = dbStore;
 let cslToZoteroTypeMap: Map<string, string> | undefined;
 
 export interface EmbeddingResult {
@@ -182,7 +182,7 @@ function findPdfFiles(items: FileItem[]): FileItem[] {
  * Retrieve existing processed files from the database
  */
 async function getExistingFiles(): Promise<Array<{ id: number; file_name: string }>> {
-	return (await selectQuery(`
+	return (await executeQuery(`
     SELECT
    	  files.id, file_name
     FROM
@@ -290,12 +290,12 @@ export async function extractAndChunkPdfs(): Promise<void> {
 		setStatus({
 			side: 'left',
 			message: `Completed processing ${processed} PDF files`,
-			type: 'success'
+			type: 'info'
 		});
 
 		setTimeout(() => {
-			setStatus({});
-		}, 3000); // Increased time to 3 seconds for better visibility
+			removeStatus();
+		}, 3000);
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		setStatus({
