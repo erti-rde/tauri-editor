@@ -127,7 +127,8 @@ function createCitationStore() {
 		initializeCitationStore,
 		getInlineCitation,
 		getAllSourcesAsJson,
-		generateBibliography
+		generateBibliography,
+    set
 	};
 }
 
