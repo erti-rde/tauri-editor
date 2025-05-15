@@ -5,14 +5,16 @@
 	import { Loader } from '$lib';
 
 	import { invoke } from '@tauri-apps/api/core';
-	import { selectQuery } from '$utils/db';
+  import { dbStore } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
 
 	import type { EmbeddingResult } from '$utils/pdf_handlers';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { clickOutside } from '$utils/clickOutside.svelte';
 
-	interface Props {
+  const { executeQuery } = dbStore;
+
+  interface Props {
 		selectedText: string;
 		closePanel: () => void;
 		selectCitation: (citation: { id: string; inlineCitation: string }) => void;
@@ -45,7 +47,7 @@
 			const queryEmbedding = queryEmbeddingResult[0].embedding;
 
 			// Get all chunks and their embeddings from database
-			const chunks = (await selectQuery(`
+			const chunks = (await executeQuery(`
 			 SELECT
 				chunks.chunk_text,
 				chunks.embedding,

@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import type Database from '@tauri-apps/plugin-sql';
 
 type DatabaseStore = {
@@ -6,8 +6,9 @@ type DatabaseStore = {
 	isLoading: boolean;
 	error: Error | null;
 };
+export const dbStore = createDbStore();
 
-const createDbStore = () => {
+function createDbStore() {
 	const { subscribe, set, update } = writable<DatabaseStore>({
 		db: null,
 		isLoading: false,
@@ -23,6 +24,23 @@ const createDbStore = () => {
 				isLoading: false
 			}));
 		},
+    async executeQuery(query: string, params?: (string | number)[]) {
+      const dbState = get(dbStore);
+      if (dbState.db) {
+        try {
+          if (query.toLowerCase().includes('select')) {
+            return await dbState.db.select(query, params);
+          } else {
+            return await dbState.db.execute(query, params);
+          }
+        } catch (error) {
+          console.error('Query failed:', error);
+          throw error;
+        }
+      }
+      throw new Error('Database not initialized');
+    },
+
 		setError: (error: Error) => {
 			update((state) => ({
 				...state,
@@ -44,6 +62,4 @@ const createDbStore = () => {
 			});
 		}
 	};
-};
-
-export const dbStore = createDbStore();
+}
