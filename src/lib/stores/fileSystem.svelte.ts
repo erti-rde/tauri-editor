@@ -16,8 +16,12 @@ interface FileSystemStore {
 	error: string | null;
 }
 
+type FileSystemState = {
+	currentFile: string | null;
+};
+
 function createFileSystemStore() {
-	const { subscribe, update } = writable<FileSystemStore>({
+	const { subscribe, update, set } = writable<FileSystemStore>({
 		items: [],
 		currentPath: '',
 		loading: false,
@@ -26,6 +30,7 @@ function createFileSystemStore() {
 
 	return {
 		subscribe,
+		set, // Allow direct state replacement if needed
 		async readDirectory(path: string) {
 			update((state) => ({ ...state, loading: true, error: null }));
 			try {
@@ -39,7 +44,7 @@ function createFileSystemStore() {
 			} catch (error) {
 				update((state) => ({
 					...state,
-					error: error as string,
+					error: error instanceof Error ? error.message : String(error),
 					loading: false
 				}));
 			}
@@ -51,3 +56,4 @@ function createFileSystemStore() {
 }
 
 export const fileSystemStore = createFileSystemStore();
+export const fileSystemState = $state<FileSystemState>({ currentFile: null });

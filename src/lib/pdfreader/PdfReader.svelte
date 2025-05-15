@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 
 	import { invoke } from '@tauri-apps/api/core';
-	import { currentFileStore } from '$lib/stores/openFileStore';
+	import { fileSystemState } from '$lib/stores/fileSystem.svelte';
 
 	let pdfUrl = $state('');
 	let loading = $state(false);
@@ -17,11 +17,11 @@
 		};
 	});
 
-  $effect(() => {
-    if ($currentFileStore && currentPath !== $currentFileStore) {
-      renderPdf($currentFileStore);
-    }
-  });
+	$effect(() => {
+		if (fileSystemState.currentFile && currentPath !== fileSystemState.currentFile) {
+			renderPdf(fileSystemState.currentFile);
+		}
+	});
 
 	async function renderPdf(pdfPath: string) {
 		// Prevent re-rendering the same PDF
@@ -36,7 +36,7 @@
 		try {
 			// Get base64 encoded PDF data from Tauri backend
 			invoke('read_pdf_file', { path: pdfPath }).then((res) => {
-        const uint8Array = base64ToUint8Array(res as string);
+				const uint8Array = base64ToUint8Array(res as string);
 				const blob = new Blob([uint8Array], { type: 'application/pdf' });
 				pdfUrl = URL.createObjectURL(blob);
 			});
@@ -71,7 +71,7 @@
 	{:else if error}
 		<div class="error">{error}</div>
 	{:else}
-		<div class="overflow-auto w-full h-full">
+		<div class="h-full w-full overflow-auto">
 			<iframe
 				title="pdf-reader"
 				src={`/pdfjs/viewer/viewer.html?file=${encodeURIComponent(pdfUrl)}`}

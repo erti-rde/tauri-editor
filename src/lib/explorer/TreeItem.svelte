@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Icon } from '$lib';
-	import type { FileItem } from '$lib/stores/fileSystem';
-	import { currentFileStore } from '$lib/stores/openFileStore';
+	import type { FileItem } from '$lib/stores/fileSystem.svelte';
+	import { fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import TreeItem from './TreeItem.svelte';
 
 	interface Props {
@@ -17,7 +17,7 @@
 		if (item.is_dir) {
 			isExpanded = !isExpanded;
 		} else {
-			currentFileStore.set(item.path);
+			fileSystemState.currentFile = item.path;
 		}
 	}
 
