@@ -62,7 +62,6 @@
 				await store.set('selectedStyle', selectedStyle);
 				const style = citationStyles.find((style) => style.name === selectedStyle);
 				if (style) {
-					console.log('Fetching new style XML from:', style.download_url);
 					try {
 						const response = await fetch(style.download_url);
 						if (!response.ok) {
@@ -76,7 +75,6 @@
 							throw new Error('Invalid style XML');
 						}
 
-						console.log('Style XML fetched successfully');
 						await store.set('cslXml', styleXml);
 						styleHasChanged = true;
 					} catch (error) {
@@ -98,7 +96,6 @@
 				const localeUrl = `https://raw.githubusercontent.com/citation-style-language/locales/master/locales-${selectedLocale}.xml`;
 
 				try {
-					console.log('Fetching locale from:', localeUrl);
 					const response = await fetch(localeUrl);
 					if (!response.ok) {
 						throw new Error(`Failed to fetch locale: ${response.status}`);
@@ -111,7 +108,6 @@
 						throw new Error('Invalid locale XML');
 					}
 
-					console.log('Locale XML fetched successfully');
 					await store.set('localeXml', localeXml);
 					localeHasChanged = true;
 				} catch (error) {
@@ -136,7 +132,6 @@
 			closeSettings();
 		} catch (error) {
 			console.error('Error saving settings:', error);
-			alert('There was an error saving your settings. Please try again.');
 		}
 	}
 
@@ -149,11 +144,6 @@
 		wordCount = ((await store.get('wordCount')) as number) || 0;
 		selectedStyle = ((await store.get('selectedStyle')) as string) || '';
 		selectedLocale = ((await store.get('selectedLocale')) as string) || 'en-GB';
-		console.log({
-			wordCount,
-			selectedStyle,
-			selectedLocale
-		});
 		await loadResources();
 	});
 </script>
