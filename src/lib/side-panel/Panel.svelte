@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Icon } from '$lib';
-	import Settings from '$lib/settings/Settings.svelte';
+	import Settings from './settings/Settings.svelte';
 
 	import type { PanelNames } from '$types/page';
 	interface Props {
