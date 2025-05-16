@@ -170,9 +170,6 @@ describe('Settings.svelte', () => {
 
 		// Test: Clicking Save button calls the saveSettings function and emits settings-updated event
 		it('calls internal saveSettings when Save button is clicked', async () => {
-			// Reset mock counters
-			// vi.clearAllMocks();
-
 			const closeSettings = vi.fn();
 			render(Settings, { props: { isOpen: true, closeSettings } });
 
