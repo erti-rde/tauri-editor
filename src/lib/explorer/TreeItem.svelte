@@ -20,12 +20,27 @@
 			fileSystemState.currentFile = item.path;
 		}
 	}
+  
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			handleClick();
+		}
+	}
 
 	let indentation = $derived(`padding-left: ${depth * 1.25}rem`);
 </script>
 
 <div class="file-item">
-	<div class="item-header" style={indentation} class:is-dir={item.is_dir} onclick={handleClick}>
+	<div 
+		class="item-header" 
+		style={indentation} 
+		class:is-dir={item.is_dir} 
+		onclick={handleClick}
+		onkeydown={handleKeyDown}
+		role="button"
+		tabindex="0"
+	>
 		<span class="icon">
 			{#if item.is_dir}
 				{#if isExpanded}
