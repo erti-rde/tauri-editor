@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-  import {dbStore} from '$lib/stores/db';
+	import { dbStore } from '$lib/stores/db';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { Icon } from '$lib';
 	import { augmentSchema } from './adapterCslZotero';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 
-  const { executeQuery } = dbStore;
-  
+	const { executeQuery } = dbStore;
+
 	type Source = {
 		id: number;
 		file_name: string;
@@ -26,8 +26,8 @@
 	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
 	onMount(async () => {
-		augmentedSchema = await augmentSchema()
-		await loadSources();		
+		augmentedSchema = await augmentSchema();
+		await loadSources();
 		loading = false;
 	});
 	async function loadSources() {
@@ -53,7 +53,6 @@
 			};
 		});
 	}
-
 
 	function getAuthorDisplay(source: Source) {
 		if (!source.metadata) return null;
