@@ -164,7 +164,7 @@
 		position: absolute;
 		right: 0;
 		width: 30%;
-		height: calc(100% - var(--footer-status-bar-height) - var(--editor-toolbar-height));
+		height: calc(100% - var(--footer-status-bar-height) - var(--toolbar-l));
 		background-color: white;
 		box-shadow: -5px 0 5px -5px rgba(0, 0, 0, 0.5);
 		z-index: 5;

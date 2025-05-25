@@ -48,10 +48,8 @@
 	});
 </script>
 
-<div
-	class={vaultIsOpen ? `grid-styles grid h-screen w-screen overscroll-none` : `flex h-full w-full`}
->
-	<div class="panel">
+<div class={['h-screen w-screen', vaultIsOpen ? 'grid-styles grid  overscroll-none' : 'flex']}>
+	<div class="panel min-w-(--toolbar-l)">
 		<SidePanel {toggleSidePanel} />
 	</div>
 	{#if vaultIsOpen}
@@ -79,7 +77,7 @@
 
 <style>
 	.grid-styles {
-		grid-template-columns: 40px auto 4fr;
+		grid-template-columns: var(--toolbar-l) auto 4fr;
 		grid-template-rows: 1fr var(--footer-status-bar-height);
 	}
 	.panel,
