@@ -103,8 +103,7 @@
 {/snippet}
 
 <div
-	class="flex w-full justify-between bg-orange-100/95 px-2 py-1 shadow-md backdrop-blur-sm"
-	style="height: var(--editor-toolbar-height)"
+	class="flex h-(--toolbar-l) w-full justify-between bg-orange-100/95 px-2 py-1 shadow-md backdrop-blur-sm"
 >
 	<div class="flex items-center gap-1">
 		<!-- History Controls Group -->
