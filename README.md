@@ -1,28 +1,48 @@
 # Erti
 
-## install rust
+> Erti (ერთი) is Georgian word for one.
 
-for installing Tuari and rust [check platform specific](https://tauri.app/v1/guides/getting-started/prerequisites) installation
+A cross-platform research writing application designed specifically for researchers and academics.
 
-## install npm dependencies
+## Why This Exists
 
-run `pnpm install`
+The project exists to help researchers on their tasks and help them to focus on the research. We are aiming to create software that becomes the only needed software for research. Bringing reading, writing, note taking, learning and sharing in one place. Find out more on our [landing page](https://erti-beta.netlify.app/).
 
-## Developing
+The tool will be always free and it will be never sold to anyone. It's aiming to be something that is created for users rather than to make money and monetise users.
 
-Once you've created a project and installed dependencies with `pnpm install` start a development server:
+Erti runs completely on your machine and works offline. Your research and data never leave your computer without your explicit consent (currently we are not asking any consent).
 
-```bash
-pnpm tauri dev
-```
+We are also using ML model in the software to help users to find citations. And we are always carefully thinking ethics and potentials of using ML models in our software. They also run on your machine and any interaction with it will stay locally as well. The software will not be using GAI (Generative Artificial Intelligence) except really rare cases where community concluded that it's good idea to use.
 
-## Building
+Why are we not jumping on GAI train and make everything very easy for researchers and academics?
+
+- We believe that research should be done by humans and Generative AI [can reduce human cognitive abilities](https://www.media.mit.edu/publications/your-brain-on-chatgpt/), which is essential for research.
+
+**IN SHORT**: Erti exists to help the most ethical way possible.
+
+## Download and Installation
+
+Erti is build using [Tauri](https://tauri.app/) and [SvelteKit](https://svelte.dev/docs/kit/introduction). The installation of Tauri will depend on your OS.
+
+- For installing Tauri and Rust [check platform specific](https://tauri.app/start/prerequisites/) installation
+- Once you have Tauri and Rust installed run `pnpm install` to install remaining dependencies.
+- Start a development server: `pnpm tauri dev`
+
+### Building
 
 To create a production version of your app:
 
 ```bash
 pnpm run tauri build
 ```
+
+## Development Status
+
+This project is in active development. We welcome contributions from developers, researchers, and anyone interested in improving academic writing tools.
+
+## Contributing
+
+We'd love your help! Whether you're a developer, researcher, or have ideas for features, see our [CONTRIBUTING.md](CONTRIBUTING.md) for how to get involved.
 
 ## License
 
