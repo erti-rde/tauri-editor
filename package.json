@@ -14,9 +14,12 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"preinstall": "npx only-allow pnpm",
-		"test": "vitest"
+		"test": "vitest",
+		"prepare": "husky"
 	},
 	"devDependencies": {
+		"@commitlint/cli": "^19.8.1",
+		"@commitlint/config-conventional": "^19.8.1",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@iconify-json/lucide": "^1.1.208",
@@ -38,6 +41,7 @@
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.0.0",
 		"globals": "^16.0.0",
+		"husky": "^9.1.7",
 		"jsdom": "^26.1.0",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
