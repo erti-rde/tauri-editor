@@ -10,6 +10,16 @@
 
 	import TextAlign from '@tiptap/extension-text-align';
 	import StarterKit from '@tiptap/starter-kit';
+	import Underline from '@tiptap/extension-underline';
+	import Highlight from '@tiptap/extension-highlight';
+	import Link from '@tiptap/extension-link';
+	import Subscript from '@tiptap/extension-subscript';
+	import Superscript from '@tiptap/extension-superscript';
+	import Image from '@tiptap/extension-image';
+	import Table from '@tiptap/extension-table';
+	import TableCell from '@tiptap/extension-table-cell';
+	import TableHeader from '@tiptap/extension-table-header';
+	import TableRow from '@tiptap/extension-table-row';
 
 	import createEditor from './core/CreateEditor';
 	import { Editor } from './core/Editor';
@@ -25,10 +35,11 @@
 	let editable = true;
 	let currentDir = '';
 
+	let saveTimeout: ReturnType<typeof setTimeout> | undefined;
+	let isSaving = false;
+
 	onMount(async () => {
 		await citationStore.initializeCitationStore();
-		const readerExtension = fileSystemState.currentFile?.endsWith('.json') ? 'json' : 'html';
-		const headNode = document.createElement('head');
 		currentDir = $fileSystemStore.currentPath;
 
 		editor = createEditor({
@@ -36,7 +47,7 @@
 				attributes: {
 					style: 'padding-left: 56px; padding-right: 56px',
 					class:
-						'focus:outline-none bg-white border border-[#C7C7C7] flex flex-col min-h-[1054px] w-[816px] pt-10 pr-14 pb-10 cursor-text'
+						'focus:outline-none bg-white border border-[#C7C7C7] flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
 				}
 			},
 			autofocus: 'end',
@@ -45,28 +56,48 @@
 				TextAlign.configure({
 					types: ['heading', 'paragraph']
 				}),
+				Subscript,
+				Superscript,
+				Underline,
+				Highlight,
+				Link.configure({
+					HTMLAttributes: {
+						class: 'tiptap-link'
+					},
+					openOnClick: false,
+					defaultProtocol: 'https'
+				}),
+				Image,
+				Table.configure({
+					resizable: true
+				}),
+				TableRow,
+				TableHeader,
+				TableCell,
 				Citation
 			],
-			content: await getDocumentData(readerExtension),
+			content: await getDocumentData(),
+
 			onUpdate: async ({ editor }) => {
-				const content = editor.getHTML();
+				clearTimeout(saveTimeout);
+				if (isSaving) {
+					return;
+				}
+				saveTimeout = setTimeout(async () => {
+					isSaving = true;
+					try {
+						const jsonContent = editor.getJSON();
 
-				console.log('Saving content:', content); // Debug log
+						const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
 
-				const html = `
-			       <html>
-			           ${headNode.innerHTML}
-			           <body>
-			           <div>
-			               ${content.replaceAll(/<p><\/p>/g, '<p><br></p>')}
-			           </div>
-			               </body>
-			       </html>
-			   `;
-				const pathToSave = await pathJoin(currentDir, 'magnum_opus.html');
-				const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
-				await writeTextFile(pathToSave, html);
-				await writeTextFile(pathToSaveJson, JSON.stringify(editor.getJSON()));
+						// Save JSON first (it's smaller and less likely to cause issues)
+						await writeTextFile(pathToSaveJson, JSON.stringify(jsonContent));
+					} catch (error) {
+						console.error('Save failed:', error);
+					} finally {
+						isSaving = false;
+					}
+				}, 500);
 			}
 		});
 
@@ -95,11 +126,9 @@
 		}
 	}
 
-	async function getDocumentData(ext: string) {
-		const MagnumOpusPath = await pathJoin(currentDir, `magnum_opus.${ext}`);
-		console.log(`🚀 ~ MagnumOpusPath:`, MagnumOpusPath);
+	async function getDocumentData() {
+		const MagnumOpusPath = await pathJoin(currentDir, `magnum_opus.json`);
 		const fileExists = await exists(MagnumOpusPath);
-		console.log(`🚀 ~ fileExists:`, fileExists);
 		if (!fileExists) {
 			return {};
 		}
@@ -107,7 +136,19 @@
 		const fileData = await readTextFile(MagnumOpusPath);
 		console.log('Loading content:', fileData); // Debug log
 
-		return ext == 'json' ? JSON.parse(fileData) : fileData;
+		if (!fileData.trim() || fileData === 'undefined') {
+			console.warn('JSON file is empty or corrupted');
+			return {};
+		}
+
+		try {
+			const parsedData = JSON.parse(fileData);
+			return parsedData;
+		} catch (parseError) {
+			console.error('JSON parse error:', parseError);
+			console.error('Problematic content:', JSON.stringify(fileData));
+			return { type: 'doc', content: [] };
+		}
 	}
 
 	// Citation handling
@@ -137,15 +178,15 @@
 </script>
 
 {#if $editor}
-	<div class="min-h-screen bg-[#FAFBFD]">
-		<div class="sticky top-0 z-50 transition-shadow duration-200">
+	<div class="flex h-full w-full flex-col bg-[#FAFBFD]">
+		<div class="z-10 mb-1 shrink-0">
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} />
 		</div>
-		<div class="flex size-full justify-center overflow-x-auto bg-[#f9fbfd] px-4">
-			<div class="flex w-[816px] min-w-max justify-center py-4">
-				<EditorContent editor={$editor} />
-				<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
-			</div>
+
+		<div class="flex min-h-0 grow justify-center overflow-auto bg-[#f9fbfd] px-4">
+			<EditorContent editor={$editor} />
+			<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
+
 			{#if showCitationPanel}
 				<Result
 					{selectedText}

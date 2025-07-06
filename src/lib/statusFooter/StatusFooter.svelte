@@ -3,7 +3,7 @@
 	export type StatusType = {
 		side: 'left' | 'right';
 		message: string;
-		type: 'info' | 'error' ;
+		type: 'info' | 'error';
 	};
 
 	const statusData = writable<StatusType | undefined>({
@@ -16,18 +16,13 @@
 		statusData.set(status);
 	}
 
-  export function removeStatus() {
-    statusData.set(undefined);
-  }
+	export function removeStatus() {
+		statusData.set(undefined);
+	}
 </script>
 
 <div
 	class="status-bar
-    fixed
-    right-0
-    bottom-0
-    left-0
-    z-50
     flex
     items-center
     justify-between

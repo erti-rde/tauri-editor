@@ -1,18 +1,21 @@
 {
-	"$schema": "../gen/schemas/desktop-schema.json",
-	"identifier": "default",
-	"description": "Capability for the main window",
-	"windows": ["main"],
-	"permissions": [
-		"core:default",
-		"shell:allow-open",
-		"dialog:default",
-		"fs:default",
-		"fs:write-all",
-		"fs:allow-resource-read-recursive",
-		"fs:allow-home-read-recursive",
-		"sql:default",
-		"sql:allow-execute",
-		"store:default"
-	]
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "dialog:default",
+    "fs:default",
+    "fs:write-all",
+    "fs:allow-resource-read-recursive",
+    "fs:allow-home-read-recursive",
+    "sql:default",
+    "sql:allow-execute",
+    "store:default",
+    "opener:default"
+  ]
 }

@@ -5,7 +5,5 @@
 	let { children } = $props();
 </script>
 
-<div class="fixed w-full">
-	<Toast />
-	{@render children()}
-</div>
+<Toast />
+{@render children()}
