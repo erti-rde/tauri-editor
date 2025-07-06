@@ -20,7 +20,7 @@
 	}
 </script>
 
-<div class="flex h-full w-full flex-col items-center justify-between border-r">
+<div class="flex h-full w-full flex-col items-center justify-between border-r pt-2">
 	<div class="flex flex-col">
 		<button class="p-1" onclick={() => toggleSidePanel('fileExplorer')}>
 			<Icon icon="Files" />
