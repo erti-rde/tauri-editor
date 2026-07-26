@@ -26,8 +26,11 @@
 	async function loadResources() {
 		try {
 			const { styles, localesData } = await readResourceFiles();
-			citationStyles = styles;
-			locales = localesData['language-names'];
+			// Both resource files are read from disk and may be missing or malformed.
+			// Fall back to empty collections so the dialog still renders instead of
+			// throwing out of the template on Object.entries(undefined).
+			citationStyles = Array.isArray(styles) ? styles : [];
+			locales = localesData?.['language-names'] ?? {};
 		} catch (error) {
 			console.error('Error loading resources:', error);
 		}
@@ -175,7 +178,7 @@
 			<div class="flex flex-1 overflow-hidden">
 				<!-- Sidebar -->
 				<div class="w-48 border-r border-gray-200 bg-gray-50">
-					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'appearance', label: 'Appearance' }] as tab}
+					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'appearance', label: 'Appearance' }] as tab (tab.id)}
 						<button
 							class="w-full border-l-2 px-4 py-3 text-left transition-colors hover:bg-gray-100 {activeTab ===
 							tab.id
@@ -241,7 +244,7 @@
 										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
 									>
 										<option value="" disabled>Select a style</option>
-										{#each citationStyles as style}
+										{#each citationStyles as style (style.name)}
 											<option value={style.name}>{style.name}</option>
 										{/each}
 									</select>
@@ -277,7 +280,7 @@
 										bind:value={selectedLocale}
 										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
 									>
-										{#each Object.entries(locales) as [code, [native]]}
+										{#each Object.entries(locales) as [code, [native]] (code)}
 											<option value={code}>{native}</option>
 										{/each}
 									</select>
