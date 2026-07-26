@@ -2,3 +2,21 @@
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+
+# Vendored third-party bundles — not our code, never reformat
+static/pdfjs/
+static/pdfjs-2/
+
+# Third-party model + CSL data shipped as Tauri resources. tokenizer.json is read by
+# the Rust `tokenizers` crate; reformatting it churns 60k lines for no benefit.
+src-tauri/resources/
+
+# Build output and generated artifacts
+build/
+coverage/
+.svelte-kit/
+src-tauri/target/
+src-tauri/gen/
+
+# Agent worktrees hold full nested checkouts of this repo
+.claude/
