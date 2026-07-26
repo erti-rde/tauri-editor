@@ -3,22 +3,22 @@
 
 	import type { Snippet } from 'svelte';
 
-	import { Popover, Separator } from 'bits-ui';
+	import { Popover } from 'bits-ui';
 
-  import TableColumnAddAfter from '~icons/mdi/table-column-plus-after';
-  import TableColumnAddBefore from '~icons/mdi/table-column-plus-before';
-  import TableColumnRemove from '~icons/mdi/table-column-remove';
-  import TableRowAddAfter from '~icons/mdi/table-row-plus-after';
-  import TableRowAddBefore from '~icons/mdi/table-row-plus-before';
-  import TableRowRemove from '~icons/mdi/table-row-remove';
-  import TableMergeCells from '~icons/mdi/table-merge-cells';
-  import TableSplitCell from '~icons/mdi/table-split-cell';
-  import TableHeaderEye from '~icons/mdi/table-headers-eye';
-  // import TableHeaderRow from '~icons/mdi/table-header-row';
-  // import TableHeaderColumn from '~icons/mdi/table-header-column';
-  // import TableHeadersEye from '~icons/mdi/table-headers-eye';
-  import TableRemove from '~icons/mdi/table-remove';
-  import TableSync from '~icons/mdi/table-sync';
+	import TableColumnAddAfter from '~icons/mdi/table-column-plus-after';
+	import TableColumnAddBefore from '~icons/mdi/table-column-plus-before';
+	import TableColumnRemove from '~icons/mdi/table-column-remove';
+	import TableRowAddAfter from '~icons/mdi/table-row-plus-after';
+	import TableRowAddBefore from '~icons/mdi/table-row-plus-before';
+	import TableRowRemove from '~icons/mdi/table-row-remove';
+	import TableMergeCells from '~icons/mdi/table-merge-cells';
+	import TableSplitCell from '~icons/mdi/table-split-cell';
+	import TableHeaderEye from '~icons/mdi/table-headers-eye';
+	// import TableHeaderRow from '~icons/mdi/table-header-row';
+	// import TableHeaderColumn from '~icons/mdi/table-header-column';
+	// import TableHeadersEye from '~icons/mdi/table-headers-eye';
+	import TableRemove from '~icons/mdi/table-remove';
+	import TableSync from '~icons/mdi/table-sync';
 
 	interface Props {
 		editor: Editor;
@@ -42,81 +42,78 @@
 		return element;
 	}
 
-
-  const tableFunctions = [
-    {
-      icon: TableColumnAddAfter,
-      action: () => editor.chain().focus().addColumnAfter().run(),
-      label: 'Add Column After'
-    },
-    {
-      icon: TableColumnAddBefore,
-      action: () => editor.chain().focus().addColumnBefore().run(),
-      label: 'Add Column Before'
-    },
-    {
-      icon: TableColumnRemove,
-      action: () => editor.chain().focus().deleteColumn().run(),
-      label: 'Delete Column'
-    },
-    {
-      icon: TableRowAddAfter,
-      action: () => editor.chain().focus().addRowAfter().run(),
-      label: 'Add Row After'
-    },
-    {
-      icon: TableRowAddBefore,
-      action: () => editor.chain().focus().addRowBefore().run(),
-      label: 'Add Row Before'
-    },
-    {
-      icon: TableRowRemove,
-      action: () => editor.chain().focus().deleteRow().run(),
-      label: 'Delete Row'
-    },
-    {
-      icon: TableMergeCells,
-      action: () => editor.chain().focus().mergeCells().run(),
-      label: 'Merge Cells'
-    },
-    {
-      icon: TableSplitCell,
-      action: () => editor.chain().focus().splitCell().run(),
-      label: 'Split Cell'
-    },
-    {
-      icon: TableHeaderEye,
-      action: () => editor.chain().focus().toggleHeaderCell().run(),
-      label: 'Toggle Header Cell'
-    },
-    // {
-    //   icon: TableHeaderRow,
-    //   action: () => editor.chain().focus().toggleHeaderRow().run(),
-    //   label: 'Toggle Header Row'
-    // },
-    // {
-    //   icon: TableHeaderColumn,
-    //   action: () => editor.chain().focus().toggleHeaderColumn().run(),
-    //   label: 'Toggle Header Column'
-    // },
-    // {
-    //   icon: TableHeadersEye,
-    //   action: () => editor.chain().focus().toggleAllHeadersVisibility().run(),
-    //   label: 'Toggle All Headers Visibility'
-    // },
-    {
-      icon: TableRemove,
-      action: () => editor.chain().focus().deleteTable().run(),
-      label: 'Delete Table'
-    },
-    {
-      icon: TableSync,
-      action: () => editor.chain().focus().fixTables().run(),
-      label: 'Fix Tables'
-    }
-  ]
-
-  
+	const tableFunctions = [
+		{
+			icon: TableColumnAddAfter,
+			action: () => editor.chain().focus().addColumnAfter().run(),
+			label: 'Add Column After'
+		},
+		{
+			icon: TableColumnAddBefore,
+			action: () => editor.chain().focus().addColumnBefore().run(),
+			label: 'Add Column Before'
+		},
+		{
+			icon: TableColumnRemove,
+			action: () => editor.chain().focus().deleteColumn().run(),
+			label: 'Delete Column'
+		},
+		{
+			icon: TableRowAddAfter,
+			action: () => editor.chain().focus().addRowAfter().run(),
+			label: 'Add Row After'
+		},
+		{
+			icon: TableRowAddBefore,
+			action: () => editor.chain().focus().addRowBefore().run(),
+			label: 'Add Row Before'
+		},
+		{
+			icon: TableRowRemove,
+			action: () => editor.chain().focus().deleteRow().run(),
+			label: 'Delete Row'
+		},
+		{
+			icon: TableMergeCells,
+			action: () => editor.chain().focus().mergeCells().run(),
+			label: 'Merge Cells'
+		},
+		{
+			icon: TableSplitCell,
+			action: () => editor.chain().focus().splitCell().run(),
+			label: 'Split Cell'
+		},
+		{
+			icon: TableHeaderEye,
+			action: () => editor.chain().focus().toggleHeaderCell().run(),
+			label: 'Toggle Header Cell'
+		},
+		// {
+		//   icon: TableHeaderRow,
+		//   action: () => editor.chain().focus().toggleHeaderRow().run(),
+		//   label: 'Toggle Header Row'
+		// },
+		// {
+		//   icon: TableHeaderColumn,
+		//   action: () => editor.chain().focus().toggleHeaderColumn().run(),
+		//   label: 'Toggle Header Column'
+		// },
+		// {
+		//   icon: TableHeadersEye,
+		//   action: () => editor.chain().focus().toggleAllHeadersVisibility().run(),
+		//   label: 'Toggle All Headers Visibility'
+		// },
+		{
+			icon: TableRemove,
+			action: () => editor.chain().focus().deleteTable().run(),
+			label: 'Delete Table'
+		},
+		{
+			icon: TableSync,
+			action: () => editor.chain().focus().fixTables().run(),
+			label: 'Fix Tables'
+		}
+	];
 </script>
 
 <Popover.Root bind:open={isActive}>
@@ -136,15 +133,15 @@
 			sideOffset={8}
 		>
 			<div class="flex items-center">
-        {#each tableFunctions as { icon: Icon, action, label }} 
-        <button
-          onclick={action}
-          class="flex items-center space-x-2 rounded-md p-2 text-sm text-gray-700 hover:bg-orange-100"
-        >
-          <Icon class="h-4 w-4" />
-        </button>
-        {/each}
-      </div>
+				{#each tableFunctions as { icon: Icon, action, label } (label)}
+					<button
+						onclick={action}
+						class="flex items-center space-x-2 rounded-md p-2 text-sm text-gray-700 hover:bg-orange-100"
+					>
+						<Icon class="h-4 w-4" />
+					</button>
+				{/each}
+			</div>
 		</Popover.Content>
 	</Popover.Portal>
 </Popover.Root>

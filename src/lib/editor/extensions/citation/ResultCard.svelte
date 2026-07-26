@@ -7,7 +7,6 @@
 		sentenceMetadata: {
 			similarity: number;
 			sentence: string;
-			id: string;
 			metadata: CitationItem;
 		};
 		selectCitation: (citation: { id: string; inlineCitation: string }) => void;

@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { chunk } from 'llm-chunk';
 import { get } from 'svelte/store';
 
-import { dbStore } from '$lib/stores/db'; 
+import { dbStore } from '$lib/stores/db';
 import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 import { removeStatus, setStatus } from '$lib/statusFooter/StatusFooter.svelte';
 import { errorToast, successToast } from '$lib/toast/Toast.svelte';
@@ -13,12 +13,32 @@ import type { AugmentedZoteroSchema } from '$lib/metadata-explorer/adapterCslZot
 import type { FileItem } from '$lib/stores/fileSystem.svelte';
 
 import * as pdfjsLib from 'pdfjs-dist';
-import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
+import type {
+	PDFDocumentProxy,
+	TextItem,
+	TextMarkedContent
+} from 'pdfjs-dist/types/src/display/api';
 import type { CitationItem } from '$lib/stores/citationStore';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs-2/build/pdf.worker.min.mjs';
 
 const { executeQuery } = dbStore;
+
+/** The subset of pdf.js document info we read. pdf.js types this as bare `Object`. */
+interface PdfDocumentInfo {
+	Author?: string;
+	Title?: string;
+	author?: string;
+	title?: string;
+}
+
+/**
+ * A page's text content is a mix of positioned text runs and marked-content
+ * markers; only the former carry a `str`.
+ */
+function isTextItem(item: TextItem | TextMarkedContent): item is TextItem {
+	return 'str' in item;
+}
 let cslToZoteroTypeMap: Map<string, string> | undefined;
 
 export interface EmbeddingResult {
@@ -53,7 +73,7 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
 				JSON.stringify(result.embedding)
 			])
 		);
-		
+
 		if (pdfMetadata) {
 			insertPromises.push(
 				executeQuery(`INSERT INTO source_metadata (file_id, metadata) VALUES (?, ?)`, [
@@ -75,7 +95,7 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
 		// Ensure PDF document is properly closed to prevent memory leaks
 		try {
 			pdfDoc?.destroy();
-		} catch (e) {
+		} catch {
 			// Silently handle destroy errors
 		}
 	}
@@ -90,10 +110,10 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
 async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName: string) {
 	try {
 		let metadata: CitationItem | undefined = undefined;
-		const { info } = await pdfDoc.getMetadata();
-		
+		const info = (await pdfDoc.getMetadata()).info as PdfDocumentInfo | undefined;
+
 		let query = 'https://api.crossref.org/works?rows=1&sort=score&select=DOI';
-		
+
 		// Build query based on available metadata
 		if (info?.Author && info?.Title) {
 			// If we have author and title, we can make a more accurate search query
@@ -105,11 +125,14 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName
 			// Fallback to text extraction from the first page
 			const firstPage = await pdfDoc.getPage(1);
 			const content = await firstPage.getTextContent();
-			const firstPageText = content.items.map((item) => item.str).join(' ');
-			
+			const firstPageText = content.items
+				.filter(isTextItem)
+				.map((item) => item.str)
+				.join(' ');
+
 			// Limit query length to avoid excessively long URLs
 			query += `&query=${encodeURIComponent(firstPageText.substring(0, 1000))}`;
-			
+
 			// Clean up page resources
 			firstPage.cleanup();
 		}
@@ -117,7 +140,7 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName
 		// Retrieve DOI information
 		const res = await fetch(query);
 		const data = await res.json();
-		
+
 		if (data.status === 'ok' && data.message?.items?.length > 0) {
 			const itemID = data.message.items[0].DOI;
 			const getCitationWithDoi = await fetch(`https://doi.org/${itemID}`, {
@@ -125,22 +148,22 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName
 					Accept: 'application/vnd.citationstyles.csl+json'
 				}
 			});
-			
+
 			metadata = (await getCitationWithDoi.json()) as CitationItem;
 			metadata.id = fileId.toString();
-			
+
 			if (!cslToZoteroTypeMap) {
 				const augmentedSchema: AugmentedZoteroSchema = await augmentSchema();
 				cslToZoteroTypeMap = augmentedSchema.cslToZoteroTypeMap;
 			}
-			
+
 			metadata.zotero_type = cslToZoteroTypeMap.get(metadata.type) || '';
 		}
 
 		// Handle potential non-string title formats
 		if (metadata && typeof metadata.title !== 'string') {
 			if (Array.isArray(metadata.title)) {
-				metadata.title = metadata.title[0]?.toString() || fileName;
+				metadata.title = (metadata.title as unknown[])[0]?.toString() || fileName;
 			} else {
 				metadata.title = fileName;
 			}
@@ -200,7 +223,8 @@ async function createFileBatch(pdfFiles: FileItem[]): Promise<Array<FileItem & {
 
 	for (const file of pdfFiles) {
 		const result = await executeQuery('INSERT INTO files (file_name) VALUES (?)', [file.name]);
-		insertedFiles.push({ ...file, id: result.lastInsertId });
+		const { lastInsertId } = result as { lastInsertId: number };
+		insertedFiles.push({ ...file, id: lastInsertId });
 	}
 
 	return insertedFiles;
@@ -222,8 +246,11 @@ async function extractTextFromPDf(pdf: PDFDocumentProxy): Promise<string> {
 
 			// Release page resources after extraction
 			page.cleanup();
-			
-			return textContent.items.map((item) => item.str).join('');
+
+			return textContent.items
+				.filter(isTextItem)
+				.map((item) => item.str)
+				.join('');
 		});
 
 		const content = await Promise.all(pageTextPromises);

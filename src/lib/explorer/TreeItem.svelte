@@ -20,7 +20,7 @@
 			fileSystemState.currentFile = item.path;
 		}
 	}
-  
+
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
@@ -32,10 +32,10 @@
 </script>
 
 <div class="file-item">
-	<div 
-		class="item-header" 
-		style={indentation} 
-		class:is-dir={item.is_dir} 
+	<div
+		class="item-header"
+		style={indentation}
+		class:is-dir={item.is_dir}
 		onclick={handleClick}
 		onkeydown={handleKeyDown}
 		role="button"
@@ -56,7 +56,7 @@
 	</div>
 
 	{#if item.is_dir && isExpanded && item.children}
-		{#each item.children as child}
+		{#each item.children as child (child.path)}
 			<TreeItem item={child} depth={depth + 1} />
 		{/each}
 	{/if}

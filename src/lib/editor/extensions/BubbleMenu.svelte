@@ -106,7 +106,7 @@
 	<div
 		class="ring-opacity-5 flex items-center gap-1 rounded-lg bg-white px-2 py-1 shadow-lg ring-1 ring-black"
 	>
-		{#each bubbleMenuItems as { name, Icon, onclick }, i}
+		{#each bubbleMenuItems as { name, Icon, onclick } (name)}
 			{@render BubbleButton({ name, Icon, onclick })}
 		{/each}
 	</div>

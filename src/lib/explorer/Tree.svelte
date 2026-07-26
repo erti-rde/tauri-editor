@@ -15,7 +15,7 @@
 			</div>
 		{:else}
 			<div class="">
-				{#each $fileSystemStore.items as item}
+				{#each $fileSystemStore.items as item (item.path)}
 					<FileItem {item} />
 				{/each}
 			</div>

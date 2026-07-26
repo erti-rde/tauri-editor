@@ -5,7 +5,7 @@ import CitationSuggestion from './CitationSuggestion.svelte';
 import { citationStore } from '$lib/stores/citationStore';
 
 import type { Editor } from '@tiptap/core';
-import type { SuggestionOptions } from '@tiptap/suggestion';
+import type { SuggestionOptions, SuggestionProps } from '@tiptap/suggestion';
 
 import { mount, type ComponentProps } from 'svelte';
 import type { Instance, Props } from 'tippy.js';
@@ -13,7 +13,7 @@ import type { Instance, Props } from 'tippy.js';
 export const suggestion = (editor: Editor): SuggestionOptions => ({
 	editor,
 	command: ({ editor, range, props }) => {
-    console.log({ editor, range, props })
+		console.log({ editor, range, props });
 		// Get the formatted citation text from our store
 		const citationIds = JSON.parse(props.id as string) as string[];
 		const citationText = citationStore.getInlineCitation(citationIds);
@@ -79,22 +79,24 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 	render: () => {
 		let wrapper: HTMLElement;
 		let component: CitationSuggestion;
-    let componentProps: ComponentProps<typeof CitationSuggestion> = $state(null!)
+		let componentProps: ComponentProps<typeof CitationSuggestion> = $state(null!);
 		let popup: Instance<Props>[] | null = null;
-		let renderer: SvelteRenderer;
-    
+		// This renderer drives a detached suggestion popup, not a node view, so it
+		// carries TipTap's SuggestionProps rather than NodeViewProps.
+		let renderer: SvelteRenderer<SuggestionProps>;
+
 		return {
 			onStart: (props) => {
 				const { editor } = props;
 
 				wrapper = document.createElement('div');
 				editor.view.dom.parentNode?.appendChild(wrapper);
-        componentProps = {
-          items: props.items,
-          cl: (itemId) => {
-            props.command({id: itemId})
-          }
-        }
+				componentProps = {
+					items: props.items,
+					cl: (itemId) => {
+						props.command({ id: itemId });
+					}
+				};
 				component = mount(CitationSuggestion, {
 					target: wrapper,
 					props: componentProps
@@ -116,8 +118,8 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 				});
 			},
 			onUpdate: (props) => {
-        componentProps.items = props.items;
-        renderer?.updateProps(props);
+				componentProps.items = props.items;
+				renderer?.updateProps(props);
 				console.log(`🚀 ~ props:`, renderer);
 
 				if (!props.clientRect || !popup?.[0]) return;
