@@ -24,22 +24,22 @@ function createDbStore() {
 				isLoading: false
 			}));
 		},
-    async executeQuery(query: string, params?: (string | number)[]) {
-      const dbState = get(dbStore);
-      if (dbState.db) {
-        try {
-          if (query.toLowerCase().includes('select')) {
-            return await dbState.db.select(query, params);
-          } else {
-            return await dbState.db.execute(query, params);
-          }
-        } catch (error) {
-          console.error('Query failed:', error);
-          throw error;
-        }
-      }
-      throw new Error('Database not initialized');
-    },
+		async executeQuery(query: string, params?: (string | number)[]) {
+			const dbState = get(dbStore);
+			if (dbState.db) {
+				try {
+					if (query.toLowerCase().includes('select')) {
+						return await dbState.db.select(query, params);
+					} else {
+						return await dbState.db.execute(query, params);
+					}
+				} catch (error) {
+					console.error('Query failed:', error);
+					throw error;
+				}
+			}
+			throw new Error('Database not initialized');
+		},
 
 		setError: (error: Error) => {
 			update((state) => ({
