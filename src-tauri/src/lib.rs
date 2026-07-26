@@ -1,6 +1,6 @@
-mod commands;
+pub mod commands;
 mod db;
-mod ml;
+pub mod ml;
 
 use commands::*;
 use tauri::path::BaseDirectory;

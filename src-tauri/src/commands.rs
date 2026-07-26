@@ -123,22 +123,33 @@ pub async fn print_pdf_file(current_dir: String) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
+/// Embed a batch of texts, returning one vector per input.
+///
+/// Shared by the `embed_chunks` command and the retrieval benchmark so both
+/// measure and use the same inference path.
+///
+/// `add_special_tokens` controls whether the tokenizer's `[CLS] … [SEP]` template
+/// is applied. sentence-transformers embeds *with* them; the original call site
+/// passed `false`, which silently drops them. The benchmark treats this as a
+/// variable so the difference can be measured rather than guessed at.
+pub fn embed_texts(texts: &[String], add_special_tokens: bool) -> Result<Vec<Vec<f32>>, String> {
     let ml_state = ML_STATE
         .get()
         .ok_or_else(|| "ML state not initialized".to_string())?;
 
-    // Encode our input strings. `encode_batch` will pad each input to be the same length.
+    if texts.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // The tokenizer is configured with fixed padding and truncation at 128 tokens,
+    // so every encoding comes back the same length regardless of input size.
     let encodings = ml_state
         .tokenizer
-        .encode_batch(chunks.clone(), false)
+        .encode_batch(texts.to_vec(), add_special_tokens)
         .map_err(|e| e.to_string())?;
 
-    // Get the padded length of each encoding.
     let padded_token_length = encodings[0].len();
 
-    // Get our token IDs & mask as a flattened array.
     let ids: Vec<i64> = encodings
         .iter()
         .flat_map(|e| e.get_ids().iter().map(|i| *i as i64))
@@ -148,32 +159,62 @@ pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, S
         .flat_map(|e| e.get_attention_mask().iter().map(|i| *i as i64))
         .collect();
 
-    // Convert our flattened arrays into 2-dimensional tensors of shape [N, L].
-    let a_ids = Array2::from_shape_vec([chunks.len(), padded_token_length], ids).unwrap();
-    let a_mask = Array2::from_shape_vec([chunks.len(), padded_token_length], mask).unwrap();
+    let a_ids = Array2::from_shape_vec([texts.len(), padded_token_length], ids)
+        .map_err(|e| e.to_string())?;
+    let a_mask = Array2::from_shape_vec([texts.len(), padded_token_length], mask)
+        .map_err(|e| e.to_string())?;
 
-    // Run the model.
     let outputs = ml_state
         .session
         .run(ort::inputs![a_ids, a_mask].map_err(|e| e.to_string())?)
         .map_err(|e| e.to_string())?;
 
-    // Extract our embeddings tensor and convert it to a strongly-typed 2-dimensional array.
+    // Output 1 is `sentence_embedding`: this ONNX export bakes the
+    // sentence-transformers mean-pooling head in, so no pooling is needed here.
     let embeddings = outputs[1]
         .try_extract_tensor::<f32>()
         .map_err(|e| e.to_string())?
         .into_dimensionality::<Ix2>()
-        .unwrap();
+        .map_err(|e| e.to_string())?;
 
-    let mut results = Vec::new();
+    Ok((0..texts.len())
+        .map(|i| embeddings.index_axis(Axis(0), i).to_vec())
+        .collect())
+}
 
-    for (i, chunk) in chunks.iter().enumerate() {
-        let embedding = embeddings.index_axis(Axis(0), i).to_vec();
-        results.push(EmbeddingResult {
-            chunk_text: chunk.clone(),
-            embedding,
-        });
+/// Cosine similarity between two equal-length vectors. Returns 0 for a zero vector.
+pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() {
+        return 0.0;
     }
+    let (mut dot, mut na, mut nb) = (0.0f32, 0.0f32, 0.0f32);
+    for i in 0..a.len() {
+        dot += a[i] * b[i];
+        na += a[i] * a[i];
+        nb += b[i] * b[i];
+    }
+    let denom = na.sqrt() * nb.sqrt();
+    if denom == 0.0 {
+        0.0
+    } else {
+        dot / denom
+    }
+}
 
-    Ok(results)
+#[tauri::command]
+pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
+    // `true` applies the tokenizer's [CLS] … [SEP] template, matching how
+    // sentence-transformers embeds text. This previously passed `false`; the
+    // retrieval benchmark measures the difference as small but consistently
+    // positive (MRR 0.890 -> 0.900), and it costs nothing.
+    let embeddings = embed_texts(&chunks, true)?;
+
+    Ok(chunks
+        .into_iter()
+        .zip(embeddings)
+        .map(|(chunk_text, embedding)| EmbeddingResult {
+            chunk_text,
+            embedding,
+        })
+        .collect())
 }
