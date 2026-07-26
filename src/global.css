@@ -212,7 +212,6 @@
 			opacity: 0;
 		}
 	}
-
 }
 
 @layer components {
@@ -353,7 +352,6 @@ body {
 				margin-bottom: 0;
 			}
 		}
-    
 
 		.selectedCell::after {
 			background: red;

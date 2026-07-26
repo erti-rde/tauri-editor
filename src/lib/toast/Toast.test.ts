@@ -16,7 +16,7 @@ describe('Toast Component', () => {
 
 	beforeEach(() => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
-    toasts.length = 0;
+		toasts.length = 0;
 	});
 
 	afterEach(() => {
@@ -98,7 +98,6 @@ describe('Toast Component', () => {
 		await errorToast('second');
 		await successToast('third');
 
-  
 		const toastTexts = screen.getAllByText(/first|second|third/);
 
 		expect(toastTexts.map((el) => el.textContent)).toEqual(['first', 'second', 'third']);

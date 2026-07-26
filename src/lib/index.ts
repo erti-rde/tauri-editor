@@ -10,15 +10,14 @@ import StatusFooter from './statusFooter/StatusFooter.svelte';
 import Toast from './toast/Toast.svelte';
 
 export {
-  Editor,
-  Explorer,
-  Icon,
-  Landing,
-  Loader,
-  MetadataEditor,
-  PdfReader,
-  SidePanel,
-  StatusFooter,
-  Toast
+	Editor,
+	Explorer,
+	Icon,
+	Landing,
+	Loader,
+	MetadataEditor,
+	PdfReader,
+	SidePanel,
+	StatusFooter,
+	Toast
 };
-

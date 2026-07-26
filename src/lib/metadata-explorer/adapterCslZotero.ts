@@ -185,22 +185,22 @@ function buildZoteroToCslTypeMap(schema: OriginalZoteroSchema): Map<string, stri
 }
 
 function buildCslToZoteroTypeMap(schema: OriginalZoteroSchema): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const [cslType, zoteroType] of Object.entries(schema.csl.types)) {
-    if (zoteroType.length == 1) {
-      // Add the original mapping
-      map.set(cslType, zoteroType[0]);
-      
-      // Handle reversed hyphenated types
-      if (cslType.includes('-')) {
-        const parts = cslType.split('-');
-        const reversedType = `${parts[1]}-${parts[0]}`;
-        map.set(reversedType, zoteroType[0]);
-      }
-    }
-  }
-  
-  return map;
+	const map = new Map<string, string>();
+	for (const [cslType, zoteroType] of Object.entries(schema.csl.types)) {
+		if (zoteroType.length == 1) {
+			// Add the original mapping
+			map.set(cslType, zoteroType[0]);
+
+			// Handle reversed hyphenated types
+			if (cslType.includes('-')) {
+				const parts = cslType.split('-');
+				const reversedType = `${parts[1]}-${parts[0]}`;
+				map.set(reversedType, zoteroType[0]);
+			}
+		}
+	}
+
+	return map;
 }
 
 function formatFieldName(fieldName: string): string {
