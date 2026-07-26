@@ -10,11 +10,13 @@
 	}
 
 	let { items, initialSelection = [], cl }: Props = $props();
-	let selectedItems: Set<string> = $state(new SvelteSet(initialSelection));
+	let selectedItems: Set<string> = new SvelteSet(initialSelection);
 	let focusedIndex = $state(0);
 
 	// Helper function to check if an item has valid author data
-	function hasValidAuthor(item: CitationItem): boolean {
+	function hasValidAuthor(
+		item: CitationItem
+	): item is CitationItem & { author: NonNullable<CitationItem['author']> } {
 		return !!(
 			item &&
 			item.author &&
@@ -86,7 +88,9 @@
 		} else {
 			selectedItems.add(item.id);
 		}
-		selectedItems = selectedItems;
+		// SvelteSet is deeply reactive, so add/delete above already notify subscribers.
+		// The old `selectedItems = selectedItems` reassignment was a Svelte 4 idiom and
+		// is now a no-op.
 	}
 
 	// Insert all selected citations
@@ -187,7 +191,7 @@
 								<div class="flex items-baseline justify-between">
 									<span class="flex items-center gap-1 font-semibold text-gray-900">
 										{#if hasValidAuthor(item)}
-											{#each item.author as author, idx}
+											{#each item.author as author, idx (idx)}
 												{`${author.given || ''} ${author.family || ''}${idx !== item.author.length - 1 ? ', ' : ''}`}
 											{/each}
 										{:else}

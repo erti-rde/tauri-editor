@@ -5,16 +5,16 @@
 	import { Loader } from '$lib';
 
 	import { invoke } from '@tauri-apps/api/core';
-  import { dbStore } from '$lib/stores/db';
+	import { dbStore } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
 
 	import type { EmbeddingResult } from '$utils/pdf_handlers';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { clickOutside } from '$utils/clickOutside.svelte';
 
-  const { executeQuery } = dbStore;
+	const { executeQuery } = dbStore;
 
-  interface Props {
+	interface Props {
 		selectedText: string;
 		closePanel: () => void;
 		selectCitation: (citation: { id: string; inlineCitation: string }) => void;
@@ -148,7 +148,7 @@
 		</div>
 	{:then similarSentences}
 		{#if similarSentences.length > 0}
-			{#each similarSentences as sentenceMetadata}
+			{#each similarSentences as sentenceMetadata, i (i)}
 				<ResultCard {sentenceMetadata} {selectCitation} />
 			{/each}
 		{:else}

@@ -4,11 +4,11 @@ import type { Store } from '@tauri-apps/plugin-store';
 import { load as loadStore } from '@tauri-apps/plugin-store';
 import { dbStore } from '$lib/stores/db';
 
-const {executeQuery} = dbStore
+const { executeQuery } = dbStore;
 
 // Define types for our citation data
 export interface CitationItem {
-	id: string | number;
+	id: string;
 	type: string;
 	title?: string;
 	author?: Array<{
@@ -22,7 +22,10 @@ export interface CitationItem {
 	};
 	DOI?: string;
 	URL?: string;
-	'container-title'?: string[];
+	// CSL-JSON specifies a plain string here, and that is what doi.org returns.
+	// citeproc silently drops the journal name when given an array, and
+	// makeBibliography() throws outright for some styles (e.g. IEEE).
+	'container-title'?: string;
 	page?: string;
 	volume?: string;
 	issue?: string;
@@ -128,7 +131,7 @@ function createCitationStore() {
 		getInlineCitation,
 		getAllSourcesAsJson,
 		generateBibliography,
-    set
+		set
 	};
 }
 

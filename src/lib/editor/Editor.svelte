@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
-	import { fileSystemStore, fileSystemState } from '$lib/stores/fileSystem.svelte';
+	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 

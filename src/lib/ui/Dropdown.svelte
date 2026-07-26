@@ -1,26 +1,31 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import type { Snippet, SvelteComponent } from 'svelte';
+	import type { SvelteHTMLElements } from 'svelte/elements';
 	import { DropdownMenu, type WithoutChild } from 'bits-ui';
 	import ChevronDown from '~icons/lucide/chevron-down';
 
 	type ItemType = {
 		label: string;
-		icon?: any; // Icon component or null
+		// Matches the icon typing convention already used in ToolBar.svelte.
+		icon?: typeof SvelteComponent<SvelteHTMLElements['svg']>;
 		isActive?: boolean;
 		callBack: () => void;
 	};
 
-	type Props = DropdownMenu.Props & {
-		buttonText: string | Snippet;
+	type Props = DropdownMenu.RootProps & {
+		buttonText: Snippet;
+		/** Accessible name for the menu group; buttonText is visual only. */
+		ariaLabel: string;
 		activeItemLabel?: string;
 		items: ItemType[];
-		contentProps?: WithoutChild<DropdownMenu.Content.Props>;
+		contentProps?: WithoutChild<DropdownMenu.ContentProps>;
 	};
 
 	let {
 		open = $bindable(false),
-		children,
+		children: _children,
 		buttonText,
+		ariaLabel,
 		items,
 		contentProps,
 		...restProps
@@ -49,15 +54,15 @@
 			class="shadow-popover rounded-xl border border-slate-500 bg-white px-1 py-1.5 outline-hidden focus-visible:outline-hidden"
 			{...contentProps}
 		>
-			<DropdownMenu.Group aria-label={buttonText}>
-				{#each items as item}
+			<DropdownMenu.Group aria-label={ariaLabel}>
+				{#each items as item (item.label)}
 					<DropdownMenu.Item
 						onclick={() => {
 							item.callBack();
 							activeItem = item;
 						}}
 						class="flex h-10 items-center rounded-xs py-3 pr-1.5 pl-3 text-sm font-medium ring-0! ring-transparent! transition-colors hover:bg-orange-100 focus-visible:outline-none data-highlighted:bg-orange-100"
-						textValue={item}
+						textValue={item.label}
 					>
 						{#if item.icon}
 							<div class="flex items-center">

@@ -27,6 +27,14 @@
 
 	const itemTypesFields = augmentedSchema.typeFields;
 
+	/** CSL-JSON date fields look like `{ 'date-parts': [[yyyy, mm, dd]] }`. */
+	type CslDate = { 'date-parts'?: number[][] };
+
+	function getDateParts(value: CitationItem[string]): number[] | undefined {
+		const parts = (value as CslDate | undefined)?.['date-parts'];
+		return Array.isArray(parts) ? parts[0] : undefined;
+	}
+
 	function handleSave() {
 		onupdate(+source.id, source);
 	}
@@ -39,8 +47,9 @@
 	function handleDateValueChange(fieldName: string, value: DateValue) {
 		if (value.year && value.month && value.day) {
 			let editedDate = [value.year, value.month, value.day];
-			source[fieldName] = source[fieldName]
-				? { ...source[fieldName], 'date-parts': [editedDate] }
+			const existing = source[fieldName] as CslDate | undefined;
+			source[fieldName] = existing
+				? { ...existing, 'date-parts': [editedDate] }
 				: { 'date-parts': [editedDate] };
 		}
 	}
@@ -86,12 +95,14 @@
 					{#if cslField}
 						<div class="mb-4">
 							{#if inputType === 'date'}
-								{@const dateValue: number[] = source[cslField]?.['date-parts'][0]}
+								{@const dateValue = getDateParts(source[cslField])}
 								<!-- Date input -->
 								<DateField
 									labelText={label}
-									value={dateValue && new CalendarDate(...dateValue)}
-									onValueChange={(value) => handleDateValueChange(cslField, value)}
+									value={dateValue
+										? new CalendarDate(dateValue[0], dateValue[1], dateValue[2])
+										: undefined}
+									onValueChange={(value) => value && handleDateValueChange(cslField, value)}
 								/>
 							{:else}
 								<label class="mb-1 block text-sm font-medium text-gray-700">
@@ -100,7 +111,7 @@
 										type={inputType}
 										class="w-full rounded-md border border-gray-300 p-2"
 										bind:value={source[cslField]}
-										oninput={(event) => (source[cslField] = event.target.value)}
+										oninput={(event) => (source[cslField] = event.currentTarget.value)}
 									/>
 								</label>
 							{/if}

@@ -70,7 +70,7 @@
 		if (source) {
 			editingSource = source.metadata;
 			if (source.file_name) {
-				editingSource.id = source.id;
+				editingSource.id = String(source.id);
 			}
 		} else {
 			editingSource = null;

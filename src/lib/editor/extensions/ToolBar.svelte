@@ -6,7 +6,7 @@
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { convertFileSrc } from '@tauri-apps/api/core';
 
-	import { Separator, Popover, Toggle } from 'bits-ui';
+	import { Separator } from 'bits-ui';
 	// Import Icons for toolbar
 	import Bold from '~icons/lucide/bold';
 	import Italic from '~icons/lucide/italic';
@@ -44,6 +44,9 @@
 		exportToPdf: () => void;
 	}
 
+	// toggleView and exportToPdf are used in the markup below, but
+	// @typescript-eslint/no-unused-vars does not track Svelte template references.
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let { editor, toggleView, exportToPdf }: Props = $props();
 
 	function handleFormatSelect(format: string) {
@@ -119,6 +122,7 @@
 
 	<Dropdown
 		buttonText={defaultHeadingButton}
+		ariaLabel="Text style"
 		items={[
 			{
 				label: 'Heading 1',
@@ -143,6 +147,7 @@
 
 	<Dropdown
 		buttonText={defaultListButtons}
+		ariaLabel="List style"
 		items={[
 			{
 				label: 'Bullet List',

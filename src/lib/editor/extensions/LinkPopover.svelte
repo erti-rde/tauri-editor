@@ -20,12 +20,8 @@
 
 	let { isActive, children, editor }: Props = $props();
 
-	let url = $state<string>('');
-
-	// Initialize url and position based on props
-	$effect(() => {
-		url = editor.getAttributes('link').href || '';
-	});
+	// Writable $derived: tracks the current link mark, but stays assignable by the input.
+	let url = $derived<string>(editor.getAttributes('link').href || '');
 
 	function setLink() {
 		editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
