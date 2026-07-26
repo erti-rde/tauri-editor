@@ -1,0 +1,59 @@
+# Retrieval benchmark baseline
+
+Recorded reference numbers for the citation-retrieval pipeline. Every later change to
+the embedding model, chunking strategy or tokenisation is compared against these —
+the point is that quality claims are measured, not asserted.
+
+## How to reproduce
+
+```bash
+./scripts/fetch-retrieval-corpus.sh                      # 20 open-access papers, checksum-verified
+node scripts/eval/extract-chunks.mjs                     # stage 1: extract + chunk
+cargo run --release --bin eval_retrieval                 # stage 2: embed + score
+```
+
+Stage 2 uses the same `ort` session, tokenizer and pooling the app ships, so the
+numbers reflect what users get rather than a reimplementation.
+
+## Baseline — 2026-07-26
+
+|               |                                                                              |
+| ------------- | ---------------------------------------------------------------------------- |
+| Model         | all-MiniLM-L6-v2, int8-quantised (`QUInt8`, IntegerOps)                      |
+| Embedding dim | 384                                                                          |
+| Tokeniser     | fixed padding + truncation at **128 tokens**                                 |
+| Chunking      | `llm-chunk`, `minLength: 100` chars, sentence splitter, **no overlap**       |
+| Corpus        | 20 papers → **8031 chunks**                                                  |
+| Queries       | 25 labelled, paraphrased-claim → gold source                                 |
+| Machine       | Apple Silicon, release build, `available_parallelism() - 1` intra-op threads |
+
+| metric        | with `[CLS]`/`[SEP]` | without (pre-fix behaviour) |
+| ------------- | -------------------- | --------------------------- |
+| Recall@1      | **80.0 %**           | 80.0 %                      |
+| Recall@5      | **100.0 %**          | 100.0 %                     |
+| Recall@10     | **100.0 %**          | 100.0 %                     |
+| MRR           | **0.900**            | 0.890                       |
+| Throughput    | **290 chunks/sec**   | 291 chunks/sec              |
+| Query latency | **5 ms**             | 5 ms                        |
+
+Special tokens are now enabled in production. The measured gain is small but free and
+matches how sentence-transformers embeds text.
+
+## Reading these numbers honestly
+
+- **Recall@5 of 100 % is not a licence to stop.** With 20 sources, returning the right
+  paper in the top 5 is a weak bar. **Recall@1 (80 %) is the metric to move**; all five
+  failures rank 2nd, i.e. a near-miss against a topically adjacent paper.
+- **The corpus is deliberately clustered** (mostly deep learning). Semantically adjacent
+  papers make discrimination _harder_ than a corpus spanning unrelated fields would. It
+  is still a proxy: it under-represents the messiness of real citation contexts, which
+  often support a claim with several works at once or cite for method rather than result.
+- **Queries paraphrase rather than quote.** Copying abstract wording would turn this into
+  a lexical-overlap test and flatter every model.
+- **The 128-token truncation is a hard ceiling on chunk size.** Roughly 500 characters.
+  Any chunking change that produces larger chunks is silently truncated unless the
+  tokenizer config changes too — worth checking before concluding a chunking strategy
+  "did not help".
+- **Throughput scales the ingest estimate**: 290 chunks/sec ≈ 1.4 s for a typical
+  400-chunk paper, so a 200-paper corpus is roughly 4–5 minutes on this machine. A model
+  with materially more parameters will move this a lot; measure it, don't assume.
