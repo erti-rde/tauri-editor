@@ -1,0 +1,120 @@
+{
+	"_readme": [
+		"Labelled query -> gold source pairs for the retrieval benchmark.",
+		"",
+		"Each `query` is a sentence of the kind a researcher might write and then want to",
+		"cite. Queries deliberately PARAPHRASE the paper's contribution rather than quote",
+		"its abstract: copying abstract wording would make retrieval a lexical-overlap test",
+		"rather than a semantic one, and would flatter any embedding model.",
+		"",
+		"`gold` is the arXiv id in corpus.json that a correct system should return first.",
+		"",
+		"Caveat, stated plainly: this is a PROXY for real citation behaviour. Real citation",
+		"contexts are messier, often cite several works at once, and frequently cite for",
+		"method rather than for a headline claim. The corpus is also topically clustered",
+		"(mostly deep learning), which is deliberate — semantically adjacent papers make",
+		"discrimination HARDER than a corpus drawn from unrelated fields would."
+	],
+	"queries": [
+		{
+			"query": "Replacing recurrence entirely with self-attention allows sequence models to be trained with far more parallelism.",
+			"gold": "1706.03762v7"
+		},
+		{
+			"query": "Scaled dot-product attention computed over multiple heads lets a model attend to information from different representation subspaces at once.",
+			"gold": "1706.03762v7"
+		},
+		{
+			"query": "Conditioning a language representation on both left and right context simultaneously during pre-training improves downstream sentence-level tasks.",
+			"gold": "1810.04805v2"
+		},
+		{
+			"query": "Masking a fraction of input tokens and predicting them is an effective pre-training objective for bidirectional encoders.",
+			"gold": "1810.04805v2"
+		},
+		{
+			"query": "Adding identity shortcut connections makes it practical to optimise networks that are hundreds of layers deep.",
+			"gold": "1512.03385v1"
+		},
+		{
+			"query": "Framing the layers as learning a residual function relative to the input eases the degradation problem in very deep vision models.",
+			"gold": "1512.03385v1"
+		},
+		{
+			"query": "Training a generator against a discriminator in a minimax game lets a model learn to synthesise realistic samples without an explicit likelihood.",
+			"gold": "1406.2661v1"
+		},
+		{
+			"query": "Adapting the learning rate per parameter using running estimates of the first and second gradient moments works well for noisy objectives.",
+			"gold": "1412.6980v9"
+		},
+		{
+			"query": "Stacking many small convolutional filters instead of fewer large ones improves large-scale image classification accuracy.",
+			"gold": "1409.1556v6"
+		},
+		{
+			"query": "Sufficiently large autoregressive language models can perform new tasks from a handful of demonstrations in the prompt, without gradient updates.",
+			"gold": "2005.14165v4"
+		},
+		{
+			"query": "Careful tuning of pre-training hyperparameters and training for longer on more data substantially improves an existing masked language model.",
+			"gold": "1907.11692v1"
+		},
+		{
+			"query": "Splitting an image into fixed-size patches and feeding them to a standard transformer encoder is competitive with convolutional architectures at scale.",
+			"gold": "2010.11929v2"
+		},
+		{
+			"query": "A smaller network can be trained to match the softened output distribution of a larger one, transferring much of its generalisation ability.",
+			"gold": "1503.02531v1"
+		},
+		{
+			"query": "A siamese encoder fine-tuned with a similarity objective produces sentence vectors that can be compared with cosine distance efficiently.",
+			"gold": "1908.10084v1"
+		},
+		{
+			"query": "Learned dense embeddings for questions and passages can outperform sparse term-matching retrieval for open-domain question answering.",
+			"gold": "2004.04906v3"
+		},
+		{
+			"query": "Combining a parametric generator with a non-parametric document index lets a model ground its outputs in retrieved evidence.",
+			"gold": "2005.11401v4"
+		},
+		{
+			"query": "A dimension-reduction technique grounded in manifold theory can preserve more global structure than t-SNE while scaling better.",
+			"gold": "1802.03426v3"
+		},
+		{
+			"query": "Word vectors that vary with sentence context capture syntax and polysemy better than a single fixed vector per word type.",
+			"gold": "1802.05365v2"
+		},
+		{
+			"query": "Shallow log-linear architectures can learn useful word vectors from very large corpora at a fraction of the training cost.",
+			"gold": "1301.3781v3"
+		},
+		{
+			"query": "Vector arithmetic over learned word representations captures analogical relationships between words.",
+			"gold": "1301.3781v3"
+		},
+		{
+			"query": "A first-order approximation of spectral convolutions lets neural networks classify nodes directly on graph-structured data.",
+			"gold": "1609.02907v4"
+		},
+		{
+			"query": "Normalising across the features of a single training example rather than across the batch suits recurrent architectures better.",
+			"gold": "1607.06450v1"
+		},
+		{
+			"query": "Normalising layer inputs using minibatch statistics permits much higher learning rates and reduces sensitivity to initialisation.",
+			"gold": "1502.03167v3"
+		},
+		{
+			"query": "A new boson with a mass near 125 GeV was observed in proton-proton collisions, consistent with the predicted Standard Model scalar.",
+			"gold": "1207.7214v2"
+		},
+		{
+			"query": "The diphoton and four-lepton decay channels together yielded a local significance above five standard deviations.",
+			"gold": "1207.7214v2"
+		}
+	]
+}
