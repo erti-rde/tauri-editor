@@ -1,0 +1,6 @@
+# pnpm 10+ no longer reads the `pnpm` field from package.json; build-script approval
+# lives here. Both packages ship native binaries that their postinstall step fetches
+# or compiles, so they must be allowed to build.
+allowBuilds:
+  '@tailwindcss/oxide': true
+  esbuild: true
