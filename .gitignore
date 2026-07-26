@@ -8,3 +8,13 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Test coverage output
+/coverage
+
+# Agent worktrees hold full nested checkouts of this repo
+.claude/
+
+# Benchmark corpus is fetched on demand by scripts/fetch-retrieval-corpus.sh
+tests/fixtures/retrieval/papers/
+tests/fixtures/retrieval/chunks.json

@@ -10,6 +10,19 @@ const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
 export default ts.config(
 	includeIgnoreFile(gitignorePath),
+	{
+		// `includeIgnoreFile` only reads the root .gitignore, which does not cover the
+		// vendored pdf.js bundles or the Rust build output. Without these, `eslint .`
+		// reports ~2400 errors from third-party and generated code and is unusable in CI.
+		ignores: [
+			'static/pdfjs/**',
+			'static/pdfjs-2/**',
+			'src-tauri/target/**',
+			'src-tauri/gen/**',
+			// Agent worktrees hold full nested checkouts of this repo.
+			'.claude/**'
+		]
+	},
 	js.configs.recommended,
 	...ts.configs.recommended,
 	...svelte.configs.recommended,
@@ -21,6 +34,18 @@ export default ts.config(
 				...globals.browser,
 				...globals.node
 			}
+		},
+		rules: {
+			// Allow a leading underscore to mark a binding as intentionally discarded —
+			// used for props that must be destructured out of `...restProps` but not rendered.
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{
+					argsIgnorePattern: '^_',
+					varsIgnorePattern: '^_',
+					caughtErrorsIgnorePattern: '^_'
+				}
+			]
 		}
 	},
 	{
