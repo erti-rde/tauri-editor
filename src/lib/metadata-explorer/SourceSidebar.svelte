@@ -12,7 +12,7 @@
 	interface Props {
 		source: CitationItem;
 		onclose: () => void;
-		onupdate: (sourceId: number, metadata: CitationItem) => void;
+		onupdate: (sourceId: string, metadata: CitationItem) => void;
 		augmentedSchema: AugmentedZoteroSchema;
 	}
 	const { source = $bindable(), onclose, augmentedSchema, onupdate }: Props = $props();
@@ -48,7 +48,7 @@
 	}
 
 	function handleSave() {
-		onupdate(+source.id, source);
+		onupdate(String(source.id), source);
 	}
 
 	function handleSourceTypeChange(value: string) {

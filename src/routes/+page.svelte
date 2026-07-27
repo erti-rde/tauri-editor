@@ -1,6 +1,7 @@
 <script lang="ts">
-	import Database from '@tauri-apps/plugin-sql';
 	import { onMount } from 'svelte';
+	import { homeDir, join } from '@tauri-apps/api/path';
+	import { load as loadStore } from '@tauri-apps/plugin-store';
 	import {
 		Editor,
 		Explorer,
@@ -10,8 +11,8 @@
 		StatusFooter,
 		MetadataEditor
 	} from '$lib';
-	import { dbStore } from '$lib/stores/db';
-	import { fileSystemState } from '$lib/stores/fileSystem.svelte';
+	import { openLibrary, openProject } from '$lib/stores/db';
+	import { fileSystemStore, fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
 	import type { PanelNames } from '$types/page';
@@ -32,18 +33,34 @@
 	});
 
 	async function handleProjectOpening() {
+		// The project database lives at <project>/.erti/project.db and is created
+		// on first open, so each project keeps its own manuscripts, source set and
+		// metadata corrections while sharing the one library of sources.
+		await openProject($fileSystemStore.currentPath);
 		vaultIsOpen = true;
 		await extractAndChunkPdfs();
 	}
 
+	/**
+	 * Where the shared source library lives.
+	 *
+	 * Configurable and defaulting to ~/Erti, the way Zotero exposes its data
+	 * directory: a corpus is worth putting somewhere the user can back up or sync,
+	 * rather than burying it in an application-support folder.
+	 */
+	async function libraryPath(): Promise<string> {
+		const settings = await loadStore('settings-store.json');
+		const configured = (await settings.get('libraryPath')) as string | undefined;
+		if (configured) return configured;
+
+		return join(await homeDir(), 'Erti', 'library.db');
+	}
+
 	onMount(async () => {
 		try {
-			dbStore.setLoading(true);
-			const db = await Database.load('sqlite:magnum_opus_test.db');
-			dbStore.setDb(db);
+			await openLibrary(await libraryPath());
 		} catch (error) {
-			dbStore.setError(error as Error);
-			console.error('Failed to load database:', error);
+			console.error('Failed to open the source library:', error);
 		}
 	});
 </script>

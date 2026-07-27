@@ -1,89 +1,111 @@
-import { writable, get } from 'svelte/store';
-import type Database from '@tauri-apps/plugin-sql';
-
-type DatabaseStore = {
-	db: Database | null;
-	isLoading: boolean;
-	error: Error | null;
-};
-export const dbStore = createDbStore();
+import { invoke } from '@tauri-apps/api/core';
 
 /**
- * True when the statement returns rows and must go to `db.select` rather than
- * `db.execute`.
+ * Typed client for the database.
  *
- * Decided by the leading keyword, not by whether "select" appears anywhere:
- * `INSERT INTO chunks SELECT …` and `UPDATE selections …` both contain the
- * word but are writes, and routing them to `select` fails or silently discards
- * the write. Leading comments and parenthesised CTE bodies are skipped first.
+ * Every call is a named Rust command. Nothing here sends SQL, which is what
+ * allows `sql:default` and `sql:allow-execute` to stay out of the app's
+ * capabilities — previously any frontend code could run arbitrary statements
+ * through `executeQuery(anyString)`, and the statement/read routing this file
+ * used to do is gone with it.
  */
-export function isReadQuery(query: string): boolean {
-	const stripped = query
-		.replace(/--[^\n]*/g, ' ') // line comments
-		.replace(/\/\*[\s\S]*?\*\//g, ' ') // block comments
-		.replace(/^[\s(]+/, '') // leading whitespace and parens
-		.toLowerCase();
 
-	// A CTE is read-only only if what follows the WITH block is a SELECT.
-	if (/^with\b/.test(stripped)) {
-		return /\bselect\b/.test(stripped) && !/\b(insert|update|delete)\b/.test(stripped);
-	}
-
-	return /^(select|pragma|explain|values)\b/.test(stripped);
+export interface Source {
+	sha256: string;
+	file_name: string;
+	path: string | null;
+	/** CSL-JSON, with any project-local override already applied. */
+	csl_json: string | null;
+	zotero_type: string | null;
+	doi: string | null;
+	resolved_via: string | null;
+	state: 'pending' | 'ready' | 'failed';
+	last_error: string | null;
 }
 
-function createDbStore() {
-	const { subscribe, set, update } = writable<DatabaseStore>({
-		db: null,
-		isLoading: false,
-		error: null
+export interface NewChunk {
+	text: string;
+	embedding: number[];
+	page_start?: number | null;
+	page_end?: number | null;
+	section?: string | null;
+	char_start?: number | null;
+	char_end?: number | null;
+}
+
+export interface ScoredChunk {
+	sha256: string;
+	text: string;
+	page_start: number | null;
+	section: string | null;
+	similarity: number;
+	/** False when the chunk comes from outside the current project's source set. */
+	in_project: boolean;
+}
+
+/** Open the shared source library, creating it on first run. */
+export const openLibrary = (path: string) => invoke<void>('open_library', { path });
+
+/** Open a project folder, creating `<root>/.erti/project.db` if needed. */
+export const openProject = (root: string) => invoke<void>('open_project', { root });
+
+export const projectRoot = () => invoke<string>('project_root');
+
+/** SHA-256 of a file's contents; the identity a source is stored under. */
+export const hashFile = (path: string) => invoke<string>('hash_file', { path });
+
+/**
+ * Record a source and add it to the open project.
+ *
+ * Resolves true when the hash was new to the library, meaning the file still
+ * needs extracting and embedding. False means another project already ingested
+ * it and its chunks can be reused as-is.
+ */
+export const registerSource = (sha256: string, path: string, fileName: string) =>
+	invoke<boolean>('register_source', { sha256, path, fileName });
+
+/** Hashes still needing ingest, including ones that previously failed. */
+export const sourcesNeedingIngest = () => invoke<string[]>('sources_needing_ingest');
+
+export const storeChunks = (sha256: string, chunks: NewChunk[]) =>
+	invoke<void>('store_chunks', { sha256, chunks });
+
+export const markIngestFailed = (sha256: string, error: string) =>
+	invoke<void>('mark_ingest_failed', { sha256, error });
+
+export const setSourceMetadata = (args: {
+	sha256: string;
+	cslJson: string;
+	zoteroType?: string | null;
+	doi?: string | null;
+	resolvedVia: string;
+}) => invoke<void>('set_source_metadata', args);
+
+/** Sources in the open project, with project-local overrides applied. */
+export const projectSources = () => invoke<Source[]>('project_sources');
+
+export const addToProject = (sha256: string) => invoke<void>('add_to_project', { sha256 });
+
+/** Correct a source's metadata for this project only, leaving the library's copy alone. */
+export const setMetadataOverride = (sha256: string, cslJson: string) =>
+	invoke<void>('set_metadata_override', { sha256, cslJson });
+
+/**
+ * Rank sources against text the user is writing.
+ *
+ * Embedding and cosine both happen in Rust; only the top results cross the IPC
+ * boundary. `includeLibrary` widens the search past the project's own sources,
+ * and results carry `in_project` so those can still be listed first.
+ */
+export const searchSources = (query: string, opts?: { limit?: number; includeLibrary?: boolean }) =>
+	invoke<ScoredChunk[]>('search_sources', {
+		query,
+		limit: opts?.limit,
+		includeLibrary: opts?.includeLibrary
 	});
 
-	return {
-		subscribe,
-		setDb: (database: Database) => {
-			update((state) => ({
-				...state,
-				db: database,
-				isLoading: false
-			}));
-		},
-		async executeQuery(query: string, params?: (string | number)[]) {
-			const dbState = get(dbStore);
-			if (dbState.db) {
-				try {
-					if (isReadQuery(query)) {
-						return await dbState.db.select(query, params);
-					} else {
-						return await dbState.db.execute(query, params);
-					}
-				} catch (error) {
-					console.error('Query failed:', error);
-					throw error;
-				}
-			}
-			throw new Error('Database not initialized');
-		},
+/** The model that produced the stored vectors, or null if nothing is stored yet. */
+export const embeddingMeta = () => invoke<[string, number] | null>('embedding_meta');
 
-		setError: (error: Error) => {
-			update((state) => ({
-				...state,
-				error,
-				isLoading: false
-			}));
-		},
-		setLoading: (loading: boolean) => {
-			update((state) => ({
-				...state,
-				isLoading: loading
-			}));
-		},
-		reset: () => {
-			set({
-				db: null,
-				isLoading: false,
-				error: null
-			});
-		}
-	};
-}
+export const setEmbeddingMeta = (modelId: string, dims: number) =>
+	invoke<void>('set_embedding_meta', { modelId, dims });

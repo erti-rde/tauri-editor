@@ -2,7 +2,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { chunk } from 'llm-chunk';
 import { get } from 'svelte/store';
 
-import { dbStore } from '$lib/stores/db';
+import {
+	hashFile,
+	markIngestFailed,
+	registerSource,
+	setSourceMetadata,
+	storeChunks
+} from '$lib/stores/db';
 import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 import { removeStatus, setStatus } from '$lib/statusFooter/StatusFooter.svelte';
 import { errorToast, successToast } from '$lib/toast/Toast.svelte';
@@ -25,8 +31,6 @@ import type {
 import type { CitationItem } from '$lib/stores/citationStore';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-
-const { executeQuery } = dbStore;
 
 /** The subset of pdf.js document info we read. pdf.js types this as bare `Object`. */
 interface PdfDocumentInfo {
@@ -51,48 +55,48 @@ export interface EmbeddingResult {
 }
 
 /**
- * Process a single PDF file by extracting text, retrieving metadata,
- * chunking the text, and storing in the database
- * @param filePath Path to the PDF file
- * @param fileName Name of the PDF file
- * @param fileId Database ID for the file
+ * Extract, embed and store one PDF, keyed by the hash of its contents.
+ *
+ * Chunks and ingest status are written together in Rust, so a source is only
+ * ever 'ready' if it genuinely succeeded. A failure is recorded rather than
+ * swallowed, which is what makes it visible and retryable — the old pipeline
+ * registered the file up front and deduplicated on the filename, so anything
+ * that failed once was skipped forever.
  */
-async function processSinglePdf(filePath: string, fileName: string, fileId: number) {
+async function processSinglePdf(filePath: string, fileName: string, sha256: string) {
 	let pdfDoc: PDFDocumentProxy | undefined;
 	try {
 		const pdfBytes = await readFile(filePath);
 		pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
 		const pdfOutput = await extractTextFromPDf(pdfDoc);
-		const pdfMetadata = await getPdfMetadata(pdfDoc, fileId, fileName);
+		const pdfMetadata = await getPdfMetadata(pdfDoc, sha256, fileName);
 
 		const chunks = chunk(pdfOutput, { minLength: 100, splitter: 'sentence' });
 		const embeddingResults = (await invoke('embed_chunks', { chunks })) as EmbeddingResult[];
 
-		// Prepare all insertions
-		const insertPromises = embeddingResults.map((result) =>
-			executeQuery(`INSERT INTO chunks (file_id, chunk_text, embedding) VALUES (?, ?, ?)`, [
-				fileId,
-				result.chunk_text,
-				JSON.stringify(result.embedding)
-			])
+		await storeChunks(
+			sha256,
+			embeddingResults.map((result) => ({
+				text: result.chunk_text,
+				embedding: result.embedding
+			}))
 		);
 
-		if (pdfMetadata) {
-			insertPromises.push(
-				executeQuery(`INSERT INTO source_metadata (file_id, metadata) VALUES (?, ?)`, [
-					fileId,
-					JSON.stringify(pdfMetadata)
-				])
-			);
+		if (pdfMetadata && Object.keys(pdfMetadata).length > 0) {
+			await setSourceMetadata({
+				sha256,
+				cslJson: JSON.stringify(pdfMetadata),
+				zoteroType: (pdfMetadata.zotero_type as string) ?? null,
+				doi: (pdfMetadata.DOI as string) ?? null,
+				resolvedVia: 'crossref'
+			});
 		}
-
-		// Execute all insertions in parallel
-		await Promise.all(insertPromises);
 
 		successToast(`${fileName} processed successfully`);
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
+		await markIngestFailed(sha256, errorMessage);
 		errorToast(`Failed to process ${fileName}: ${errorMessage}`);
 		throw error;
 	} finally {
@@ -111,7 +115,7 @@ async function processSinglePdf(filePath: string, fileName: string, fileId: numb
  * @param fileId Database ID for the file
  * @param fileName Name of the PDF file for error reporting
  */
-async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName: string) {
+async function getPdfMetadata(pdfDoc: PDFDocumentProxy, sha256: string, fileName: string) {
 	try {
 		let metadata: CitationItem | undefined = undefined;
 		const info = (await pdfDoc.getMetadata()).info as PdfDocumentInfo | undefined;
@@ -154,7 +158,7 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName
 			});
 
 			metadata = (await getCitationWithDoi.json()) as CitationItem;
-			metadata.id = fileId.toString();
+			metadata.id = sha256;
 
 			if (!cslToZoteroTypeMap) {
 				const augmentedSchema: AugmentedZoteroSchema = await augmentSchema();
@@ -180,10 +184,12 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, fileId: number, fileName
 
 		return metadata;
 	} catch (error) {
-		// Log error but allow processing to continue with empty metadata
+		// Allow ingest to continue, but return undefined rather than {}. Storing an
+		// empty object is what left 52% of the old database with literal '{}'
+		// metadata that looked resolved and never got retried.
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.error(`Failed to get metadata for ${fileName}: ${errorMessage}`);
-		return {};
+		return undefined;
 	}
 }
 
@@ -206,63 +212,34 @@ function findPdfFiles(items: FileItem[]): FileItem[] {
 }
 
 /**
- * Retrieve existing processed files from the database
- */
-async function getExistingFiles(): Promise<Array<{ id: number; file_name: string }>> {
-	return (await executeQuery(`
-    SELECT
-   	  files.id, file_name
-    FROM
-  		files
-		`)) as Array<{ id: number; file_name: string }>;
-}
-
-/**
- * Create database entries for a batch of PDF files
- * @param pdfFiles List of PDF files to create entries for
- * @returns List of files with their database IDs
- */
-async function createFileBatch(pdfFiles: FileItem[]): Promise<Array<FileItem & { id: number }>> {
-	const insertedFiles = [];
-
-	for (const file of pdfFiles) {
-		const result = await executeQuery('INSERT INTO files (file_name) VALUES (?)', [file.name]);
-		const { lastInsertId } = result as { lastInsertId: number };
-		insertedFiles.push({ ...file, id: lastInsertId });
-	}
-
-	return insertedFiles;
-}
-
-/**
  * Extract text content from a PDF document
  * @param pdf PDF document to extract text from
  * @returns Concatenated text content from all pages
  */
 async function extractTextFromPDf(pdf: PDFDocumentProxy): Promise<string> {
-	try {
-		const totalPageCount = pdf.numPages;
-		// Extract text from each page
-		const pageTextPromises = Array.from({ length: totalPageCount }, async (_, i) => {
-			const pageNum = i + 1;
-			const page = await pdf.getPage(pageNum);
-			const textContent = await page.getTextContent();
+	// Failures propagate to processSinglePdf, which records them against the
+	// source. This used to wrap everything in a try/catch solely to issue a
+	// ROLLBACK, though no transaction was ever open; storage now happens later,
+	// in one Rust transaction per source.
+	const totalPageCount = pdf.numPages;
 
-			// Release page resources after extraction
-			page.cleanup();
+	// Extract text from each page
+	const pageTextPromises = Array.from({ length: totalPageCount }, async (_, i) => {
+		const pageNum = i + 1;
+		const page = await pdf.getPage(pageNum);
+		const textContent = await page.getTextContent();
 
-			return textContent.items
-				.filter(isTextItem)
-				.map((item) => item.str)
-				.join('');
-		});
+		// Release page resources after extraction
+		page.cleanup();
 
-		const content = await Promise.all(pageTextPromises);
-		return content.join(' ');
-	} catch (error) {
-		await executeQuery('ROLLBACK');
-		throw error;
-	}
+		return textContent.items
+			.filter(isTextItem)
+			.map((item) => item.str)
+			.join('');
+	});
+
+	const content = await Promise.all(pageTextPromises);
+	return content.join(' ');
 }
 
 /**
@@ -273,44 +250,67 @@ export async function extractAndChunkPdfs(): Promise<void> {
 	try {
 		// Get all PDF files recursively
 		const pdfFiles = findPdfFiles(fileSystem.items);
+		if (pdfFiles.length === 0) {
+			return;
+		}
 
-		// Get existing files from database
-		const existingFiles = await getExistingFiles();
+		setStatus({ side: 'left', message: `Found ${pdfFiles.length} PDF files`, type: 'info' });
 
-		// Filter out already processed PDFs
-		const existingFileNames = new Set(existingFiles.map((file) => file.file_name));
-		let newPdfs = pdfFiles.filter((file) => !existingFileNames.has(file.name));
+		// Identify every PDF by the hash of its contents and register it against
+		// the project. Registration reports whether the hash was new to the
+		// library: a paper already read for another project keeps its chunks and
+		// is simply added to this one, with no re-embedding. Deduplicating on the
+		// filename, as before, both missed this and silently dropped same-named
+		// files in different folders.
+		const needsIngest: Array<FileItem & { sha256: string }> = [];
+		for (const file of pdfFiles) {
+			try {
+				const sha256 = await hashFile(file.path);
+				if (await registerSource(sha256, file.path, file.name)) {
+					needsIngest.push({ ...file, sha256 });
+				}
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				console.error(`Could not register ${file.name}:`, message);
+			}
+		}
 
-		if (newPdfs.length === 0) {
+		if (needsIngest.length === 0) {
+			setStatus({
+				side: 'left',
+				message: `All ${pdfFiles.length} PDFs are already in your library`,
+				type: 'info'
+			});
+			setTimeout(() => removeStatus(), 3000);
 			return;
 		}
 
 		setStatus({
 			side: 'left',
-			message: `Found ${pdfFiles.length} PDF files (${newPdfs.length} new to process, ${pdfFiles.length - newPdfs.length} already processed)`,
+			message: `Processing ${needsIngest.length} new PDFs (${pdfFiles.length - needsIngest.length} already in your library)`,
 			type: 'info'
 		});
-
-		newPdfs = await createFileBatch(newPdfs);
 
 		let processed = 0;
 
 		// Process PDFs concurrently in batches to avoid overwhelming the system
 		const batchSize = 3;
-		for (let i = 0; i < newPdfs.length; i += batchSize) {
-			const batch = newPdfs.slice(i, i + batchSize);
+		for (let i = 0; i < needsIngest.length; i += batchSize) {
+			const batch = needsIngest.slice(i, i + batchSize);
 			await Promise.all(
 				batch.map(async (file) => {
 					try {
-						await processSinglePdf(file.path, file.name, file.id as number);
+						await processSinglePdf(file.path, file.name, file.sha256);
 						processed++;
 						setStatus({
 							side: 'left',
-							message: `Processing PDFs: ${processed}/${newPdfs.length}`,
+							message: `Processing PDFs: ${processed}/${needsIngest.length}`,
 							type: 'info'
 						});
 					} catch (error) {
-						// Continue processing other files even if one fails
+						// Continue with the rest. The failure is recorded against the
+						// source, so it stays visible and can be retried rather than
+						// being skipped forever.
 						const errorMessage = error instanceof Error ? error.message : String(error);
 						console.error(`Error processing ${file.name}:`, errorMessage);
 					}
