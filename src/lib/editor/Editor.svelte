@@ -8,26 +8,13 @@
 
 	import { invoke } from '@tauri-apps/api/core';
 
-	import TextAlign from '@tiptap/extension-text-align';
-	import StarterKit from '@tiptap/starter-kit';
-	import Underline from '@tiptap/extension-underline';
-	import Highlight from '@tiptap/extension-highlight';
-	import Link from '@tiptap/extension-link';
-	import Subscript from '@tiptap/extension-subscript';
-	import Superscript from '@tiptap/extension-superscript';
-	import Image from '@tiptap/extension-image';
-	import Table from '@tiptap/extension-table';
-	import TableCell from '@tiptap/extension-table-cell';
-	import TableHeader from '@tiptap/extension-table-header';
-	import TableRow from '@tiptap/extension-table-row';
-
 	import createEditor from './core/CreateEditor';
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
+	import { editorExtensions } from './core/extensions';
 
 	import type { Readable } from 'svelte/store';
 	import BubbleMenu from './extensions/BubbleMenu.svelte';
-	import { Citation } from './extensions/citation/Citation';
 	import Result from './extensions/citation/Result.svelte';
 	import ToolBar from './extensions/ToolBar.svelte';
 
@@ -51,31 +38,7 @@
 				}
 			},
 			autofocus: 'end',
-			extensions: [
-				StarterKit,
-				TextAlign.configure({
-					types: ['heading', 'paragraph']
-				}),
-				Subscript,
-				Superscript,
-				Underline,
-				Highlight,
-				Link.configure({
-					HTMLAttributes: {
-						class: 'tiptap-link'
-					},
-					openOnClick: false,
-					defaultProtocol: 'https'
-				}),
-				Image,
-				Table.configure({
-					resizable: true
-				}),
-				TableRow,
-				TableHeader,
-				TableCell,
-				Citation
-			],
+			extensions: editorExtensions,
 			content: await getDocumentData(),
 
 			onUpdate: async ({ editor }) => {

@@ -4,6 +4,9 @@ version = "0.2.5"
 description = "Text editor for researchers"
 authors = ["you"]
 edition = "2021"
+# The crate ships a second binary (the retrieval benchmark), so `cargo run` —
+# which is what `tauri dev` invokes — needs to be told which one is the app.
+default-run = "Erti"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
