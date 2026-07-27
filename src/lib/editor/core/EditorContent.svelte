@@ -8,13 +8,24 @@
 	const { editor, children, class: className }: Props = $props();
 	let element: HTMLElement;
 
+	/**
+	 * TipTap 3 widened `options.element` to also allow a `{ mount }` object, a
+	 * factory function, or null. Only the plain DOM-element form is meaningful
+	 * here, since this component relocates the editor's rendered children.
+	 */
+	function mountedElement(): Element | null {
+		const el = editor?.options.element;
+		return el instanceof Element ? el : null;
+	}
+
 	const init = async () => {
 		await tick();
 		if (!element) {
 			return;
 		}
 
-		if (!editor?.options.element) {
+		const current = mountedElement();
+		if (!current) {
 			return;
 		}
 
@@ -25,7 +36,7 @@
 		// ProseMirror owns this element once mounted, so Svelte must not manage its
 		// children. Direct manipulation is required by TipTap's mount contract.
 		// eslint-disable-next-line svelte/no-dom-manipulating
-		element.append(...Array.from(editor.options.element.childNodes));
+		element.append(...Array.from(current.childNodes));
 		editor.setOptions({ element });
 
 		editor.contentElement = element;
@@ -42,12 +53,13 @@
 
 		editor.contentElement = null;
 
-		if (!editor.options.element.firstChild) {
+		const current = mountedElement();
+		if (!current?.firstChild) {
 			return;
 		}
 
 		const newElement = document.createElement('div');
-		newElement.append(...Array.from(editor.options.element.childNodes));
+		newElement.append(...Array.from(current.childNodes));
 
 		editor.setOptions({
 			element: newElement

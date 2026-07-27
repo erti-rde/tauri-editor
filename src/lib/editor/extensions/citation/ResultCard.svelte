@@ -103,6 +103,9 @@
 		</button>
 
 		{#if sourceUrl}
+			<!-- sourceUrl is an external DOI or publisher link from the source metadata,
+			     not SvelteKit navigation, so resolve() does not apply. -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -->
 			<a
 				href={sourceUrl}
 				target="_blank"
@@ -112,6 +115,7 @@
 				<Icon icon="ExternalLink" size="s" />
 				<span class="ml-1">View online</span>
 			</a>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/if}
 	</div>
 </div>
