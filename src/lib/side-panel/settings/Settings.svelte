@@ -26,11 +26,26 @@
 	async function loadResources() {
 		try {
 			const { styles, localesData } = await readResourceFiles();
-			// Both resource files are read from disk and may be missing or malformed.
-			// Fall back to empty collections so the dialog still renders instead of
-			// throwing out of the template on Object.entries(undefined).
-			citationStyles = Array.isArray(styles) ? styles : [];
-			locales = localesData?.['language-names'] ?? {};
+			// Both resource files are read from disk and may be missing or malformed,
+			// so guard the entries and not just the containers: a bad file can yield
+			// [null] or { en: null }, which would throw in the template rather than
+			// here. Falling back to empty collections keeps the dialog renderable.
+			citationStyles = Array.isArray(styles)
+				? styles.filter(
+						(style) => typeof style?.name === 'string' && typeof style?.download_url === 'string'
+					)
+				: [];
+
+			const languageNames = localesData?.['language-names'];
+			locales =
+				languageNames && typeof languageNames === 'object' && !Array.isArray(languageNames)
+					? (Object.fromEntries(
+							Object.entries(languageNames).filter(
+								(entry): entry is [string, string[]] =>
+									Array.isArray(entry[1]) && typeof entry[1][0] === 'string'
+							)
+						) as { [key: string]: string[] })
+					: {};
 		} catch (error) {
 			console.error('Error loading resources:', error);
 		}

@@ -15,7 +15,13 @@
 	 */
 	function mountedElement(): Element | null {
 		const el = editor?.options.element;
-		return el instanceof Element ? el : null;
+		if (el instanceof Element) return el;
+		// TipTap 3 also accepts a `{ mount }` wrapper. The factory and null forms
+		// have no element to relocate children from, so they stay unhandled.
+		if (el && typeof el === 'object' && 'mount' in el && el.mount instanceof Element) {
+			return el.mount;
+		}
+		return null;
 	}
 
 	const init = async () => {

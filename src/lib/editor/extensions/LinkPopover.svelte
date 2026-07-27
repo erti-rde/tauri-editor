@@ -20,8 +20,23 @@
 
 	let { isActive, children, editor }: Props = $props();
 
-	// Writable $derived: tracks the current link mark, but stays assignable by the input.
-	let url = $derived<string>(editor.getAttributes('link').href || '');
+	let url = $state('');
+
+	// editor.getAttributes() reads ProseMirror state, which is not a Svelte
+	// reactive source — neither $derived nor a bare $effect re-runs when the
+	// selection moves. Without subscribing, moving between links leaves the
+	// previous href in the field, and pressing Enter submits it.
+	$effect(() => {
+		const syncUrl = () => {
+			url = editor.getAttributes('link').href || '';
+		};
+
+		syncUrl();
+		editor.on('selectionUpdate', syncUrl);
+		return () => {
+			editor.off('selectionUpdate', syncUrl);
+		};
+	});
 
 	function setLink() {
 		editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();

@@ -119,8 +119,14 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 			},
 			onUpdate: (props) => {
 				componentProps.items = props.items;
+				// `props.command` is bound to the suggestion's current range, so the
+				// callback captured in onStart goes stale as soon as the user types
+				// another character — selecting an item would then insert at the old
+				// range. Rebind it alongside the items.
+				componentProps.cl = (itemId) => {
+					props.command({ id: itemId });
+				};
 				renderer?.updateProps(props);
-				console.log(`🚀 ~ props:`, renderer);
 
 				if (!props.clientRect || !popup?.[0]) return;
 

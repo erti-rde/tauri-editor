@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { dbStore } from './db';
+import { dbStore, isReadQuery } from './db';
 import type Database from '@tauri-apps/plugin-sql';
 
 // Mock Database implementation with required properties
@@ -81,5 +81,58 @@ describe('dbStore', () => {
 		expect(value.db).toBe(null);
 		expect(value.isLoading).toBe(false);
 		expect(value.error).toBe(null);
+	});
+});
+
+describe('statement routing', () => {
+	// Routing used to be `query.toLowerCase().includes('select')`, which sends
+	// writes to db.select. That either errors or silently discards the write.
+	const reads = [
+		'SELECT * FROM files',
+		'  select id from chunks',
+		'\n\tSELECT 1',
+		'-- a leading comment\nSELECT * FROM files',
+		'/* block */ SELECT * FROM files',
+		'PRAGMA foreign_keys = ON',
+		'EXPLAIN QUERY PLAN SELECT * FROM files',
+		'WITH recent AS (SELECT * FROM files) SELECT * FROM recent'
+	];
+
+	const writes = [
+		'INSERT INTO files (file_name) VALUES (?)',
+		'INSERT INTO chunks (file_id, chunk_text) SELECT id, name FROM files',
+		'UPDATE selections SET x = 1',
+		'DELETE FROM files WHERE id = ?',
+		'INSERT OR REPLACE INTO source_metadata (file_id, metadata) VALUES (?, ?)',
+		'CREATE TABLE selected_items (id INTEGER)',
+		'WITH doomed AS (SELECT id FROM files) DELETE FROM chunks WHERE file_id IN (SELECT id FROM doomed)'
+	];
+
+	it.each(reads)('treats %j as a read', (query) => {
+		expect(isReadQuery(query)).toBe(true);
+	});
+
+	it.each(writes)('treats %j as a write', (query) => {
+		expect(isReadQuery(query)).toBe(false);
+	});
+
+	it('routes a write containing SELECT to execute, not select', async () => {
+		dbStore.setDb(mockDb);
+		mockExecute.mockResolvedValue({ rowsAffected: 3 });
+
+		await dbStore.executeQuery('INSERT INTO chunks (file_id) SELECT id FROM files');
+
+		expect(mockExecute).toHaveBeenCalledTimes(1);
+		expect(mockSelect).not.toHaveBeenCalled();
+	});
+
+	it('routes a query against a table named selections to execute', async () => {
+		dbStore.setDb(mockDb);
+		mockExecute.mockResolvedValue({ rowsAffected: 1 });
+
+		await dbStore.executeQuery('UPDATE selections SET chosen = 1');
+
+		expect(mockExecute).toHaveBeenCalledTimes(1);
+		expect(mockSelect).not.toHaveBeenCalled();
 	});
 });

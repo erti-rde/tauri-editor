@@ -30,9 +30,21 @@
 	/** CSL-JSON date fields look like `{ 'date-parts': [[yyyy, mm, dd]] }`. */
 	type CslDate = { 'date-parts'?: number[][] };
 
-	function getDateParts(value: CitationItem[string]): number[] | undefined {
+	/**
+	 * Only a complete [year, month, day] is usable. CSL dates are legitimately
+	 * partial — a year-only book is `{ 'date-parts': [[2021]] }` — and passing
+	 * the missing entries to CalendarDate yields undefined year/month/day, which
+	 * throws while rendering the sidebar.
+	 */
+	function getDateParts(value: CitationItem[string]): [number, number, number] | undefined {
 		const parts = (value as CslDate | undefined)?.['date-parts'];
-		return Array.isArray(parts) ? parts[0] : undefined;
+		const first = Array.isArray(parts) ? parts[0] : undefined;
+
+		if (!Array.isArray(first) || first.length < 3) return undefined;
+		const [year, month, day] = first;
+		if (![year, month, day].every((n) => Number.isInteger(n))) return undefined;
+
+		return [year, month, day];
 	}
 
 	function handleSave() {
