@@ -51,11 +51,11 @@ fn read_directory_impl(
             }
 
             let children = if is_dir {
-                // Recursive call using the implementation function
-                match read_directory_impl(path_buf.to_string_lossy().to_string()).await {
-                    Ok(children) => Some(children),
-                    Err(_) => None,
-                }
+                // An unreadable subdirectory is reported as having no children rather
+                // than failing the whole listing.
+                read_directory_impl(path_buf.to_string_lossy().to_string())
+                    .await
+                    .ok()
             } else {
                 None
             };
