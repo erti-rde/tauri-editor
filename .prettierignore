@@ -3,9 +3,9 @@ pnpm-lock.yaml
 package-lock.json
 yarn.lock
 
-# Vendored third-party bundles — not our code, never reformat
+# Vendored third-party bundle — the standalone pdf.js viewer app used by the
+# PDF reader iframe. Not published on npm, so it stays checked in.
 static/pdfjs/
-static/pdfjs-2/
 
 # Third-party model + CSL data shipped as Tauri resources. tokenizer.json is read by
 # the Rust `tokenizers` crate; reformatting it churns 60k lines for no benefit.

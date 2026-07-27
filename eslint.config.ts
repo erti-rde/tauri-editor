@@ -16,7 +16,6 @@ export default ts.config(
 		// reports ~2400 errors from third-party and generated code and is unusable in CI.
 		ignores: [
 			'static/pdfjs/**',
-			'static/pdfjs-2/**',
 			'src-tauri/target/**',
 			'src-tauri/gen/**',
 			// Agent worktrees hold full nested checkouts of this repo.
