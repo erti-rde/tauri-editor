@@ -13,6 +13,10 @@ import type { AugmentedZoteroSchema } from '$lib/metadata-explorer/adapterCslZot
 import type { FileItem } from '$lib/stores/fileSystem.svelte';
 
 import * as pdfjsLib from 'pdfjs-dist';
+// Resolve the worker from the same package as the library above, so the two can
+// never drift apart. This previously pointed at a hand-copied worker in
+// static/pdfjs-2/, which pdf.js rejects outright when the versions disagree.
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type {
 	PDFDocumentProxy,
 	TextItem,
@@ -20,7 +24,7 @@ import type {
 } from 'pdfjs-dist/types/src/display/api';
 import type { CitationItem } from '$lib/stores/citationStore';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs-2/build/pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const { executeQuery } = dbStore;
 
