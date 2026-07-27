@@ -51,7 +51,14 @@ export class CitationEngine {
 
 		const sys = {
 			retrieveLocale: () => localeXml,
-			retrieveItem: (id: string) => sources[id]
+			retrieveItem: (id: string) => {
+				const item = sources[id];
+				// A cluster can outlive its source — a document referencing a deleted
+				// source hands undefined to citeproc, which then fails deep inside the
+				// processor with an opaque error. Fail at the boundary instead.
+				if (!item) throw new Error(`Unknown citation source: ${id}`);
+				return item;
+			}
 		};
 
 		this.engine = new CSL.Engine(sys, styleXml);

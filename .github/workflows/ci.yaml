@@ -5,6 +5,11 @@ on:
   push:
     branches: [main]
 
+# Dependency install and cargo build both run third-party scripts. Give the token
+# no more than read access, and keep it out of the checkout's git config.
+permissions:
+  contents: read
+
 # A newer push to the same PR makes in-flight runs redundant.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -16,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # No version pin here: the `packageManager` field in package.json is the
       # single source of truth, and pnpm/action-setup reads it.
@@ -42,6 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Tauri system dependencies
         run: |

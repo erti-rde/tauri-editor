@@ -71,6 +71,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // sentence-transformers embeds with [CLS]/[SEP]; the app currently does not.
     let add_special_tokens = !flag("no-special-tokens");
     let batch = opt("batch", 64);
+    if batch == 0 {
+        // chunks(0) panics rather than erroring.
+        return Err("--batch must be at least 1".into());
+    }
 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(ml::initialize_ml_state(
