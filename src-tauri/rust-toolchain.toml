@@ -1,0 +1,11 @@
+# Pin the Rust toolchain so local builds and CI agree.
+#
+# Without this, CI installed whatever `stable` happened to be while contributors
+# ran whatever they had. That gap is not theoretical: a clippy lint added after
+# 1.85 failed CI while passing locally on 1.85, because `-D warnings` turns every
+# new lint into a build failure the moment stable moves.
+#
+# rustup installs this automatically on the first cargo command in this directory.
+[toolchain]
+channel = "1.97"
+components = ["clippy", "rustfmt"]

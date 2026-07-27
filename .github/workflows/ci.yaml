@@ -65,9 +65,13 @@ jobs:
             libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
+      # The toolchain and its components come from src-tauri/rust-toolchain.toml,
+      # so CI and contributors run the same rustc and the same clippy lint set.
+      # Installing `stable` here instead would let a new release break CI without
+      # any change to this repo, since -D warnings promotes new lints to errors.
+      - name: Install the pinned Rust toolchain
+        working-directory: ./src-tauri
+        run: rustup show active-toolchain || rustup toolchain install
 
       - uses: Swatinem/rust-cache@v2
         with:
