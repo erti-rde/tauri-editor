@@ -4,15 +4,11 @@
 	import ResultCard from './ResultCard.svelte';
 	import { Loader } from '$lib';
 
-	import { invoke } from '@tauri-apps/api/core';
-	import { dbStore } from '$lib/stores/db';
+	import { searchSources, type ScoredChunk } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
 
-	import type { EmbeddingResult } from '$utils/pdf_handlers';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { clickOutside } from '$utils/clickOutside.svelte';
-
-	const { executeQuery } = dbStore;
 
 	interface Props {
 		selectedText: string;
@@ -22,116 +18,41 @@
 
 	let { selectedText, closePanel, selectCitation }: Props = $props();
 
-	async function handleQuery(query: string): Promise<
-		{
-			metadata: CitationItem;
-			sentence: string;
-			similarity: number;
-			id: string;
-		}[]
-	> {
-		const similarSentences = await searchSimilarChunks(query);
-		return similarSentences;
+	type Match = ScoredChunk & { sentence: string; id: string; metadata: CitationItem };
+
+	/** Widen past the project's own sources into the rest of the library. */
+	let includeLibrary = $state(false);
+
+	/**
+	 * Embedding, cosine and ranking all happen in Rust now.
+	 *
+	 * This used to SELECT every chunk and its embedding, pull the whole corpus
+	 * across the IPC boundary, JSON.parse each 384-float array and score them on
+	 * the main thread. Only the top results cross now.
+	 */
+	async function search(includeWiderLibrary: boolean): Promise<Match[]> {
+		const chunks = await searchSources(selectedText, {
+			limit: 5,
+			includeLibrary: includeWiderLibrary
+		});
+
+		const citationSources = citationStore.getAllSourcesAsJson();
+
+		return chunks.map((chunk) => ({
+			...chunk,
+			sentence: chunk.text,
+			id: chunk.sha256,
+			// A source found outside the project has no citation entry loaded yet;
+			// adding it to the project is what makes it citable.
+			metadata: citationSources[chunk.sha256] ?? {
+				id: chunk.sha256,
+				type: 'article-journal',
+				title: 'Unknown Title'
+			}
+		}));
 	}
 
-	const results = handleQuery(selectedText);
-
-	async function searchSimilarChunks(query: string, topK: number = 5) {
-		query = selectedText;
-		try {
-			// Get query embedding
-			const queryEmbeddingResult = (await invoke('embed_chunks', {
-				chunks: [query]
-			})) as EmbeddingResult[];
-
-			const queryEmbedding = queryEmbeddingResult[0].embedding;
-
-			// Get all chunks and their embeddings from database
-			const chunks = (await executeQuery(`
-			 SELECT
-				chunks.chunk_text,
-				chunks.embedding,
-				files.id
-			FROM
-			   chunks
-			JOIN
-			   files ON chunks.file_id = files.id
-			`)) as { chunk_text: string; embedding: string; id: string }[];
-			// Calculate similarities
-			const similarities = chunks.map((chunk) => {
-				const chunkEmbedding = JSON.parse(chunk.embedding);
-				const similarity = cosineSimilarity(queryEmbedding, chunkEmbedding);
-
-				return {
-					sentence: chunk.chunk_text,
-					similarity,
-					id: chunk.id
-				};
-			});
-
-			// Sort by similarity in descending order and take top K
-			const topResults = similarities.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
-			const citationSources = citationStore.getAllSourcesAsJson();
-			// Add metadata to top results only
-			const resultsWithMetadata = topResults.map((result) => {
-				let metadata = null;
-
-				if (result.id && citationSources[result.id]) {
-					metadata = citationSources[result.id];
-				}
-				// If no matching citation found, use placeholder metadata
-				if (!metadata) {
-					metadata = {
-						id: `unknown-${Date.now()}`,
-						type: 'article-journal',
-						title: 'Unknown Title',
-						author: [
-							{
-								family: 'Unknown',
-								given: 'Author'
-							}
-						]
-					};
-				}
-
-				return {
-					...result,
-					metadata
-				};
-			});
-
-			console.log({ resultsWithMetadata });
-			return resultsWithMetadata;
-		} catch (error) {
-			console.error('Error in similarity search:', error);
-			throw error;
-		}
-	}
-
-	function cosineSimilarity(a: number[], b: number[]): number {
-		if (a.length !== b.length) {
-			throw new Error('Vectors must have same length');
-		}
-
-		let dotProduct = 0;
-		let normA = 0;
-		let normB = 0;
-
-		for (let i = 0; i < a.length; i++) {
-			dotProduct += a[i] * b[i];
-			normA += a[i] * a[i];
-			normB += b[i] * b[i];
-		}
-
-		normA = Math.sqrt(normA);
-		normB = Math.sqrt(normB);
-
-		if (normA === 0 || normB === 0) {
-			return 0;
-		}
-
-		return dotProduct / (normA * normB);
-	}
+	const results = $derived(search(includeLibrary));
 </script>
 
 <div
@@ -140,19 +61,43 @@
 	use:clickOutside
 	onoutclick={closePanel}
 >
-	<h3 class="p-4">Top Matching results:</h3>
+	<h3 class="p-4">
+		{includeLibrary ? 'Matches across your library' : 'Matches in this project'}
+	</h3>
 	{#await results}
 		<div class="flex h-[50%] w-[100%] flex-col items-center justify-center">
 			<p class="p-4">Searching for citation:</p>
 			<Loader />
 		</div>
-	{:then similarSentences}
-		{#if similarSentences.length > 0}
-			{#each similarSentences as sentenceMetadata, i (i)}
-				<ResultCard {sentenceMetadata} {selectCitation} />
+	{:then matches}
+		{#if matches.length > 0}
+			{#each matches as match, i (i)}
+				<ResultCard sentenceMetadata={match} {selectCitation} />
 			{/each}
 		{:else}
-			<p class="p-4">No results found</p>
+			<p class="p-4">
+				{includeLibrary ? 'No results found' : 'Nothing in this project matches'}
+			</p>
+		{/if}
+
+		<!--
+			The project's own sources are searched first. Everything else read for
+			any project stays one click away, rather than being invisible.
+		-->
+		{#if !includeLibrary}
+			<button
+				class="m-4 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+				onclick={() => (includeLibrary = true)}
+			>
+				Search the rest of my library
+			</button>
+		{:else}
+			<button
+				class="m-4 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+				onclick={() => (includeLibrary = false)}
+			>
+				Only this project
+			</button>
 		{/if}
 	{:catch error}
 		<p class="p-4">Error: {error.message}</p>

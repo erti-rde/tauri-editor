@@ -3,7 +3,7 @@ import { citationStore } from './citationStore';
 import CSL from 'citeproc';
 import { get } from 'svelte/store';
 import * as pluginStore from '@tauri-apps/plugin-store';
-import { dbStore } from '$lib/stores/db';
+import { projectSources } from '$lib/stores/db';
 import type { CitationItem } from './citationStore';
 
 // Mock dependencies
@@ -12,7 +12,7 @@ vi.mock('@tauri-apps/plugin-store', () => ({
 }));
 
 vi.mock('$lib/stores/db', () => ({
-	dbStore: { executeQuery: vi.fn() }
+	projectSources: vi.fn()
 }));
 
 vi.mock('citeproc', () => {
@@ -26,8 +26,10 @@ vi.mock('citeproc', () => {
 	};
 });
 
+// A source's citation id is now the SHA-256 of its file, so one paper keeps the
+// same identity across every project that cites it.
 const fakeCitationItem: CitationItem = {
-	id: '1',
+	id: 'hash1',
 	type: 'book',
 	title: 'Test Book',
 	author: [{ family: 'Smith', given: 'John' }]
@@ -63,14 +65,19 @@ describe('citationStore', () => {
 				.mockImplementationOnce(() => '<locale-xml/>')
 		};
 		(pluginStore.load as unknown as MockInstance).mockResolvedValue(fakeStore);
-		(dbStore.executeQuery as unknown as MockInstance).mockResolvedValue([
-			{ id: 1, file_name: 'file1', metadata: JSON.stringify(fakeCitationItem) }
+		(projectSources as unknown as MockInstance).mockResolvedValue([
+			{
+				sha256: 'hash1',
+				file_name: 'file1',
+				csl_json: JSON.stringify(fakeCitationItem),
+				state: 'ready'
+			}
 		]);
 
 		await citationStore.initializeCitationStore();
 		const value = get(citationStore);
 		expect(value.engine).not.toBe(null);
-		expect(value.citationSources['1']).toMatchObject(fakeCitationItem);
+		expect(value.citationSources['hash1']).toMatchObject(fakeCitationItem);
 	});
 
 	it('getAllSourcesAsJson returns sources', async () => {
@@ -82,11 +89,16 @@ describe('citationStore', () => {
 				.mockImplementationOnce(() => '<locale-xml/>')
 		};
 		(pluginStore.load as unknown as MockInstance).mockResolvedValue(fakeStore);
-		(dbStore.executeQuery as unknown as MockInstance).mockResolvedValue([
-			{ id: 1, file_name: 'file1', metadata: JSON.stringify(fakeCitationItem) }
+		(projectSources as unknown as MockInstance).mockResolvedValue([
+			{
+				sha256: 'hash1',
+				file_name: 'file1',
+				csl_json: JSON.stringify(fakeCitationItem),
+				state: 'ready'
+			}
 		]);
 		await citationStore.initializeCitationStore();
-		expect(citationStore.getAllSourcesAsJson()).toHaveProperty('1');
+		expect(citationStore.getAllSourcesAsJson()).toHaveProperty('hash1');
 	});
 
 	it('getInlineCitation returns formatted citation', () => {

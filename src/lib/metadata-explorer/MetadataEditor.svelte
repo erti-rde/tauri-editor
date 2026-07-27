@@ -1,17 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { dbStore } from '$lib/stores/db';
+	import { projectSources, setMetadataOverride } from '$lib/stores/db';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { Icon } from '$lib';
 	import { augmentSchema } from './adapterCslZotero';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 
-	const { executeQuery } = dbStore;
-
 	type Source = {
-		id: number;
+		id: string;
 		file_name: string;
 		metadata: CitationItem;
 	};
@@ -21,7 +19,7 @@
 
 	let loading = $state(true);
 	let searchQuery = $state('');
-	let selectedSourceId: number | null = $state(null);
+	let selectedSourceId: string | null = $state(null);
 	let sidebarOpen = $state(false);
 	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
@@ -31,27 +29,15 @@
 		loading = false;
 	});
 	async function loadSources() {
-		let files = (await executeQuery(`
-	           SELECT
-	             files.id, files.file_name, sm.metadata
-	           FROM
-	             files
-	           LEFT JOIN
-	             source_metadata sm ON files.id = sm.file_id
-	       `)) as {
-			id: number;
-			file_name: string;
-			metadata: string;
-		}[];
-
-		sources = files.map((file) => {
-			// TODO: check if the metadata type is present or not. We could try to fetch data from online again
-			// if we know the type determine zotero type from it and save it to db
-			return {
-				...file,
-				metadata: JSON.parse(file.metadata)
-			};
-		});
+		sources = (await projectSources()).map((source) => ({
+			id: source.sha256,
+			file_name: source.file_name,
+			// Unresolved sources have no CSL-JSON yet; the row still lists so the
+			// user can see what failed and fix it, rather than it vanishing.
+			metadata: source.csl_json ? JSON.parse(source.csl_json) : {},
+			state: source.state,
+			last_error: source.last_error
+		}));
 	}
 
 	function getAuthorDisplay(source: Source) {
@@ -64,13 +50,13 @@
 		return null;
 	}
 
-	function handleSourceSelect(sourceId: number) {
+	function handleSourceSelect(sourceId: string) {
 		selectedSourceId = sourceId;
 		const source = sources.find((s) => s.id === sourceId);
 		if (source) {
 			editingSource = source.metadata;
 			if (source.file_name) {
-				editingSource.id = String(source.id);
+				editingSource.id = source.id;
 			}
 		} else {
 			editingSource = null;
@@ -84,11 +70,11 @@
 		editingSource = null;
 	}
 
-	async function handleSourceUpdate(sourceId: number, metadata: CitationItem) {
-		await executeQuery(
-			`INSERT OR REPLACE INTO source_metadata (file_id, metadata, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`,
-			[sourceId, JSON.stringify(metadata)]
-		);
+	async function handleSourceUpdate(sourceId: string, metadata: CitationItem) {
+		// Written as a project-local override, so correcting a source here does
+		// not silently rewrite it for every other project citing the same paper.
+		await setMetadataOverride(sourceId, JSON.stringify(metadata));
+		await loadSources();
 
 		editingSource = null;
 		sidebarOpen = false;

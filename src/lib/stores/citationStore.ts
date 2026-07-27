@@ -2,9 +2,7 @@ import { writable, get } from 'svelte/store';
 import CSL from 'citeproc';
 import type { Store } from '@tauri-apps/plugin-store';
 import { load as loadStore } from '@tauri-apps/plugin-store';
-import { dbStore } from '$lib/stores/db';
-
-const { executeQuery } = dbStore;
+import { projectSources } from '$lib/stores/db';
 
 // Define types for our citation data
 export interface CitationItem {
@@ -150,24 +148,20 @@ async function getInitialState() {
 		console.log('Style XML snippet:', styleXml?.substring(0, 300));
 		console.log('Locale XML snippet:', localeXml?.substring(0, 300));
 
-		const itemsJson2 = (await executeQuery(`
-		  SELECT
-				 files.id, files.file_name, sm.metadata
-			FROM
-			 files
-			LEFT JOIN
-			  source_metadata sm ON files.id = sm.file_id
-		`)) as {
-			id: number;
-			file_name: string;
-			metadata: string;
-		}[];
+		// Sources are keyed by content hash and scoped to the open project, with
+		// any project-local metadata corrections already applied by the backend.
+		const sources = await projectSources();
 
 		const citationSources: Record<string, CitationItem> = {};
 
-		itemsJson2.forEach((item) => {
-			citationSources[item.id] = { file_name: item.file_name, ...JSON.parse(item.metadata) };
-		});
+		for (const source of sources) {
+			const csl = source.csl_json ? JSON.parse(source.csl_json) : {};
+			citationSources[source.sha256] = {
+				...csl,
+				id: source.sha256,
+				file_name: source.file_name
+			};
+		}
 
 		console.log('Citation sources loaded:', Object.keys(citationSources).length);
 
