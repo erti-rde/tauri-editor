@@ -492,3 +492,191 @@ async fn a_missing_legacy_database_is_not_an_error() {
 
     assert_eq!(report.imported, 0);
 }
+
+// ---------------------------------------------------------------------------
+// End-to-end isolation, with real files on disk
+// ---------------------------------------------------------------------------
+
+/// Real PDFs from the benchmark corpus, if it has been fetched.
+///
+/// The earlier tests use synthetic hashes to exercise the schema; this one runs
+/// actual bytes through actual hashing, which is where a filename-based identity
+/// would still be able to hide.
+fn corpus() -> Option<PathBuf> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()?
+        .join("tests/fixtures/retrieval/papers");
+    dir.exists().then_some(dir)
+}
+
+#[tokio::test]
+async fn two_projects_stay_isolated_with_real_files_on_disk() {
+    let Some(corpus) = corpus() else {
+        eprintln!("skipping: run ./scripts/fetch-retrieval-corpus.sh for the PDF corpus");
+        return;
+    };
+
+    let dir = scratch("e2e");
+    let (state, library) = library_at(&dir).await;
+
+    let thesis = dir.join("thesis");
+    let review = dir.join("review");
+    std::fs::create_dir_all(&thesis).unwrap();
+    std::fs::create_dir_all(&review).unwrap();
+
+    // Two *different* papers, both named paper.pdf — the case the old
+    // `file_name UNIQUE` column silently dropped.
+    std::fs::copy(corpus.join("1706.03762v7.pdf"), thesis.join("paper.pdf")).unwrap();
+    std::fs::copy(corpus.join("1810.04805v2.pdf"), review.join("paper.pdf")).unwrap();
+
+    // And one paper genuinely present in both folders.
+    std::fs::copy(corpus.join("1512.03385v1.pdf"), thesis.join("shared.pdf")).unwrap();
+    std::fs::copy(corpus.join("1512.03385v1.pdf"), review.join("shared.pdf")).unwrap();
+
+    // --- open the first project and ingest its folder ----------------------
+    state.open_project(&thesis).await.unwrap();
+    let mut thesis_hashes = Vec::new();
+    for name in ["paper.pdf", "shared.pdf"] {
+        let path = thesis.join(name);
+        let hash = erti_lib::db::hash_file(&path).await.unwrap();
+        let is_new = queries::register_source(&library, &hash, path.to_str().unwrap(), name)
+            .await
+            .unwrap();
+        assert!(is_new, "{name} is new to an empty library");
+        queries::add_to_project(&state.project().await.unwrap(), &hash)
+            .await
+            .unwrap();
+        store_one_chunk(&library, &hash).await;
+        thesis_hashes.push(hash);
+    }
+
+    // --- open the second project and ingest its folder ---------------------
+    state.open_project(&review).await.unwrap();
+    let mut review_hashes = Vec::new();
+    for name in ["paper.pdf", "shared.pdf"] {
+        let path = review.join(name);
+        let hash = erti_lib::db::hash_file(&path).await.unwrap();
+        let is_new = queries::register_source(&library, &hash, path.to_str().unwrap(), name)
+            .await
+            .unwrap();
+
+        if name == "shared.pdf" {
+            assert!(
+                !is_new,
+                "the same paper is not re-ingested for a second project"
+            );
+        } else {
+            assert!(is_new, "a different paper of the same name is still new");
+        }
+
+        queries::add_to_project(&state.project().await.unwrap(), &hash)
+            .await
+            .unwrap();
+        if is_new {
+            store_one_chunk(&library, &hash).await;
+        }
+        review_hashes.push(hash);
+    }
+
+    // Same name, different content: two distinct sources.
+    assert_ne!(
+        thesis_hashes[0], review_hashes[0],
+        "same-named but different papers must not collide"
+    );
+    // Same content in two folders: one source.
+    assert_eq!(
+        thesis_hashes[1], review_hashes[1],
+        "identical files share one identity"
+    );
+
+    // Three sources for four files, and the shared paper embedded once.
+    let sources: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sources")
+        .fetch_one(&library)
+        .await
+        .unwrap();
+    assert_eq!(sources, 3, "four files, three distinct papers");
+
+    let shared_chunks: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM chunks WHERE sha256 = ?")
+        .bind(&thesis_hashes[1])
+        .fetch_one(&library)
+        .await
+        .unwrap();
+    assert_eq!(
+        shared_chunks, 1,
+        "the shared paper is embedded once, not twice"
+    );
+
+    let shared_locations: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM locations WHERE sha256 = ?")
+            .bind(&thesis_hashes[1])
+            .fetch_one(&library)
+            .await
+            .unwrap();
+    assert_eq!(shared_locations, 2, "but is known at both project paths");
+
+    // --- each project sees only its own sources ----------------------------
+    let review_sources = queries::project_sources(&library, &state.project().await.unwrap())
+        .await
+        .unwrap();
+    let review_set: Vec<&str> = review_sources.iter().map(|s| s.sha256.as_str()).collect();
+    assert_eq!(review_set.len(), 2);
+    assert!(review_set.contains(&review_hashes[0].as_str()));
+    assert!(
+        !review_set.contains(&thesis_hashes[0].as_str()),
+        "thesis's paper.pdf must not appear"
+    );
+
+    state.open_project(&thesis).await.unwrap();
+    let thesis_sources = queries::project_sources(&library, &state.project().await.unwrap())
+        .await
+        .unwrap();
+    let thesis_set: Vec<&str> = thesis_sources.iter().map(|s| s.sha256.as_str()).collect();
+    assert_eq!(thesis_set.len(), 2);
+    assert!(
+        !thesis_set.contains(&review_hashes[0].as_str()),
+        "review's paper.pdf must not appear"
+    );
+}
+
+async fn store_one_chunk(library: &sqlx::SqlitePool, sha256: &str) {
+    queries::store_chunks(
+        library,
+        sha256,
+        &[queries::NewChunk {
+            text: "text".into(),
+            embedding: vec![0.5, 0.5],
+            page_start: Some(1),
+            page_end: Some(1),
+            section: None,
+            char_start: None,
+            char_end: None,
+        }],
+    )
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn identical_bytes_hash_identically_and_a_single_byte_changes_it() {
+    let dir = scratch("hashing");
+    let a = dir.join("a.bin");
+    let b = dir.join("b.bin");
+    let c = dir.join("c.bin");
+
+    // Larger than the 64KB read buffer, so the streaming path is exercised.
+    let payload: Vec<u8> = (0..200_000u32).map(|i| (i % 251) as u8).collect();
+    std::fs::write(&a, &payload).unwrap();
+    std::fs::write(&b, &payload).unwrap();
+
+    let mut altered = payload.clone();
+    *altered.last_mut().unwrap() ^= 1;
+    std::fs::write(&c, &altered).unwrap();
+
+    let ha = erti_lib::db::hash_file(&a).await.unwrap();
+    let hb = erti_lib::db::hash_file(&b).await.unwrap();
+    let hc = erti_lib::db::hash_file(&c).await.unwrap();
+
+    assert_eq!(ha, hb, "identical contents, identical identity");
+    assert_ne!(ha, hc, "one differing byte is a different source");
+    assert_eq!(ha.len(), 64, "hex-encoded SHA-256");
+}
