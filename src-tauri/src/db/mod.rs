@@ -127,6 +127,32 @@ impl DbState {
     }
 }
 
+/// SHA-256 of a file's contents, streamed so large PDFs never land in memory whole.
+///
+/// This is a source's identity. Hashing contents rather than trusting a filename
+/// is what lets the same paper live in two project folders as one entry, and
+/// what stops two different papers sharing a name from colliding.
+pub async fn hash_file(path: &Path) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    use tokio::io::AsyncReadExt;
+
+    let mut file = tokio::fs::File::open(path)
+        .await
+        .map_err(|e| format!("could not open {}: {e}", path.display()))?;
+
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buf).await.map_err(|e| e.to_string())?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buf[..read]);
+    }
+
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 /// Pack embeddings as little-endian f32.
 ///
 /// The previous pipeline stored `JSON.stringify(embedding)` into a column

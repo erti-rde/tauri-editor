@@ -27,27 +27,10 @@ pub async fn project_root(state: State<'_, DbState>) -> Result<String, String> {
     Ok(state.project_root().await?.to_string_lossy().to_string())
 }
 
-/// Hash a file's contents, streaming so large PDFs do not land in memory whole.
+/// Hash a file's contents. See `db::hash_file`.
 #[tauri::command]
 pub async fn hash_file(path: String) -> Result<String, String> {
-    use sha2::{Digest, Sha256};
-    use tokio::io::AsyncReadExt;
-
-    let mut file = tokio::fs::File::open(&path)
-        .await
-        .map_err(|e| format!("could not open {path}: {e}"))?;
-
-    let mut hasher = Sha256::new();
-    let mut buf = vec![0u8; 64 * 1024];
-    loop {
-        let read = file.read(&mut buf).await.map_err(|e| e.to_string())?;
-        if read == 0 {
-            break;
-        }
-        hasher.update(&buf[..read]);
-    }
-
-    Ok(format!("{:x}", hasher.finalize()))
+    crate::db::hash_file(&PathBuf::from(path)).await
 }
 
 /// Record a source and add it to the open project.
