@@ -8,7 +8,7 @@
 use std::path::PathBuf;
 use tauri::State;
 
-use crate::db::{queries, DbState};
+use crate::db::{queries, salvage, DbState};
 
 /// Open the source library, creating it if this is the first run.
 #[tauri::command]
@@ -181,4 +181,33 @@ pub async fn set_embedding_meta(
     dims: i64,
 ) -> Result<(), String> {
     queries::set_embedding_meta(&state.library().await?, &model_id, dims).await
+}
+
+/// Import metadata from the pre-hybrid database, if one exists.
+///
+/// The old database is only read, never modified — it stays on disk so nothing
+/// is lost if the result is unsatisfactory.
+#[tauri::command]
+pub async fn import_legacy_metadata(
+    state: State<'_, DbState>,
+    legacy_db_path: String,
+) -> Result<salvage::SalvageReport, String> {
+    salvage::import_legacy_metadata(&state.library().await?, &PathBuf::from(legacy_db_path)).await
+}
+
+/// Metadata previously resolved for this filename, if any.
+#[tauri::command]
+pub async fn legacy_metadata_for(
+    state: State<'_, DbState>,
+    file_name: String,
+) -> Result<Option<String>, String> {
+    salvage::legacy_metadata_for(&state.library().await?, &file_name).await
+}
+
+#[tauri::command]
+pub async fn mark_legacy_consumed(
+    state: State<'_, DbState>,
+    file_name: String,
+) -> Result<(), String> {
+    salvage::mark_legacy_consumed(&state.library().await?, &file_name).await
 }

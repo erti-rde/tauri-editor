@@ -62,6 +62,9 @@ pub fn run() {
             search_sources,
             embedding_meta,
             set_embedding_meta,
+            import_legacy_metadata,
+            legacy_metadata_for,
+            mark_legacy_consumed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

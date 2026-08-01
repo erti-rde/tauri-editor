@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { homeDir, join } from '@tauri-apps/api/path';
+	import { appDataDir, homeDir, join } from '@tauri-apps/api/path';
 	import { load as loadStore } from '@tauri-apps/plugin-store';
 	import {
 		Editor,
@@ -11,7 +11,7 @@
 		StatusFooter,
 		MetadataEditor
 	} from '$lib';
-	import { openLibrary, openProject } from '$lib/stores/db';
+	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { fileSystemStore, fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
@@ -61,6 +61,22 @@
 			await openLibrary(await libraryPath());
 		} catch (error) {
 			console.error('Failed to open the source library:', error);
+			return;
+		}
+
+		// Carry forward whatever the pre-hybrid database resolved. Idempotent, so
+		// it can run on every launch; the old database is only read and is left
+		// on disk. Failing here must not stop the app from opening.
+		try {
+			const legacy = await join(await appDataDir(), 'magnum_opus_test.db');
+			const report = await importLegacyMetadata(legacy);
+			if (report.imported > 0) {
+				console.info(
+					`Carried forward metadata for ${report.imported} sources from the previous library.`
+				);
+			}
+		} catch (error) {
+			console.error('Could not read the previous library:', error);
 		}
 	});
 </script>

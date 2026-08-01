@@ -1,4 +1,5 @@
 pub mod queries;
+pub mod salvage;
 pub mod schema;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
