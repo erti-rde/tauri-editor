@@ -10,7 +10,7 @@
 //! than once per phase.
 
 /// Schema version applied to a freshly created or upgraded database.
-pub const LIBRARY_VERSION: i64 = 1;
+pub const LIBRARY_VERSION: i64 = 2;
 pub const PROJECT_VERSION: i64 = 1;
 
 /// The shared source corpus. Lives at a user-configurable location, defaulting to
@@ -97,6 +97,24 @@ CREATE TABLE IF NOT EXISTS embedding_meta (
     dims       INTEGER NOT NULL,
     revision   TEXT,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Metadata salvaged from the pre-hybrid database.
+--
+-- The old `files` table recorded only a filename, never a path, so there is no
+-- way to locate those PDFs and hash them: the migration cannot map old rows onto
+-- new sources by itself. What it can do is carry the metadata forward keyed by
+-- filename and apply it when a file of that name is next ingested, which saves
+-- re-fetching work that already succeeded.
+--
+-- Only rows with genuinely resolved metadata are imported. The old database was
+-- mostly '{}' placeholders that look resolved and never get retried, and
+-- importing those would recreate exactly that problem.
+CREATE TABLE IF NOT EXISTS legacy_metadata (
+    file_name   TEXT PRIMARY KEY,
+    csl_json    TEXT NOT NULL,
+    imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    consumed_at TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_locations_path ON locations(path);

@@ -109,3 +109,30 @@ export const embeddingMeta = () => invoke<[string, number] | null>('embedding_me
 
 export const setEmbeddingMeta = (modelId: string, dims: number) =>
 	invoke<void>('set_embedding_meta', { modelId, dims });
+
+export interface SalvageReport {
+	imported: number;
+	skipped_empty: number;
+	skipped_unprocessed: number;
+}
+
+/**
+ * Carry metadata forward from the pre-hybrid database, if one exists.
+ *
+ * The old schema stored a filename and no path, so its PDFs cannot be located or
+ * hashed; what can be saved is the metadata that genuinely resolved, keyed by
+ * filename and applied when a file of that name is next ingested. Rows that were
+ * `'{}'` placeholders are deliberately not imported — those are what made
+ * failures look resolved and never get retried.
+ *
+ * The old database is only read, and stays on disk.
+ */
+export const importLegacyMetadata = (legacyDbPath: string) =>
+	invoke<SalvageReport>('import_legacy_metadata', { legacyDbPath });
+
+/** Metadata previously resolved for this filename, if any. */
+export const legacyMetadataFor = (fileName: string) =>
+	invoke<string | null>('legacy_metadata_for', { fileName });
+
+export const markLegacyConsumed = (fileName: string) =>
+	invoke<void>('mark_legacy_consumed', { fileName });

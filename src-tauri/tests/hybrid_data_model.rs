@@ -339,3 +339,156 @@ async fn reopening_a_project_keeps_its_source_set() {
     );
     assert!(root.join(".erti").join("project.db").exists());
 }
+
+// ---------------------------------------------------------------------------
+// Salvage from the pre-hybrid database
+// ---------------------------------------------------------------------------
+
+/// Build a database shaped like the pre-hybrid one, with the same mix of good
+/// rows, `'{}'` placeholders and registered-but-never-processed files that the
+/// real one has.
+async fn legacy_db_at(path: &Path) -> sqlx::SqlitePool {
+    let pool = sqlx::SqlitePool::connect(&format!("sqlite:{}?mode=rwc", path.display()))
+        .await
+        .unwrap();
+
+    sqlx::raw_sql(
+        "CREATE TABLE files (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             file_name TEXT NOT NULL UNIQUE,
+             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         );
+         CREATE TABLE source_metadata (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             file_id INTEGER NULL UNIQUE,
+             metadata TEXT NULL,
+             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+         );",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let rows: [(&str, Option<&str>); 5] = [
+        (
+            "resolved-a.pdf",
+            Some(r#"{"title":"Postcolonial cities","type":"article-journal"}"#),
+        ),
+        (
+            "resolved-b.pdf",
+            Some(r#"{"title":"Cutting Feedback in Misspecified Copula Models"}"#),
+        ),
+        // The placeholder the old pipeline wrote whenever lookup failed.
+        ("placeholder.pdf", Some("{}")),
+        ("no-title.pdf", Some(r#"{"type":"article-journal"}"#)),
+        // Registered, then never processed — 41% of the real corpus.
+        ("never-processed.pdf", None),
+    ];
+
+    for (name, metadata) in rows {
+        let id: i64 = sqlx::query_scalar("INSERT INTO files (file_name) VALUES (?) RETURNING id")
+            .bind(name)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        if let Some(json) = metadata {
+            sqlx::query("INSERT INTO source_metadata (file_id, metadata) VALUES (?, ?)")
+                .bind(id)
+                .bind(json)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+    }
+
+    pool
+}
+
+#[tokio::test]
+async fn salvage_carries_forward_only_genuinely_resolved_metadata() {
+    let dir = scratch("salvage");
+    let (_state, library) = library_at(&dir).await;
+
+    let legacy_path = dir.join("magnum_opus_test.db");
+    legacy_db_at(&legacy_path).await.close().await;
+
+    let report = erti_lib::db::salvage::import_legacy_metadata(&library, &legacy_path)
+        .await
+        .unwrap();
+
+    assert_eq!(report.imported, 2, "only the rows with a real title");
+    assert_eq!(report.skipped_empty, 2, "'{{}}' and the title-less row");
+    assert_eq!(
+        report.skipped_unprocessed, 1,
+        "the file that never processed"
+    );
+
+    // Importing a '{}' placeholder would recreate the original problem: metadata
+    // that looks resolved and is therefore never retried.
+    assert!(
+        erti_lib::db::salvage::legacy_metadata_for(&library, "placeholder.pdf")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        erti_lib::db::salvage::legacy_metadata_for(&library, "resolved-a.pdf")
+            .await
+            .unwrap()
+            .unwrap()
+            .contains("Postcolonial cities")
+    );
+}
+
+#[tokio::test]
+async fn salvage_is_safe_to_run_more_than_once() {
+    let dir = scratch("salvage-twice");
+    let (_state, library) = library_at(&dir).await;
+
+    let legacy_path = dir.join("old.db");
+    legacy_db_at(&legacy_path).await.close().await;
+
+    erti_lib::db::salvage::import_legacy_metadata(&library, &legacy_path)
+        .await
+        .unwrap();
+
+    // A correction made after the first import must survive a second run.
+    sqlx::query("UPDATE legacy_metadata SET csl_json = ? WHERE file_name = 'resolved-a.pdf'")
+        .bind(r#"{"title":"Corrected by hand"}"#)
+        .execute(&library)
+        .await
+        .unwrap();
+
+    erti_lib::db::salvage::import_legacy_metadata(&library, &legacy_path)
+        .await
+        .unwrap();
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM legacy_metadata")
+        .fetch_one(&library)
+        .await
+        .unwrap();
+    assert_eq!(count, 2, "no duplicates on a second run");
+
+    assert!(
+        erti_lib::db::salvage::legacy_metadata_for(&library, "resolved-a.pdf")
+            .await
+            .unwrap()
+            .unwrap()
+            .contains("Corrected by hand"),
+        "a later correction is not clobbered"
+    );
+}
+
+#[tokio::test]
+async fn a_missing_legacy_database_is_not_an_error() {
+    // Most users are new and have nothing to migrate.
+    let dir = scratch("salvage-absent");
+    let (_state, library) = library_at(&dir).await;
+
+    let report = erti_lib::db::salvage::import_legacy_metadata(&library, &dir.join("nope.db"))
+        .await
+        .unwrap();
+
+    assert_eq!(report.imported, 0);
+}

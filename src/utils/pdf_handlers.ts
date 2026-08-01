@@ -4,7 +4,9 @@ import { get } from 'svelte/store';
 
 import {
 	hashFile,
+	legacyMetadataFor,
 	markIngestFailed,
+	markLegacyConsumed,
 	registerSource,
 	setSourceMetadata,
 	storeChunks
@@ -117,6 +119,17 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
  */
 async function getPdfMetadata(pdfDoc: PDFDocumentProxy, sha256: string, fileName: string) {
 	try {
+		// Metadata that already resolved under the previous library is reused
+		// rather than re-fetched, which also avoids telling Crossref about a paper
+		// twice.
+		const salvaged = await legacyMetadataFor(fileName);
+		if (salvaged) {
+			const carried = JSON.parse(salvaged) as CitationItem;
+			carried.id = sha256;
+			await markLegacyConsumed(fileName);
+			return carried;
+		}
+
 		let metadata: CitationItem | undefined = undefined;
 		const info = (await pdfDoc.getMetadata()).info as PdfDocumentInfo | undefined;
 
