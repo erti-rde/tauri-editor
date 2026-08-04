@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 
 	import { projectSources, setMetadataOverride } from '$lib/stores/db';
+	import { applyManualDoi, retryIngest } from '$utils/pdf_handlers';
+	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { Icon } from '$lib';
@@ -11,7 +13,12 @@
 	type Source = {
 		id: string;
 		file_name: string;
+		path: string | null;
 		metadata: CitationItem;
+		state: 'pending' | 'ready' | 'failed';
+		last_error: string | null;
+		/** True when ingest succeeded but nothing could be resolved to cite. */
+		unresolved: boolean;
 	};
 
 	let sources: Source[] = $state([]);
@@ -32,12 +39,59 @@
 		sources = (await projectSources()).map((source) => ({
 			id: source.sha256,
 			file_name: source.file_name,
+			path: source.path,
 			// Unresolved sources have no CSL-JSON yet; the row still lists so the
 			// user can see what failed and fix it, rather than it vanishing.
 			metadata: source.csl_json ? JSON.parse(source.csl_json) : {},
 			state: source.state,
-			last_error: source.last_error
+			last_error: source.last_error,
+			unresolved: !source.csl_json
 		}));
+	}
+
+	/**
+	 * Sources that need a human.
+	 *
+	 * Failure used to be invisible — 41% of the old corpus sat unprocessed with
+	 * nothing in the interface to say so. Anything that failed to ingest, or
+	 * ingested but resolved to nothing citable, is surfaced here.
+	 */
+	const needsAttention = $derived(sources.filter((s) => s.state === 'failed' || s.unresolved));
+
+	let busyWith: string | null = $state(null);
+	let doiFor: string | null = $state(null);
+	let doiInput = $state('');
+
+	async function handleRetry(source: Source) {
+		if (!source.path) {
+			errorToast(`Erti no longer knows where ${source.file_name} is.`);
+			return;
+		}
+
+		busyWith = source.id;
+		try {
+			await retryIngest({ sha256: source.id, path: source.path, file_name: source.file_name });
+			await loadSources();
+		} catch (error) {
+			errorToast(error instanceof Error ? error.message : String(error));
+		} finally {
+			busyWith = null;
+		}
+	}
+
+	async function handleManualDoi(source: Source) {
+		busyWith = source.id;
+		try {
+			const metadata = await applyManualDoi(source.id, doiInput);
+			successToast(`Resolved: ${metadata.title}`);
+			doiFor = null;
+			doiInput = '';
+			await loadSources();
+		} catch (error) {
+			errorToast(error instanceof Error ? error.message : String(error));
+		} finally {
+			busyWith = null;
+		}
 	}
 
 	function getAuthorDisplay(source: Source) {
@@ -111,6 +165,79 @@
 				/>
 			</div>
 		</div>
+
+		<!--
+			Failure has to be visible to be fixable. The old pipeline registered a
+			file, failed silently and never offered it again.
+		-->
+		{#if needsAttention.length > 0}
+			<div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
+				<div class="mb-2 flex items-center gap-2">
+					<Icon icon="FileWarning" class="h-4 w-4 text-amber-600" />
+					<span class="font-medium text-amber-900">
+						{needsAttention.length}
+						{needsAttention.length === 1 ? 'source needs' : 'sources need'} attention
+					</span>
+				</div>
+
+				<div class="divide-y divide-amber-200">
+					{#each needsAttention as source (source.id)}
+						<div class="py-2">
+							<div class="flex items-center justify-between gap-3">
+								<div class="min-w-0">
+									<div class="truncate text-sm font-medium text-gray-800">{source.file_name}</div>
+									<div class="text-xs text-amber-700">
+										{#if source.state === 'failed'}
+											{source.last_error ?? 'Could not be processed'}
+										{:else}
+											No citation details found
+										{/if}
+									</div>
+								</div>
+
+								<div class="flex shrink-0 gap-2">
+									<button
+										class="rounded-md border border-amber-400 px-3 py-1 text-sm text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+										disabled={busyWith === source.id}
+										onclick={() => handleRetry(source)}
+									>
+										{busyWith === source.id ? 'Working…' : 'Retry'}
+									</button>
+									<button
+										class="rounded-md border border-amber-400 px-3 py-1 text-sm text-amber-900 hover:bg-amber-100"
+										onclick={() => {
+											doiFor = doiFor === source.id ? null : source.id;
+											doiInput = '';
+										}}
+									>
+										Enter DOI
+									</button>
+								</div>
+							</div>
+
+							{#if doiFor === source.id}
+								<div class="mt-2 flex gap-2">
+									<input
+										type="text"
+										bind:value={doiInput}
+										placeholder="10.1000/example or https://doi.org/…"
+										class="flex-1 rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none"
+										onkeydown={(e) => e.key === 'Enter' && handleManualDoi(source)}
+									/>
+									<button
+										class="rounded-md bg-orange-500 px-3 py-1 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+										disabled={busyWith === source.id || doiInput.trim().length === 0}
+										onclick={() => handleManualDoi(source)}
+									>
+										Resolve
+									</button>
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		{#if loading}
 			<div class="flex h-20 items-center justify-center">

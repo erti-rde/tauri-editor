@@ -31,6 +31,7 @@ import type { CitationItem } from '$lib/stores/citationStore';
 import { extractPages, pagesToText } from '$lib/ingest/extract';
 import { chunkPages } from '$lib/ingest/chunk';
 import { resolveMetadata, type ResolvedVia } from '$lib/ingest/resolve';
+import { findDoi } from '$lib/ingest/identifiers';
 import { getMailto, networkAllowed } from '$lib/stores/consent';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -297,4 +298,64 @@ export async function extractAndChunkPdfs(): Promise<void> {
 		});
 		console.error('Error processing PDFs:', error);
 	}
+}
+
+/**
+ * Re-attempt a source that previously failed or never resolved.
+ *
+ * The whole point of recording failures rather than swallowing them is that they
+ * can be acted on. This re-runs the same path a first scan takes, so a transient
+ * network problem or a since-granted consent is all it takes to succeed.
+ */
+export async function retryIngest(source: {
+	sha256: string;
+	path: string;
+	file_name: string;
+}): Promise<void> {
+	await processSinglePdf(source.path, source.file_name, source.sha256);
+}
+
+/**
+ * Resolve a source from a DOI the user supplies.
+ *
+ * Automatic resolution will never be perfect — a scanned chapter or a working
+ * paper may carry no identifier at all. Pasting a DOI turns that from a silent
+ * dead end into a few seconds' work.
+ */
+export async function applyManualDoi(sha256: string, doi: string): Promise<CitationItem> {
+	const cleaned = findDoi(doi) ?? doi.trim();
+
+	const resolved = await resolveMetadata({
+		text: cleaned,
+		allowNetwork: await networkAllowed(),
+		mailto: await getMailto()
+	});
+
+	if (!resolved) {
+		throw new Error(
+			(await networkAllowed())
+				? `Could not resolve ${cleaned}. Check the DOI, or enter the details by hand.`
+				: 'Online lookups are turned off. Enable them in Settings, or enter the details by hand.'
+		);
+	}
+
+	const metadata = resolved.csl as CitationItem;
+	metadata.id = sha256;
+	if (typeof metadata.title !== 'string') {
+		metadata.title = Array.isArray(metadata.title)
+			? ((metadata.title as unknown[])[0]?.toString() ?? cleaned)
+			: cleaned;
+	}
+	if (metadata.reference) delete metadata.reference;
+
+	const withType = await withZoteroType(metadata);
+	await setSourceMetadata({
+		sha256,
+		cslJson: JSON.stringify(withType),
+		zoteroType: (withType.zotero_type as string) ?? null,
+		doi: resolved.doi ?? cleaned,
+		resolvedVia: 'manual'
+	});
+
+	return withType;
 }
