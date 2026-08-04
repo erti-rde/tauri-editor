@@ -12,10 +12,15 @@
 		MetadataEditor
 	} from '$lib';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
+	import { getConsent } from '$lib/stores/consent';
+	import ConsentPrompt from '$lib/consent/ConsentPrompt.svelte';
 	import { fileSystemStore, fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
 	import type { PanelNames } from '$types/page';
+
+	// Asked once, before anything can be sent anywhere.
+	let askForConsent = $state(false);
 
 	let isExplorerOpen = $state(true);
 	let vaultIsOpen = $state(false);
@@ -57,6 +62,10 @@
 	}
 
 	onMount(async () => {
+		// The app has always sent titles and page text to Crossref during ingest
+		// while promising it would not without consent. Ask before the first scan.
+		askForConsent = (await getConsent()) === 'unasked';
+
 		try {
 			await openLibrary(await libraryPath());
 		} catch (error) {
@@ -80,6 +89,10 @@
 		}
 	});
 </script>
+
+{#if askForConsent}
+	<ConsentPrompt onchoice={() => (askForConsent = false)} />
+{/if}
 
 <div class="flex h-screen flex-col">
 	<div class="flex min-h-0 grow">

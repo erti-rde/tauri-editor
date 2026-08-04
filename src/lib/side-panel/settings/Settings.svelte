@@ -5,6 +5,7 @@
 	import type { Store } from '@tauri-apps/plugin-store';
 	import { Icon } from '$lib';
 	import { clickOutside } from '$utils/clickOutside.svelte';
+	import { getConsent, getMailto, setConsent, setMailto } from '$lib/stores/consent';
 
 	interface Props {
 		isOpen: boolean;
@@ -21,6 +22,11 @@
 	let citationStyles: { name: string; download_url: string }[] = $state([]);
 	let locales: { [key: string]: string[] } = $state({});
 	let activeTab = $state('general');
+
+	// Governs every outbound request: metadata lookups and citation-style
+	// downloads alike.
+	let allowNetwork = $state(false);
+	let crossrefMailto = $state('');
 
 	// Load citation styles and locales from resources folder
 	async function loadResources() {
@@ -141,6 +147,9 @@
 				wordCountHasChanged = true;
 			}
 
+			await setConsent(allowNetwork);
+			await setMailto(crossrefMailto);
+
 			window.dispatchEvent(
 				new CustomEvent('settings-updated', {
 					detail: { localeHasChanged, styleHasChanged, wordCountHasChanged }
@@ -162,6 +171,8 @@
 		wordCount = ((await store.get('wordCount')) as number) || 0;
 		selectedStyle = ((await store.get('selectedStyle')) as string) || '';
 		selectedLocale = ((await store.get('selectedLocale')) as string) || 'en-GB';
+		allowNetwork = (await getConsent()) === 'granted';
+		crossrefMailto = (await getMailto()) ?? '';
 		await loadResources();
 	});
 </script>
@@ -234,6 +245,46 @@
 								</div>
 								<p class="mt-1 text-sm text-gray-500">Set your target word count for documents</p>
 							</div>
+
+							<div class="mb-6">
+								<label class="flex items-start gap-3">
+									<input
+										type="checkbox"
+										bind:checked={allowNetwork}
+										class="mt-1 h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+									/>
+									<span>
+										<span class="block font-medium text-gray-700"
+											>Look up citation details online</span
+										>
+										<span class="mt-1 block text-sm text-gray-500">
+											Sends a paper's identifier — or its title and the opening of its first page —
+											to doi.org and crossref.org, and allows citation styles to be downloaded. With
+											this off, Erti reads the identifier printed in each paper and nothing leaves
+											your machine.
+										</span>
+									</span>
+								</label>
+							</div>
+
+							{#if allowNetwork}
+								<div class="mb-6">
+									<label for="crossref-mailto" class="mb-2 block font-medium text-gray-700">
+										Contact address for Crossref (optional)
+									</label>
+									<input
+										id="crossref-mailto"
+										type="email"
+										bind:value={crossrefMailto}
+										placeholder="you@university.edu"
+										class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
+									/>
+									<p class="mt-1 text-sm text-gray-500">
+										Crossref asks API users to identify themselves and gives those requests better
+										service. Yours to provide or leave blank.
+									</p>
+								</div>
+							{/if}
 						</div>
 					</div>
 

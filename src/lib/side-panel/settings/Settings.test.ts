@@ -3,6 +3,15 @@ import { render, fireEvent, waitFor, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 import Settings from './Settings.svelte';
 
+// Consent persistence has its own module and its own store handle; stub it so
+// this suite stays about the dialog rather than about plugin-store plumbing.
+vi.mock('$lib/stores/consent', () => ({
+	getConsent: vi.fn().mockResolvedValue('granted'),
+	getMailto: vi.fn().mockResolvedValue(''),
+	setConsent: vi.fn().mockResolvedValue(undefined),
+	setMailto: vi.fn().mockResolvedValue(undefined)
+}));
+
 const { mockStore } = vi.hoisted(() => {
 	return {
 		mockStore: {
