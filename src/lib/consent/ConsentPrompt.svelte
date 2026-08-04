@@ -19,14 +19,51 @@
 
 	const { onchoice }: Props = $props();
 
+	let dialog: HTMLDivElement;
+	let allowButton: HTMLButtonElement;
+	let previouslyFocused: HTMLElement | null = null;
+
+	// Without this a keyboard user can tab straight past the overlay and operate
+	// the app behind it — while the question of whether data may leave the machine
+	// is still unanswered.
+	$effect(() => {
+		previouslyFocused = document.activeElement as HTMLElement | null;
+		allowButton?.focus();
+
+		return () => previouslyFocused?.focus();
+	});
+
+	function trapFocus(event: KeyboardEvent) {
+		if (event.key !== 'Tab' || !dialog) return;
+
+		const focusable = dialog.querySelectorAll<HTMLElement>(
+			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+		);
+		if (focusable.length === 0) return;
+
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+
+		if (event.shiftKey && document.activeElement === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && document.activeElement === last) {
+			event.preventDefault();
+			first.focus();
+		}
+	}
+
 	async function choose(granted: boolean) {
 		await setConsent(granted);
 		onchoice(granted);
 	}
 </script>
 
+<svelte:window onkeydown={trapFocus} />
+
 <div class="fixed inset-0 z-100 flex items-center justify-center bg-black/50">
 	<div
+		bind:this={dialog}
 		class="w-[520px] max-w-[90%] rounded-lg bg-white p-6 shadow-xl"
 		role="dialog"
 		aria-modal="true"
@@ -59,6 +96,7 @@
 				Stay offline
 			</button>
 			<button
+				bind:this={allowButton}
 				class="rounded-md bg-orange-500 px-4 py-2 font-medium text-white hover:bg-orange-600"
 				onclick={() => choose(true)}
 			>

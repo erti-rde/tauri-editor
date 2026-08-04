@@ -14,7 +14,8 @@
 		id: string;
 		file_name: string;
 		path: string | null;
-		metadata: CitationItem;
+		/** Null when the source has not resolved to anything citable. */
+		metadata: CitationItem | null;
 		state: 'pending' | 'ready' | 'failed';
 		last_error: string | null;
 		/** True when ingest succeeded but nothing could be resolved to cite. */
@@ -31,22 +32,43 @@
 	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
 	onMount(async () => {
-		augmentedSchema = await augmentSchema();
-		await loadSources();
-		loading = false;
+		try {
+			augmentedSchema = await augmentSchema();
+			await loadSources();
+		} catch (error) {
+			// Leaving `loading` true would strand the panel on its spinner.
+			errorToast(error instanceof Error ? error.message : String(error));
+		} finally {
+			loading = false;
+		}
 	});
+	/** An unreadable value is treated as unresolved rather than failing the load. */
+	function parseCsl(cslJson: string | null): CitationItem | null {
+		if (!cslJson) return null;
+		try {
+			return JSON.parse(cslJson) as CitationItem;
+		} catch (error) {
+			console.error('Unreadable citation metadata; treating the source as unresolved.', error);
+			return null;
+		}
+	}
+
 	async function loadSources() {
-		sources = (await projectSources()).map((source) => ({
-			id: source.sha256,
-			file_name: source.file_name,
-			path: source.path,
+		sources = (await projectSources()).map((source) => {
 			// Unresolved sources have no CSL-JSON yet; the row still lists so the
 			// user can see what failed and fix it, rather than it vanishing.
-			metadata: source.csl_json ? JSON.parse(source.csl_json) : {},
-			state: source.state,
-			last_error: source.last_error,
-			unresolved: !source.csl_json
-		}));
+			const metadata = parseCsl(source.csl_json);
+
+			return {
+				id: source.sha256,
+				file_name: source.file_name,
+				path: source.path,
+				metadata,
+				state: source.state,
+				last_error: source.last_error,
+				unresolved: metadata === null
+			};
+		});
 	}
 
 	/**
@@ -80,10 +102,17 @@
 	}
 
 	async function handleManualDoi(source: Source) {
+		// Validated here rather than only in the template: the Enter-key path
+		// applied neither guard, so it could fire on an empty input or start a
+		// second concurrent resolve.
+		if (busyWith === source.id) return;
+		const doi = doiInput.trim();
+		if (!doi) return;
+
 		busyWith = source.id;
 		try {
-			const metadata = await applyManualDoi(source.id, doiInput);
-			successToast(`Resolved: ${metadata.title}`);
+			const metadata = await applyManualDoi(source.id, doi);
+			successToast(`Resolved: ${metadata.title ?? source.file_name}`);
 			doiFor = null;
 			doiInput = '';
 			await loadSources();
@@ -108,7 +137,12 @@
 		selectedSourceId = sourceId;
 		const source = sources.find((s) => s.id === sourceId);
 		if (source) {
-			editingSource = source.metadata;
+			// A copy: SourceSidebar takes this as $bindable() and mutates fields in
+			// place, which would otherwise edit the loaded list as the user types,
+			// before anything is saved.
+			editingSource = source.metadata
+				? (structuredClone($state.snapshot(source.metadata)) as CitationItem)
+				: ({ id: source.id, type: '' } as CitationItem);
 			if (source.file_name) {
 				editingSource.id = source.id;
 			}

@@ -25,16 +25,22 @@ numbers reflect what users get rather than a reimplementation.
 | ---------- | ----------------------------------------------------------------- |
 | Extraction | geometry-based spacing, column detection, running heads stripped  |
 | Chunking   | section-aware, references excluded, 380-char target, 15 % overlap |
-| Corpus     | 20 papers → **4563 chunks** (82 of 410 pages detected two-column) |
+| Corpus     | 20 papers → **5601 chunks** (82 of 410 pages detected two-column) |
 
-| metric         | before  | after      | change      |
-| -------------- | ------- | ---------- | ----------- |
-| **Recall@1**   | 80.0 %  | **84.0 %** | **+4.0 pt** |
-| Recall@5       | 100.0 % | 100.0 %    | —           |
-| **MRR**        | 0.900   | **0.920**  | **+0.020**  |
-| Queries missed | 5       | **4**      | −1          |
-| Corpus embed   | 27.7 s  | **20.8 s** | −25 %       |
-| Throughput     | 290/s   | 220/s      | see below   |
+| metric         | baseline | first pass | after review fixes | change      |
+| -------------- | -------- | ---------- | ------------------ | ----------- |
+| **Recall@1**   | 80.0 %   | 84.0 %     | **88.0 %**         | **+8.0 pt** |
+| Recall@5       | 100.0 %  | 100.0 %    | 100.0 %            | —           |
+| **MRR**        | 0.900    | 0.920      | **0.940**          | **+0.040**  |
+| Queries missed | 5        | 4          | **3**              | −2          |
+| Corpus embed   | 27.7 s   | 20.8 s     | **22.2 s**         | −20 %       |
+| Throughput     | 290/s    | 220/s      | 252/s              | see below   |
+
+The gain between the two passes came from **fixing data loss, not from tuning**. Two chunking
+bugs were dropping content: an enumerated sentence such as `1. We evaluate…` was classified as a
+heading (and heading text is never indexed), and everything printed after the reference list —
+appendices included — was discarded. Recovering that content added roughly a thousand chunks and
+four points of Recall@1.
 
 **Throughput fell but ingest got faster.** Chunks are roughly 1.75× larger, so
 chunks-per-second is not comparable across the change. Time to embed the whole corpus —

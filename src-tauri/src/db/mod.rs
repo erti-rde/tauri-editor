@@ -65,6 +65,17 @@ async fn apply_schema(pool: &SqlitePool, sql: &str, version: i64) -> Result<(), 
         return Ok(());
     }
 
+    // A database written by a newer build may contain structures this code does
+    // not understand. Opening it read-write risks corrupting a user's library,
+    // so fail closed rather than treating it as current.
+    if let Some(found) = current {
+        if found > version {
+            return Err(format!(
+                "This library was created by a newer version of Erti (schema {found}, this build understands {version}). Please update Erti."
+            ));
+        }
+    }
+
     // sqlx's query API is single-statement; the schemas are multi-statement.
     sqlx::raw_sql(sql)
         .execute(pool)

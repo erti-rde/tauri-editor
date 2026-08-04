@@ -155,9 +155,12 @@ async function getInitialState() {
 		const citationSources: Record<string, CitationItem> = {};
 
 		for (const source of sources) {
-			const csl = source.csl_json ? JSON.parse(source.csl_json) : {};
+			// Only sources that actually resolved can be cited. Including pending or
+			// failed ones offered the user a source citeproc has nothing to format.
+			if (source.state !== 'ready' || !source.csl_json) continue;
+
 			citationSources[source.sha256] = {
-				...csl,
+				...JSON.parse(source.csl_json),
 				id: source.sha256,
 				file_name: source.file_name
 			};

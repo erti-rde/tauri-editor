@@ -13,6 +13,7 @@
 	} from '$lib';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
+	import { errorToast } from '$lib/toast/Toast.svelte';
 	import ConsentPrompt from '$lib/consent/ConsentPrompt.svelte';
 	import { fileSystemStore, fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
@@ -21,6 +22,10 @@
 
 	// Asked once, before anything can be sent anywhere.
 	let askForConsent = $state(false);
+
+	// A library that failed to open does not resolve by itself, and every later
+	// action depends on it — so this is persistent, not a dismissible toast.
+	let startupError: string | null = $state(null);
 
 	let isExplorerOpen = $state(true);
 	let vaultIsOpen = $state(false);
@@ -41,10 +46,24 @@
 		// The project database lives at <project>/.erti/project.db and is created
 		// on first open, so each project keeps its own manuscripts, source set and
 		// metadata corrections while sharing the one library of sources.
-		await openProject($fileSystemStore.currentPath);
+		try {
+			await openProject($fileSystemStore.currentPath);
+		} catch (error) {
+			// Leave the project closed rather than showing an empty workspace.
+			errorToast(`Could not open this project: ${message(error)}`);
+			return;
+		}
+
 		vaultIsOpen = true;
-		await extractAndChunkPdfs();
+
+		try {
+			await extractAndChunkPdfs();
+		} catch (error) {
+			errorToast(`Could not scan this folder: ${message(error)}`);
+		}
 	}
+
+	const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 	/**
 	 * Where the shared source library lives.
@@ -69,7 +88,7 @@
 		try {
 			await openLibrary(await libraryPath());
 		} catch (error) {
-			console.error('Failed to open the source library:', error);
+			startupError = message(error);
 			return;
 		}
 
@@ -89,6 +108,13 @@
 		}
 	});
 </script>
+
+{#if startupError}
+	<div class="border-b border-red-300 bg-red-50 px-4 py-3 text-red-900">
+		<span class="font-medium">Erti could not open your source library.</span>
+		{startupError}
+	</div>
+{/if}
 
 {#if askForConsent}
 	<ConsentPrompt onchoice={() => (askForConsent = false)} />

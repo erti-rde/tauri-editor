@@ -203,6 +203,14 @@ pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 
 #[tauri::command]
 pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
+    // Ingest embeds hundreds of chunks per document. Off the async workers, as
+    // above: this is CPU-bound inference with no await points.
+    tokio::task::spawn_blocking(move || embed_chunks_blocking(chunks))
+        .await
+        .map_err(|e| format!("embedding task failed: {e}"))?
+}
+
+fn embed_chunks_blocking(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
     // `true` applies the tokenizer's [CLS] … [SEP] template, matching how
     // sentence-transformers embeds text. This previously passed `false`; the
     // retrieval benchmark measures the difference as small but consistently

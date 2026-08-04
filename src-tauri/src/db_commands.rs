@@ -131,10 +131,16 @@ pub async fn search_sources(
     limit: Option<usize>,
     include_library: Option<bool>,
 ) -> Result<Vec<queries::ScoredChunk>, String> {
-    let embedding = crate::commands::embed_texts(&[query], true)?
-        .into_iter()
-        .next()
-        .ok_or_else(|| "query produced no embedding".to_string())?;
+    // embed_texts is synchronous ONNX inference with no await points; running it
+    // on an async worker blocks that worker for the whole inference and can
+    // starve other commands.
+    let embedding =
+        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&[query], true))
+            .await
+            .map_err(|e| format!("embedding task failed: {e}"))??
+            .into_iter()
+            .next()
+            .ok_or_else(|| "query produced no embedding".to_string())?;
 
     let library = state.library().await?;
     let project_hashes = match state.project().await {
