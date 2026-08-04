@@ -78,7 +78,6 @@
 		"@tiptap/starter-kit": "^3.29.0",
 		"@tiptap/suggestion": "^3.29.0",
 		"citeproc": "^2.4.63",
-		"llm-chunk": "^0.0.1",
 		"pdfjs-dist": "4.9.155",
 		"tippy.js": "^6.3.7"
 	},
