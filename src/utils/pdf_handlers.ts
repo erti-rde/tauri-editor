@@ -28,7 +28,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import type { CitationItem } from '$lib/stores/citationStore';
 // Extraction and chunking live in $lib/ingest so the retrieval benchmark runs
 // exactly this code rather than a copy that can drift.
-import { extractPages, pagesToText } from '$lib/ingest/extract';
+import { extractPages, pagesToText, type ExtractedPage } from '$lib/ingest/extract';
 import { chunkPages } from '$lib/ingest/chunk';
 import { resolveMetadata, type ResolvedVia } from '$lib/ingest/resolve';
 import { findDoi } from '$lib/ingest/identifiers';
@@ -67,12 +67,20 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 		pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
 		const pages = await extractPages(pdfDoc);
-		const pdfMetadata = await getPdfMetadata(pdfDoc, sha256, fileName);
+		const pdfMetadata = await getPdfMetadata(pages, sha256, fileName, pdfDoc);
 
 		const chunks = chunkPages(pages);
 		const embeddingResults = (await invoke('embed_chunks', {
 			chunks: chunks.map((c) => c.text)
 		})) as EmbeddingResult[];
+
+		// The two arrays are zipped by index below, so a length mismatch would pair
+		// one chunk's text with another chunk's page and section.
+		if (embeddingResults.length !== chunks.length) {
+			throw new Error(
+				`Embedding returned ${embeddingResults.length} vectors for ${chunks.length} chunks.`
+			);
+		}
 
 		// Page, section and offsets travel with the chunk, so a result can say
 		// "p. 4, Results" and later jump to the passage in the PDF (#37).
@@ -81,11 +89,11 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 			embeddingResults.map((result, i) => ({
 				text: result.chunk_text,
 				embedding: result.embedding,
-				page_start: chunks[i]?.pageStart ?? null,
-				page_end: chunks[i]?.pageEnd ?? null,
-				section: chunks[i]?.section ?? null,
-				char_start: chunks[i]?.charStart ?? null,
-				char_end: chunks[i]?.charEnd ?? null
+				page_start: chunks[i].pageStart,
+				page_end: chunks[i].pageEnd,
+				section: chunks[i].section,
+				char_start: chunks[i].charStart,
+				char_end: chunks[i].charEnd
 			}))
 		);
 
@@ -124,9 +132,10 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
  * source rather than stored as empty metadata.
  */
 async function getPdfMetadata(
-	pdfDoc: PDFDocumentProxy,
+	pages: ExtractedPage[],
 	sha256: string,
-	fileName: string
+	fileName: string,
+	pdfDoc: PDFDocumentProxy
 ): Promise<{ metadata: CitationItem; via: ResolvedVia; doi: string | null } | undefined> {
 	try {
 		// Work the previous library already did, reused rather than re-fetched.
@@ -141,16 +150,20 @@ async function getPdfMetadata(
 		const info = (await pdfDoc.getMetadata()).info as PdfDocumentInfo | undefined;
 
 		// Identifiers are printed in the page-one header or footer, or in the
-		// margin, and sometimes repeated at the end.
-		const pages = await extractPages(pdfDoc);
+		// margin, and sometimes repeated at the end. The pages are passed in: this
+		// used to re-extract the whole document, which is the expensive half of
+		// ingest, only to keep two pages of it.
 		const edges = [pages[0], pages[pages.length - 1]].filter(Boolean);
 
-		const resolved = await resolveMetadata({
+		const { resolved } = await resolveMetadata({
 			info,
 			text: pagesToText(edges),
 			allowNetwork: await networkAllowed(),
 			mailto: await getMailto()
 		});
+		// An identifier without a lookup is not a resolution. The source stays
+		// unresolved, is listed as needing attention, and Retry will resolve it
+		// once lookups are allowed.
 		if (!resolved) return undefined;
 
 		const metadata = resolved.csl as CitationItem;
@@ -325,7 +338,7 @@ export async function retryIngest(source: {
 export async function applyManualDoi(sha256: string, doi: string): Promise<CitationItem> {
 	const cleaned = findDoi(doi) ?? doi.trim();
 
-	const resolved = await resolveMetadata({
+	const { resolved } = await resolveMetadata({
 		text: cleaned,
 		allowNetwork: await networkAllowed(),
 		mailto: await getMailto()

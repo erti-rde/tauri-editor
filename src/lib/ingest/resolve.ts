@@ -19,10 +19,24 @@ import { findIdentifier, type IdentifierHit } from './identifiers';
 export type ResolvedVia = 'pdf-doi' | 'pdf-arxiv' | 'crossref' | 'manual' | 'legacy';
 
 export interface ResolvedMetadata {
-	/** CSL-JSON, as returned by the resolver. */
+	/** CSL-JSON, as returned by the resolver. Never empty. */
 	csl: Record<string, unknown>;
 	via: ResolvedVia;
 	doi: string | null;
+}
+
+export interface ResolveResult {
+	/** Null when nothing citable was obtained. */
+	resolved: ResolvedMetadata | null;
+	/**
+	 * The identifier printed in the document, whether or not it was looked up.
+	 *
+	 * Kept separate from `resolved` because finding an identifier is not the same
+	 * as resolving metadata. Conflating them is how the offline path came to
+	 * return `{ DOI: undefined }`, which serialises to `'{}'` — precisely the
+	 * placeholder this module exists to stop being stored.
+	 */
+	identifier: IdentifierHit | null;
 }
 
 export interface ResolveOptions {
@@ -63,8 +77,16 @@ async function fetchWithRetry(
 		try {
 			const controller = new AbortController();
 			const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-			const response = await fetchImpl(url, { ...init, signal: controller.signal });
-			clearTimeout(timer);
+
+			// Cleared in `finally`: on a network error, or on the abort this timer
+			// itself fires, control jumps to the catch below and the timer would
+			// otherwise stay pending and hold the event loop open.
+			let response: Response;
+			try {
+				response = await fetchImpl(url, { ...init, signal: controller.signal });
+			} finally {
+				clearTimeout(timer);
+			}
 
 			if (response.ok) return response;
 			// Only these are worth retrying; a 404 will stay a 404.
@@ -161,42 +183,45 @@ const viaFor = (hit: IdentifierHit): ResolvedVia => (hit.kind === 'doi' ? 'pdf-d
  * Null means "not resolved", which is recorded against the source so it can be
  * retried or corrected by hand. It is never stored as empty metadata.
  */
-export async function resolveMetadata(options: ResolveOptions): Promise<ResolvedMetadata | null> {
+export async function resolveMetadata(options: ResolveOptions): Promise<ResolveResult> {
 	const fetchImpl = options.fetchImpl ?? fetch;
 
 	// 1. The document's own identifier — offline, and by far the most reliable.
-	const hit = findIdentifier(options.info, options.text);
+	const identifier = findIdentifier(options.info, options.text);
 
-	if (!options.allowNetwork) {
-		// Nothing can be looked up, but the identifier is still worth recording:
-		// it is what a later online run, or a manual entry, will resolve from.
-		return hit
-			? {
-					csl: { DOI: hit.kind === 'doi' ? hit.value : undefined },
-					via: viaFor(hit),
-					doi: hit.kind === 'doi' ? hit.value : null
-				}
-			: null;
-	}
+	// Without consent nothing can be looked up. The identifier is still reported
+	// so the caller can show what was found and offer a retry, but the source is
+	// emphatically not resolved.
+	if (!options.allowNetwork) return { resolved: null, identifier };
 
-	if (hit) {
+	if (identifier) {
 		const csl =
-			hit.kind === 'doi'
-				? await fromDoi(hit.value, fetchImpl)
-				: await fromArxiv(hit.value, fetchImpl);
+			identifier.kind === 'doi'
+				? await fromDoi(identifier.value, fetchImpl)
+				: await fromArxiv(identifier.value, fetchImpl);
 
 		if (csl && hasTitle(csl)) {
-			return { csl, via: viaFor(hit), doi: typeof csl.DOI === 'string' ? csl.DOI : null };
+			return {
+				resolved: {
+					csl,
+					via: viaFor(identifier),
+					doi: typeof csl.DOI === 'string' ? csl.DOI : null
+				},
+				identifier
+			};
 		}
 	}
 
 	// 2. Only now guess, and only from bibliographic fields.
 	const searched = await fromCrossrefSearch(options, fetchImpl);
 	if (searched && hasTitle(searched.csl)) {
-		return { csl: searched.csl, via: 'crossref', doi: searched.doi };
+		return {
+			resolved: { csl: searched.csl, via: 'crossref', doi: searched.doi },
+			identifier
+		};
 	}
 
-	return null;
+	return { resolved: null, identifier };
 }
 
 /** A record without a title cannot be cited, so it does not count as resolved. */

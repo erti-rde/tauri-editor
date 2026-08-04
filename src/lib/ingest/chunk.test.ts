@@ -183,3 +183,53 @@ describe('chunking', () => {
 		expect(chunkPages(pagesOf([]))).toEqual([]);
 	});
 });
+
+describe('regressions', () => {
+	it('keeps an enumerated sentence in the index', () => {
+		// isHeading exempted digit-initial lines from the "ends in punctuation"
+		// rejection, so "1. We evaluate…" was classified as a heading — and heading
+		// text is never added to a segment. The sentence disappeared entirely.
+		const sentence = '1. We evaluate the model on three datasets.';
+
+		expect(isHeading(line(sentence), 10)).toBe(false);
+
+		const chunks = chunkPages(pagesOf([line('Methods', 1, 14), line(sentence)]));
+		expect(chunks.map((c) => c.text).join(' ')).toContain('three datasets');
+	});
+
+	it('indexes an appendix printed after the references', () => {
+		// The traversal used to return at the references heading, discarding every
+		// later page.
+		const chunks = chunkPages(
+			pagesOf(
+				[line('Discussion', 1, 14), line('The main finding is stated here clearly.', 1)],
+				[line('References', 2, 14), line('Smith, A. (2020). Coastal erosion.', 2)],
+				[line('Appendix A', 3, 14), line('Supplementary derivation of the estimator.', 3)]
+			)
+		);
+
+		const text = chunks.map((c) => c.text).join(' ');
+		expect(text).toContain('Supplementary derivation');
+		expect(text).not.toContain('Coastal erosion');
+	});
+
+	it('falls back to defaults for nonsensical options', () => {
+		// A mistyped CLI flag arrives as NaN. Unchecked, the emit condition is
+		// always false and the document becomes one chunk the tokenizer truncates.
+		const chunks = chunkPages(pagesOf([line(paragraph('body'), 1)]), {
+			targetChars: Number.NaN,
+			overlap: Number.NaN
+		});
+
+		expect(chunks.length).toBeGreaterThan(1);
+	});
+
+	it('does not loop forever on an absurd overlap', () => {
+		const chunks = chunkPages(pagesOf([line(paragraph('body'), 1)]), {
+			targetChars: 200,
+			overlap: 5
+		});
+
+		expect(chunks.length).toBeLessThan(50);
+	});
+});

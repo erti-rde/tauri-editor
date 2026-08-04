@@ -36,8 +36,12 @@ describe('offline resolution', () => {
 		});
 
 		expect(calls).toEqual([]);
-		// The identifier is still recorded, so a later online run can resolve it.
-		expect(result?.via).toBe('pdf-arxiv');
+		// The identifier is reported so the UI can offer a retry...
+		expect(result.identifier).toEqual({ kind: 'arxiv', value: '1706.03762', source: 'text' });
+		// ...but nothing was resolved. Returning a ResolvedMetadata here produced
+		// `{ DOI: undefined }`, which serialises to '{}' — the very placeholder
+		// this module exists to prevent being stored.
+		expect(result.resolved).toBeNull();
 	});
 
 	it('reports nothing when there is no identifier and no network', async () => {
@@ -49,7 +53,8 @@ describe('offline resolution', () => {
 			fetchImpl: impl
 		});
 
-		expect(result).toBeNull();
+		expect(result.resolved).toBeNull();
+		expect(result.identifier).toBeNull();
 	});
 });
 
@@ -63,8 +68,8 @@ describe('identifier-first resolution', () => {
 			fetchImpl: impl
 		});
 
-		expect(result?.via).toBe('pdf-doi');
-		expect(result?.csl.title).toBe(APA_PAPER.title);
+		expect(result.resolved?.via).toBe('pdf-doi');
+		expect(result.resolved?.csl.title).toBe(APA_PAPER.title);
 		// Crossref's search endpoint is never touched.
 		expect(calls.some((c) => c.includes('api.crossref.org'))).toBe(false);
 	});
@@ -78,7 +83,7 @@ describe('identifier-first resolution', () => {
 			fetchImpl: impl
 		});
 
-		expect(result?.via).toBe('pdf-arxiv');
+		expect(result.resolved?.via).toBe('pdf-arxiv');
 		expect(calls[0]).toContain('10.48550/arXiv.1512.03385');
 	});
 
@@ -111,7 +116,7 @@ describe('falling back to search', () => {
 			fetchImpl: impl
 		});
 
-		expect(result?.via).toBe('crossref');
+		expect(result.resolved?.via).toBe('crossref');
 		const search = calls.find((c) => c.includes('api.crossref.org'))!;
 		expect(search).toContain('query.bibliographic=');
 		expect(search).toContain('mailto=erti%40example.org');
@@ -152,7 +157,7 @@ describe('failure is reported, never invented', () => {
 			fetchImpl: impl
 		});
 
-		expect(result).toBeNull();
+		expect(result.resolved).toBeNull();
 	});
 
 	it('rejects a record with no usable title', async () => {
@@ -164,7 +169,7 @@ describe('failure is reported, never invented', () => {
 			fetchImpl: impl
 		});
 
-		expect(result).toBeNull();
+		expect(result.resolved).toBeNull();
 	});
 
 	it('retries a rate-limited request', async () => {
@@ -182,7 +187,7 @@ describe('failure is reported, never invented', () => {
 		});
 
 		expect(attempts).toBeGreaterThan(1);
-		expect(result?.csl.title).toBe(APA_PAPER.title);
+		expect(result.resolved?.csl.title).toBe(APA_PAPER.title);
 	});
 
 	it('does not retry a 404', async () => {
@@ -196,5 +201,24 @@ describe('failure is reported, never invented', () => {
 
 		// One attempt for the DOI, one for the Crossref search — neither repeated.
 		expect(attempts).toBeLessThanOrEqual(2);
+	});
+});
+
+describe('the placeholder can never come back', () => {
+	it('no resolved result ever serialises to an empty object', async () => {
+		const cases = [
+			{ text: 'arXiv:1706.03762', allowNetwork: false },
+			{ text: 'no identifier here', allowNetwork: false },
+			{ text: '10.1000/nothing', allowNetwork: true }
+		];
+
+		for (const options of cases) {
+			const { impl } = stubFetch({});
+			const { resolved } = await resolveMetadata({ ...options, fetchImpl: impl });
+
+			if (resolved) {
+				expect(JSON.stringify(resolved.csl)).not.toBe('{}');
+			}
+		}
 	});
 });

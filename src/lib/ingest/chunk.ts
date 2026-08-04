@@ -61,12 +61,16 @@ export function isHeading(line: Line, bodyFontSize: number): boolean {
 	const text = line.text.trim();
 	if (text.length === 0 || text.length > 90) return false;
 
-	// A heading ending in a full stop is almost always a figure caption or a
-	// sentence that happens to be short.
-	if (/[.;,]$/.test(text) && !/^\d/.test(text)) return false;
+	// A line ending in sentence punctuation is prose, not a heading — including
+	// an enumerated sentence like "1. We evaluate the model on three datasets."
+	// A leading digit used to exempt such lines, which made them headings, and
+	// heading text is never added to a segment: the sentence vanished from the
+	// index entirely. Real numbered headings ("3.2 Experimental Setup") do not
+	// end in punctuation, so no exemption is needed.
+	if (/[.;,]$/.test(text)) return false;
 
 	const larger = line.fontSize > bodyFontSize * 1.08;
-	const numbered = /^\d+(\.\d+)*\.?\s+\S/.test(text);
+	const numbered = /^\d+(\.\d+)*\.?\s+\S/.test(text) && text.split(/\s+/).length <= 12;
 	const named =
 		/^\s*(?:\d+\.?\s*)?(abstract|introduction|background|related work|method(s|ology)?|materials and methods|experiments?|results?|discussion|conclusions?|limitations|acknowledg(e)?ments?|appendix|references|bibliography)\s*$/i.test(
 			text
@@ -116,6 +120,9 @@ function segmentBySection(pages: ExtractedPage[], options: Required<ChunkOptions
 	let current: Segment | null = null;
 	let section: string | null = null;
 	let offset = 0;
+	// Set while inside the reference list, cleared at the next heading, so an
+	// appendix printed after the references is still indexed.
+	let inReferences = false;
 
 	const flush = () => {
 		if (current && current.text.trim().length > 0) segments.push(current);
@@ -128,16 +135,17 @@ function segmentBySection(pages: ExtractedPage[], options: Required<ChunkOptions
 			if (text.length === 0) continue;
 
 			if (isHeading(line, body)) {
-				// A reference list is dense with author names, titles and years, so
-				// its chunks match anything citation-shaped. Indexing it actively
-				// costs precision.
-				if (options.excludeReferences && REFERENCES_HEADING.test(text)) {
-					flush();
-					return segments;
-				}
-
 				flush();
-				section = text;
+				// A reference list is dense with author names, titles and years, so
+				// its chunks match anything citation-shaped. Skip its body, but
+				// resume at the next heading rather than abandoning the document.
+				inReferences = options.excludeReferences && REFERENCES_HEADING.test(text);
+				section = inReferences ? null : text;
+				offset += text.length + 1;
+				continue;
+			}
+
+			if (inReferences) {
 				offset += text.length + 1;
 				continue;
 			}
@@ -268,6 +276,23 @@ function packSentences(segment: Segment, options: Required<ChunkOptions>): Chunk
  * Turn extracted pages into chunks ready for embedding.
  */
 export function chunkPages(pages: ExtractedPage[], options: ChunkOptions = {}): Chunk[] {
-	const resolved = { ...DEFAULTS, ...options };
+	const merged = { ...DEFAULTS, ...options };
+
+	// A mistyped CLI flag reaches here as NaN. Left unchecked it makes the emit
+	// condition always false, so the document becomes one huge chunk that the
+	// tokenizer silently truncates to its first 128 tokens. An overlap at or
+	// above 1 makes consecutive chunks repeat the same text forever.
+	const resolved = {
+		...merged,
+		targetChars:
+			Number.isFinite(merged.targetChars) && merged.targetChars > 0
+				? merged.targetChars
+				: DEFAULTS.targetChars,
+		overlap:
+			Number.isFinite(merged.overlap) && merged.overlap >= 0 && merged.overlap < 0.9
+				? merged.overlap
+				: DEFAULTS.overlap
+	};
+
 	return segmentBySection(pages, resolved).flatMap((segment) => packSentences(segment, resolved));
 }
