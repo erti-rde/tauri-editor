@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { chunk } from 'llm-chunk';
 import { get } from 'svelte/store';
 
 import {
@@ -25,12 +24,12 @@ import * as pdfjsLib from 'pdfjs-dist';
 // never drift apart. This previously pointed at a hand-copied worker in
 // static/pdfjs-2/, which pdf.js rejects outright when the versions disagree.
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import type {
-	PDFDocumentProxy,
-	TextItem,
-	TextMarkedContent
-} from 'pdfjs-dist/types/src/display/api';
+import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import type { CitationItem } from '$lib/stores/citationStore';
+// Extraction and chunking live in $lib/ingest so the retrieval benchmark runs
+// exactly this code rather than a copy that can drift.
+import { extractPages, pagesToText } from '$lib/ingest/extract';
+import { chunkPages } from '$lib/ingest/chunk';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -42,13 +41,6 @@ interface PdfDocumentInfo {
 	title?: string;
 }
 
-/**
- * A page's text content is a mix of positioned text runs and marked-content
- * markers; only the former carry a `str`.
- */
-function isTextItem(item: TextItem | TextMarkedContent): item is TextItem {
-	return 'str' in item;
-}
 let cslToZoteroTypeMap: Map<string, string> | undefined;
 
 export interface EmbeddingResult {
@@ -71,17 +63,26 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 		const pdfBytes = await readFile(filePath);
 		pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
-		const pdfOutput = await extractTextFromPDf(pdfDoc);
+		const pages = await extractPages(pdfDoc);
 		const pdfMetadata = await getPdfMetadata(pdfDoc, sha256, fileName);
 
-		const chunks = chunk(pdfOutput, { minLength: 100, splitter: 'sentence' });
-		const embeddingResults = (await invoke('embed_chunks', { chunks })) as EmbeddingResult[];
+		const chunks = chunkPages(pages);
+		const embeddingResults = (await invoke('embed_chunks', {
+			chunks: chunks.map((c) => c.text)
+		})) as EmbeddingResult[];
 
+		// Page, section and offsets travel with the chunk, so a result can say
+		// "p. 4, Results" and later jump to the passage in the PDF (#37).
 		await storeChunks(
 			sha256,
-			embeddingResults.map((result) => ({
+			embeddingResults.map((result, i) => ({
 				text: result.chunk_text,
-				embedding: result.embedding
+				embedding: result.embedding,
+				page_start: chunks[i]?.pageStart ?? null,
+				page_end: chunks[i]?.pageEnd ?? null,
+				section: chunks[i]?.section ?? null,
+				char_start: chunks[i]?.charStart ?? null,
+				char_end: chunks[i]?.charEnd ?? null
 			}))
 		);
 
@@ -144,18 +145,14 @@ async function getPdfMetadata(pdfDoc: PDFDocumentProxy, sha256: string, fileName
 			query += `&query.author=${encodeURIComponent(info.author)}&query.title=${encodeURIComponent(info.title)}`;
 		} else {
 			// Fallback to text extraction from the first page
-			const firstPage = await pdfDoc.getPage(1);
-			const content = await firstPage.getTextContent();
-			const firstPageText = content.items
-				.filter(isTextItem)
-				.map((item) => item.str)
-				.join(' ');
+			// Use the same extractor as ingest: the old inline version joined runs
+			// with a space and produced text riddled with broken words.
+			const firstPageText = pagesToText(
+				await extractPages({ numPages: 1, getPage: (n) => pdfDoc.getPage(n) })
+			);
 
 			// Limit query length to avoid excessively long URLs
 			query += `&query=${encodeURIComponent(firstPageText.substring(0, 1000))}`;
-
-			// Clean up page resources
-			firstPage.cleanup();
 		}
 
 		// Retrieve DOI information
@@ -222,37 +219,6 @@ function findPdfFiles(items: FileItem[]): FileItem[] {
 		}
 	}
 	return pdfs;
-}
-
-/**
- * Extract text content from a PDF document
- * @param pdf PDF document to extract text from
- * @returns Concatenated text content from all pages
- */
-async function extractTextFromPDf(pdf: PDFDocumentProxy): Promise<string> {
-	// Failures propagate to processSinglePdf, which records them against the
-	// source. This used to wrap everything in a try/catch solely to issue a
-	// ROLLBACK, though no transaction was ever open; storage now happens later,
-	// in one Rust transaction per source.
-	const totalPageCount = pdf.numPages;
-
-	// Extract text from each page
-	const pageTextPromises = Array.from({ length: totalPageCount }, async (_, i) => {
-		const pageNum = i + 1;
-		const page = await pdf.getPage(pageNum);
-		const textContent = await page.getTextContent();
-
-		// Release page resources after extraction
-		page.cleanup();
-
-		return textContent.items
-			.filter(isTextItem)
-			.map((item) => item.str)
-			.join('');
-	});
-
-	const content = await Promise.all(pageTextPromises);
-	return content.join(' ');
 }
 
 /**

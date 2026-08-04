@@ -12,10 +12,37 @@ node scripts/eval/extract-chunks.mjs                     # stage 1: extract + ch
 cargo run --release --bin eval_retrieval                 # stage 2: embed + score
 ```
 
+Stage 1 imports `src/lib/ingest/{extract,chunk}.ts` — the same modules the app uses, so
+the benchmark cannot drift from what ships. Chunking can be varied with
+`--target-chars`, `--overlap` and `--keep-references`.
+
 Stage 2 uses the same `ort` session, tokenizer and pooling the app ships, so the
 numbers reflect what users get rather than a reimplementation.
 
-## Baseline — 2026-07-26
+## Current — 2026-07-27 (structure-aware ingest)
+
+|            |                                                                   |
+| ---------- | ----------------------------------------------------------------- |
+| Extraction | geometry-based spacing, column detection, running heads stripped  |
+| Chunking   | section-aware, references excluded, 380-char target, 15 % overlap |
+| Corpus     | 20 papers → **4563 chunks** (82 of 410 pages detected two-column) |
+
+| metric         | before  | after      | change      |
+| -------------- | ------- | ---------- | ----------- |
+| **Recall@1**   | 80.0 %  | **84.0 %** | **+4.0 pt** |
+| Recall@5       | 100.0 % | 100.0 %    | —           |
+| **MRR**        | 0.900   | **0.920**  | **+0.020**  |
+| Queries missed | 5       | **4**      | −1          |
+| Corpus embed   | 27.7 s  | **20.8 s** | −25 %       |
+| Throughput     | 290/s   | 220/s      | see below   |
+
+**Throughput fell but ingest got faster.** Chunks are roughly 1.75× larger, so
+chunks-per-second is not comparable across the change. Time to embed the whole corpus —
+what a user waits for — dropped from 27.7 s to 20.8 s.
+
+Every remaining miss ranks 2nd, against a topically adjacent paper.
+
+## Previous baseline — 2026-07-26
 
 |               |                                                                              |
 | ------------- | ---------------------------------------------------------------------------- |
@@ -51,9 +78,9 @@ matches how sentence-transformers embeds text.
 - **Queries paraphrase rather than quote.** Copying abstract wording would turn this into
   a lexical-overlap test and flatter every model.
 - **The 128-token truncation is a hard ceiling on chunk size.** Roughly 500 characters.
-  Any chunking change that produces larger chunks is silently truncated unless the
-  tokenizer config changes too — worth checking before concluding a chunking strategy
-  "did not help".
+  The 380-character target leaves headroom for `[CLS]`/`[SEP]` and for words costing more
+  than one token. Raising it further needs the tokenizer config changed too, or the extra
+  text is silently discarded.
 - **Throughput scales the ingest estimate**: 290 chunks/sec ≈ 1.4 s for a typical
   400-chunk paper, so a 200-paper corpus is roughly 4–5 minutes on this machine. A model
   with materially more parameters will move this a lot; measure it, don't assume.

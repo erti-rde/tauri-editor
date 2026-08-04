@@ -62,9 +62,6 @@ importers:
       citeproc:
         specifier: ^2.4.63
         version: 2.4.63
-      llm-chunk:
-        specifier: ^0.0.1
-        version: 0.0.1
       pdfjs-dist:
         specifier: 4.9.155
         version: 4.9.155
@@ -2179,9 +2176,6 @@ packages:
   listr2@9.0.5:
     resolution: {integrity: sha512-ME4Fb83LgEgwNw96RKNvKV4VTLuXfoKudAmm2lP8Kk87KaMK0/Xrx/aAkMWmT8mDb+3MlFDspfbCs7adjRxA2g==}
     engines: {node: '>=20.0.0'}
-
-  llm-chunk@0.0.1:
-    resolution: {integrity: sha512-n9fHgsSiJb7vXZiC5c4XV6rme+tC7WX/cWH6EJvPPmMOMwOZ9xdg/U9LY5Qhmixd3K1PdRB0FVOdzoJF2HUZbg==}
 
   local-pkg@0.5.1:
     resolution: {integrity: sha512-9rrA30MRRP3gBD3HTGnC6cDFpaE1kVDWxWgqWJUN0RvDNAo+Nz/9GxB+nHOH0ifbVFy0hSA1V6vFDvnx54lTEQ==}
@@ -4913,8 +4907,6 @@ snapshots:
       log-update: 6.1.0
       rfdc: 1.4.1
       wrap-ansi: 9.0.2
-
-  llm-chunk@0.0.1: {}
 
   local-pkg@0.5.1:
     dependencies:
