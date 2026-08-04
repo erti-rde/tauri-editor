@@ -619,7 +619,15 @@ present in **both** — no collision, each project shows only its own sources, a
 exactly one `chunks` group for its hash. Migration runs on a copy of the real 44-file DB and the 3
 genuinely-resolved metadata rows survive.
 
-### Phase 2 — Ingest quality
+### Phase 2 — Ingest quality — **mostly done**
+
+> **Measured.** Recall@1 80.0 % → **84.0 %**, MRR 0.900 → **0.920**, corpus embed 27.7 s → 20.8 s.
+> Identifier scanning resolves **20 of 20** benchmark papers with no network call. Extraction and
+> chunking live in `$lib/ingest` and the benchmark imports them directly, so it cannot drift from
+> what ships.
+>
+> **Still open:** the embedding model bake-off (§5.3). The DOI path is unit-tested but has not been
+> measured against real journal PDFs — the benchmark corpus is all arXiv.
 
 - Fix extraction (§5.1) — spacing and line breaks from geometry, `hasEOL` honoured.
 - Structure-aware chunking (§5.2): column detection and reading order, header/footer stripping,
