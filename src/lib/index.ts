@@ -21,3 +21,4 @@ export {
 	StatusFooter,
 	Toast
 };
+export { default as ConsentPrompt } from './consent/ConsentPrompt.svelte';

@@ -30,6 +30,8 @@ import type { CitationItem } from '$lib/stores/citationStore';
 // exactly this code rather than a copy that can drift.
 import { extractPages, pagesToText } from '$lib/ingest/extract';
 import { chunkPages } from '$lib/ingest/chunk';
+import { resolveMetadata, type ResolvedVia } from '$lib/ingest/resolve';
+import { getMailto, networkAllowed } from '$lib/stores/consent';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -86,13 +88,13 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 			}))
 		);
 
-		if (pdfMetadata && Object.keys(pdfMetadata).length > 0) {
+		if (pdfMetadata) {
 			await setSourceMetadata({
 				sha256,
-				cslJson: JSON.stringify(pdfMetadata),
-				zoteroType: (pdfMetadata.zotero_type as string) ?? null,
-				doi: (pdfMetadata.DOI as string) ?? null,
-				resolvedVia: 'crossref'
+				cslJson: JSON.stringify(pdfMetadata.metadata),
+				zoteroType: (pdfMetadata.metadata.zotero_type as string) ?? null,
+				doi: pdfMetadata.doi,
+				resolvedVia: pdfMetadata.via
 			});
 		}
 
@@ -113,94 +115,74 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 }
 
 /**
- * Extract metadata from a PDF document and attempt to find DOI information
- * @param pdfDoc PDF document to extract metadata from
- * @param fileId Database ID for the file
- * @param fileName Name of the PDF file for error reporting
+ * Resolve a source's citation metadata.
+ *
+ * Order matters: metadata salvaged from the previous library, then the paper's
+ * own identifier found offline, then — only if the user has allowed it — a
+ * lookup. Returns undefined when nothing resolved, which is recorded against the
+ * source rather than stored as empty metadata.
  */
-async function getPdfMetadata(pdfDoc: PDFDocumentProxy, sha256: string, fileName: string) {
+async function getPdfMetadata(
+	pdfDoc: PDFDocumentProxy,
+	sha256: string,
+	fileName: string
+): Promise<{ metadata: CitationItem; via: ResolvedVia; doi: string | null } | undefined> {
 	try {
-		// Metadata that already resolved under the previous library is reused
-		// rather than re-fetched, which also avoids telling Crossref about a paper
-		// twice.
+		// Work the previous library already did, reused rather than re-fetched.
 		const salvaged = await legacyMetadataFor(fileName);
 		if (salvaged) {
 			const carried = JSON.parse(salvaged) as CitationItem;
 			carried.id = sha256;
 			await markLegacyConsumed(fileName);
-			return carried;
+			return { metadata: await withZoteroType(carried), via: 'legacy', doi: carried.DOI ?? null };
 		}
 
-		let metadata: CitationItem | undefined = undefined;
 		const info = (await pdfDoc.getMetadata()).info as PdfDocumentInfo | undefined;
 
-		let query = 'https://api.crossref.org/works?rows=1&sort=score&select=DOI';
+		// Identifiers are printed in the page-one header or footer, or in the
+		// margin, and sometimes repeated at the end.
+		const pages = await extractPages(pdfDoc);
+		const edges = [pages[0], pages[pages.length - 1]].filter(Boolean);
 
-		// Build query based on available metadata
-		if (info?.Author && info?.Title) {
-			// If we have author and title, we can make a more accurate search query
-			query += `&query.author=${encodeURIComponent(info.Author)}&query.title=${encodeURIComponent(info.Title)}`;
-		} else if (info?.author && info?.title) {
-			// Handle lowercase keys
-			query += `&query.author=${encodeURIComponent(info.author)}&query.title=${encodeURIComponent(info.title)}`;
-		} else {
-			// Fallback to text extraction from the first page
-			// Use the same extractor as ingest: the old inline version joined runs
-			// with a space and produced text riddled with broken words.
-			const firstPageText = pagesToText(
-				await extractPages({ numPages: 1, getPage: (n) => pdfDoc.getPage(n) })
-			);
+		const resolved = await resolveMetadata({
+			info,
+			text: pagesToText(edges),
+			allowNetwork: await networkAllowed(),
+			mailto: await getMailto()
+		});
+		if (!resolved) return undefined;
 
-			// Limit query length to avoid excessively long URLs
-			query += `&query=${encodeURIComponent(firstPageText.substring(0, 1000))}`;
+		const metadata = resolved.csl as CitationItem;
+		metadata.id = sha256;
+
+		// A non-string title breaks citeproc downstream.
+		if (typeof metadata.title !== 'string') {
+			metadata.title = Array.isArray(metadata.title)
+				? ((metadata.title as unknown[])[0]?.toString() ?? fileName)
+				: fileName;
 		}
 
-		// Retrieve DOI information
-		const res = await fetch(query);
-		const data = await res.json();
+		// The reference list is large and never read back.
+		if (metadata.reference) delete metadata.reference;
 
-		if (data.status === 'ok' && data.message?.items?.length > 0) {
-			const itemID = data.message.items[0].DOI;
-			const getCitationWithDoi = await fetch(`https://doi.org/${itemID}`, {
-				headers: {
-					Accept: 'application/vnd.citationstyles.csl+json'
-				}
-			});
-
-			metadata = (await getCitationWithDoi.json()) as CitationItem;
-			metadata.id = sha256;
-
-			if (!cslToZoteroTypeMap) {
-				const augmentedSchema: AugmentedZoteroSchema = await augmentSchema();
-				cslToZoteroTypeMap = augmentedSchema.cslToZoteroTypeMap;
-			}
-
-			metadata.zotero_type = cslToZoteroTypeMap.get(metadata.type) || '';
-		}
-
-		// Handle potential non-string title formats
-		if (metadata && typeof metadata.title !== 'string') {
-			if (Array.isArray(metadata.title)) {
-				metadata.title = (metadata.title as unknown[])[0]?.toString() || fileName;
-			} else {
-				metadata.title = fileName;
-			}
-		}
-
-		// Remove reference field to reduce storage size
-		if (metadata?.reference) {
-			delete metadata.reference;
-		}
-
-		return metadata;
+		return { metadata: await withZoteroType(metadata), via: resolved.via, doi: resolved.doi };
 	} catch (error) {
-		// Allow ingest to continue, but return undefined rather than {}. Storing an
-		// empty object is what left 52% of the old database with literal '{}'
-		// metadata that looked resolved and never got retried.
+		// Resolution failing must not stop the text from being indexed; the source
+		// is simply left unresolved, visible and retryable.
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.error(`Failed to get metadata for ${fileName}: ${errorMessage}`);
 		return undefined;
 	}
+}
+
+/** Attach the Zotero item type the metadata editor's form is driven by. */
+async function withZoteroType(metadata: CitationItem): Promise<CitationItem> {
+	if (!cslToZoteroTypeMap) {
+		const augmentedSchema: AugmentedZoteroSchema = await augmentSchema();
+		cslToZoteroTypeMap = augmentedSchema.cslToZoteroTypeMap;
+	}
+	metadata.zotero_type = cslToZoteroTypeMap.get(metadata.type) || '';
+	return metadata;
 }
 
 /**
