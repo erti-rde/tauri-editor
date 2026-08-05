@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod db;
 pub mod db_commands;
+pub mod fs_errors;
 pub mod ml;
 
 use commands::*;
