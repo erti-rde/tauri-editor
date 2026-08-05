@@ -18,6 +18,9 @@ use std::str::FromStr;
 pub struct SalvageReport {
     /// Rows carried forward.
     pub imported: usize,
+    /// Rows a previous run already carried forward. Reported separately so a
+    /// repeat launch does not claim new work.
+    pub already_present: usize,
     /// Rows skipped because their metadata was a `'{}'` placeholder or absent.
     pub skipped_empty: usize,
     /// Files in the old database that were registered but never processed.
@@ -35,6 +38,7 @@ pub async fn import_legacy_metadata(
     if !legacy_db.exists() {
         return Ok(SalvageReport {
             imported: 0,
+            already_present: 0,
             skipped_empty: 0,
             skipped_unprocessed: 0,
         });
@@ -62,6 +66,7 @@ pub async fn import_legacy_metadata(
 
     let mut report = SalvageReport {
         imported: 0,
+        already_present: 0,
         skipped_empty: 0,
         skipped_unprocessed: 0,
     };
@@ -76,7 +81,10 @@ pub async fn import_legacy_metadata(
             None => report.skipped_unprocessed += 1,
             Some(json) if !is_resolved(&json) => report.skipped_empty += 1,
             Some(json) => {
-                sqlx::query(
+                // Only a row this call created counts as carried forward. Counting
+                // every resolved row made the second launch announce it had
+                // imported metadata that had been sitting there since the first.
+                let created = sqlx::query(
                     "INSERT INTO legacy_metadata (file_name, csl_json)
                      VALUES (?, ?)
                      ON CONFLICT(file_name) DO NOTHING",
@@ -85,8 +93,15 @@ pub async fn import_legacy_metadata(
                 .bind(&json)
                 .execute(library)
                 .await
-                .map_err(|e| e.to_string())?;
-                report.imported += 1;
+                .map_err(|e| e.to_string())?
+                .rows_affected()
+                    > 0;
+
+                if created {
+                    report.imported += 1;
+                } else {
+                    report.already_present += 1;
+                }
             }
         }
     }

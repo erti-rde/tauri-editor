@@ -143,6 +143,24 @@ async fn a_failed_source_is_offered_again() {
         "a failed source is still offered"
     );
 
+    // The next scan sees the file again and re-registers it. Registration reports
+    // whether the *row* was new, which for a source that already failed is false —
+    // so a caller that decides what to ingest from this return value skips it
+    // forever, which is the original defect with a hash instead of a filename.
+    // Ingest state is the authority; this asserts the two genuinely disagree, so
+    // that anyone tempted to use the simpler signal sees why it is wrong.
+    assert!(
+        !queries::register_source(&library, "flaky1", "/a/f.pdf", "f.pdf")
+            .await
+            .unwrap(),
+        "re-registering an existing source reports not-new"
+    );
+    assert_eq!(
+        queries::sources_needing_ingest(&library).await.unwrap(),
+        vec!["flaky1"],
+        "yet it still needs ingesting"
+    );
+
     queries::store_chunks(
         &library,
         "flaky1",
@@ -418,11 +436,25 @@ async fn salvage_carries_forward_only_genuinely_resolved_metadata() {
         .unwrap();
 
     assert_eq!(report.imported, 2, "only the rows with a real title");
+    assert_eq!(
+        report.already_present, 0,
+        "nothing had been carried over yet"
+    );
     assert_eq!(report.skipped_empty, 2, "'{{}}' and the title-less row");
     assert_eq!(
         report.skipped_unprocessed, 1,
         "the file that never processed"
     );
+
+    // Every launch runs this. The insert is ON CONFLICT DO NOTHING, so the second
+    // run writes nothing — and must not report that it imported anything, or the
+    // user is told metadata was carried forward every time they open the app.
+    let again = erti_lib::db::salvage::import_legacy_metadata(&library, &legacy_path)
+        .await
+        .unwrap();
+
+    assert_eq!(again.imported, 0, "the second run creates no rows");
+    assert_eq!(again.already_present, 2, "and says so separately");
 
     // Importing a '{}' placeholder would recreate the original problem: metadata
     // that looks resolved and is therefore never retried.
