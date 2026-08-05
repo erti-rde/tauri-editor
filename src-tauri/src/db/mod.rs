@@ -29,7 +29,7 @@ async fn connect(path: &Path) -> Result<SqlitePool, String> {
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent)
             .await
-            .map_err(|e| crate::fs_errors::describe(&e, parent))?;
+            .map_err(|e| format!("could not create {}: {e}", parent.display()))?;
     }
 
     let options = SqliteConnectOptions::from_str(&format!("sqlite:{}", path.display()))
@@ -149,7 +149,7 @@ pub async fn hash_file(path: &Path) -> Result<String, String> {
 
     let mut file = tokio::fs::File::open(path)
         .await
-        .map_err(|e| crate::fs_errors::describe(&e, path))?;
+        .map_err(|e| format!("could not open {}: {e}", path.display()))?;
 
     let mut hasher = Sha256::new();
     let mut buf = vec![0u8; 64 * 1024];

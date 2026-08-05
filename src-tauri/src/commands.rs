@@ -31,14 +31,12 @@ fn read_directory_impl(
         let path = Path::new(&path);
 
         if !path.exists() {
-            return Err(format!("{} no longer exists.", path.display()));
+            return Err("Directory does not exist".to_string());
         }
 
         let mut items = Vec::new();
 
-        let read_dir = tokio_fs::read_dir(path)
-            .await
-            .map_err(|e| crate::fs_errors::describe(&e, path))?;
+        let read_dir = tokio_fs::read_dir(path).await.map_err(|e| e.to_string())?;
         let mut read_dir = read_dir;
 
         while let Ok(Some(entry)) = read_dir.next_entry().await {
@@ -89,8 +87,7 @@ pub async fn read_directory(path: String) -> Result<Vec<FileItem>, String> {
 
 #[tauri::command]
 pub async fn read_pdf_file(path: String) -> Result<String, String> {
-    let data =
-        std::fs::read(&path).map_err(|e| crate::fs_errors::describe(&e, Path::new(&path)))?;
+    let data = std::fs::read(path).map_err(|e| e.to_string())?;
     Ok(STANDARD.encode(data))
 }
 
