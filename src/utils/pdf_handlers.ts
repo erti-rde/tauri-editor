@@ -228,26 +228,46 @@ export async function extractAndChunkPdfs(): Promise<void> {
 		// interrupted mid-ingest, registers as not-new on the next scan and would
 		// never be attempted again — which is the defect this whole layer exists to
 		// remove.
+		// A file that cannot be hashed or registered never reaches the work set.
+		// Counting it as the difference between the two would report it as already
+		// in the library — telling the user a PDF is ingested when it was not read
+		// at all, which is the silent failure this pipeline exists to end.
+		const unreadable: string[] = [];
 		const needsIngest = await selectSourcesToIngest(pdfFiles, {
 			hashFile,
 			registerSource,
 			unfinished: new Set(await sourcesNeedingIngest()),
-			onError: (file, message) => console.error(`Could not register ${file.name}:`, message)
+			onError: (file, message) => {
+				unreadable.push(file.name);
+				console.error(`Could not register ${file.name}:`, message);
+			}
 		});
+
+		if (unreadable.length > 0) {
+			errorToast(
+				`Could not read ${unreadable.length} ${unreadable.length === 1 ? 'file' : 'files'}: ${unreadable.slice(0, 3).join(', ')}${unreadable.length > 3 ? '…' : ''}`
+			);
+		}
+
+		const alreadyIngested = pdfFiles.length - needsIngest.length - unreadable.length;
 
 		if (needsIngest.length === 0) {
 			setStatus({
 				side: 'left',
-				message: `All ${pdfFiles.length} PDFs are already in your library`,
-				type: 'info'
+				message: unreadable.length
+					? `${alreadyIngested} of ${pdfFiles.length} PDFs are in your library; ${unreadable.length} could not be read`
+					: `All ${pdfFiles.length} PDFs are already in your library`,
+				type: unreadable.length ? 'error' : 'info'
 			});
-			setTimeout(() => removeStatus(), 3000);
+			if (!unreadable.length) setTimeout(() => removeStatus(), 3000);
 			return;
 		}
 
 		setStatus({
 			side: 'left',
-			message: `Processing ${needsIngest.length} PDFs (${pdfFiles.length - needsIngest.length} already in your library)`,
+			message:
+				`Processing ${needsIngest.length} PDFs (${alreadyIngested} already in your library` +
+				(unreadable.length ? `, ${unreadable.length} unreadable)` : ')'),
 			type: 'info'
 		});
 

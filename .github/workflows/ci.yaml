@@ -44,6 +44,47 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+  corpus:
+    name: Ingest quality on real papers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The papers are ~29 MB of third-party work, pinned by arXiv version and
+      # verified against a SHA-256 manifest rather than vendored. The cache key
+      # is the manifest, so arXiv is asked only when the corpus itself changes.
+      - name: Cache the benchmark corpus
+        id: corpus
+        uses: actions/cache@v4
+        with:
+          path: tests/fixtures/retrieval/papers
+          key: retrieval-corpus-${{ hashFiles('tests/fixtures/retrieval/corpus.json') }}
+
+      - name: Fetch the benchmark corpus
+        if: steps.corpus.outputs.cache-hit != 'true'
+        run: ./scripts/fetch-retrieval-corpus.sh
+
+      # Without this the tests skip when the corpus is missing, and a skip reads
+      # as a pass. The whole point of these assertions is that the ingest claims
+      # are measured rather than asserted, so absence has to be a failure.
+      # Scoped to the corpus-dependent file: the rest of the suite is hermetic
+      # and already ran in the job above.
+      - name: Metadata health on real papers
+        env:
+          ERTI_REQUIRE_CORPUS: '1'
+        run: pnpm exec vitest run src/lib/ingest/metadata-health
+
   rust:
     name: Clippy, test, build
     runs-on: ubuntu-latest

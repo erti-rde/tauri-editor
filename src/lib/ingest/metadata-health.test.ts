@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -22,10 +23,15 @@ import { resolveMetadata, type ResolveResult } from './resolve';
  *
  * Offline by default: no request leaves the machine, matching a user who
  * declined the consent prompt. Set ERTI_EVAL_ONLINE=1 to also exercise the
- * doi.org path, which is a manual verification rather than a CI gate.
+ * doi.org path, which is a manual verification rather than a gate.
+ *
+ * The PDFs are ~29 MB and not committed, so these skip on a machine that has
+ * not fetched them. A skip must never be mistaken for a pass: the CI job that
+ * provisions the corpus sets ERTI_REQUIRE_CORPUS, which turns absence into a
+ * failure rather than a quiet green.
  */
 
-const CORPUS = path.resolve('tests/fixtures/retrieval/papers');
+const CORPUS = fileURLToPath(new URL('../../../tests/fixtures/retrieval/papers', import.meta.url));
 
 interface Row {
 	file: string;
@@ -47,8 +53,25 @@ async function corpusFiles(): Promise<string[]> {
 
 files = await corpusFiles();
 
-// The corpus is fetched by scripts/eval, not committed. Skip rather than fail
-// so a fresh clone still runs green.
+if (files.length === 0) {
+	const fetch = './scripts/fetch-retrieval-corpus.sh';
+
+	// Where the corpus is meant to be present, its absence is the failure. This
+	// file previously skipped either way, so a CI run with no corpus reported
+	// green on assertions it had never executed.
+	if (process.env.ERTI_REQUIRE_CORPUS) {
+		throw new Error(
+			`ERTI_REQUIRE_CORPUS is set but no PDFs were found in ${CORPUS}. Run ${fetch}.`
+		);
+	}
+
+	console.warn(
+		`\n  SKIPPING metadata health: no corpus in ${CORPUS}.` +
+			`\n  These assertions did NOT run. Fetch it with ${fetch}\n`
+	);
+}
+
+// A fresh clone has no corpus and still runs green, but never silently in CI.
 describe.skipIf(files.length === 0)('metadata health on the real corpus', () => {
 	beforeAll(async () => {
 		const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
