@@ -521,18 +521,18 @@ nothing meaningful.
 
 The project is roughly a year behind, with several majors available:
 
-| package                               | in repo                         | latest                                  |                 |
-| ------------------------------------- | ------------------------------- | --------------------------------------- | --------------- |
-| **@tiptap/\*** (18 packages)          | 2.23.1                          | **3.29.0**                              | major           |
-| **pdfjs-dist**                        | 4.9.155                         | **6.1.200**                             | two majors      |
-| **vite**                              | 6.3.5                           | **8.1.5**                               | two majors      |
-| **typescript**                        | 5.8.3                           | **7.0.2**                               | two majors      |
-| **vitest**                            | 3.2.4                           | **4.1.10**                              | major           |
-| **eslint**                            | 9.30.0                          | **10.8.0**                              | major           |
-| svelte / @sveltejs/kit                | 5.34.9 / 2.22.2                 | 5.56.8 / 2.70.1                         | 22 / 48 minors  |
-| tailwindcss / bits-ui / @tauri-apps/* | 4.1.11 / 2.8.10 / 2.6.x         | 4.3.3 / 2.18.1 / 2.11.x                 | minors          |
-| `citeproc`                            | 2.4.63                          | 2.4.63                                  | already current |
-| Rust `tokenizers` / `ndarray` / `ort` | 0.20.1 / 0.16.1 / `=2.0.0-rc.9` | 0.23.1 / 0.17.2 / rc.12 (no stable yet) |                 |
+| package                               | in repo                         | latest                                  |                                                            |
+| ------------------------------------- | ------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| **@tiptap/\*** (18 packages)          | 2.23.1                          | **3.29.0**                              | major                                                      |
+| **pdfjs-dist**                        | 4.9.155                         | **6.1.200**                             | two majors                                                 |
+| **vite**                              | 6.3.5                           | **8.1.5**                               | two majors                                                 |
+| **typescript**                        | 5.8.3                           | **7.0.2**                               | two majors                                                 |
+| **vitest**                            | 3.2.4                           | **4.1.10**                              | major                                                      |
+| **eslint**                            | 9.30.0                          | **10.8.0**                              | major                                                      |
+| svelte / @sveltejs/kit                | 5.34.9 / 2.22.2                 | 5.56.8 / 2.70.1                         | 22 / 48 minors                                             |
+| tailwindcss / bits-ui / @tauri-apps/* | 4.1.11 / 2.8.10 / 2.6.x         | 4.3.3 / 2.18.1 / 2.11.x                 | minors                                                     |
+| `citeproc`                            | 2.4.63                          | 2.4.63                                  | already current                                            |
+| Rust `tokenizers` / `ndarray` / `ort` | 0.20.1 / 0.16.1 / `=2.0.0-rc.9` | 0.23.1 / 0.17.2 / rc.12 (no stable yet) | `tokenizers` since raised to 0.23.1 in Phase 0 — see below |
 
 **Sequencing consequence:** TipTap v2→v3 changed the extension API. Phase 4 writes two new
 extensions and heavily rewrites the 422-line `Citation.ts` — doing that on v2 and migrating later

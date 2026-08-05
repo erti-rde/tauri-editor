@@ -8,6 +8,7 @@ import {
 	markLegacyConsumed,
 	registerSource,
 	setSourceMetadata,
+	sourcesNeedingIngest,
 	storeChunks
 } from '$lib/stores/db';
 import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
@@ -82,6 +83,28 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 			);
 		}
 
+		// Metadata is written before the chunks, because storeChunks is what marks
+		// the source ready. Ready has to mean "finished": in the other order a
+		// failure to write metadata left a ready source with no csl_json, which no
+		// scan ever offers for ingest again.
+		if (pdfMetadata) {
+			await setSourceMetadata({
+				sha256,
+				cslJson: JSON.stringify(pdfMetadata.metadata),
+				zoteroType: (pdfMetadata.metadata.zotero_type as string) ?? null,
+				doi: pdfMetadata.doi,
+				resolvedVia: pdfMetadata.via
+			});
+
+			// Only now is the salvaged row safely transferred. Consuming it while
+			// resolving would have discarded it on any later failure, and the
+			// retry would find nothing to carry forward — losing exactly the work
+			// the salvage migration went to trouble to preserve.
+			if (pdfMetadata.via === 'legacy') {
+				await markLegacyConsumed(fileName);
+			}
+		}
+
 		// Page, section and offsets travel with the chunk, so a result can say
 		// "p. 4, Results" and later jump to the passage in the PDF (#37).
 		await storeChunks(
@@ -96,16 +119,6 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 				char_end: chunks[i].charEnd
 			}))
 		);
-
-		if (pdfMetadata) {
-			await setSourceMetadata({
-				sha256,
-				cslJson: JSON.stringify(pdfMetadata.metadata),
-				zoteroType: (pdfMetadata.metadata.zotero_type as string) ?? null,
-				doi: pdfMetadata.doi,
-				resolvedVia: pdfMetadata.via
-			});
-		}
 
 		successToast(`${fileName} processed successfully`);
 	} catch (error) {
@@ -143,7 +156,7 @@ async function getPdfMetadata(
 		if (salvaged) {
 			const carried = JSON.parse(salvaged) as CitationItem;
 			carried.id = sha256;
-			await markLegacyConsumed(fileName);
+			// Marking it consumed is the caller's job, once the metadata is stored.
 			return { metadata: await withZoteroType(carried), via: 'legacy', doi: carried.DOI ?? null };
 		}
 
@@ -237,11 +250,26 @@ export async function extractAndChunkPdfs(): Promise<void> {
 		// is simply added to this one, with no re-embedding. Deduplicating on the
 		// filename, as before, both missed this and silently dropped same-named
 		// files in different folders.
+		//
+		// What decides whether a file is ingested is its recorded ingest state, not
+		// whether registration created the row. Selecting on "the row was new" was
+		// the old filename dedup wearing a hash: a source that failed once, or was
+		// interrupted mid-ingest, registers as not-new on the next scan and would
+		// never be attempted again — which is the defect this whole layer exists to
+		// remove.
+		const unfinished = new Set(await sourcesNeedingIngest());
+
 		const needsIngest: Array<FileItem & { sha256: string }> = [];
+		const queued = new Set<string>();
 		for (const file of pdfFiles) {
 			try {
 				const sha256 = await hashFile(file.path);
-				if (await registerSource(sha256, file.path, file.name)) {
+				const isNew = await registerSource(sha256, file.path, file.name);
+
+				// The same paper can sit in the folder twice under two names. It is one
+				// source, so it is ingested once.
+				if ((isNew || unfinished.has(sha256)) && !queued.has(sha256)) {
+					queued.add(sha256);
 					needsIngest.push({ ...file, sha256 });
 				}
 			} catch (error) {
@@ -262,7 +290,7 @@ export async function extractAndChunkPdfs(): Promise<void> {
 
 		setStatus({
 			side: 'left',
-			message: `Processing ${needsIngest.length} new PDFs (${pdfFiles.length - needsIngest.length} already in your library)`,
+			message: `Processing ${needsIngest.length} PDFs (${pdfFiles.length - needsIngest.length} already in your library)`,
 			type: 'info'
 		});
 

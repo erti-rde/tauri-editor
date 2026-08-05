@@ -112,6 +112,8 @@ export const setEmbeddingMeta = (modelId: string, dims: number) =>
 
 export interface SalvageReport {
 	imported: number;
+	/** Rows a previous run already carried forward. */
+	already_present: number;
 	skipped_empty: number;
 	skipped_unprocessed: number;
 }
