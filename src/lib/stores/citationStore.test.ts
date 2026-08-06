@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type MockInstance } from 'vitest';
 import { citationStore } from './citationStore';
-import CSL from 'citeproc';
+import { CitationEngine } from '$lib/citations/engine';
 import { get } from 'svelte/store';
 import * as pluginStore from '@tauri-apps/plugin-store';
 import { projectSources } from '$lib/stores/db';
@@ -15,11 +15,17 @@ vi.mock('$lib/stores/db', () => ({
 	projectSources: vi.fn()
 }));
 
+// The store now drives citeproc through CitationEngine, which replaces the
+// processor's whole citation state rather than formatting clusters one at a
+// time. The mock mirrors that surface.
 vi.mock('citeproc', () => {
 	return {
 		default: {
 			Engine: vi.fn().mockImplementation(() => ({
-				processCitationCluster: vi.fn(() => [null, [[null, '(Smith, 2020)']]]),
+				updateItems: vi.fn(),
+				rebuildProcessorState: vi.fn((citations: Array<{ citationID: string }>) =>
+					citations.map((c, i) => [c.citationID, i + 1, '(Smith, 2020)'])
+				),
 				makeBibliography: vi.fn(() => [null, ['Bibliography Entry']])
 			}))
 		}
@@ -40,9 +46,22 @@ const fakeCitationSources = {
 };
 
 type CitationState = {
-	engine: CSL.Engine | null;
+	engine: CitationEngine | null;
 	citationSources: Record<string, CitationItem>;
+	bibliography: string[];
+	missingIds: string[];
 };
+
+const engineWith = (sources: Record<string, CitationItem>) =>
+	new CitationEngine({ styleXml: '', localeXml: '', sources });
+
+const withEngine = (sources = fakeCitationSources) =>
+	setCitationStore({
+		engine: engineWith(sources),
+		citationSources: sources,
+		bibliography: [],
+		missingIds: []
+	});
 const setCitationStore = (citationStore as unknown as { set: (v: CitationState) => void }).set;
 
 beforeEach(() => {
@@ -101,36 +120,56 @@ describe('citationStore', () => {
 		expect(citationStore.getAllSourcesAsJson()).toHaveProperty('hash1');
 	});
 
-	it('getInlineCitation returns formatted citation', () => {
-		setCitationStore({
-			engine: new CSL.Engine({}, ''),
-			citationSources: fakeCitationSources
-		});
-		const result = citationStore.getInlineCitation(['1']);
-		expect(result).toBe('(Smith, 2020)');
+	it('previews a single citation before it is inserted', () => {
+		withEngine();
+
+		expect(citationStore.previewCitation(['1'])).toBe('(Smith, 2020)');
 	});
 
-	it('getInlineCitation returns error if engine not initialized', () => {
-		setCitationStore({ engine: null, citationSources: fakeCitationSources });
-		const result = citationStore.getInlineCitation(['1']);
-		expect(result).toMatch(/engine not ready/i);
+	it('previews nothing before the engine exists', () => {
+		setCitationStore({
+			engine: null,
+			citationSources: fakeCitationSources,
+			bibliography: [],
+			missingIds: []
+		});
+
+		expect(citationStore.previewCitation(['1'])).toBe('');
 	});
 
-	it('getInlineCitation returns error if citation not found', () => {
-		setCitationStore({
-			engine: new CSL.Engine({}, ''),
-			citationSources: fakeCitationSources
-		});
-		const result = citationStore.getInlineCitation(['2']);
-		expect(result).toMatch(/not found/i);
+	it('previews nothing for a source that is not in the library', () => {
+		// Handing citeproc an unresolvable id throws inside the processor.
+		withEngine();
+
+		expect(citationStore.previewCitation(['2'])).toBe('');
 	});
 
-	it('generateBibliography returns bibliography', () => {
+	it('renders a document and publishes its bibliography', () => {
+		withEngine();
+
+		const rendered = citationStore.renderDocument([{ pos: 0, itemIds: ['1'] }]);
+
+		expect(rendered?.sites[0].label).toBe('(Smith, 2020)');
+		expect(get(citationStore).bibliography).toContain('Bibliography Entry');
+	});
+
+	it('reports a cited source that no longer exists', () => {
+		withEngine();
+
+		const rendered = citationStore.renderDocument([{ pos: 0, itemIds: ['gone'] }]);
+
+		expect(rendered?.missingIds).toEqual(['gone']);
+		expect(get(citationStore).missingIds).toEqual(['gone']);
+	});
+
+	it('renders nothing when no style has been loaded', () => {
 		setCitationStore({
-			engine: new CSL.Engine({}, ''),
-			citationSources: fakeCitationSources
+			engine: null,
+			citationSources: fakeCitationSources,
+			bibliography: [],
+			missingIds: []
 		});
-		const result = citationStore.generateBibliography();
-		expect(result).toContain('Bibliography Entry');
+
+		expect(citationStore.renderDocument([{ pos: 0, itemIds: ['1'] }])).toBeNull();
 	});
 });

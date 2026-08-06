@@ -2,6 +2,7 @@ import tippy from 'tippy.js';
 import SvelteRenderer from '../../core/SvelteRenderer';
 import CitationSuggestion from './CitationSuggestion.svelte';
 
+import { parseCitationIds } from '$lib/citations/document';
 import { citationStore } from '$lib/stores/citationStore';
 
 import type { Editor } from '@tiptap/core';
@@ -15,8 +16,9 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 	command: ({ editor, range, props }) => {
 		console.log({ editor, range, props });
 		// Get the formatted citation text from our store
-		const citationIds = JSON.parse(props.id as string) as string[];
-		const citationText = citationStore.getInlineCitation(citationIds);
+		// Provisional. Inserting runs a document render, which is what makes the
+		// citation correct with respect to everything else cited.
+		const citationText = citationStore.previewCitation(parseCitationIds(props.id));
 
 		// Check if we need to extend range for spaces
 		const nodeAfter = editor.view.state.selection.$to.nodeAfter;
@@ -43,6 +45,10 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 					text: ' '
 				}
 			])
+			// No re-render here: inserting changes the document, and the extension's
+			// plugin re-renders every citation off the back of that. Chaining it
+			// would render twice, and would only ever cover the insertion paths
+			// someone remembered to chain it onto.
 			.run();
 
 		// Move cursor to end of insertion

@@ -1,8 +1,9 @@
 import { writable, get } from 'svelte/store';
-import CSL from 'citeproc';
 import type { Store } from '@tauri-apps/plugin-store';
 import { load as loadStore } from '@tauri-apps/plugin-store';
 import { projectSources } from '$lib/stores/db';
+import { CitationEngine } from '$lib/citations/engine';
+import { renderDocumentCitations, type CitationSite } from '$lib/citations/document';
 
 // Define types for our citation data
 export interface CitationItem {
@@ -33,16 +34,23 @@ export interface CitationItem {
 }
 
 interface CitationState {
-	engine: CSL.Engine | null;
+	engine: CitationEngine | null;
 	citationSources: Record<string, CitationItem>; // Store citation items by their ID
+	/** Entries for the works cited by the most recent document render. */
+	bibliography: string[];
+	/** Cited ids with no source behind them, from the most recent render. */
+	missingIds: string[];
 }
+
 export const citationStore = createCitationStore();
 
 function createCitationStore() {
 	// Initialize the store with empty state
-	const { subscribe, set } = writable<CitationState>({
+	const { subscribe, set, update } = writable<CitationState>({
 		engine: null,
-		citationSources: {}
+		citationSources: {},
+		bibliography: [],
+		missingIds: []
 	});
 
 	async function initializeCitationStore() {
@@ -59,76 +67,70 @@ function createCitationStore() {
 		return get(citationStore).citationSources;
 	}
 
-	function getInlineCitation(ids: string[]) {
-		let inlineCitation = '';
-		const state = get(citationStore);
+	/**
+	 * A citation rendered on its own, for previewing a source before it is cited.
+	 *
+	 * Deliberately not what the document uses. Disambiguation, short forms and
+	 * note numbers are properties of the whole manuscript, so a citation formatted
+	 * in isolation can only ever be an approximation — two different Smith 2020
+	 * papers both preview as "(Smith, 2020)". Inserting one runs a full document
+	 * render, which is what makes it correct.
+	 */
+	function previewCitation(ids: string[]): string {
+		const { engine, citationSources } = get(citationStore);
+		if (!engine) return '';
 
-		if (!state.engine) {
-			console.error('CSL Engine not initialized');
-			return `[Citation engine not ready]`;
-		}
-
-		// Verify all IDs exist
-		const missingIds = ids.filter((id) => !state.citationSources[id]);
-		if (missingIds.length > 0) {
-			console.error(`Some citation sources not found: ${missingIds.join(', ')}`);
-			return `[Citations not found: ${missingIds.join(', ')}]`;
-		}
+		const known = ids.filter((id) => citationSources[id]);
+		if (known.length === 0) return '';
 
 		try {
-			// Create a proper citation object
-			const citation = {
-				citationItems: ids.map((id) => ({ id })),
-				properties: {
-					noteIndex: 0
-				}
-			};
-			// Process the citation with careful error handling
-			const result = state.engine.processCitationCluster(citation, [], []);
-
-			if (
-				result &&
-				Array.isArray(result) &&
-				result[1] &&
-				Array.isArray(result[1]) &&
-				result[1].length > 0
-			) {
-				inlineCitation = result[1][0][1];
-				if (!inlineCitation || typeof inlineCitation !== 'string') {
-					console.error('Invalid citation result format:', result);
-					inlineCitation = `[Invalid citation format]`;
-				}
-			} else {
-				console.error('Invalid result from processCitationCluster:', result);
-				inlineCitation = `[Processing error]`;
-			}
+			return engine.render([{ id: 'preview', itemIds: known }])[0]?.text ?? '';
 		} catch (error) {
-			console.error('Error processing citation:', error);
+			console.error('Could not preview citation:', error);
+			return '';
 		}
-
-		return inlineCitation;
 	}
 
-	// Generate bibliography
-	function generateBibliography() {
-		let bibliography = '';
-		const state = get(citationStore);
+	/**
+	 * Render every citation in the document, and the bibliography that follows
+	 * from it.
+	 *
+	 * This is the only correct way to format citations: citeproc needs the whole
+	 * ordered list to disambiguate, to shorten back-references and to number
+	 * notes. The result is published to the store so a bibliography component
+	 * re-renders with it.
+	 */
+	function renderDocument(sites: CitationSite[]) {
+		const { engine, citationSources } = get(citationStore);
+		if (!engine) return null;
 
-		if (state.engine) {
-			const bib = state.engine.makeBibliography();
-			if (bib !== false) {
-				bibliography = bib[1].join('\n');
-			}
+		try {
+			const rendered = renderDocumentCitations(
+				sites,
+				engine,
+				new Set(Object.keys(citationSources))
+			);
+
+			update((state) => ({
+				...state,
+				bibliography: rendered.bibliography,
+				missingIds: rendered.missingIds
+			}));
+
+			return rendered;
+		} catch (error) {
+			// A style the processor rejects must not take the manuscript with it.
+			console.error('Could not render the document citations:', error);
+			return null;
 		}
-		return bibliography;
 	}
 
 	return {
 		subscribe,
 		initializeCitationStore,
-		getInlineCitation,
+		previewCitation,
+		renderDocument,
 		getAllSourcesAsJson,
-		generateBibliography,
 		set
 	};
 }
@@ -140,13 +142,11 @@ async function getInitialState() {
 		const styleXml = (await store.get('cslXml')) as string;
 		const localeXml = (await store.get('localeXml')) as string;
 
-		console.log('CSL Engine Initialization:');
-		console.log('Style XML exists:', !!styleXml);
-		console.log('Locale XML exists:', !!localeXml);
-
-		// Log the first 100 chars to check content format
-		console.log('Style XML snippet:', styleXml?.substring(0, 300));
-		console.log('Locale XML snippet:', localeXml?.substring(0, 300));
+		if (!styleXml || !localeXml) {
+			throw new Error(
+				'No citation style is configured. Choose one in Settings before citing sources.'
+			);
+		}
 
 		// Sources are keyed by content hash and scoped to the open project, with
 		// any project-local metadata corrections already applied by the backend.
@@ -166,35 +166,11 @@ async function getInitialState() {
 			};
 		}
 
-		console.log('Citation sources loaded:', Object.keys(citationSources).length);
-
-		const createCslSystem = () => ({
-			retrieveLocale: () => {
-				console.log('Retrieving locale...');
-				return localeXml;
-			},
-			retrieveItem: (id: string) => {
-				console.log('Retrieving item:', id);
-				console.log('Item exists:', !!citationSources[id]);
-				return citationSources[id];
-			}
-		});
-
-		const sys = createCslSystem();
-
-		// Create engine with try/catch to catch any initialization errors
-		let engine;
-		try {
-			engine = new CSL.Engine(sys, styleXml);
-			console.log('CSL Engine created successfully');
-		} catch (error) {
-			console.error('Error creating CSL Engine:', error);
-			throw error;
-		}
-
 		return {
-			engine,
-			citationSources
+			engine: new CitationEngine({ styleXml, localeXml, sources: citationSources }),
+			citationSources,
+			bibliography: [],
+			missingIds: []
 		};
 	} catch (error) {
 		console.error('Error in getInitialState:', error);
