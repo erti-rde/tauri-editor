@@ -17,7 +17,7 @@
 	let isExpanded = $state(false);
 
 	function generateCitation() {
-		const inlineCitation = citationStore.getInlineCitation([sentenceMetadata.metadata.id]);
+		const inlineCitation = citationStore.previewCitation([sentenceMetadata.metadata.id]);
 
 		return {
 			id: JSON.stringify([sentenceMetadata.metadata.id]),

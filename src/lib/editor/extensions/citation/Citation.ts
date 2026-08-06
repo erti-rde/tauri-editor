@@ -3,9 +3,12 @@ import tippy from 'tippy.js';
 
 import type { Command, CommandProps, RawCommands } from '@tiptap/core';
 import { Node } from '@tiptap/core';
-import { PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import type { Transaction } from '@tiptap/pm/state';
+import type { Node as ProsemirrorNode } from '@tiptap/pm/model';
 import Suggestion from '@tiptap/suggestion';
 
+import { parseCitationIds, type CitationSite } from '$lib/citations/document';
 import { citationStore } from '$lib/stores/citationStore';
 
 import SvelteRenderer from '../../core/SvelteRenderer';
@@ -27,6 +30,52 @@ export interface CitationNodeAttrs {
 
 export const CitationPluginKey = new PluginKey('citation');
 
+/** The cited ids in document order — what the rendering actually depends on. */
+function citationSignature(doc: ProsemirrorNode): string {
+	const parts: string[] = [];
+	doc.descendants((node) => {
+		if (node.type.name === 'citation') parts.push(parseCitationIds(node.attrs.id).join(','));
+		return true;
+	});
+	return parts.join('|');
+}
+
+/**
+ * Re-render every citation in the document against the document.
+ *
+ * Formatting each citation on its own cannot be correct: two different Smith
+ * 2020 papers both render "(Smith, 2020)", repeated notes are never shortened,
+ * and note numbers are all 0. Those are properties of the manuscript as a
+ * whole, so the whole ordered list goes to the processor at once.
+ */
+function updateAllCitations(tr: Transaction): boolean {
+	const sites: CitationSite[] = [];
+	tr.doc.descendants((node, pos) => {
+		if (node.type.name === 'citation') {
+			sites.push({ pos, itemIds: parseCitationIds(node.attrs.id) });
+		}
+		return true;
+	});
+
+	if (sites.length === 0) return false;
+
+	const rendered = citationStore.renderDocument(sites);
+	if (!rendered) return false;
+
+	let updated = false;
+	for (const site of rendered.sites) {
+		const node = tr.doc.nodeAt(site.pos);
+		if (!node || node.attrs.label === site.label) continue;
+
+		// A citation is an inline atom, so rewriting its attributes does not move
+		// anything after it and the collected positions stay valid.
+		tr.setNodeMarkup(site.pos, undefined, { ...node.attrs, label: site.label });
+		updated = true;
+	}
+
+	return updated;
+}
+
 export const Citation = Node.create({
 	name: 'citation',
 	priority: 101,
@@ -45,6 +94,20 @@ export const Citation = Node.create({
 			target: null
 		};
 	},
+	/**
+	 * Render the citations a manuscript was opened with.
+	 *
+	 * Loading a document is not a transaction, so the plugin below never sees it
+	 * and the labels stay as they were last saved. That goes stale the moment
+	 * anything else moves: a source removed from the library, metadata corrected,
+	 * or a different CSL style chosen since the file was written. Until the user
+	 * happened to make an edit, the manuscript showed citations that no longer
+	 * matched its own bibliography.
+	 */
+	onCreate() {
+		this.editor.commands.updateAllCitation();
+	},
+
 	onSelectionUpdate() {
 		const isInCitation = this.editor.isActive('citation');
 
@@ -75,8 +138,9 @@ export const Citation = Node.create({
 						// Handle updating the citation with new IDs
 
 						// Get the formatted citation text
-						const citationIds = JSON.parse(id);
-						const citationText = citationStore.getInlineCitation(citationIds);
+						// Provisional: the document render below replaces it with the
+						// citation as it should read given everything else cited.
+						const citationText = citationStore.previewCitation(parseCitationIds(id));
 
 						// Update the citation
 						this.editor
@@ -386,28 +450,17 @@ export const Citation = Node.create({
 						])
 						.run();
 				},
+			/**
+			 * Re-render every citation on demand.
+			 *
+			 * The document plugin covers edits. This covers the other trigger: the
+			 * user changing CSL style, where the manuscript is untouched but every
+			 * citation and the bibliography must be rebuilt.
+			 */
 			updateAllCitation:
 				(): Command =>
-				({ tr }) => {
-					let updated = false;
-					tr.doc.descendants((node, pos) => {
-						if (node.type.name === 'citation') {
-							const citationId = node.attrs.id ? JSON.parse(node.attrs.id) : null;
-
-							if (citationId) {
-								const newCitationText = citationStore.getInlineCitation(citationId);
-								tr.setNodeMarkup(pos, undefined, {
-									...node.attrs,
-									label: newCitationText
-								});
-								updated = true;
-							}
-						}
-						return true;
-					});
-
-					return updated;
-				}
+				({ tr }) =>
+					updateAllCitations(tr)
 		} as Partial<RawCommands>;
 	},
 	addProseMirrorPlugins() {
@@ -416,6 +469,37 @@ export const Citation = Node.create({
 				char: '@',
 				pluginKey: CitationPluginKey,
 				...suggestion(this.editor)
+			}),
+
+			/**
+			 * Keep every citation correct as the document changes.
+			 *
+			 * Adding, removing or moving a citation changes how the *others* should
+			 * read: a second Smith 2020 makes both need a disambiguating letter, a
+			 * deleted one takes those letters away again, and in a note style every
+			 * note after the edit is renumbered.
+			 *
+			 * This reacts to the document rather than hanging off each command, so
+			 * undo, redo, paste, cut, backspace and drag all go through it — the
+			 * paths that would otherwise be missed one at a time.
+			 */
+			new Plugin({
+				key: new PluginKey('citationRender'),
+				appendTransaction(transactions, oldState, newState) {
+					if (!transactions.some((tr) => tr.docChanged)) return null;
+
+					// Only the cited ids and their order matter. Labels are excluded on
+					// purpose: this plugin's own rewrite changes them, and including
+					// them would make it retrigger on its own output forever.
+					if (citationSignature(oldState.doc) === citationSignature(newState.doc)) return null;
+
+					const tr = newState.tr;
+					const applied = updateAllCitations(tr);
+
+					// Re-labelling is a consequence of the user's edit, not an edit of
+					// its own; folding it into history would make undo a two-step.
+					return applied ? tr.setMeta('addToHistory', false) : null;
+				}
 			})
 		];
 	}
