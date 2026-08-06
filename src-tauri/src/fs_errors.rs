@@ -79,48 +79,63 @@ fn protected_folder(path: &Path) -> Option<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     fn denied() -> io::Error {
         io::Error::new(io::ErrorKind::PermissionDenied, "Operation not permitted")
     }
 
     #[test]
-    fn a_refusal_names_the_setting_that_fixes_it() {
+    fn a_refusal_is_actionable_rather_than_an_error_number() {
         // "Operation not permitted (os error 1)" was the whole message before.
-        let message = describe(&denied(), Path::new("/Users/someone/Documents/thesis"));
+        // What the user is told to do differs by platform; that they are told
+        // something rather than given an errno does not.
+        let message = describe(&denied(), Path::new("/somewhere/thesis"));
 
-        assert!(message.contains("System Settings"), "{message}");
         assert!(!message.contains("os error"), "{message}");
+        assert!(
+            message.contains("permission") || message.contains("blocking"),
+            "{message}"
+        );
     }
 
-    #[test]
     #[cfg(target_os = "macos")]
-    fn a_protected_folder_is_named() {
-        let home = PathBuf::from(std::env::var("HOME").unwrap());
+    mod macos {
+        use super::*;
+        use std::path::PathBuf;
 
-        let message = describe(&denied(), &home.join("Documents/papers"));
+        fn home() -> PathBuf {
+            PathBuf::from(std::env::var("HOME").unwrap())
+        }
 
-        assert!(message.contains("Documents folder"), "{message}");
-        assert!(message.contains("Files and Folders"), "{message}");
-    }
+        #[test]
+        fn a_protected_folder_is_named_with_the_pane_that_governs_it() {
+            let message = describe(&denied(), &home().join("Documents/papers"));
 
-    #[test]
-    #[cfg(target_os = "macos")]
-    fn a_similarly_named_folder_is_not_mistaken_for_a_protected_one() {
-        // A substring search would call this Documents and send the user to the
-        // wrong settings pane.
-        let home = PathBuf::from(std::env::var("HOME").unwrap());
+            assert!(message.contains("Documents folder"), "{message}");
+            assert!(message.contains("Files and Folders"), "{message}");
+        }
 
-        assert_eq!(
-            protected_folder(&home.join("Documents-backup/papers")),
-            None
-        );
-        assert_eq!(protected_folder(&home.join("dev/Documents")), None);
-        assert_eq!(
-            protected_folder(&home.join("Documents/a/b")),
-            Some("Documents")
-        );
+        #[test]
+        fn an_unprotected_path_points_at_full_disk_access_instead() {
+            let message = describe(&denied(), &home().join("dev/papers"));
+
+            assert!(message.contains("Full Disk Access"), "{message}");
+        }
+
+        #[test]
+        fn a_similarly_named_folder_is_not_mistaken_for_a_protected_one() {
+            // A substring search would call this Documents and send the user to
+            // the wrong settings pane.
+            assert_eq!(
+                protected_folder(&home().join("Documents-backup/papers")),
+                None
+            );
+            assert_eq!(protected_folder(&home().join("dev/Documents")), None);
+            assert_eq!(
+                protected_folder(&home().join("Documents/a/b")),
+                Some("Documents")
+            );
+        }
     }
 
     #[test]
