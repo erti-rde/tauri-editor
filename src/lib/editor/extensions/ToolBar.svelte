@@ -10,6 +10,7 @@
 	// Import Icons for toolbar
 	import Bold from '~icons/lucide/bold';
 	import BookText from '~icons/lucide/book-text';
+	import SeparatorHorizontal from '~icons/lucide/separator-horizontal';
 	import Italic from '~icons/lucide/italic';
 	import StrikeThrough from '~icons/lucide/strikethrough';
 	import ListUnordered from '~icons/lucide/list';
@@ -243,6 +244,14 @@
 		isActive: editor.isActive('superscript'),
 		disabled: !editor.can().chain().focus().toggleSuperscript().run(),
 		Icon: Superscript
+	})}
+
+	<!-- A break the author places. Print rules decide where a page *may* break;
+	     only this says where one *must* end — a chapter, or the references. -->
+	{@render toolBarButton({
+		onclick: () => editor.chain().focus().insertPageBreak().run(),
+		isActive: editor.isActive('pageBreak'),
+		Icon: SeparatorHorizontal
 	})}
 
 	<!-- The works cited. A document node, so it exports and paginates with the

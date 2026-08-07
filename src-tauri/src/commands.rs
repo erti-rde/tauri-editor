@@ -2,10 +2,8 @@ use crate::ml::ML_STATE;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use core::future::Future;
 use core::pin::Pin;
-use headless_chrome::{types::PrintToPdfOptions, Browser, LaunchOptions};
 use ndarray::{Array2, Axis, Ix2};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::Path;
 use tokio::fs as tokio_fs;
 
@@ -93,38 +91,6 @@ pub async fn read_pdf_file(path: String) -> Result<String, String> {
     let data =
         std::fs::read(&path).map_err(|e| crate::fs_errors::describe(&e, Path::new(&path)))?;
     Ok(STANDARD.encode(data))
-}
-
-#[tauri::command]
-pub async fn print_pdf_file(current_dir: String) -> Result<(), String> {
-    let html_path = Path::new(&current_dir)
-        .join("magnum_opus.html")
-        .to_string_lossy()
-        .to_string();
-
-    let file_path = format!("file://{}", html_path);
-
-    let browser = Browser::new(LaunchOptions::default_builder().build().unwrap())
-        .map_err(|e| e.to_string())?;
-    let tab = browser.new_tab().map_err(|e| e.to_string())?;
-
-    // Browse to the file url and render a pdf of the web page.
-    let pdf_options: Option<PrintToPdfOptions> = None; // use chrome's defaults for this example
-    let local_pdf = tab
-        .navigate_to(&file_path)
-        .map_err(|e| e.to_string())?
-        .wait_until_navigated()
-        .map_err(|e| e.to_string())?
-        .print_to_pdf(pdf_options)
-        .map_err(|e| e.to_string())?;
-    let path_to_save = Path::new(&current_dir)
-        .join("opus.pdf")
-        .to_string_lossy()
-        .to_string();
-    fs::write(path_to_save, local_pdf).map_err(|e| e.to_string())?;
-    println!("PDF successfully created from local web page.");
-
-    Ok(())
 }
 
 /// Embed a batch of texts, returning one vector per input.
