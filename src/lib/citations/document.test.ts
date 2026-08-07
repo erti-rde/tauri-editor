@@ -78,8 +78,37 @@ describe('rendering a document', () => {
 			known
 		);
 
-		// The first is given in full; the third refers back to it.
-		expect(plain(sites[2].label).length).toBeLessThan(plain(sites[0].label).length);
+		// The first note gives the work in full; the third refers back to it. The
+		// comparison is on the note text, because the label is now the marker that
+		// appears in the sentence — "1", "3" — and the reference is in the note.
+		expect(plain(sites[2].note).length).toBeLessThan(plain(sites[0].note).length);
+	});
+
+	it('leaves a marker in the text and the reference in the note', () => {
+		// Chicago and Turabian exist to keep the reference out of the sentence.
+		// The editor used to render citeproc's note text inline, which put a full
+		// bibliographic reference in the middle of the author's prose.
+		const { sites, notes } = renderDocumentCitations(
+			sitesOf(['smith-2020-a']),
+			engineFor(chicagoNotes),
+			known
+		);
+
+		expect(sites[0].label).toBe('1');
+		expect(plain(sites[0].note)).toContain('Smith');
+		expect(notes).toEqual([{ index: 1, text: sites[0].note }]);
+	});
+
+	it('produces no notes for an in-text style', () => {
+		const { sites, notes } = renderDocumentCitations(
+			sitesOf(['smith-2020-a']),
+			engineFor(apa),
+			known
+		);
+
+		expect(notes).toEqual([]);
+		expect(sites[0].note).toBe('');
+		expect(plain(sites[0].label)).toContain('Smith');
 	});
 
 	it('builds a bibliography of exactly the cited works', () => {
