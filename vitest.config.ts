@@ -16,6 +16,14 @@ export default defineConfig({
 	test: {
 		globals: true,
 		environment: 'jsdom',
+		// citeproc parses a CSL style from XML on every engine construction, and
+		// the citation tests build a lot of engines — the bibliography-across-
+		// styles test alone parses five large files and takes over a second on a
+		// developer machine. Vitest's 5s default left no headroom on a two-core CI
+		// runner, where it timed out. Long enough for real work, short enough that
+		// a genuinely hung test still fails rather than hanging the job.
+		testTimeout: 30_000,
+		hookTimeout: 60_000,
 		include: ['src/**/*.{test,spec}.{js,ts,svelte}'],
 		setupFiles: ['./vitest.setup.ts'],
 		coverage: {
