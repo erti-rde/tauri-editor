@@ -9,6 +9,7 @@ import type { Node as ProsemirrorNode } from '@tiptap/pm/model';
 import Suggestion from '@tiptap/suggestion';
 
 import { parseCitationIds, type CitationSite, type RenderedNote } from '$lib/citations/document';
+import { setCitationHtml } from '$lib/citations/sanitize';
 import { BIBLIOGRAPHY_NODE } from './Bibliography';
 import { NOTES_NODE } from './Notes';
 import { citationStore } from '$lib/stores/citationStore';
@@ -486,7 +487,7 @@ export const Citation = Node.create({
 			return span;
 		}
 
-		span.innerHTML = node.attrs.label;
+		setCitationHtml(span, node.attrs.label);
 		return span;
 	},
 
