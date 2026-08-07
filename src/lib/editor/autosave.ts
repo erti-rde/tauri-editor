@@ -14,7 +14,8 @@
  *
  * The rule here is that the most recent content always reaches disk. Edits
  * arriving during a write are kept and written when it finishes, writes never
- * overlap, and a failure keeps the content pending rather than discarding it.
+ * overlap, a failure keeps the content and retries it, and `flush` does not
+ * resolve until everything outstanding has actually been written.
  */
 
 export type SaveState = 'idle' | 'pending' | 'saving' | 'error';
@@ -24,6 +25,9 @@ export interface AutosaveOptions {
 	write: (content: unknown) => Promise<void>;
 	/** Quiet period before a save, in milliseconds. */
 	delay?: number;
+	/** First wait before retrying a failed write. Doubles, up to `maxRetryDelay`. */
+	retryDelay?: number;
+	maxRetryDelay?: number;
 	onStateChange?: (state: SaveState) => void;
 	onError?: (error: unknown) => void;
 }
@@ -31,11 +35,17 @@ export interface AutosaveOptions {
 export interface Autosave {
 	/** Record an edit. The content is read when the save actually runs. */
 	schedule: (getContent: () => unknown) => void;
-	/** Write any outstanding content now. Await before closing a document. */
-	flush: () => Promise<void>;
-	/** Stop the timer. Does not write — call `flush` first if that matters. */
+	/**
+	 * Write everything outstanding and wait for it.
+	 *
+	 * Resolves only once no write is in flight and nothing is pending, so it can
+	 * be awaited before closing a document. Returns false if it gave up because
+	 * a write failed, leaving the content pending for the next attempt.
+	 */
+	flush: () => Promise<boolean>;
+	/** Stop all timers. Does not write — call `flush` first if that matters. */
 	destroy: () => void;
-	/** Whether anything is waiting to be written. */
+	/** Whether anything is waiting to be written, or is being written now. */
 	readonly hasUnsavedChanges: boolean;
 	readonly state: SaveState;
 }
@@ -43,6 +53,8 @@ export interface Autosave {
 export function createAutosave({
 	write,
 	delay = 500,
+	retryDelay = 2000,
+	maxRetryDelay = 30_000,
 	onStateChange,
 	onError
 }: AutosaveOptions): Autosave {
@@ -50,8 +62,14 @@ export function createAutosave({
 	// period rather than one per keystroke, and always the newest document.
 	let pending: (() => unknown) | null = null;
 	let timer: ReturnType<typeof setTimeout> | undefined;
-	let writing = false;
+	let retryTimer: ReturnType<typeof setTimeout> | undefined;
+	let nextRetry = retryDelay;
 	let state: SaveState = 'idle';
+
+	// The run in progress. Held rather than a boolean flag so that a caller
+	// arriving mid-write can await the same work instead of being told to go
+	// away — which is what let `flush` resolve while a write was still running.
+	let active: Promise<void> | null = null;
 
 	function moveTo(next: SaveState) {
 		if (state === next) return;
@@ -59,38 +77,55 @@ export function createAutosave({
 		onStateChange?.(next);
 	}
 
-	async function drain(): Promise<void> {
-		// A write is already running; it will pick up whatever arrived, so a
-		// second pass here would only duplicate it.
-		if (writing) return;
-		if (!pending) return;
+	function drain(): Promise<void> {
+		if (active) return active;
+		if (!pending) return Promise.resolve();
 
-		writing = true;
+		active = run().finally(() => {
+			active = null;
+		});
+		return active;
+	}
+
+	async function run(): Promise<void> {
 		moveTo('saving');
 
-		try {
-			// Loop rather than write once: edits that land while the await is
-			// outstanding set `pending` again, and this is what stops them being
-			// dropped, which was the whole defect.
-			while (pending) {
-				const getContent = pending;
-				pending = null;
+		// Loop rather than write once: edits landing while the await is
+		// outstanding set `pending` again, and picking them up here is what stops
+		// them being dropped.
+		while (pending) {
+			const getContent = pending;
+			pending = null;
 
-				try {
-					await write(getContent());
-				} catch (error) {
-					// Keep the content. A failed write must not be a lost edit, and
-					// the next edit or flush will try again.
-					pending = getContent;
-					moveTo('error');
-					onError?.(error);
-					return;
-				}
+			try {
+				await write(getContent());
+			} catch (error) {
+				// Keep the content — a failed write must not be a lost edit. Only if
+				// nothing newer arrived while this write was outstanding, though:
+				// putting the failed getter back unconditionally would overwrite a
+				// newer edit with older content, which is the very loss this exists
+				// to prevent.
+				if (!pending) pending = getContent;
+
+				moveTo('error');
+				onError?.(error);
+				scheduleRetry();
+				return;
 			}
-			moveTo('idle');
-		} finally {
-			writing = false;
 		}
+
+		nextRetry = retryDelay;
+		moveTo('idle');
+	}
+
+	function scheduleRetry() {
+		clearTimeout(retryTimer);
+		retryTimer = setTimeout(() => {
+			void drain();
+		}, nextRetry);
+		// Backing off keeps a persistently unwritable disk from being hammered,
+		// while a transient failure still recovers quickly.
+		nextRetry = Math.min(nextRetry * 2, maxRetryDelay);
 	}
 
 	return {
@@ -98,28 +133,46 @@ export function createAutosave({
 			pending = getContent;
 			if (state !== 'saving') moveTo('pending');
 
+			// An edit is also the moment to retry a failed save.
+			clearTimeout(retryTimer);
+			nextRetry = retryDelay;
+
 			clearTimeout(timer);
 			timer = setTimeout(() => {
 				void drain();
 			}, delay);
 		},
 
-		async flush() {
+		async flush(): Promise<boolean> {
 			clearTimeout(timer);
-			await drain();
+			clearTimeout(retryTimer);
 
-			// A write that was already running when flush was called takes the
-			// content with it, but anything scheduled *during* that write is still
-			// outstanding when it returns. One more pass settles it.
-			if (pending) await drain();
+			// Keep going until nothing is outstanding: a write in flight is awaited,
+			// and anything scheduled during it is written by the next pass.
+			//
+			// The pass limit is a backstop, not the mechanism. It holds only if
+			// `drain` stops making progress — awaiting something already settled, or
+			// returning while a write is still running — and closing a document is
+			// not worth hanging the app over if that ever becomes true.
+			for (let pass = 0; pass < 100; pass++) {
+				if (!active && !pending) return true;
+
+				await drain();
+				if (state === 'error') return false;
+			}
+
+			return !pending && !active;
 		},
 
 		destroy() {
 			clearTimeout(timer);
+			clearTimeout(retryTimer);
 		},
 
 		get hasUnsavedChanges() {
-			return pending !== null;
+			// A write in flight counts: the content is not on disk yet, and the
+			// window-close path reads this to decide whether to wait.
+			return pending !== null || active !== null;
 		},
 
 		get state() {

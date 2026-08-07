@@ -14,10 +14,13 @@ function controllableWrite() {
 	const writes: unknown[] = [];
 	let release: (() => void) | null = null;
 
+	let reject: ((error: Error) => void) | null = null;
+
 	const write = vi.fn(async (content: unknown) => {
 		writes.push(content);
-		await new Promise<void>((resolve) => {
+		await new Promise<void>((resolve, rej) => {
 			release = resolve;
+			reject = rej;
 		});
 	});
 
@@ -29,9 +32,34 @@ function controllableWrite() {
 			release = null;
 			// Let the awaiting write resume before the assertion runs.
 			return Promise.resolve().then(() => Promise.resolve());
+		},
+		fail(error: Error) {
+			reject?.(error);
+			reject = null;
+			return Promise.resolve().then(() => Promise.resolve());
 		}
 	};
 }
+
+/**
+ * Track whether a promise has resolved, for asserting that it has *not*.
+ *
+ * A flag the promise sets itself, read after letting the microtask queue drain.
+ * An earlier version raced the promise against `Promise.resolve()`, which
+ * reported an already-resolved promise as still pending — so the flush test
+ * built on it passed on timing rather than on behaviour, and missed a real bug.
+ */
+function watch<T>(promise: Promise<T>) {
+	const box = { done: false, value: undefined as T | undefined };
+	void promise.then((value) => {
+		box.done = true;
+		box.value = value;
+	});
+	return box;
+}
+
+/** Let every queued microtask run before reading a watcher. */
+const drainMicrotasks = () => vi.advanceTimersByTimeAsync(0);
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -99,6 +127,32 @@ describe('an edit made while a save is in flight', () => {
 		expect(save.hasUnsavedChanges).toBe(false);
 	});
 
+	it('does not lose a newer edit when the write it interrupted fails', async () => {
+		// The failure path put the *failed* getter back as pending, overwriting
+		// the newer one scheduled while the write was outstanding. The retry then
+		// wrote older content over newer work — the exact loss this module is for.
+		const disk = controllableWrite();
+		const save = createAutosave({ write: disk.write, delay: 500, onError: () => {} });
+
+		save.schedule(() => 'first');
+		await vi.advanceTimersByTimeAsync(500);
+
+		save.schedule(() => 'second');
+		await disk.fail(new Error('disk full'));
+
+		// The retry has to be released before flush can finish, so flush is
+		// started rather than awaited — awaiting it here would deadlock the test
+		// against the very write it is waiting for.
+		const flushed = watch(save.flush());
+		await drainMicrotasks();
+		await disk.finish();
+		await drainMicrotasks();
+
+		expect(flushed.done).toBe(true);
+		expect(disk.writes.at(-1)).toBe('second');
+		expect(save.hasUnsavedChanges).toBe(false);
+	});
+
 	it('never runs two writes at once', async () => {
 		let active = 0;
 		let maxActive = 0;
@@ -134,6 +188,48 @@ describe('when a write fails', () => {
 		expect(onError).toHaveBeenCalled();
 		expect(save.hasUnsavedChanges).toBe(true);
 		expect(save.state).toBe('error');
+	});
+
+	it('retries on its own, without waiting for another edit', async () => {
+		// The indicator says "retrying", so it has to actually retry. A researcher
+		// who hits a transient failure and then stops typing must not be left with
+		// unwritten work.
+		let fail = true;
+		const write = vi.fn(async () => {
+			if (fail) throw new Error('disk full');
+		});
+		const save = createAutosave({ write, delay: 500, retryDelay: 2000, onError: () => {} });
+
+		save.schedule(() => 'work');
+		await vi.advanceTimersByTimeAsync(500);
+		expect(save.state).toBe('error');
+
+		fail = false;
+		await vi.advanceTimersByTimeAsync(2000);
+
+		expect(save.state).toBe('idle');
+		expect(save.hasUnsavedChanges).toBe(false);
+	});
+
+	it('backs off rather than hammering an unwritable disk', async () => {
+		const write = vi.fn(async () => {
+			throw new Error('disk full');
+		});
+		const save = createAutosave({ write, delay: 500, retryDelay: 1000, onError: () => {} });
+
+		save.schedule(() => 'work');
+		await vi.advanceTimersByTimeAsync(500);
+		expect(write).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(write).toHaveBeenCalledTimes(2);
+
+		// The next wait is longer, so this is not yet due.
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(write).toHaveBeenCalledTimes(2);
+
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(write).toHaveBeenCalledTimes(3);
 	});
 
 	it('writes it on the next attempt', async () => {
@@ -175,12 +271,37 @@ describe('flushing', () => {
 		await vi.advanceTimersByTimeAsync(500);
 		save.schedule(() => 'second');
 
-		const flushed = save.flush();
-		await disk.finish();
-		await disk.finish();
-		await flushed;
+		const flushed = watch(save.flush());
 
+		// Checked before each write completes. Awaiting only at the end would pass
+		// even if flush resolved immediately — which it did, so closing a document
+		// did not actually wait for the work to reach disk.
+		await drainMicrotasks();
+		expect(flushed.done).toBe(false);
+
+		await disk.finish();
+		await drainMicrotasks();
+		expect(flushed.done).toBe(false);
+
+		await disk.finish();
+		await drainMicrotasks();
+		expect(flushed.done).toBe(true);
 		expect(disk.writes).toEqual(['first', 'second']);
+	});
+
+	it('reports unsaved changes while a write is still in flight', async () => {
+		// The window-close path reads this before deciding to flush, so content
+		// that is mid-write must count as unsaved.
+		const disk = controllableWrite();
+		const save = createAutosave({ write: disk.write, delay: 500 });
+
+		save.schedule(() => 'work');
+		await vi.advanceTimersByTimeAsync(500);
+
+		expect(save.hasUnsavedChanges).toBe(true);
+
+		await disk.finish();
+		expect(save.hasUnsavedChanges).toBe(false);
 	});
 
 	it('does nothing when there is nothing to write', async () => {
