@@ -8,11 +8,12 @@
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
-	import { invoke } from '@tauri-apps/api/core';
-
 	import { get } from 'svelte/store';
 
+	import { load as loadStore } from '@tauri-apps/plugin-store';
+
 	import { createAutosave, type SaveState } from './autosave';
+	import { countDocument, progressTo, type WordCount } from './wordCount';
 	import { DOCUMENT_EXTENSION, toDocumentFileName, type ProjectDocument } from './documents';
 	import { documentsStore } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
@@ -44,6 +45,16 @@
 	let readFailed = $state(false);
 	/** Bumped on each document switch, so a superseded one abandons itself. */
 	let transition = 0;
+
+	/**
+	 * The number a researcher is actually writing to.
+	 *
+	 * Settings has persisted a target since before this work began and nothing
+	 * ever read it, so the figure that decides whether a paper can be submitted
+	 * was invisible.
+	 */
+	let words = $state<WordCount>({ body: 0, references: 0, total: 0, characters: 0 });
+	let wordTarget = $state(0);
 
 	const autosave = createAutosave({
 		write: async (content) => {
@@ -77,12 +88,14 @@
 		documentsStore.refresh();
 		if (!$documentsStore.current) await createFirstDocument();
 
+		wordTarget = Number((await (await loadStore('settings-store.json')).get('wordCount')) ?? 0);
+
 		editor = createEditor({
 			editorProps: {
 				attributes: {
 					style: 'padding-left: 56px; padding-right: 56px',
 					class:
-						'focus:outline-none bg-white border border-[#C7C7C7] flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
+						'manuscript focus:outline-none bg-white border border-[#C7C7C7] flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
 				}
 			},
 			autofocus: 'end',
@@ -90,6 +103,8 @@
 			content: await getDocumentData(),
 
 			onUpdate: ({ editor }) => {
+				words = countDocument(editor.state.doc);
+
 				// A file that could not be parsed is left alone. Saving over it would
 				// replace whatever was recoverable with an empty document, which is
 				// the opposite of what someone whose file just failed to open needs.
@@ -146,14 +161,29 @@
 		$editor.setEditable(editable);
 	}
 
+	/**
+	 * Export as PDF, through the webview's own print.
+	 *
+	 * What is on screen is what comes out, which is the point for researchers
+	 * arriving from Word: the editor already renders an 816px page — US Letter at
+	 * 96dpi — so the model was right, it just had no print stylesheet.
+	 *
+	 * The previous implementation rendered `magnum_opus.html` through a headless
+	 * Chrome. Nothing ever wrote that file, so it had never worked, and requiring
+	 * a Chrome install contradicts the whole premise of an offline-first app.
+	 * `window.print()` reaches the OS print sheet, which is where "Save as PDF"
+	 * lives, and needs nothing installed.
+	 */
 	async function exportToPdf() {
-		try {
-			await invoke('print_pdf_file', {
-				currentDir
-			});
-		} catch (error) {
-			console.error('Failed to export PDF:', error);
-		}
+		// Anything still in the quiet period is written first, so the PDF and the
+		// file on disk are the same document.
+		await autosave.flush();
+
+		// The citations and the works-cited list are rendered from the document, so
+		// they must be current before it is committed to paper.
+		$editor.commands.updateAllCitation();
+
+		window.print();
 	}
 
 	async function getDocumentData(path?: string) {
@@ -334,16 +364,33 @@
 				it stays put instead of disappearing like a toast, because it is the
 				one thing the user must not miss.
 			-->
-			<div class="flex justify-end px-4 pb-1 text-xs" aria-live="polite">
-				{#if saveState === 'error'}
-					<span class="font-medium text-red-600">Not saved — retrying, your work is kept</span>
-				{:else if saveState === 'saving'}
-					<span class="text-gray-500">Saving…</span>
-				{:else if saveState === 'pending'}
-					<span class="text-gray-400">Unsaved changes</span>
-				{:else}
-					<span class="text-gray-400">Saved</span>
-				{/if}
+			<div class="flex items-center justify-end gap-4 px-4 pb-1 text-xs">
+				<!--
+					Body words, with the references counted separately: a journal's
+					limit applies to the text, and folding the works cited into one
+					total would report an author as over a limit they had not crossed.
+				-->
+				<span class="text-gray-400" title="{words.references} words in references and notes">
+					{words.body.toLocaleString()}
+					{words.body === 1 ? 'word' : 'words'}
+					{#if wordTarget > 0}
+						<span class:text-orange-600={progressTo(words.body, wordTarget).remaining < 0}>
+							/ {wordTarget.toLocaleString()}
+						</span>
+					{/if}
+				</span>
+
+				<span aria-live="polite">
+					{#if saveState === 'error'}
+						<span class="font-medium text-red-600">Not saved — retrying, your work is kept</span>
+					{:else if saveState === 'saving'}
+						<span class="text-gray-500">Saving…</span>
+					{:else if saveState === 'pending'}
+						<span class="text-gray-400">Unsaved changes</span>
+					{:else}
+						<span class="text-gray-400">Saved</span>
+					{/if}
+				</span>
 			</div>
 		</div>
 

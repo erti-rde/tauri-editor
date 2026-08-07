@@ -45,7 +45,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_directory,
             read_pdf_file,
-            print_pdf_file,
             embed_chunks,
             // Database surface — no statement is accepted from the frontend.
             open_library,
