@@ -18,7 +18,16 @@ import type { CitationItem } from '$lib/stores/citationStore';
  */
 
 const FIXTURES = resolve(process.cwd(), 'tests/fixtures/csl');
-const read = (p: string) => readFileSync(resolve(FIXTURES, p), 'utf8');
+// Memoised: the same style is read many times across a file, and the fixtures
+// do not change while the suite runs.
+const fileCache = new Map<string, string>();
+const read = (p: string) => {
+	const hit = fileCache.get(p);
+	if (hit !== undefined) return hit;
+	const text = readFileSync(resolve(FIXTURES, p), 'utf8');
+	fileCache.set(p, text);
+	return text;
+};
 
 const sources = JSON.parse(read('sources.json')) as Record<string, CitationItem>;
 const localeXml = read('locales/locales-en-US.xml');
