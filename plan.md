@@ -53,9 +53,9 @@ the measurement lives in the repository so it can be re-run rather than believed
 
 **Defects closed:** D1 (metadata pipeline), D2 (poisoned files), D3 (stateless citeproc), D5 (one
 global database), D6 (JSON embeddings, JS cosine), D7 (autosave dropping keystrokes), D9
-(`container-title`), and most of D11. **Still open:** D4 — export is dead code. D8 is partly done:
-the consent gate exists, and the README still claims what the app now actually does, so it should be
-re-read rather than assumed correct. D10 is tracked separately.
+(`container-title`), and most of D11. **Still open:** none of the original defect list. D4 was
+closed by the export work; D8 by the consent gate plus a README that now enumerates exactly what
+leaves the machine. D10 is tracked separately.
 
 **Found and fixed beyond the plan:** a stored-XSS path from manuscript files into the webview
 (Phase 4); macOS denying access to `~/Documents` — where academics keep papers — with no usage

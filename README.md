@@ -10,7 +10,20 @@ The project exists to help researchers on their tasks and help them to focus on 
 
 The tool will be always free and it will be never sold to anyone. It's aiming to be something that is created for users rather than to make money and monetise users.
 
-Erti runs completely on your machine and works offline. Your research and data never leave your computer without your explicit consent (currently we are not asking any consent).
+Erti runs completely on your machine and works offline. Your research and data never leave your computer without your explicit consent.
+
+Concretely, Erti asks once before anything is sent, and works fully offline if you decline.
+
+If you allow lookups, this is what leaves the machine and nothing else:
+
+- **The identifier printed in a paper** — its DOI or arXiv ID — sent to `doi.org` to fetch authors, title and journal. This is the usual case: it resolved every paper in our benchmark corpus.
+- **Only when no identifier can be found**, a search query to `crossref.org` containing the paper's **title and authors** — or, if the PDF's embedded title is unusable, **the first 400 characters of its opening page**.
+- **An email address, if you enter one** in Settings, which Crossref asks for so it can contact you about heavy use. Optional and blank by default.
+- **A citation style file** from GitHub, when you choose one.
+
+Your PDFs, your notes and your writing are never uploaded, in any case. The search that finds relevant passages runs entirely on your machine.
+
+If you decline, Erti still reads the identifier printed inside each paper — which is enough on its own for most papers — and you can paste a DOI or type the details in by hand.
 
 We are also using ML model in the software to help users to find citations. And we are always carefully thinking ethics and potentials of using ML models in our software. They also run on your machine and any interaction with it will stay locally as well. The software will not be using GAI (Generative Artificial Intelligence) except really rare cases where community concluded that it's good idea to use.
 
