@@ -30,9 +30,10 @@ fn read_directory_impl(
     Box::pin(async move {
         let path = Path::new(&path);
 
-        if !path.exists() {
-            return Err(format!("{} no longer exists.", path.display()));
-        }
+        // No exists() preflight: it reports false when the metadata call is
+        // itself denied, so a folder Erti simply lacks permission to read would
+        // be described as missing — which is the opposite of the guidance this
+        // path exists to give. read_dir distinguishes the two.
 
         let mut items = Vec::new();
 

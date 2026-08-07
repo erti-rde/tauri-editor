@@ -172,6 +172,15 @@ describe('reading a citation node', () => {
 		expect(parseCitationIds(JSON.stringify('quoted'))).toEqual(['quoted']);
 	});
 
+	it('keeps a bare id that happens to be valid JSON', () => {
+		// An all-digit id parses as a number, and so does `1e5`. Discarding those
+		// rendered the citation as a removed source.
+		expect(parseCitationIds('12345')).toEqual(['12345']);
+		expect(parseCitationIds('1e5')).toEqual(['1e5']);
+		expect(parseCitationIds('1')).toEqual(['1']);
+		expect(parseCitationIds('true')).toEqual(['true']);
+	});
+
 	it('yields nothing rather than throwing on a broken node', () => {
 		// One malformed node must not stop the document rendering.
 		expect(parseCitationIds(null)).toEqual([]);

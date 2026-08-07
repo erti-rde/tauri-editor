@@ -57,10 +57,11 @@ function updateAllCitations(tr: Transaction): boolean {
 		return true;
 	});
 
-	if (sites.length === 0) return false;
-
+	// An empty document is still rendered, because the store has to be told: the
+	// bibliography and the missing-source markers left by the citations that were
+	// just deleted have to go with them.
 	const rendered = citationStore.renderDocument(sites);
-	if (!rendered) return false;
+	if (!rendered || sites.length === 0) return false;
 
 	let updated = false;
 	for (const site of rendered.sites) {
@@ -459,8 +460,15 @@ export const Citation = Node.create({
 			 */
 			updateAllCitation:
 				(): Command =>
-				({ tr }) =>
-					updateAllCitations(tr)
+				({ tr }) => {
+					// Same reason as the plugin: re-labelling is a consequence of an
+					// edit, not an edit. onCreate runs this as a manuscript loads, so
+					// without this the document opens already "changed" — the first
+					// undo would strip the labels, and autosave would write a file the
+					// user never touched.
+					tr.setMeta('addToHistory', false);
+					return updateAllCitations(tr);
+				}
 		} as Partial<RawCommands>;
 	},
 	addProseMirrorPlugins() {
