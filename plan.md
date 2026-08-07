@@ -470,9 +470,15 @@ All fit under 2 GB RAM at fp16, comfortably at int8. Notes that matter more than
   chunk matching; the right tool for a future "papers you should cite" feature, adjacent to #17.
   Noted as complementary, explicitly not a replacement.
 
-**Decision rule:** the model changes only if it wins on the harness in §8 at acceptable ingest
-throughput. Prior expectation is that bge-small-en-v1.5 offers the best value (identical 384 dims →
-zero schema change, 2× context, MIT), with Qwen3-0.6B the upside case if throughput allows.
+**Decision rule — revised, and the reason is in §12.** The original rule was that the model changes
+only if it wins on the retrieval harness at acceptable throughput. That harness cannot carry the
+decision: it was built to catch regressions in Erti's own extraction and chunking, and it is good at
+that, but it is far too small to separate two embedding models. See **§12**, which replaces this
+plan's approach to the bake-off.
+
+Prior expectation is unchanged and worth recording: bge-small-en-v1.5 offers the best value
+(identical 384 dims → zero schema change, 2× context, MIT), with Qwen3-0.6B the upside case if
+throughput allows.
 
 ---
 
@@ -699,9 +705,10 @@ genuinely-resolved metadata rows survive.
 > chain works end to end, not that a library of scanned chapters and identifier-less publisher PDFs
 > will do the same.
 >
-> **Still open:** the model bake-off (§5.3), deferred — see below. The app has now ingested for
-> real (3 sources, 758 chunks, zero `'{}'`, all metadata salvaged from the old database), but not at
-> scale and not through the network path, so the in-app verification below is not yet complete.
+> **Still open:** the model bake-off, which §12 replaces with a different approach. The app has now
+> ingested for real (3 sources, 758 chunks, zero `'{}'`, all metadata salvaged from the old
+> database), but not at scale and not through the network path, so the in-app verification below is
+> not yet complete.
 
 - Fix extraction (§5.1) — spacing and line breaks from geometry, `hasEOL` honoured.
 - Structure-aware chunking (§5.2): column detection and reading order, header/footer stripping,
@@ -721,12 +728,12 @@ genuinely-resolved metadata rows survive.
 > injected, and production calls them, so there is one implementation rather than a tested copy
 > beside an untested original.
 
-**The model bake-off is deferred, and this is why.** As specified it cannot produce a decision:
-Recall@5 is saturated at 100 % and MRR sits at 0.940 over 25 queries, so a genuinely better model
-would score identically. It needs a harder eval set first — more queries, distractors drawn from the
-same subfield — and two candidates also need work before they can be measured at all: `ml/mod.rs`
-loads a fixed `model.onnx` path, and the BGE/Qwen families expect query prefixes the code does not
-emit. The current model is not the bottleneck.
+**The model bake-off is not being done as planned — see §12.** The eval set has since been widened
+to 65 queries and still cannot decide it: Recall@5 stays saturated at 100 % because 20 papers make
+the top five a quarter of the corpus, and a challenger would have to fix six of the eight remaining
+Recall@1 misses to be statistically distinguishable. §12 replaces the approach: published scientific
+retrieval benchmarks for quality, local measurement for throughput and memory, and Erti's harness
+kept for what it is genuinely good at — catching regressions in our own extraction and chunking.
 
 ### Phase 3 — Search — **mostly done**
 
@@ -862,3 +869,71 @@ applied ahead of the network. What it has not done is run at the scale this plan
 exercise the network resolver and the retry path. Ingesting twenty-plus real PDFs, including
 two-column journal articles and ones with junk `info.Title`, and re-running the metadata-health
 cross-tab against the resulting library, is the outstanding verification for Phase 2.
+
+---
+
+## 12. The embedding model bake-off — deferred, and to be done differently
+
+This is the one item from the original plan that is **not** being carried out as written. It is
+recorded here rather than dropped, because the question it asks is still worth answering.
+
+### Why the planned approach cannot work
+
+§5.3 said: measure the candidates on Erti's own retrieval harness and adopt whichever wins. That
+harness now has 65 labelled queries over 20 papers, and it still cannot carry the decision.
+
+- **Recall@5 is saturated at 100 %.** With 20 papers, the top five covers a quarter of the corpus,
+  so every competent model lands in it. Harder queries do not change this; only more papers would.
+- **Recall@1 and MRR discriminate, but coarsely.** Eight misses remain. Because the models answer
+  the same queries the comparison is paired, so McNemar on the discordant pairs is the right test
+  and is far more sensitive than comparing two proportions — and even so a challenger must fix
+  roughly six of those eight without breaking any to reach p < 0.05.
+
+So the harness can detect a large improvement and cannot detect a small one. Differences between
+modern embedding models are usually a few points, which is exactly the range it cannot see. Running
+it would produce a number that reads like a decision and is not one.
+
+Scaling the hand-labelled set to where it could decide means hundreds of query–paper pairs, each
+one judged by someone who has read the paper. That is a research project, not a task, and it would
+produce a worse benchmark than several that already exist.
+
+### What to do instead
+
+Split the question, because it is really two questions with different best answers.
+
+**Quality — use a benchmark built for it.** BEIR's scientific subsets, particularly **SciFact** and
+**NFCorpus**, are retrieval benchmarks over academic text with thousands of graded relevance
+judgments. They are the right size to separate models, they are in Erti's actual domain, and they
+are already what the field uses. **MTEB** publishes exactly these scores for every candidate here,
+so for most of the comparison the measurement has been done — reading it costs nothing and is more
+reliable than anything we would produce.
+
+**Throughput, memory and behaviour under our constraints — measure locally, because nobody else
+has.** What MTEB cannot tell us is what a model does _here_: int8-quantised through ONNX Runtime,
+in a 128-token window, on a laptop, embedding a few thousand chunks while the researcher waits. So
+the local measurement is chunks/sec, peak RSS and model size — where a 26×-larger model turning a
+two-minute ingest into an hour is disqualifying regardless of its nDCG.
+
+**Erti's own harness keeps the job it is good at.** It was built to catch regressions in _our_
+extraction and chunking, and it does that well — it is what showed the chunking rewrite gaining
+eight points of Recall@1, and what caught two silent data-loss bugs. That is a regression gate, not
+a model benchmark, and the two should not be confused again.
+
+### What has to be built before any of it
+
+1. **A model-parameterised loader.** `ml/mod.rs` loads a fixed `model.onnx`; a swap is a rebuild.
+2. **Query prefixes.** The BGE, E5 and Qwen families are trained for asymmetric query→passage
+   retrieval and expect an instruction prefix that the code does not emit, so they would be measured
+   below their real ability.
+3. **`embedding_meta` enforcement.** The column exists; nothing yet refuses to mix vectors from two
+   models, and mixing them silently produces meaningless similarities.
+
+Item 3 is worth doing on its own merits, whatever happens to the bake-off.
+
+### The decision until then
+
+**Stay on all-MiniLM-L6-v2.** It is Apache-2.0, 23 M parameters, already int8, and embeds the
+benchmark corpus at ~278 chunks/sec. Nothing measured so far suggests the model is a bottleneck:
+the retrieval gains this project has actually banked came from fixing extraction and chunking, not
+from the embeddings. Revisit when there is a reason — a user reporting poor matches on a real
+corpus, or a candidate whose published scores on scientific retrieval are decisively better.
