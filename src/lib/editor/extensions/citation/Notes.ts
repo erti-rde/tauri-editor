@@ -1,5 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 
+import { sanitizeCitationHtml, setCitationHtml } from '$lib/citations/sanitize';
+
 /**
  * The notes a note style produces, collected at the end of the manuscript.
  *
@@ -52,7 +54,16 @@ export const Notes = Node.create({
 						return [];
 					}
 				},
-				renderHTML: (attributes) => ({ 'data-notes': JSON.stringify(attributes.notes ?? []) })
+				// Sanitized on the way out as well as at render, so hostile markup
+				// carried in by a file cannot survive a save-and-reopen cycle.
+				renderHTML: (attributes) => ({
+					'data-notes': JSON.stringify(
+						((attributes.notes ?? []) as NoteEntry[]).map((n) => ({
+							index: n.index,
+							text: sanitizeCitationHtml(n.text)
+						}))
+					)
+				})
 			}
 		};
 	},
@@ -94,8 +105,9 @@ export const Notes = Node.create({
 			item.value = note.index;
 			item.id = `note-${note.index}`;
 			// citeproc emits the note as HTML — italics for titles, quotation marks
-			// the locale chose.
-			item.innerHTML = note.text;
+			// the locale chose. Sanitized because this text comes back out of the
+			// manuscript file, and manuscripts arrive from co-authors.
+			setCitationHtml(item, note.text);
 			list.appendChild(item);
 		}
 		container.appendChild(list);

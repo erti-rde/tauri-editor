@@ -174,6 +174,39 @@ describe('the references section as part of the manuscript', () => {
 		expect(editor.getHTML()).toContain('Nothing is cited yet');
 	});
 
+	it('does not carry hostile markup out of a manuscript file', async () => {
+		// The stored entries are the input here, and manuscripts arrive from
+		// co-authors. Measured before the sanitizer: both onerror and <script>
+		// survived from a document's attributes into the rendered DOM, inside the
+		// webview that can call the filesystem commands.
+		// No engine, so the render pass leaves the stored entries alone — which is
+		// the situation being tested: what the file itself puts on screen.
+		setStore({ engine: null, citationSources: {}, bibliography: [], missingIds: [] });
+
+		const editor = new Editor({
+			extensions: [StarterKit, Citation, Bibliography],
+			content: {
+				type: 'doc',
+				content: [
+					{
+						type: BIBLIOGRAPHY_NODE,
+						attrs: {
+							entries: ['<img src=x onerror="steal()"><script>steal()</script>Smith, A. 2020.'],
+							missing: 0
+						}
+					}
+				]
+			}
+		});
+		await new Promise((r) => setTimeout(r, 0));
+
+		const html = editor.getHTML();
+
+		expect(html).not.toContain('onerror');
+		expect(html).not.toContain('<script');
+		expect(plain(html)).toContain('Smith, A. 2020.');
+	});
+
 	it('adds one on command, and does not add a second', async () => {
 		const editor = new Editor({
 			extensions: [StarterKit, Citation, Bibliography],

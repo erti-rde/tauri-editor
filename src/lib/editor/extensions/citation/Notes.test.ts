@@ -171,6 +171,32 @@ describe('notes as part of the manuscript', () => {
 		expect(editor.getHTML()).toContain('when the citation style uses them');
 	});
 
+	it('adds a notes section to a manuscript that predates them', async () => {
+		// A document written before notes existed has a references list and
+		// nowhere for its notes to go. Returning early on the strength of the
+		// bibliography alone left such a document permanently unable to gain one.
+		const editor = new Editor({
+			extensions: [StarterKit, Citation, Notes, Bibliography],
+			content: {
+				type: 'doc',
+				content: [
+					{ type: 'paragraph' },
+					{ type: BIBLIOGRAPHY_NODE, attrs: { entries: [], missing: 0 } }
+				]
+			}
+		});
+		await new Promise((r) => setTimeout(r, 0));
+
+		editor.commands.insertBibliography();
+
+		let notes = 0;
+		editor.state.doc.descendants((node) => {
+			if (node.type.name === NOTES_NODE) notes++;
+			return true;
+		});
+		expect(notes).toBe(1);
+	});
+
 	it('is added alongside the references section', async () => {
 		const editor = new Editor({
 			extensions: [StarterKit, Citation, Notes, Bibliography],

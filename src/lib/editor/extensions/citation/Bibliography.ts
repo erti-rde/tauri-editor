@@ -3,6 +3,8 @@ import type { Command, RawCommands } from '@tiptap/core';
 
 import type { EditorState } from '@tiptap/pm/state';
 
+import { sanitizeCitationHtml, setCitationHtml } from '$lib/citations/sanitize';
+
 import { NOTES_NODE } from './Notes';
 
 /**
@@ -61,8 +63,14 @@ export const Bibliography = Node.create({
 						return [];
 					}
 				},
+				// Sanitized on the way out as well as at render, so hostile markup
+				// carried in by a file cannot survive a save-and-reopen cycle. The
+				// attribute is inert escaped data either way; this stops it
+				// persisting rather than stopping it executing.
 				renderHTML: (attributes) => ({
-					'data-entries': JSON.stringify(attributes.entries ?? [])
+					'data-entries': JSON.stringify(
+						((attributes.entries ?? []) as string[]).map(sanitizeCitationHtml)
+					)
 				})
 			},
 			missing: {
@@ -106,8 +114,9 @@ export const Bibliography = Node.create({
 			const item = document.createElement('div');
 			item.className = 'bibliography-entry';
 			// citeproc emits the formatted entry as HTML: italics for titles,
-			// spans carrying the style's own hanging-indent markup.
-			item.innerHTML = entry;
+			// spans carrying the style's own hanging-indent markup. Sanitized because
+			// it comes back out of the manuscript file when the document is opened.
+			setCitationHtml(item, entry);
 			container.appendChild(item);
 		}
 
@@ -144,25 +153,31 @@ export const Bibliography = Node.create({
 			insertBibliography:
 				(): Command =>
 				({ chain, state }) => {
-					let existing: number | null = null;
-					state.doc.descendants((node, pos) => {
-						if (node.type.name === BIBLIOGRAPHY_NODE && existing === null) existing = pos;
-						return existing === null;
-					});
-
-					if (existing !== null) {
-						return chain().focus().setNodeSelection(existing).run();
-					}
+					const existing = findNode(state, BIBLIOGRAPHY_NODE);
 
 					// A note style needs somewhere for its notes to go, and the two
 					// belong together at the end of the manuscript. Guarded on the
 					// schema rather than assumed: Bibliography must stay usable on its
 					// own, and referring to a node type that is not registered fails
 					// the whole insert with nothing to show for it.
-					const content: Array<Record<string, unknown>> = [];
-					if (state.schema.nodes[NOTES_NODE] && !hasNode(state, NOTES_NODE)) {
-						content.push({ type: NOTES_NODE, attrs: { notes: [] } });
+					const wantsNotes = Boolean(state.schema.nodes[NOTES_NODE]) && !hasNode(state, NOTES_NODE);
+
+					if (existing !== null) {
+						// A manuscript written before notes existed has a references list
+						// and nowhere for its notes to go. Returning here on the strength
+						// of the bibliography alone left such a document permanently
+						// unable to gain one.
+						if (!wantsNotes) return chain().focus().setNodeSelection(existing).run();
+
+						return chain()
+							.focus()
+							.insertContentAt(existing, { type: NOTES_NODE, attrs: { notes: [] } })
+							.updateAllCitation()
+							.run();
 					}
+
+					const content: Array<Record<string, unknown>> = [];
+					if (wantsNotes) content.push({ type: NOTES_NODE, attrs: { notes: [] } });
 					content.push({ type: BIBLIOGRAPHY_NODE, attrs: { entries: [], missing: 0 } });
 
 					return (
