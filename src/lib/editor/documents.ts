@@ -116,12 +116,6 @@ export function toDocumentFileName(input: string, existing: readonly string[] = 
 		};
 	}
 
-	// Reserved on Windows, and a project folder is meant to be shareable across
-	// machines rather than only openable on the one it was made on.
-	if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(trimmed)) {
-		return { ok: false, reason: `"${trimmed}" is a reserved name on Windows.` };
-	}
-
 	if (trimmed.startsWith('.')) {
 		return { ok: false, reason: 'A document name cannot start with a dot.' };
 	}
@@ -134,6 +128,19 @@ export function toDocumentFileName(input: string, existing: readonly string[] = 
 	const base = trimmed.endsWith(DOCUMENT_EXTENSION)
 		? trimmed.slice(0, -DOCUMENT_EXTENSION.length)
 		: trimmed;
+
+	// Checked against the base rather than what was typed: Windows reserves these
+	// device names whatever extension follows, so `CON.erti.json` is refused too.
+	// A project folder is meant to be shareable across machines rather than only
+	// openable on the one it was made on.
+	if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base)) {
+		return { ok: false, reason: `"${base}" is a reserved name on Windows.` };
+	}
+
+	if (base.length === 0) {
+		return { ok: false, reason: 'Give the document a name.' };
+	}
+
 	const fileName = `${base}${DOCUMENT_EXTENSION}`;
 
 	if (existing.some((name) => name.toLowerCase() === fileName.toLowerCase())) {

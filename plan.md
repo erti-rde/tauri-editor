@@ -107,9 +107,10 @@ survives, rather than only the outcome.
 
 ## 1. Critical defects found (mostly NOT in the issue tracker)
 
-> Kept as written, because the measurements that motivated each one are the record of why the work
-> was done in this order. See **Progress** above for which are closed: all but D4, part of D8, and
-> D10 which is tracked separately.
+> A snapshot of what was found, kept as written: the measurements that motivated each defect are the
+> record of why the work happened in this order. Rows that have since been fixed say so inline rather
+> than being deleted. See **Progress** above for the summary — all closed but D4, part of D8, and D10
+> which is tracked separately.
 
 ### D1 — The metadata pipeline effectively does not work (9 % success)
 
@@ -233,18 +234,18 @@ logged, so the user just sees the style silently fail to apply. Tracked separate
 
 ### D11 — Supporting gaps
 
-|                                               |                                                                                                                                                                                                                          |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **No CI at all** (#38)                        | No `pull_request` workflow exists. Lint/typecheck/tests never run automatically; Prettier violations are already committed.                                                                                              |
-| **`test` script unusable in CI**              | `"test": "vitest"` is watch mode; needs `vitest run`. `coverage` configured but `@vitest/coverage-v8` not installed.                                                                                                     |
-| **Core logic untested** (#63/#66/#67/#69/#71) | 47 tests cover 3 small stores + 6 leaf components. Zero for the 422-line `Citation.ts`, 331-line `adapterCslZotero.ts`, 308-line `pdf_handlers.ts`, all routes, all Rust. `Tree.test.ts` asserts nothing meaningful.     |
-| **ONNX is single-threaded everywhere**        | [ml/mod.rs](src-tauri/src/ml/mod.rs) sets `with_intra_threads(1)` and requests `CUDAExecutionProvider`, absent on macOS (silent CPU fallback). Caps ingest throughput and constrains model choice (§5.3).                |
-| **Version drift**                             | `package.json` 0.2.5 / `tauri.conf.json` 0.1.0 / `Cargo.toml` 0.1.0. `tauri-action` reads the Tauri one, so every release is labelled "Erti v0.1.0".                                                                     |
-| **Phantom updater**                           | `@tauri-apps/plugin-updater` installed; no Rust crate, no registration, no config, no capability, zero imports. Shipped users can never update.                                                                          |
-| **Dead scripts**                              | `dev:backend` and `build:fastapi` point at `src-backend/`, which doesn't exist (Python was removed → **#20 obsolete**).                                                                                                  |
-| **Duplicate pdf.js** (#59)                    | `static/pdfjs` is 4.10.38 (viewer); `static/pdfjs-2` is a lone worker paired with npm `pdfjs-dist` 4.9.155 (extraction). ~19 MB shipped incl. a 5.3 MB `.map`, at mismatched versions.                                   |
-| **Broad capabilities**                        | `sql:allow-execute` + `fs:write-all` + `fs:allow-home-read-recursive`, with `dbStore.executeQuery(arbitraryString)` reachable from all frontend code.                                                                    |
-| **Stale artifacts**                           | `auto-imports.d.ts` (unused icon global; `unplugin-auto-import` isn't a dependency), empty untracked `.qodo/`, `eslint.config.ts` ignoring a nonexistent `eslint.config.js`, debug `Print PATH` steps in `release.yaml`. |
+|                                               |                                                                                                                                                                                                                                                                                    |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **No CI at all** (#38)                        | No `pull_request` workflow exists. Lint/typecheck/tests never run automatically; Prettier violations are already committed.                                                                                                                                                        |
+| **`test` script unusable in CI**              | `"test": "vitest"` is watch mode; needs `vitest run`. `coverage` configured but `@vitest/coverage-v8` not installed. **Fixed in Phase 0** — `test` is `vitest run` and coverage is installed.                                                                                      |
+| **Core logic untested** (#63/#66/#67/#69/#71) | 47 tests cover 3 small stores + 6 leaf components. Zero for the 422-line `Citation.ts`, 331-line `adapterCslZotero.ts`, 308-line `pdf_handlers.ts`, all routes, all Rust. `Tree.test.ts` asserts nothing meaningful.                                                               |
+| **ONNX is single-threaded everywhere**        | [ml/mod.rs](src-tauri/src/ml/mod.rs) sets `with_intra_threads(1)` and requests `CUDAExecutionProvider`, absent on macOS (silent CPU fallback). Caps ingest throughput and constrains model choice (§5.3).                                                                          |
+| **Version drift**                             | `package.json` 0.2.5 / `tauri.conf.json` 0.1.0 / `Cargo.toml` 0.1.0. `tauri-action` reads the Tauri one, so every release is labelled "Erti v0.1.0".                                                                                                                               |
+| **Phantom updater**                           | `@tauri-apps/plugin-updater` installed; no Rust crate, no registration, no config, no capability, zero imports. Shipped users can never update.                                                                                                                                    |
+| **Dead scripts**                              | `dev:backend` and `build:fastapi` point at `src-backend/`, which doesn't exist (Python was removed → **#20 obsolete**).                                                                                                                                                            |
+| **Duplicate pdf.js** (#59)                    | `static/pdfjs` is 4.10.38 (viewer); `static/pdfjs-2` is a lone worker paired with npm `pdfjs-dist` 4.9.155 (extraction). ~19 MB shipped incl. a 5.3 MB `.map`, at mismatched versions.                                                                                             |
+| **Broad capabilities**                        | `sql:allow-execute` + `fs:write-all` + `fs:allow-home-read-recursive`, with `dbStore.executeQuery(arbitraryString)` reachable from all frontend code. **Fixed in Phase 1** — both SQL capabilities are gone from `capabilities/default.json` and there is no SQL surface to reach. |
+| **Stale artifacts**                           | `auto-imports.d.ts` (unused icon global; `unplugin-auto-import` isn't a dependency), empty untracked `.qodo/`, `eslint.config.ts` ignoring a nonexistent `eslint.config.js`, debug `Print PATH` steps in `release.yaml`.                                                           |
 
 ---
 
@@ -753,9 +754,11 @@ opening the cited PDF to that page.
   document's cited set or order changes, so undo, redo, paste, cut and drag all go through it rather
   than each command being patched one at a time.
 - ~~Bibliography (**#32**)~~ — done. A document node, not a panel: it has to appear in exports where
-  the author put it, paginate, and be placed by the author. Entries live on the node so they travel
-  with `getJSON()` into every export. It empties when the last citation goes, and reports cited
-  sources that have left the library.
+  the author put it, paginate, and be placed by the author. Entries live on the node rather than only
+  on screen, so they are in `getJSON()` and `getHTML()` and will be in an export as soon as there is
+  one — PDF export is still dead code (D4) and the LaTeX bundle is unwritten, so this is groundwork,
+  not a shipped export. It empties when the last citation goes, and reports cited sources that have
+  left the library.
 - ~~Footnotes (**#26**)~~ — done, and **they are endnotes, named as such.** A footnote sits at the
   foot of the page it is referenced from, which needs pagination the editor does not have; browsers
   have no usable print footnote support, so that means a paged-media layer. Endnotes carry the same

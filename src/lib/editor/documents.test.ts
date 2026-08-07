@@ -102,6 +102,17 @@ describe('naming a new document', () => {
 		expect(toDocumentFileName('lpt1').ok).toBe(false);
 	});
 
+	it('refuses a reserved name even with the extension typed out', () => {
+		// Windows reserves these device names whatever extension follows, and
+		// checking the raw input let `CON.erti.json` straight through.
+		expect(toDocumentFileName(`CON${DOCUMENT_EXTENSION}`).ok).toBe(false);
+		expect(toDocumentFileName(`lpt1${DOCUMENT_EXTENSION}`).ok).toBe(false);
+	});
+
+	it('refuses a name that is only the extension', () => {
+		expect(toDocumentFileName(DOCUMENT_EXTENSION).ok).toBe(false);
+	});
+
 	it('refuses a hidden file', () => {
 		expect(toDocumentFileName('.secret').ok).toBe(false);
 	});
