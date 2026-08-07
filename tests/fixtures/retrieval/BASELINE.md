@@ -90,3 +90,48 @@ matches how sentence-transformers embeds text.
 - **Throughput scales the ingest estimate**: 290 chunks/sec ≈ 1.4 s for a typical
   400-chunk paper, so a 200-paper corpus is roughly 4–5 minutes on this machine. A model
   with materially more parameters will move this a lot; measure it, don't assume.
+
+---
+
+## The eval set, and what it can decide
+
+The model bake-off (§5.3 of the plan) has been deferred since Phase 2 because the
+eval set could not discriminate: Recall@5 sat at 100 % on 25 queries, so a
+genuinely better model would have scored identically.
+
+The set is now **65 queries**, reported in two slices. The original 25 are kept
+and marked `easy` — near-quotes carrying each paper's own distinctive vocabulary
+— so the recorded baseline above stays comparable. The 40 new ones are `hard`:
+paraphrased claims whose gold paper sits beside near-identical neighbours in
+this corpus, avoiding the signature terms that made the easy set separable by
+vocabulary alone. BERT against RoBERTa and ELMo; LayerNorm against BatchNorm;
+DPR against RAG; VGG against ResNet against ViT.
+
+| set  | n   | R@1    | R@5   | R@10  | MRR   |
+| ---- | --- | ------ | ----- | ----- | ----- |
+| all  | 65  | 87.7 % | 100 % | 100 % | 0.934 |
+| easy | 25  | 92.0 % | 100 % | 100 % | 0.960 |
+| hard | 40  | 85.0 % | 100 % | 100 % | 0.918 |
+
+The hard set separates at Recall@1 and MRR — seven points and 0.042 below the
+easy set — so those two metrics are now usable.
+
+**Recall@5 is still saturated, and harder queries cannot fix it.** With 20
+papers, the top five covers a quarter of the corpus; any competent model puts
+the gold source in there. That needs a bigger corpus, not better questions.
+
+### How much of a difference this can detect
+
+Comparing two models by their headline percentages treats them as independent
+samples, which is the wrong test: they answer the same queries, so the
+comparison is paired and only the queries where they disagree carry information.
+McNemar on those discordant pairs is far more sensitive than comparing two
+proportions.
+
+Even so, with 8 misses remaining at Recall@1, a challenger has to fix about six
+of them without breaking any to reach p < 0.05. So this set can detect a **large**
+improvement and cannot detect a small one — which is worth knowing before
+reading any bake-off result as a decision.
+
+`eval_retrieval` writes per-query ranks to `last-run.json` so two runs can
+actually be compared that way, rather than by their summary lines.
