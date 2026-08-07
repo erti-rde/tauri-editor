@@ -277,6 +277,64 @@ async fn search_ranks_project_sources_above_the_wider_library() {
 }
 
 #[tokio::test]
+async fn citing_a_library_source_adds_it_to_the_project_without_re_embedding() {
+    // What makes the wider library useful rather than merely visible: a paper
+    // read for another project is cited in one action. Its chunks already exist,
+    // so nothing is copied and nothing is embedded again.
+    let dir = scratch("cite-from-library");
+    let (state, library) = library_at(&dir).await;
+    state.open_project(&dir.join("project")).await.unwrap();
+
+    queries::register_source(&library, "elsewhere", "/a/read-last-year.pdf", "paper.pdf")
+        .await
+        .unwrap();
+    store_one_chunk(&library, "elsewhere").await;
+    queries::set_source_metadata(
+        &library,
+        "elsewhere",
+        r#"{"title":"Read for another project","type":"article-journal"}"#,
+        None,
+        None,
+        "pdf-doi",
+    )
+    .await
+    .unwrap();
+
+    let project = state.project().await.unwrap();
+    let chunks_before = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM chunks")
+        .fetch_one(&library)
+        .await
+        .unwrap();
+
+    // Not in the project, so not citable: citeproc would have no source behind
+    // the id and the citation would render as removed.
+    assert!(
+        queries::project_sources(&library, &project)
+            .await
+            .unwrap()
+            .is_empty(),
+        "a library source is not in the project until it is added"
+    );
+
+    queries::add_to_project(&project, "elsewhere")
+        .await
+        .unwrap();
+
+    let sources = queries::project_sources(&library, &project).await.unwrap();
+    assert_eq!(sources.len(), 1, "the source is now citable");
+    assert_eq!(sources[0].sha256, "elsewhere");
+
+    let chunks_after = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM chunks")
+        .fetch_one(&library)
+        .await
+        .unwrap();
+    assert_eq!(
+        chunks_before, chunks_after,
+        "citing an existing source must not re-embed it"
+    );
+}
+
+#[tokio::test]
 async fn project_overrides_shadow_library_metadata() {
     // Correcting a wrong author for one paper must not silently rewrite it for
     // every other project that cites the same source.

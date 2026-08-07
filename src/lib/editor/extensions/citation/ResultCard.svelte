@@ -1,29 +1,24 @@
 <script lang="ts">
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { Icon } from '$lib';
-	import { citationStore } from '$lib/stores/citationStore';
 
 	interface Props {
 		sentenceMetadata: {
 			similarity: number;
 			sentence: string;
 			metadata: CitationItem;
+			page_start?: number | null;
+			section?: string | null;
+			in_project?: boolean;
 		};
-		selectCitation: (citation: { id: string; inlineCitation: string }) => void;
+		/** Cite this match. The parent adds it to the project first if needed. */
+		oncite: () => void;
+		busy?: boolean;
 	}
 
-	let { sentenceMetadata, selectCitation }: Props = $props();
+	let { sentenceMetadata, oncite, busy = false }: Props = $props();
 
 	let isExpanded = $state(false);
-
-	function generateCitation() {
-		const inlineCitation = citationStore.previewCitation([sentenceMetadata.metadata.id]);
-
-		return {
-			id: JSON.stringify([sentenceMetadata.metadata.id]),
-			inlineCitation
-		};
-	}
 
 	function toggleExpand() {
 		isExpanded = !isExpanded;
@@ -92,14 +87,42 @@
 		</div>
 	</div>
 
+	<!--
+		Where the passage is, which is what Phase 2 recorded page and section for:
+		"p. 4, Results" is what lets a researcher check a quotation against the PDF.
+	-->
+	{#if sentenceMetadata.page_start || sentenceMetadata.section}
+		<p class="px-1.5 text-xs text-gray-500">
+			{#if sentenceMetadata.page_start}p. {sentenceMetadata.page_start}{/if}{#if sentenceMetadata.page_start && sentenceMetadata.section},
+			{/if}{#if sentenceMetadata.section}{sentenceMetadata.section}{/if}
+		</p>
+	{/if}
+
 	<!-- Action buttons -->
 	<div class="flex justify-start space-x-2 p-1.5">
+		<!--
+			A source from outside the project says so, because citing it changes the
+			project: it joins this project's sources. Adding silently would leave the
+			researcher unsure which papers a project actually contains.
+		-->
 		<button
-			class="flex items-center space-x-1 rounded bg-orange-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-200"
-			onclick={() => selectCitation(generateCitation())}
+			class="flex items-center space-x-1 rounded bg-orange-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-200 disabled:opacity-60"
+			onclick={oncite}
+			disabled={busy}
+			title={sentenceMetadata.in_project === false
+				? 'Add this source to the project and cite it'
+				: 'Cite this source'}
 		>
 			<Icon icon="Quote" size="s" />
-			<span class="ml-1">Cite</span>
+			<span class="ml-1">
+				{#if busy}
+					Adding…
+				{:else if sentenceMetadata.in_project === false}
+					Add &amp; cite
+				{:else}
+					Cite
+				{/if}
+			</span>
 		</button>
 
 		{#if sourceUrl}

@@ -4,8 +4,9 @@
 	import ResultCard from './ResultCard.svelte';
 	import { Loader } from '$lib';
 
-	import { searchSources, type ScoredChunk } from '$lib/stores/db';
+	import { addToProject, searchSources, type ScoredChunk } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
+	import { errorToast } from '$lib/toast/Toast.svelte';
 
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { clickOutside } from '$utils/clickOutside.svelte';
@@ -52,6 +53,46 @@
 		}));
 	}
 
+	/** Set while a library source is being added, so the click cannot repeat. */
+	let adding = $state<string | null>(null);
+
+	/**
+	 * Cite a match, adding it to the project first if it came from elsewhere.
+	 *
+	 * This is what makes the wider library useful rather than merely visible: a
+	 * paper read for another project is cited in one action, with no copying and
+	 * no re-embedding, because its chunks are already in the library.
+	 *
+	 * The order matters. The source has to be in the project *and* loaded into
+	 * the citation engine before the citation is inserted, or the document render
+	 * finds no source behind the id and shows it as removed.
+	 */
+	async function cite(match: Match) {
+		if (adding) return;
+
+		try {
+			if (!match.in_project) {
+				adding = match.sha256;
+				await addToProject(match.sha256);
+				// Reloaded so citeproc knows the source. Without this the citation
+				// inserts against an id the engine cannot resolve.
+				await citationStore.initializeCitationStore();
+			}
+
+			selectCitation({
+				id: JSON.stringify([match.sha256]),
+				inlineCitation: citationStore.previewCitation([match.sha256])
+			});
+		} catch (error) {
+			console.error('Could not cite that source:', error);
+			errorToast(
+				`Could not add that source to this project: ${error instanceof Error ? error.message : String(error)}`
+			);
+		} finally {
+			adding = null;
+		}
+	}
+
 	const results = $derived(search(includeLibrary));
 </script>
 
@@ -72,7 +113,11 @@
 	{:then matches}
 		{#if matches.length > 0}
 			{#each matches as match, i (i)}
-				<ResultCard sentenceMetadata={match} {selectCitation} />
+				<ResultCard
+					sentenceMetadata={match}
+					oncite={() => cite(match)}
+					busy={adding === match.sha256}
+				/>
 			{/each}
 		{:else}
 			<p class="p-4">
