@@ -42,6 +42,8 @@
 	let unlistenClose: (() => void) | undefined;
 	/** Set when the open file could not be parsed, so autosave must not overwrite it. */
 	let readFailed = $state(false);
+	/** Bumped on each document switch, so a superseded one abandons itself. */
+	let transition = 0;
 
 	const autosave = createAutosave({
 		write: async (content) => {
@@ -191,16 +193,45 @@
 	async function openDocument(next: ProjectDocument) {
 		if (next.path === $documentsStore.current?.path) return;
 
+		// Two quick clicks both get past the guard and both await. A slower first
+		// read finishing last would put one manuscript's text on screen while
+		// autosave — which resolves its target at write time — pointed at the
+		// other, and the next keystroke would write the wrong file. The token is
+		// what makes a superseded switch abandon itself.
+		const token = ++transition;
+
 		const saved = await autosave.flush();
 		if (!saved) {
 			errorToast('Could not save the current document, so it stayed open.');
 			return;
 		}
+		if (token !== transition) return;
+
+		const content = await getDocumentData(next.path);
+		if (token !== transition) return;
 
 		readFailed = false;
 		documentsStore.open(next);
-		$editor.commands.setContent(await getDocumentData(next.path));
+		$editor.commands.setContent(content);
 		$editor.commands.updateAllCitation();
+	}
+
+	/** An empty manuscript, written only if that name is genuinely free. */
+	async function createOnDisk(path: string): Promise<boolean> {
+		try {
+			// createNew rather than a prior exists() check: the gap between looking
+			// and writing is enough to overwrite a file that appeared in between,
+			// and the name check runs against a directory listing that may already
+			// be stale. Losing a co-author's chapter to a race is not recoverable,
+			// so the filesystem decides rather than a cached list.
+			await writeTextFile(path, JSON.stringify({ type: 'doc', content: [] }), {
+				createNew: true
+			});
+			return true;
+		} catch (error) {
+			console.error(`Could not create ${path}:`, error);
+			return false;
+		}
 	}
 
 	/** The manuscript a brand-new project starts with. */
@@ -208,9 +239,8 @@
 		const fileName = `Untitled${DOCUMENT_EXTENSION}`;
 		const path = await pathJoin(currentDir, fileName);
 
-		if (!(await exists(path))) {
-			await writeTextFile(path, JSON.stringify({ type: 'doc', content: [] }));
-		}
+		// An existing file here is not a failure: it is the manuscript to open.
+		if (!(await exists(path))) await createOnDisk(path);
 
 		documentsStore.add({ fileName, path, title: 'Untitled', legacy: false });
 	}
@@ -226,16 +256,27 @@
 			return;
 		}
 
+		const token = ++transition;
+
 		const saved = await autosave.flush();
 		if (!saved) {
 			errorToast('Could not save the current document, so the new one was not created.');
 			return;
 		}
+		if (token !== transition) return;
 
 		const path = await pathJoin(currentDir, result.fileName!);
 		// Written straight away so the manuscript exists on disk even if the app
 		// closes before anything is typed into it.
-		await writeTextFile(path, JSON.stringify({ type: 'doc', content: [] }));
+		if (!(await createOnDisk(path))) {
+			errorToast(
+				`Could not create "${result.fileName}". A file of that name may already be there — refresh and try again.`
+			);
+			await fileSystemStore.readDirectory(currentDir);
+			documentsStore.refresh();
+			return;
+		}
+		if (token !== transition) return;
 
 		readFailed = false;
 		documentsStore.add({
