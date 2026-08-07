@@ -26,16 +26,33 @@ export interface CitationSite {
 
 export interface RenderedSite {
 	pos: number;
-	/** Formatted citation, as HTML. */
+	/**
+	 * What appears at this point in the text.
+	 *
+	 * For an in-text style that is the citation itself, "(Smith, 2020)". For a
+	 * note style it is the note's number, because the citation belongs in the
+	 * note, not in the sentence.
+	 */
 	label: string;
+	/** The note's text, for note styles. Empty for in-text styles. */
+	note: string;
 	/** 1-based for note styles, 0 for in-text styles. */
 	noteIndex: number;
 	/** Ids cited here that no longer exist in the library. */
 	missingIds: string[];
 }
 
+export interface RenderedNote {
+	/** The number printed against the note, and against its marker in the text. */
+	index: number;
+	/** The note's text, as HTML. */
+	text: string;
+}
+
 export interface DocumentCitations {
 	sites: RenderedSite[];
+	/** Notes in document order. Empty unless the style is a note style. */
+	notes: RenderedNote[];
 	bibliography: string[];
 	/** Every cited id with no source behind it, deduplicated. */
 	missingIds: string[];
@@ -82,18 +99,49 @@ export function renderDocumentCitations(
 		.map((entry) => ({ id: entry.clusterId, itemIds: entry.present }));
 
 	const rendered = new Map(clusters.length > 0 ? renderOrEmpty(engine, clusters) : []);
+	const noteStyle = engine.isNoteStyle;
+	const notes: RenderedNote[] = [];
 
-	return {
-		sites: perSite.map((entry) => {
-			const hit = rendered.get(entry.clusterId);
+	const renderedSites: RenderedSite[] = perSite.map((entry) => {
+		const hit = rendered.get(entry.clusterId);
 
+		if (!hit) {
 			return {
 				pos: entry.site.pos,
-				label: hit?.text ?? MISSING_SOURCE_LABEL,
-				noteIndex: hit?.noteIndex ?? 0,
+				label: MISSING_SOURCE_LABEL,
+				note: '',
+				noteIndex: 0,
 				missingIds: entry.missingIds
 			};
-		}),
+		}
+
+		// In a note style citeproc returns the note's *text*. Putting that inline
+		// drops a full bibliographic reference into the middle of the sentence,
+		// which is what Chicago and Turabian exist to avoid: the sentence carries
+		// a marker, and the reference goes below.
+		if (noteStyle) {
+			notes.push({ index: hit.noteIndex, text: hit.text });
+			return {
+				pos: entry.site.pos,
+				label: String(hit.noteIndex),
+				note: hit.text,
+				noteIndex: hit.noteIndex,
+				missingIds: entry.missingIds
+			};
+		}
+
+		return {
+			pos: entry.site.pos,
+			label: hit.text,
+			note: '',
+			noteIndex: hit.noteIndex,
+			missingIds: entry.missingIds
+		};
+	});
+
+	return {
+		sites: renderedSites,
+		notes,
 		bibliography: clusters.length > 0 ? engine.bibliography() : [],
 		missingIds: [...missing]
 	};

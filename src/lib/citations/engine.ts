@@ -100,6 +100,18 @@ export class CitationEngine {
 	}
 
 	/**
+	 * Whether this style puts citations in notes rather than in the text.
+	 *
+	 * It changes what `render()` returns, and so what the editor must do with it:
+	 * a note style hands back the *note text* — "Alice Smith, \u201cCoastal Erosion\u2026\u201d"
+	 * — which belongs at the foot of the document behind a superscript marker, not
+	 * in the middle of the author's sentence.
+	 */
+	get isNoteStyle(): boolean {
+		return this.noteStyle;
+	}
+
+	/**
 	 * Bibliography entries for the works cited by the most recent `render()`,
 	 * in the order the style prescribes. Empty when the style suppresses one.
 	 */

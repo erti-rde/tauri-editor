@@ -397,6 +397,57 @@ body {
 }
 
 /*
+ * Notes, for the styles that use them.
+ *
+ * These are endnotes: a true footnote sits at the foot of the page it is
+ * referenced from, which needs pagination the editor does not have. Browsers
+ * have no usable footnote support in print, so getting there means a
+ * paged-media layer. Endnotes are correct academic practice in their own right
+ * and carry the same numbering and short forms.
+ */
+.notes {
+	margin-top: 2.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--color-border, #e5e5e5);
+}
+
+.notes-heading {
+	margin-bottom: 1rem;
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+.notes-list {
+	padding-left: 1.5rem;
+	list-style: decimal;
+}
+
+.notes-entry {
+	margin-bottom: 0.5rem;
+	font-size: 0.9375rem;
+	line-height: 1.6;
+}
+
+.notes-empty {
+	color: var(--color-muted-foreground, #737373);
+	font-style: italic;
+}
+
+/* The marker left in the sentence where the reference used to be printed. */
+.citation-note-marker {
+	font-size: 0.75em;
+	line-height: 0;
+	vertical-align: super;
+	font-weight: 600;
+}
+
+@media print {
+	.notes-entry {
+		break-inside: avoid;
+	}
+}
+
+/*
  * The works cited.
  *
  * Hanging indent is the convention almost every style shares, and CSL styles

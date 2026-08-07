@@ -8,8 +8,9 @@ import type { Transaction } from '@tiptap/pm/state';
 import type { Node as ProsemirrorNode } from '@tiptap/pm/model';
 import Suggestion from '@tiptap/suggestion';
 
-import { parseCitationIds, type CitationSite } from '$lib/citations/document';
+import { parseCitationIds, type CitationSite, type RenderedNote } from '$lib/citations/document';
 import { BIBLIOGRAPHY_NODE } from './Bibliography';
+import { NOTES_NODE } from './Notes';
 import { citationStore } from '$lib/stores/citationStore';
 
 import SvelteRenderer from '../../core/SvelteRenderer';
@@ -39,6 +40,7 @@ function citationSignature(doc: ProsemirrorNode): string {
 		// Adding or removing the references section changes what has to be
 		// rendered, though it cites nothing itself.
 		if (node.type.name === BIBLIOGRAPHY_NODE) parts.push('#bibliography');
+		if (node.type.name === NOTES_NODE) parts.push('#notes');
 		return true;
 	});
 	return parts.join('|');
@@ -64,6 +66,28 @@ function refreshBibliography(tr: Transaction, entries: string[], missing: number
 
 		if (!same) {
 			tr.setNodeMarkup(pos, undefined, { ...node.attrs, entries, missing });
+			updated = true;
+		}
+		return true;
+	});
+
+	return updated;
+}
+
+/** Write the current notes into the document's notes section, if it has one. */
+function refreshNotes(tr: Transaction, notes: RenderedNote[]): boolean {
+	let updated = false;
+
+	tr.doc.descendants((node, pos) => {
+		if (node.type.name !== NOTES_NODE) return true;
+
+		const current: RenderedNote[] = node.attrs.notes ?? [];
+		const same =
+			current.length === notes.length &&
+			current.every((n, i) => n.index === notes[i].index && n.text === notes[i].text);
+
+		if (!same) {
+			tr.setNodeMarkup(pos, undefined, { ...node.attrs, notes });
 			updated = true;
 		}
 		return true;
@@ -98,15 +122,21 @@ function updateAllCitations(tr: Transaction): boolean {
 	// The references section is refreshed even when nothing is cited any more —
 	// that is exactly when it has to empty out.
 	let updated = refreshBibliography(tr, rendered.bibliography, rendered.missingIds.length);
+	updated = refreshNotes(tr, rendered.notes) || updated;
 
 	if (sites.length === 0) return updated;
 	for (const site of rendered.sites) {
 		const node = tr.doc.nodeAt(site.pos);
-		if (!node || node.attrs.label === site.label) continue;
+		if (!node) continue;
+		if (node.attrs.label === site.label && node.attrs.noteIndex === site.noteIndex) continue;
 
 		// A citation is an inline atom, so rewriting its attributes does not move
 		// anything after it and the collected positions stay valid.
-		tr.setNodeMarkup(site.pos, undefined, { ...node.attrs, label: site.label });
+		tr.setNodeMarkup(site.pos, undefined, {
+			...node.attrs,
+			label: site.label,
+			noteIndex: site.noteIndex
+		});
 		updated = true;
 	}
 
@@ -414,6 +444,18 @@ export const Citation = Node.create({
 				default: null,
 				parseHTML: (element) => element.getAttribute('data-label'),
 				renderHTML: (attributes) => (attributes.label ? { 'data-label': attributes.label } : {})
+			},
+			/**
+			 * The note number, when the style puts citations in notes.
+			 *
+			 * Zero for in-text styles. Non-zero means `label` holds the marker and
+			 * the reference itself lives in the notes section.
+			 */
+			noteIndex: {
+				default: 0,
+				parseHTML: (element) => Number(element.getAttribute('data-note-index')) || 0,
+				renderHTML: (attributes) =>
+					attributes.noteIndex ? { 'data-note-index': String(attributes.noteIndex) } : {}
 			}
 		};
 	},
@@ -431,8 +473,20 @@ export const Citation = Node.create({
 		span.dataset.type = this.name;
 		span.dataset.id = node.attrs.id;
 		span.dataset.label = node.attrs.label;
-		span.innerHTML = node.attrs.label;
 
+		// In a note style the sentence carries a marker and the reference itself is
+		// in the notes section. Rendering the note text here instead would put a
+		// full bibliographic reference in the middle of the author's prose.
+		if (node.attrs.noteIndex) {
+			span.dataset.noteIndex = String(node.attrs.noteIndex);
+			const marker = document.createElement('sup');
+			marker.className = 'citation-note-marker';
+			marker.textContent = String(node.attrs.noteIndex);
+			span.appendChild(marker);
+			return span;
+		}
+
+		span.innerHTML = node.attrs.label;
 		return span;
 	},
 
