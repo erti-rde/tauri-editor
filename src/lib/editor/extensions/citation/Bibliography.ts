@@ -1,6 +1,10 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import type { Command, RawCommands } from '@tiptap/core';
 
+import type { EditorState } from '@tiptap/pm/state';
+
+import { NOTES_NODE } from './Notes';
+
 /**
  * The list of works cited, as part of the manuscript.
  *
@@ -150,13 +154,21 @@ export const Bibliography = Node.create({
 						return chain().focus().setNodeSelection(existing).run();
 					}
 
+					// A note style needs somewhere for its notes to go, and the two
+					// belong together at the end of the manuscript. Guarded on the
+					// schema rather than assumed: Bibliography must stay usable on its
+					// own, and referring to a node type that is not registered fails
+					// the whole insert with nothing to show for it.
+					const content: Array<Record<string, unknown>> = [];
+					if (state.schema.nodes[NOTES_NODE] && !hasNode(state, NOTES_NODE)) {
+						content.push({ type: NOTES_NODE, attrs: { notes: [] } });
+					}
+					content.push({ type: BIBLIOGRAPHY_NODE, attrs: { entries: [], missing: 0 } });
+
 					return (
 						chain()
 							.focus()
-							.insertContentAt(state.doc.content.size, {
-								type: BIBLIOGRAPHY_NODE,
-								attrs: { entries: [], missing: 0 }
-							})
+							.insertContentAt(state.doc.content.size, content)
 							// Empty until the render pass fills it, which is the same pass
 							// that relabels citations.
 							.updateAllCitation()
@@ -166,6 +178,17 @@ export const Bibliography = Node.create({
 		} as Partial<RawCommands>;
 	}
 });
+
+function findNode(state: EditorState, name: string): number | null {
+	let found: number | null = null;
+	state.doc.descendants((node, pos) => {
+		if (node.type.name === name && found === null) found = pos;
+		return found === null;
+	});
+	return found;
+}
+
+const hasNode = (state: EditorState, name: string) => findNode(state, name) !== null;
 
 function stripHtml(html: string): string {
 	return html

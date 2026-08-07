@@ -73,6 +73,16 @@ function labels(editor: Editor): string[] {
 	return found;
 }
 
+/** The note number recorded against each citation, in document order. */
+function noteIndices(editor: Editor): number[] {
+	const found: number[] = [];
+	editor.state.doc.descendants((node) => {
+		if (node.type.name === 'citation') found.push(Number(node.attrs.noteIndex) || 0);
+		return true;
+	});
+	return found;
+}
+
 const plain = (html: string) =>
 	html
 		.replace(/<[^>]+>/g, '')
@@ -112,8 +122,7 @@ describe('citations react to the document', () => {
 		useStyle('chicago-notes-bibliography');
 		const editor = await editorWith(['smith-2020-a'], ['okafor-2019']);
 
-		const before = labels(editor);
-		expect(before).toHaveLength(2);
+		expect(labels(editor)).toEqual(['1', '2']);
 
 		// A note inserted at the front pushes every later note number up by one.
 		editor.commands.insertContentAt(1, {
@@ -121,8 +130,32 @@ describe('citations react to the document', () => {
 			attrs: { id: JSON.stringify(['tanaka-2021-book']), label: 'pending' }
 		});
 
-		expect(labels(editor)).toHaveLength(3);
-		expect(plain(labels(editor)[0])).toContain('Tanaka');
+		expect(labels(editor)).toEqual(['1', '2', '3']);
+		expect(noteIndices(editor)).toEqual([1, 2, 3]);
+
+		editor.destroy();
+	});
+
+	it('leaves a marker in the sentence, not the whole reference', async () => {
+		// Chicago and Turabian exist to keep the reference out of the prose. The
+		// editor used to render citeproc's note text inline, so a sentence read
+		// "…as argued Alice Smith, \u201cCoastal Erosion under Rising Sea Levels,\u201d
+		// Journal of Coastal Research 36, no. 2 (2020): 101-18. in the literature".
+		useStyle('chicago-notes-bibliography');
+		const editor = await editorWith(['smith-2020-a']);
+
+		expect(labels(editor)[0]).toBe('1');
+		expect(plain(editor.getText())).not.toContain('Coastal Research');
+
+		editor.destroy();
+	});
+
+	it('puts the citation in the sentence for an in-text style', async () => {
+		// The same document under APA: no marker, the citation reads in place.
+		const editor = await editorWith(['smith-2020-a']);
+
+		expect(plain(labels(editor)[0])).toContain('Smith');
+		expect(noteIndices(editor)).toEqual([0]);
 
 		editor.destroy();
 	});

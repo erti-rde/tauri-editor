@@ -9,6 +9,7 @@ import StarterKit from '@tiptap/starter-kit';
 
 import { Bibliography } from '../extensions/citation/Bibliography';
 import { Citation } from '../extensions/citation/Citation';
+import { Notes } from '../extensions/citation/Notes';
 
 /**
  * The editor's extension set.
@@ -43,5 +44,6 @@ export const editorExtensions = [
 	TableHeader,
 	TableCell,
 	Citation,
+	Notes,
 	Bibliography
 ];
