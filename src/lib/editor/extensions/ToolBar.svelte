@@ -44,12 +44,13 @@
 		editor: Editor;
 		toggleView: () => void;
 		exportToPdf: () => void;
+		exportToLatex: () => void;
 	}
 
 	// toggleView and exportToPdf are used in the markup below, but
 	// @typescript-eslint/no-unused-vars does not track Svelte template references.
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let { editor, toggleView, exportToPdf }: Props = $props();
+	let { editor, toggleView, exportToPdf, exportToLatex }: Props = $props();
 
 	function handleFormatSelect(format: string) {
 		if (format === 'paragraph') {
@@ -315,6 +316,9 @@
 		</button>
 		<button class="toolbar-btn" onclick={exportToPdf}>
 			<Icon icon="FileOutput" size="s" />
+		</button>
+		<button class="toolbar-btn" onclick={exportToLatex} title="Export a LaTeX bundle">
+			.tex
 		</button>
 	</div> -->
 </div>

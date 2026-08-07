@@ -2,11 +2,12 @@
 	import { onDestroy, onMount } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
-	import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+	import { exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+	import { invoke } from '@tauri-apps/api/core';
 
 	import { get } from 'svelte/store';
 
@@ -14,6 +15,9 @@
 
 	import { createAutosave, type SaveState } from './autosave';
 	import { countDocument, progressTo, type WordCount } from './wordCount';
+	import { parseCitationIds } from '$lib/citations/document';
+	import { toBibliography } from '$lib/export/bibtex';
+	import { toLatexDocument } from '$lib/export/latex';
 	import { DOCUMENT_EXTENSION, toDocumentFileName, type ProjectDocument } from './documents';
 	import { documentsStore } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
@@ -174,6 +178,77 @@
 	 * `window.print()` reaches the OS print sheet, which is where "Save as PDF"
 	 * lives, and needs nothing installed.
 	 */
+	/**
+	 * Write a LaTeX bundle beside the manuscript, and compile it if this machine
+	 * can.
+	 *
+	 * Journals routinely ask for `.tex` alongside the PDF, and some supply a
+	 * class file the paper must be built with. Erti does not ship TeX Live —
+	 * several gigabytes for the minority who compile locally — so the bundle is
+	 * the deliverable and compiling is an offer.
+	 */
+	async function exportToLatex() {
+		await autosave.flush();
+		$editor.commands.updateAllCitation();
+
+		const current = $documentsStore.current;
+		if (!current) return;
+
+		try {
+			const doc = $editor.getJSON();
+
+			// Only the works this manuscript cites: a .bib of the whole library
+			// lists papers it never mentions, and some journals check.
+			const cited: string[] = [];
+			$editor.state.doc.descendants((node) => {
+				if (node.type.name === 'citation') cited.push(...parseCitationIds(node.attrs.id));
+				return true;
+			});
+
+			const { bibtex, keys } = toBibliography(citationStore.getAllSourcesAsJson(), cited);
+
+			const dir = await pathJoin(currentDir, 'export');
+			await mkdir(dir, { recursive: true });
+
+			await writeTextFile(
+				await pathJoin(dir, 'main.tex'),
+				toLatexDocument(doc, { title: current.title, citationKeys: keys })
+			);
+			await writeTextFile(await pathJoin(dir, 'references.bib'), bibtex);
+
+			const tex = await invoke<{ engine: string | null }>('detect_tex_toolchain');
+
+			if (!tex.engine) {
+				// Said rather than hidden: the bundle is the useful artefact, and
+				// Overleaf is where most co-authors will open it.
+				successToast(
+					`Wrote export/main.tex and references.bib. No LaTeX installation was found, so it was not compiled — the folder is ready to upload to Overleaf or send to a journal.`
+				);
+				return;
+			}
+
+			const result = await invoke<{ ok: boolean; log: string }>('compile_latex', {
+				directory: dir,
+				engine: tex.engine
+			});
+
+			if (result.ok) {
+				successToast(`Compiled export/main.pdf with ${tex.engine}.`);
+			} else {
+				// The log is the only thing that says what went wrong.
+				console.error(result.log);
+				errorToast(
+					`${tex.engine} could not compile the document. The bundle is in export/ and the log is in the console.`
+				);
+			}
+		} catch (error) {
+			console.error('LaTeX export failed:', error);
+			errorToast(
+				`Could not write the LaTeX bundle: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
+	}
+
 	async function exportToPdf() {
 		// Anything still in the quiet period is written first, so the PDF and the
 		// file on disk are the same document.
@@ -356,7 +431,7 @@
 				oncreate={createDocument}
 			/>
 
-			<ToolBar editor={$editor} {toggleView} {exportToPdf} />
+			<ToolBar editor={$editor} {toggleView} {exportToPdf} {exportToLatex} />
 
 			<!--
 				Whether the work is safe. A failed save keeps the content and retries,

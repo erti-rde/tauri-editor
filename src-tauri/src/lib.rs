@@ -2,6 +2,7 @@ pub mod commands;
 pub mod db;
 pub mod db_commands;
 pub mod fs_errors;
+pub mod latex;
 pub mod ml;
 
 use commands::*;
@@ -52,6 +53,8 @@ pub fn run() {
             project_root,
             hash_file,
             register_source,
+            latex::detect_tex_toolchain,
+            latex::compile_latex,
             sources_needing_ingest,
             store_chunks,
             mark_ingest_failed,
