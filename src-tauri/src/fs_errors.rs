@@ -21,38 +21,63 @@ pub fn describe(err: &io::Error, path: &Path) -> String {
         io::ErrorKind::NotFound => {
             format!("{shown} no longer exists. It may have been moved or renamed.")
         }
-        _ => format!("Could not read {shown}: {err}"),
+        _ => format!("Could not access {shown}: {err}"),
     }
 }
 
 #[cfg(target_os = "macos")]
 fn permission_denied(path: &Path) -> String {
-    // The pane differs by what is being asked for, so name the one that matches
-    // rather than sending everyone to Full Disk Access.
-    let pane = if protected_folder(path).is_some() {
-        "Privacy & Security > Files and Folders"
-    } else {
-        "Privacy & Security > Full Disk Access"
-    };
-
-    match protected_folder(path) {
-        Some(folder) => format!(
+    // Removable volumes are governed by their own TCC permission, not by Full
+    // Disk Access, and the app declares NSRemovableVolumesUsageDescription for
+    // exactly this case. Sending those users to Full Disk Access would have
+    // them grant something far broader than the app needs, and it is not the
+    // switch that unblocks them.
+    match access_class(path) {
+        Access::ProtectedFolder(folder) => format!(
             "macOS is blocking access to your {folder} folder, where {} lives. \
-             Open System Settings > {pane}, allow Erti access, then try again.",
+             Open System Settings > Privacy & Security > Files and Folders, \
+             allow Erti access, then try again.",
             path.display()
         ),
-        None => format!(
+        Access::RemovableVolume => format!(
+            "macOS is blocking access to the volume holding {}. \
+             Open System Settings > Privacy & Security > Removable Volumes, \
+             allow Erti access, then try again.",
+            path.display()
+        ),
+        Access::Other => format!(
             "macOS is blocking access to {}. \
-             Open System Settings > {pane}, allow Erti access, then try again.",
+             Open System Settings > Privacy & Security > Full Disk Access, \
+             allow Erti access, then try again.",
             path.display()
         ),
     }
 }
 
+#[cfg(target_os = "macos")]
+enum Access {
+    ProtectedFolder(&'static str),
+    RemovableVolume,
+    Other,
+}
+
+/// Which permission actually governs this path.
+#[cfg(target_os = "macos")]
+fn access_class(path: &Path) -> Access {
+    if let Some(folder) = protected_folder(path) {
+        return Access::ProtectedFolder(folder);
+    }
+    // External drives and mounted images live under /Volumes.
+    if path.starts_with("/Volumes") {
+        return Access::RemovableVolume;
+    }
+    Access::Other
+}
+
 #[cfg(not(target_os = "macos"))]
 fn permission_denied(path: &Path) -> String {
     format!(
-        "Erti does not have permission to read {}. Check the folder's permissions and try again.",
+        "Erti does not have permission to access {}. Check the folder's permissions and try again.",
         path.display()
     )
 }
@@ -123,6 +148,18 @@ mod tests {
         }
 
         #[test]
+        fn an_external_drive_points_at_its_own_permission() {
+            // Removable Volumes is a separate TCC permission from Full Disk
+            // Access, and the app declares a usage description for it. Sending
+            // the user to Full Disk Access would ask for far more than Erti
+            // needs and still not be the switch that unblocks them.
+            let message = describe(&denied(), Path::new("/Volumes/Backup/papers/thesis.pdf"));
+
+            assert!(message.contains("Removable Volumes"), "{message}");
+            assert!(!message.contains("Full Disk Access"), "{message}");
+        }
+
+        #[test]
         fn a_similarly_named_folder_is_not_mistaken_for_a_protected_one() {
             // A substring search would call this Documents and send the user to
             // the wrong settings pane.
@@ -136,6 +173,17 @@ mod tests {
                 Some("Documents")
             );
         }
+    }
+
+    #[test]
+    fn the_wording_does_not_assume_the_caller_was_reading() {
+        // The same formatter reports a failure to *create* the library
+        // directory, so "could not read" would describe the wrong operation.
+        let full = io::Error::new(io::ErrorKind::StorageFull, "No space left on device");
+
+        let message = describe(&full, Path::new("/Users/someone/Erti"));
+
+        assert!(!message.contains("read"), "{message}");
     }
 
     #[test]

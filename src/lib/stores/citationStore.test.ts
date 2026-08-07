@@ -162,6 +162,20 @@ describe('citationStore', () => {
 		expect(get(citationStore).missingIds).toEqual(['gone']);
 	});
 
+	it('clears the bibliography when the last citation is deleted', () => {
+		// Only renderDocument publishes to the store, so returning early on an
+		// empty document left the previous bibliography and missing-source
+		// markers on screen for a manuscript that no longer cites anything.
+		withEngine();
+		citationStore.renderDocument([{ pos: 0, itemIds: ['1'] }]);
+		expect(get(citationStore).bibliography).not.toEqual([]);
+
+		citationStore.renderDocument([]);
+
+		expect(get(citationStore).bibliography).toEqual([]);
+		expect(get(citationStore).missingIds).toEqual([]);
+	});
+
 	it('renders nothing when no style has been loaded', () => {
 		setCitationStore({
 			engine: null,

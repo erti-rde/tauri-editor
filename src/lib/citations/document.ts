@@ -119,7 +119,12 @@ export function parseCitationIds(attr: unknown): string[] {
 	try {
 		const parsed = JSON.parse(attr);
 		if (Array.isArray(parsed)) return parsed.filter((id): id is string => typeof id === 'string');
-		return typeof parsed === 'string' ? [parsed] : [];
+		if (typeof parsed === 'string') return [parsed];
+
+		// An all-digit id parses as a number, and `1e5` does too. Treating that as
+		// "no ids" renders the citation as a removed source. An object, on the
+		// other hand, was never a legacy id.
+		return parsed !== null && typeof parsed === 'object' ? [] : [attr];
 	} catch {
 		// An older document stored a bare id rather than an array.
 		return [attr];
