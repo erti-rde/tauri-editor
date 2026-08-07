@@ -9,6 +9,7 @@
 	import { Separator } from 'bits-ui';
 	// Import Icons for toolbar
 	import Bold from '~icons/lucide/bold';
+	import BookText from '~icons/lucide/book-text';
 	import Italic from '~icons/lucide/italic';
 	import StrikeThrough from '~icons/lucide/strikethrough';
 	import ListUnordered from '~icons/lucide/list';
@@ -242,6 +243,14 @@
 		isActive: editor.isActive('superscript'),
 		disabled: !editor.can().chain().focus().toggleSuperscript().run(),
 		Icon: Superscript
+	})}
+
+	<!-- The works cited. A document node, so it exports and paginates with the
+	     manuscript rather than living beside it. -->
+	{@render toolBarButton({
+		onclick: () => editor.chain().focus().insertBibliography().run(),
+		isActive: editor.isActive('bibliography'),
+		Icon: BookText
 	})}
 
 	<Separator.Root class="mx-1 my-1 w-[1px] self-stretch bg-orange-200" />

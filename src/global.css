@@ -395,3 +395,55 @@ body {
 		cursor: col-resize;
 	}
 }
+
+/*
+ * The works cited.
+ *
+ * Hanging indent is the convention almost every style shares, and CSL styles
+ * assume it rather than emitting it: citeproc gives the entry's text and leaves
+ * the block layout to the renderer. Without it the list reads as a wall of
+ * paragraphs and looks wrong to anyone who has submitted a paper.
+ */
+.bibliography {
+	margin-top: 2.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--color-border, #e5e5e5);
+}
+
+.bibliography-heading {
+	margin-bottom: 1rem;
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+.bibliography-entry {
+	margin-bottom: 0.75rem;
+	padding-left: 2em;
+	text-indent: -2em;
+	line-height: 1.6;
+}
+
+.bibliography-empty {
+	color: var(--color-muted-foreground, #737373);
+	font-style: italic;
+}
+
+/* A cited source that has left the library cannot appear in the list above, so
+   its absence is stated rather than left silent. */
+.bibliography-missing {
+	margin-top: 1rem;
+	color: #b45309;
+	font-size: 0.875rem;
+}
+
+/* A references list breaks across pages as a matter of course; what must not
+   break is a single entry. */
+@media print {
+	.bibliography {
+		break-before: auto;
+	}
+
+	.bibliography-entry {
+		break-inside: avoid;
+	}
+}

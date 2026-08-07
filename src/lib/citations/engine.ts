@@ -82,6 +82,12 @@ export class CitationEngine {
 		}));
 
 		// Register the cited set so makeBibliography() reflects exactly these works.
+		//
+		// Measured as belt-and-braces rather than load-bearing: rebuildProcessorState
+		// below already confines the bibliography to the cited set, and removing this
+		// call breaks no test. It is kept because citeproc documents updateItems as
+		// the way to declare that set, and relying on a side effect of rebuilding
+		// would be relying on something undocumented.
 		this.engine.updateItems(clusters.flatMap((c) => c.itemIds));
 
 		const rebuilt = this.engine.rebuildProcessorState(citations) as unknown as [
