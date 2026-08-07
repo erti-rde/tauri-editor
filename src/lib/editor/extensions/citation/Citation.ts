@@ -9,6 +9,7 @@ import type { Node as ProsemirrorNode } from '@tiptap/pm/model';
 import Suggestion from '@tiptap/suggestion';
 
 import { parseCitationIds, type CitationSite } from '$lib/citations/document';
+import { BIBLIOGRAPHY_NODE } from './Bibliography';
 import { citationStore } from '$lib/stores/citationStore';
 
 import SvelteRenderer from '../../core/SvelteRenderer';
@@ -35,9 +36,40 @@ function citationSignature(doc: ProsemirrorNode): string {
 	const parts: string[] = [];
 	doc.descendants((node) => {
 		if (node.type.name === 'citation') parts.push(parseCitationIds(node.attrs.id).join(','));
+		// Adding or removing the references section changes what has to be
+		// rendered, though it cites nothing itself.
+		if (node.type.name === BIBLIOGRAPHY_NODE) parts.push('#bibliography');
 		return true;
 	});
 	return parts.join('|');
+}
+
+/**
+ * Write the current works-cited list into the document's references section.
+ *
+ * The entries live on the node so they travel with `getJSON()` into the saved
+ * file and into every export, rather than existing only on screen.
+ */
+function refreshBibliography(tr: Transaction, entries: string[], missing: number): boolean {
+	let updated = false;
+
+	tr.doc.descendants((node, pos) => {
+		if (node.type.name !== BIBLIOGRAPHY_NODE) return true;
+
+		const same =
+			node.attrs.missing === missing &&
+			Array.isArray(node.attrs.entries) &&
+			node.attrs.entries.length === entries.length &&
+			node.attrs.entries.every((e: string, i: number) => e === entries[i]);
+
+		if (!same) {
+			tr.setNodeMarkup(pos, undefined, { ...node.attrs, entries, missing });
+			updated = true;
+		}
+		return true;
+	});
+
+	return updated;
 }
 
 /**
@@ -61,9 +93,13 @@ function updateAllCitations(tr: Transaction): boolean {
 	// bibliography and the missing-source markers left by the citations that were
 	// just deleted have to go with them.
 	const rendered = citationStore.renderDocument(sites);
-	if (!rendered || sites.length === 0) return false;
+	if (!rendered) return false;
 
-	let updated = false;
+	// The references section is refreshed even when nothing is cited any more —
+	// that is exactly when it has to empty out.
+	let updated = refreshBibliography(tr, rendered.bibliography, rendered.missingIds.length);
+
+	if (sites.length === 0) return updated;
 	for (const site of rendered.sites) {
 		const node = tr.doc.nodeAt(site.pos);
 		if (!node || node.attrs.label === site.label) continue;

@@ -7,6 +7,7 @@ import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table
 import TextAlign from '@tiptap/extension-text-align';
 import StarterKit from '@tiptap/starter-kit';
 
+import { Bibliography } from '../extensions/citation/Bibliography';
 import { Citation } from '../extensions/citation/Citation';
 
 /**
@@ -41,5 +42,6 @@ export const editorExtensions = [
 	TableRow,
 	TableHeader,
 	TableCell,
-	Citation
+	Citation,
+	Bibliography
 ];
