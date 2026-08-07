@@ -1,13 +1,15 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
+	import { errorToast } from '$lib/toast/Toast.svelte';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 
 	import { invoke } from '@tauri-apps/api/core';
 
+	import { createAutosave, type SaveState } from './autosave';
 	import createEditor from './core/CreateEditor';
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
@@ -18,12 +20,45 @@
 	import Result from './extensions/citation/Result.svelte';
 	import ToolBar from './extensions/ToolBar.svelte';
 
+	/**
+	 * The manuscript's filename.
+	 *
+	 * Still one hardcoded name per project — multi-document support (#57) is what
+	 * removes that. Named once here so the reader and the writer cannot disagree,
+	 * which they could when the string was repeated.
+	 */
+	const DOCUMENT_FILE = 'magnum_opus.json';
+
 	let editor = $state() as Readable<Editor>;
 	let editable = true;
 	let currentDir = '';
 
-	let saveTimeout: ReturnType<typeof setTimeout> | undefined;
-	let isSaving = false;
+	/**
+	 * Autosave, which has to keep every keystroke.
+	 *
+	 * The previous version cancelled the pending save on each update and then
+	 * returned without scheduling anything if a write was in flight, so edits
+	 * made during a write were dropped — permanently, if the user stopped typing
+	 * there. The logic now lives in ./autosave with tests for that race.
+	 */
+	let saveState = $state<SaveState>('idle');
+
+	const autosave = createAutosave({
+		write: async (content) => {
+			const path = await pathJoin(currentDir, DOCUMENT_FILE);
+			await writeTextFile(path, JSON.stringify(content));
+		},
+		onStateChange: (next) => (saveState = next),
+		onError: (error) => {
+			// A failed save is the one thing the user must not miss, and it does
+			// not resolve by itself. The content is kept and retried, so this says
+			// what is true rather than claiming the work is gone.
+			console.error('Save failed:', error);
+			errorToast(
+				`Could not save your document: ${error instanceof Error ? error.message : String(error)}. Your changes are still here and will be saved again on the next edit.`
+			);
+		}
+	});
 
 	onMount(async () => {
 		await citationStore.initializeCitationStore();
@@ -41,27 +76,21 @@
 			extensions: editorExtensions,
 			content: await getDocumentData(),
 
-			onUpdate: async ({ editor }) => {
-				clearTimeout(saveTimeout);
-				if (isSaving) {
-					return;
-				}
-				saveTimeout = setTimeout(async () => {
-					isSaving = true;
-					try {
-						const jsonContent = editor.getJSON();
-
-						const pathToSaveJson = await pathJoin(currentDir, 'magnum_opus.json');
-
-						// Save JSON first (it's smaller and less likely to cause issues)
-						await writeTextFile(pathToSaveJson, JSON.stringify(jsonContent));
-					} catch (error) {
-						console.error('Save failed:', error);
-					} finally {
-						isSaving = false;
-					}
-				}, 500);
+			onUpdate: ({ editor }) => {
+				// The getter is passed rather than the content: it is read when the
+				// save actually runs, so a burst of typing costs one write and always
+				// writes the newest document.
+				autosave.schedule(() => editor.getJSON());
 			}
+		});
+
+		// A closing window does not wait for promises, so this is best-effort: it
+		// starts the write and asks the browser to hold on, which is as much as the
+		// platform allows.
+		window.addEventListener('beforeunload', (event) => {
+			if (!autosave.hasUnsavedChanges) return;
+			void saveNow();
+			event.preventDefault();
 		});
 
 		window.addEventListener('settings-updated', async (event: CustomEvent) => {
@@ -72,6 +101,20 @@
 				$editor.commands.updateAllCitation();
 			}
 		});
+	});
+
+	/**
+	 * Anything still in the quiet period is written before the document goes
+	 * away. Without this, the last few seconds of work are lost on close — the
+	 * same data loss as the race, arriving by a different route.
+	 */
+	async function saveNow() {
+		await autosave.flush();
+	}
+
+	onDestroy(() => {
+		void saveNow();
+		autosave.destroy();
 	});
 
 	function toggleView() {
@@ -90,7 +133,7 @@
 	}
 
 	async function getDocumentData() {
-		const MagnumOpusPath = await pathJoin(currentDir, `magnum_opus.json`);
+		const MagnumOpusPath = await pathJoin(currentDir, DOCUMENT_FILE);
 		const fileExists = await exists(MagnumOpusPath);
 		if (!fileExists) {
 			return {};
@@ -144,6 +187,24 @@
 	<div class="flex h-full w-full flex-col bg-[#FAFBFD]">
 		<div class="z-10 mb-1 shrink-0">
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} />
+
+			<!--
+				Whether the work is safe. A failed save keeps the content and retries,
+				so the message says that rather than implying the work is gone — and
+				it stays put instead of disappearing like a toast, because it is the
+				one thing the user must not miss.
+			-->
+			<div class="flex justify-end px-4 pb-1 text-xs" aria-live="polite">
+				{#if saveState === 'error'}
+					<span class="font-medium text-red-600">Not saved — retrying</span>
+				{:else if saveState === 'saving'}
+					<span class="text-gray-500">Saving…</span>
+				{:else if saveState === 'pending'}
+					<span class="text-gray-400">Unsaved changes</span>
+				{:else}
+					<span class="text-gray-400">Saved</span>
+				{/if}
+			</div>
 		</div>
 
 		<div class="flex min-h-0 grow justify-center overflow-auto bg-[#f9fbfd] px-4">
