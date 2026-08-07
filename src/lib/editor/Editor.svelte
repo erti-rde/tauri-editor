@@ -10,8 +10,13 @@
 
 	import { invoke } from '@tauri-apps/api/core';
 
+	import { get } from 'svelte/store';
+
 	import { createAutosave, type SaveState } from './autosave';
+	import { DOCUMENT_EXTENSION, toDocumentFileName, type ProjectDocument } from './documents';
+	import { documentsStore } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
+	import DocumentBar from './DocumentBar.svelte';
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
 	import { editorExtensions } from './core/extensions';
@@ -20,15 +25,6 @@
 	import BubbleMenu from './extensions/BubbleMenu.svelte';
 	import Result from './extensions/citation/Result.svelte';
 	import ToolBar from './extensions/ToolBar.svelte';
-
-	/**
-	 * The manuscript's filename.
-	 *
-	 * Still one hardcoded name per project — multi-document support (#57) is what
-	 * removes that. Named once here so the reader and the writer cannot disagree,
-	 * which they could when the string was repeated.
-	 */
-	const DOCUMENT_FILE = 'magnum_opus.json';
 
 	let editor = $state() as Readable<Editor>;
 	let editable = true;
@@ -44,11 +40,18 @@
 	 */
 	let saveState = $state<SaveState>('idle');
 	let unlistenClose: (() => void) | undefined;
+	/** Set when the open file could not be parsed, so autosave must not overwrite it. */
+	let readFailed = $state(false);
 
 	const autosave = createAutosave({
 		write: async (content) => {
-			const path = await pathJoin(currentDir, DOCUMENT_FILE);
-			await writeTextFile(path, JSON.stringify(content));
+			// Resolved at write time, not captured: switching documents changes
+			// where the next save goes, and a stale path would write one
+			// manuscript's text into another's file.
+			const target = get(documentsStore).current;
+			if (!target) return;
+
+			await writeTextFile(target.path, JSON.stringify(content));
 		},
 		onStateChange: (next) => (saveState = next),
 		onError: (error) => {
@@ -66,6 +69,12 @@
 		await citationStore.initializeCitationStore();
 		currentDir = $fileSystemStore.currentPath;
 
+		// A project that has never been opened in this version has no manuscript
+		// at all; one written before multiple documents existed has exactly one,
+		// under the old fixed name. Both are handled by reading the folder.
+		documentsStore.refresh();
+		if (!$documentsStore.current) await createFirstDocument();
+
 		editor = createEditor({
 			editorProps: {
 				attributes: {
@@ -79,6 +88,11 @@
 			content: await getDocumentData(),
 
 			onUpdate: ({ editor }) => {
+				// A file that could not be parsed is left alone. Saving over it would
+				// replace whatever was recoverable with an empty document, which is
+				// the opposite of what someone whose file just failed to open needs.
+				if (readFailed) return;
+
 				// The getter is passed rather than the content: it is read when the
 				// save actually runs, so a burst of typing costs one write and always
 				// writes the newest document.
@@ -140,29 +154,99 @@
 		}
 	}
 
-	async function getDocumentData() {
-		const MagnumOpusPath = await pathJoin(currentDir, DOCUMENT_FILE);
-		const fileExists = await exists(MagnumOpusPath);
-		if (!fileExists) {
+	async function getDocumentData(path?: string) {
+		const target = path ?? get(documentsStore).current?.path;
+		if (!target || !(await exists(target))) {
 			return {};
 		}
 
-		const fileData = await readTextFile(MagnumOpusPath);
-		console.log('Loading content:', fileData); // Debug log
+		const fileData = await readTextFile(target);
 
 		if (!fileData.trim() || fileData === 'undefined') {
-			console.warn('JSON file is empty or corrupted');
+			console.warn(`${target} is empty; starting from a blank document.`);
 			return {};
 		}
 
 		try {
-			const parsedData = JSON.parse(fileData);
-			return parsedData;
+			return JSON.parse(fileData);
 		} catch (parseError) {
-			console.error('JSON parse error:', parseError);
-			console.error('Problematic content:', JSON.stringify(fileData));
-			return { type: 'doc', content: [] };
+			// Refuse rather than silently replacing the file with a blank document
+			// on the next save, which would destroy whatever was recoverable.
+			console.error(`Could not read ${target}:`, parseError);
+			errorToast(
+				`${target.split('/').pop()} could not be read. It has been left untouched — open it in a text editor to check.`
+			);
+			readFailed = true;
+			return {};
 		}
+	}
+
+	/**
+	 * Put a different manuscript in the editor.
+	 *
+	 * The outgoing one is written first, and its failure stops the switch: moving
+	 * on would leave those edits with nowhere to go, since the autosave resolves
+	 * its target at write time.
+	 */
+	async function openDocument(next: ProjectDocument) {
+		if (next.path === $documentsStore.current?.path) return;
+
+		const saved = await autosave.flush();
+		if (!saved) {
+			errorToast('Could not save the current document, so it stayed open.');
+			return;
+		}
+
+		readFailed = false;
+		documentsStore.open(next);
+		$editor.commands.setContent(await getDocumentData(next.path));
+		$editor.commands.updateAllCitation();
+	}
+
+	/** The manuscript a brand-new project starts with. */
+	async function createFirstDocument() {
+		const fileName = `Untitled${DOCUMENT_EXTENSION}`;
+		const path = await pathJoin(currentDir, fileName);
+
+		if (!(await exists(path))) {
+			await writeTextFile(path, JSON.stringify({ type: 'doc', content: [] }));
+		}
+
+		documentsStore.add({ fileName, path, title: 'Untitled', legacy: false });
+	}
+
+	async function createDocument(name: string) {
+		const result = toDocumentFileName(
+			name,
+			$documentsStore.documents.map((d) => d.fileName)
+		);
+
+		if (!result.ok) {
+			errorToast(result.reason!);
+			return;
+		}
+
+		const saved = await autosave.flush();
+		if (!saved) {
+			errorToast('Could not save the current document, so the new one was not created.');
+			return;
+		}
+
+		const path = await pathJoin(currentDir, result.fileName!);
+		// Written straight away so the manuscript exists on disk even if the app
+		// closes before anything is typed into it.
+		await writeTextFile(path, JSON.stringify({ type: 'doc', content: [] }));
+
+		readFailed = false;
+		documentsStore.add({
+			fileName: result.fileName!,
+			path,
+			title: result.fileName!.replace(DOCUMENT_EXTENSION, ''),
+			legacy: false
+		});
+
+		$editor.commands.setContent({ type: 'doc', content: [] });
+		await fileSystemStore.readDirectory(currentDir);
 	}
 
 	// Citation handling
@@ -194,6 +278,13 @@
 {#if $editor}
 	<div class="flex h-full w-full flex-col bg-[#FAFBFD]">
 		<div class="z-10 mb-1 shrink-0">
+			<DocumentBar
+				documents={$documentsStore.documents}
+				current={$documentsStore.current}
+				onopen={openDocument}
+				oncreate={createDocument}
+			/>
+
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} />
 
 			<!--
