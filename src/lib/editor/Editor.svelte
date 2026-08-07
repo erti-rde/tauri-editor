@@ -3,6 +3,7 @@
 
 	import { citationStore } from '$lib/stores/citationStore';
 	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
@@ -42,6 +43,7 @@
 	 * there. The logic now lives in ./autosave with tests for that race.
 	 */
 	let saveState = $state<SaveState>('idle');
+	let unlistenClose: (() => void) | undefined;
 
 	const autosave = createAutosave({
 		write: async (content) => {
@@ -50,12 +52,12 @@
 		},
 		onStateChange: (next) => (saveState = next),
 		onError: (error) => {
-			// A failed save is the one thing the user must not miss, and it does
-			// not resolve by itself. The content is kept and retried, so this says
-			// what is true rather than claiming the work is gone.
+			// A failed save is the one thing the user must not miss. The content is
+			// kept and retried on a backoff, so this says that rather than implying
+			// the work is gone.
 			console.error('Save failed:', error);
 			errorToast(
-				`Could not save your document: ${error instanceof Error ? error.message : String(error)}. Your changes are still here and will be saved again on the next edit.`
+				`Could not save your document: ${error instanceof Error ? error.message : String(error)}. Your changes are kept and will be saved again automatically.`
 			);
 		}
 	});
@@ -84,13 +86,24 @@
 			}
 		});
 
-		// A closing window does not wait for promises, so this is best-effort: it
-		// starts the write and asks the browser to hold on, which is as much as the
-		// platform allows.
-		window.addEventListener('beforeunload', (event) => {
+		// Closing the window is the last chance to write, and `beforeunload` cannot
+		// take it: the browser does not await a promise, so the webview can go away
+		// mid-write and lose the work. Tauri's close request can be held open,
+		// which turns best-effort into an actual guarantee.
+		unlistenClose = await getCurrentWindow().onCloseRequested(async (event) => {
 			if (!autosave.hasUnsavedChanges) return;
-			void saveNow();
+
 			event.preventDefault();
+			const saved = await autosave.flush();
+
+			if (!saved) {
+				// The disk refused. Closing now would discard the work silently, so
+				// the window stays open with the failure on screen.
+				errorToast('Could not save your document, so the window was kept open. Try again.');
+				return;
+			}
+
+			await getCurrentWindow().destroy();
 		});
 
 		window.addEventListener('settings-updated', async (event: CustomEvent) => {
@@ -103,17 +116,12 @@
 		});
 	});
 
-	/**
-	 * Anything still in the quiet period is written before the document goes
-	 * away. Without this, the last few seconds of work are lost on close — the
-	 * same data loss as the race, arriving by a different route.
-	 */
-	async function saveNow() {
-		await autosave.flush();
-	}
-
 	onDestroy(() => {
-		void saveNow();
+		// Best-effort: a component teardown cannot be awaited. The close handler
+		// above is what actually guarantees the write; this covers switching away
+		// from a document while the app stays open.
+		void autosave.flush();
+		unlistenClose?.();
 		autosave.destroy();
 	});
 
@@ -196,7 +204,7 @@
 			-->
 			<div class="flex justify-end px-4 pb-1 text-xs" aria-live="polite">
 				{#if saveState === 'error'}
-					<span class="font-medium text-red-600">Not saved — retrying</span>
+					<span class="font-medium text-red-600">Not saved — retrying, your work is kept</span>
 				{:else if saveState === 'saving'}
 					<span class="text-gray-500">Saving…</span>
 				{:else if saveState === 'pending'}
