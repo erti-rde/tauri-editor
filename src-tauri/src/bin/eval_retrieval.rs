@@ -29,6 +29,59 @@ struct ChunkFile {
 struct Query {
     query: String,
     gold: String,
+    /// "easy" or "hard". Absent in older files, which are all easy.
+    #[serde(default)]
+    difficulty: Option<String>,
+}
+
+/// Recall and MRR over one slice of the query set.
+#[derive(Default)]
+struct Scores {
+    n: usize,
+    at_1: usize,
+    at_5: usize,
+    at_10: usize,
+    rr: f64,
+}
+
+impl Scores {
+    fn record(&mut self, rank: Option<usize>) {
+        self.n += 1;
+        match rank {
+            Some(0) => {
+                self.at_1 += 1;
+                self.at_5 += 1;
+                self.at_10 += 1;
+                self.rr += 1.0;
+            }
+            Some(r) if r < 5 => {
+                self.at_5 += 1;
+                self.at_10 += 1;
+                self.rr += 1.0 / (r + 1) as f64;
+            }
+            Some(r) if r < 10 => {
+                self.at_10 += 1;
+                self.rr += 1.0 / (r + 1) as f64;
+            }
+            _ => {}
+        }
+    }
+
+    fn report(&self, label: &str) {
+        if self.n == 0 {
+            return;
+        }
+        let n = self.n as f64;
+        println!(
+            "{:<16}{:>4}   {:>5.1}%  {:>5.1}%  {:>5.1}%   {:.3}",
+            label,
+            self.n,
+            100.0 * self.at_1 as f64 / n,
+            100.0 * self.at_5 as f64 / n,
+            100.0 * self.at_10 as f64 / n,
+            self.rr / n
+        );
+    }
 }
 
 #[derive(Deserialize)]
@@ -117,9 +170,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let q_embeds = embed_texts(&queries, add_special_tokens)?;
     let query_ms = q_started.elapsed().as_secs_f64() * 1000.0 / queries.len().max(1) as f64;
 
-    let (mut hits_at_1, mut hits_at_5, mut hits_at_10, mut rr_total) =
-        (0usize, 0usize, 0usize, 0f64);
+    // Scored separately as well as together: the easy set saturated at 100%
+    // Recall@5, so averaging the two would hide exactly the discrimination the
+    // hard set was written to provide.
+    let mut all = Scores::default();
+    let mut easy = Scores::default();
+    let mut hard = Scores::default();
     let mut misses: Vec<(&str, String, usize)> = Vec::new();
+    // Per-query ranks, written out so two runs can be compared as a paired test.
+    // Comparing two models by their headline percentages throws away the fact
+    // that they saw the same queries, and with a set this size that is the
+    // difference between detecting a real improvement and not.
+    let mut per_query: Vec<serde_json::Value> = Vec::new();
 
     for (qi, q) in qf.queries.iter().enumerate() {
         let mut scored: Vec<(f32, &str)> = corpus
@@ -146,24 +208,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         let rank = seen.iter().position(|s| *s == q.gold.as_str());
 
-        match rank {
-            Some(0) => {
-                hits_at_1 += 1;
-                hits_at_5 += 1;
-                hits_at_10 += 1;
-                rr_total += 1.0;
-            }
-            Some(r) if r < 5 => {
-                hits_at_5 += 1;
-                hits_at_10 += 1;
-                rr_total += 1.0 / (r + 1) as f64;
-            }
-            Some(r) if r < 10 => {
-                hits_at_10 += 1;
-                rr_total += 1.0 / (r + 1) as f64;
-            }
-            _ => {}
+        all.record(rank);
+        match q.difficulty.as_deref() {
+            Some("hard") => hard.record(rank),
+            _ => easy.record(rank),
         }
+
+        per_query.push(serde_json::json!({
+            "query": q.query,
+            "gold": q.gold,
+            "difficulty": q.difficulty.as_deref().unwrap_or("easy"),
+            // 0 means the gold source was outside the top 10.
+            "rank": rank.map(|r| r + 1).unwrap_or(0),
+        }));
 
         if rank.map(|r| r > 0).unwrap_or(true) {
             misses.push((
@@ -174,13 +231,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let n = qf.queries.len() as f64;
     println!("query embed     : {query_ms:.0} ms/query\n");
-    println!("queries         : {}", qf.queries.len());
-    println!("Recall@1        : {:.1}%", 100.0 * hits_at_1 as f64 / n);
-    println!("Recall@5        : {:.1}%", 100.0 * hits_at_5 as f64 / n);
-    println!("Recall@10       : {:.1}%", 100.0 * hits_at_10 as f64 / n);
-    println!("MRR             : {:.3}", rr_total / n);
+    println!("set                 n      R@1     R@5    R@10   MRR");
+    all.report("all");
+    easy.report("  easy");
+    hard.report("  hard");
+
+    let out = fixtures.join("last-run.json");
+    std::fs::write(
+        &out,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "model": "all-MiniLM-L6-v2",
+            "chunks": cf.chunks.len(),
+            "queries": per_query,
+        }))?,
+    )?;
+    println!("\nper-query ranks -> {}", out.display());
 
     if !misses.is_empty() {
         println!("\nnot ranked first ({}):", misses.len());

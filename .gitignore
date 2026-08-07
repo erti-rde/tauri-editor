@@ -18,3 +18,6 @@ vite.config.ts.timestamp-*
 # Benchmark corpus is fetched on demand by scripts/fetch-retrieval-corpus.sh
 tests/fixtures/retrieval/papers/
 tests/fixtures/retrieval/chunks.json
+
+# Written by the retrieval benchmark on each run, for comparing two runs pairwise.
+tests/fixtures/retrieval/last-run.json
