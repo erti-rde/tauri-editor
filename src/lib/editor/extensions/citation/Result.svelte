@@ -79,6 +79,19 @@
 				await citationStore.initializeCitationStore();
 			}
 
+			// A source can be searchable without being citable: ingest stores its
+			// chunks whether or not the metadata resolved, and only resolved sources
+			// reach the citation engine. Inserting anyway would put an empty
+			// citation in the manuscript that renders as a removed source — so the
+			// user is told what to do instead, and the source stays in the project
+			// where the metadata can be added.
+			if (!citationStore.getAllSourcesAsJson()[match.sha256]) {
+				errorToast(
+					`That source has no citation details yet, so it cannot be cited. It has been added to this project — open the metadata explorer to paste a DOI or enter the details.`
+				);
+				return;
+			}
+
 			selectCitation({
 				id: JSON.stringify([match.sha256]),
 				inlineCitation: citationStore.previewCitation([match.sha256])
