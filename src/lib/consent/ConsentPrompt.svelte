@@ -61,43 +61,43 @@
 
 <svelte:window onkeydown={trapFocus} />
 
-<div class="fixed inset-0 z-100 flex items-center justify-center bg-black/50">
+<div class="bg-surface-overlay/50 fixed inset-0 z-100 flex items-center justify-center">
 	<div
 		bind:this={dialog}
-		class="w-[520px] max-w-[90%] rounded-lg bg-white p-6 shadow-xl"
+		class="bg-surface-raised w-[520px] max-w-[90%] rounded-lg p-6 shadow-xl"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="consent-title"
 	>
-		<h2 id="consent-title" class="mb-3 text-xl font-semibold text-gray-900">
+		<h2 id="consent-title" class="text-ink mb-3 text-xl font-semibold">
 			Look up citation details online?
 		</h2>
 
-		<p class="mb-3 text-gray-700">
+		<p class="text-ink mb-3">
 			Erti can fill in authors, titles and journals automatically. To do that it sends a paper's
 			identifier — or, failing that, its title and the opening of its first page — to
 			<span class="font-medium">doi.org</span> and <span class="font-medium">crossref.org</span>.
 		</p>
 
-		<p class="mb-3 text-gray-700">
+		<p class="text-ink mb-3">
 			Nothing else is sent. Your PDFs, your notes and your writing stay on this machine either way.
 		</p>
 
-		<p class="mb-5 text-sm text-gray-600">
+		<p class="text-ink-muted mb-5 text-sm">
 			If you decline, Erti still reads the identifier printed in each paper and you can paste a DOI
 			or type details in yourself. You can change this later in Settings.
 		</p>
 
 		<div class="flex justify-end gap-2">
 			<button
-				class="rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+				class="border-line-strong text-ink hover:bg-surface-sunken rounded-md border px-4 py-2"
 				onclick={() => choose(false)}
 			>
 				Stay offline
 			</button>
 			<button
 				bind:this={allowButton}
-				class="rounded-md bg-orange-500 px-4 py-2 font-medium text-white hover:bg-orange-600"
+				class="bg-accent text-accent-ink hover:bg-accent rounded-md px-4 py-2 font-medium"
 				onclick={() => choose(true)}
 			>
 				Allow lookups

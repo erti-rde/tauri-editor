@@ -26,11 +26,11 @@
 
 	// Helper to determine similarity score color
 	function getSimilarityColor(score: number): string {
-		if (score >= 0.8) return 'bg-green-200 text-green-800';
-		if (score >= 0.6) return 'bg-lime-200 text-lime-800';
-		if (score >= 0.4) return 'bg-yellow-200 text-yellow-800';
-		if (score >= 0.2) return 'bg-orange-200 text-orange-800';
-		return 'bg-red-100 text-red-800';
+		if (score >= 0.8) return 'bg-surface-sunken text-success';
+		if (score >= 0.6) return 'bg-surface-sunken text-success';
+		if (score >= 0.4) return 'bg-surface-sunken text-warning';
+		if (score >= 0.2) return 'bg-accent-quiet text-accent';
+		return 'bg-surface-sunken text-danger';
 	}
 
 	const similarityColor = getSimilarityColor(sentenceMetadata.similarity);
@@ -49,20 +49,20 @@
 </script>
 
 <div
-	class="mb-2 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow"
+	class="border-line bg-surface-raised mb-2 overflow-hidden rounded-md border shadow-sm transition-shadow hover:shadow"
 >
 	<!-- Header with similarity score and title -->
 	<div class="flex items-center">
 		<div class={`flex h-12 w-12 items-center justify-center text-xs font-bold ${similarityColor}`}>
 			{scorePercentage}%
 		</div>
-		<div class="ml-2 flex-1 text-sm font-medium text-gray-800">
+		<div class="text-ink ml-2 flex-1 text-sm font-medium">
 			{sentenceMetadata.metadata.title}
 		</div>
 	</div>
 
 	<!-- Citation text preview -->
-	<div class="border-y border-gray-100 bg-gray-50 px-3 pt-1.5 pb-0.5 text-xs text-gray-700">
+	<div class="border-line bg-surface-sunken text-ink border-y px-3 pt-1.5 pb-0.5 text-xs">
 		<!-- Text content -->
 		<div class="relative">
 			<p class:line-clamp-2={!isExpanded} class="mb-1 pr-14 italic">
@@ -72,7 +72,7 @@
 			<!-- Fixed position expander button -->
 			{#if needsExpander}
 				<button
-					class="absolute top-0 right-0 flex items-center bg-gray-50 p-1 text-sm text-gray-500 hover:text-gray-700"
+					class="bg-surface-sunken text-ink-muted hover:text-ink absolute top-0 right-0 flex items-center p-1 text-sm"
 					onclick={toggleExpand}
 					aria-label={isExpanded ? 'Show less' : 'Show more'}
 				>
@@ -92,7 +92,7 @@
 		"p. 4, Results" is what lets a researcher check a quotation against the PDF.
 	-->
 	{#if sentenceMetadata.page_start || sentenceMetadata.section}
-		<p class="px-1.5 text-xs text-gray-500">
+		<p class="text-ink-muted px-1.5 text-xs">
 			{#if sentenceMetadata.page_start}p. {sentenceMetadata.page_start}{/if}{#if sentenceMetadata.page_start && sentenceMetadata.section},
 			{/if}{#if sentenceMetadata.section}{sentenceMetadata.section}{/if}
 		</p>
@@ -106,7 +106,7 @@
 			researcher unsure which papers a project actually contains.
 		-->
 		<button
-			class="flex items-center space-x-1 rounded bg-orange-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-orange-200 disabled:opacity-60"
+			class="bg-accent-quiet text-ink hover:bg-accent-quiet flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60"
 			onclick={oncite}
 			disabled={busy}
 			title={sentenceMetadata.in_project === false
@@ -133,7 +133,7 @@
 				href={sourceUrl}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="flex items-center space-x-1 rounded bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200"
+				class="bg-surface-sunken text-ink hover:bg-surface-sunken flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors"
 			>
 				<Icon icon="ExternalLink" size="s" />
 				<span class="ml-1">View online</span>

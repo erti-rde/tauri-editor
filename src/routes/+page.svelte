@@ -110,7 +110,7 @@
 </script>
 
 {#if startupError}
-	<div class="border-b border-red-300 bg-red-50 px-4 py-3 text-red-900">
+	<div class="border-danger bg-surface-sunken text-danger border-b px-4 py-3">
 		<span class="font-medium">Erti could not open your source library.</span>
 		{startupError}
 	</div>

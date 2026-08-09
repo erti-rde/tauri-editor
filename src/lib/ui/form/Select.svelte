@@ -24,25 +24,25 @@ from the perspective of the consumer of this component, it will be typed appropr
 -->
 <Select.Root bind:value={value as never} {...restProps}>
 	<Select.Trigger
-		class="flex w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm hover:border-gray-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+		class="border-line-strong bg-surface-raised text-ink hover:border-line-strong focus:border-accent focus:ring-accent/20 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm shadow-sm focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		<span class="truncate">
 			{#if selectedLabel}
 				{selectedLabel}
 			{:else}
-				<span class="text-gray-500">{placeholder}</span>
+				<span class="text-ink-muted">{placeholder}</span>
 			{/if}
 		</span>
-		<ChevronsUpDown class="ml-2 h-4 w-4 text-gray-500" />
+		<ChevronsUpDown class="text-ink-muted ml-2 h-4 w-4" />
 	</Select.Trigger>
 	<Select.Portal>
 		<Select.Content
-			class="z-50 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] overflow-hidden rounded-md border border-slate-300 bg-white shadow-lg"
+			class="border-line-strong bg-surface-raised z-50 max-h-[var(--bits-select-content-available-height)] w-[var(--bits-select-anchor-width)] min-w-[var(--bits-select-anchor-width)] overflow-hidden rounded-md border shadow-lg"
 			{...contentProps}
 			sideOffset={8}
 		>
 			<Select.ScrollUpButton
-				class="flex h-6 cursor-pointer items-center justify-center bg-white text-gray-500 hover:text-gray-800"
+				class="bg-surface-raised text-ink-muted hover:text-ink flex h-6 cursor-pointer items-center justify-center"
 			>
 				<ChevronsUp class="h-4 w-4" />
 			</Select.ScrollUpButton>
@@ -52,11 +52,11 @@ from the perspective of the consumer of this component, it will be typed appropr
 						{value}
 						{label}
 						{disabled}
-						class="relative flex w-full cursor-pointer items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-orange-100 data-[highlighted]:text-orange-900"
+						class="data-[highlighted]:bg-accent-quiet data-[highlighted]:text-accent relative flex w-full cursor-pointer items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
 					>
 						{#snippet children({ selected })}
 							<span
-								class="absolute right-2 flex h-3.5 w-3.5 items-center justify-center text-orange-600"
+								class="text-accent absolute right-2 flex h-3.5 w-3.5 items-center justify-center"
 							>
 								{#if selected}
 									<Check class="h-4 w-4" />
@@ -68,7 +68,7 @@ from the perspective of the consumer of this component, it will be typed appropr
 				{/each}
 			</Select.Viewport>
 			<Select.ScrollDownButton
-				class="flex h-6 cursor-pointer items-center justify-center bg-white text-gray-500 hover:text-gray-800"
+				class="bg-surface-raised text-ink-muted hover:text-ink flex h-6 cursor-pointer items-center justify-center"
 			>
 				<ChevronsDown class="h-4 w-4" />
 			</Select.ScrollDownButton>

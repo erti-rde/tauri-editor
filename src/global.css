@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './lib/theme/tokens.css';
+@import './lib/theme/palettes.css';
 @plugin 'tailwindcss-animate';
 
 :root {
@@ -706,10 +707,55 @@ body {
  * prose is harder to read inverted, and because what is on screen should look
  * like what comes out of the printer.
  */
+/*
+ * The page follows the palette only when the reader asks it to. The default is
+ * paper, because long prose is harder to read inverted — but someone who chose
+ * an editor palette may well want the whole window in it.
+ */
+[data-page='themed'] .manuscript {
+	background: hsl(var(--surface-page-themed, var(--surface-raised)));
+	color: hsl(var(--ink-page-themed, var(--ink)));
+}
+
 .manuscript {
 	background: hsl(var(--surface-page));
 	color: hsl(var(--ink-page));
 	font-family: var(--page-font);
 	font-size: var(--page-size);
 	line-height: 1.7;
+}
+
+/*
+ * Density.
+ *
+ * The tokens existed and nothing consumed them, so the setting did nothing —
+ * a control that appears to work and does not is worse than one that is absent.
+ * These are the rows a researcher actually scans down: the source list, the
+ * document tabs, the toolbar.
+ */
+.row,
+.tree-item,
+.toolbar-btn {
+	min-height: var(--row-height);
+}
+
+.tree-item {
+	padding-block: calc((var(--row-height) - 1.2em) / 2);
+	padding-inline: var(--gap);
+}
+
+[data-density='comfortable'] .metadata-row {
+	padding-block: 0.6rem;
+}
+
+[data-density='compact'] .metadata-row {
+	padding-block: 0.3rem;
+}
+
+[data-density='compact'] .document-tab {
+	padding-block: 0.25rem;
+}
+
+[data-density='comfortable'] .document-tab {
+	padding-block: 0.5rem;
 }

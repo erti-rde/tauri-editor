@@ -452,7 +452,7 @@
 					{words.body.toLocaleString()}
 					{words.body === 1 ? 'word' : 'words'}
 					{#if wordTarget > 0}
-						<span class:text-orange-600={progressTo(words.body, wordTarget).remaining < 0}>
+						<span class:text-accent={progressTo(words.body, wordTarget).remaining < 0}>
 							/ {wordTarget.toLocaleString()}
 						</span>
 					{/if}

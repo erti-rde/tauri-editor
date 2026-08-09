@@ -144,14 +144,14 @@
 		-->
 		{#if !includeLibrary}
 			<button
-				class="m-4 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+				class="border-line-strong hover:bg-surface-sunken m-4 rounded-md border px-3 py-2 text-sm"
 				onclick={() => (includeLibrary = true)}
 			>
 				Search the rest of my library
 			</button>
 		{:else}
 			<button
-				class="m-4 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+				class="text-ink-muted hover:bg-surface-sunken m-4 rounded-md px-3 py-2 text-sm"
 				onclick={() => (includeLibrary = false)}
 			>
 				Only this project

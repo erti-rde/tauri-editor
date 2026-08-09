@@ -87,8 +87,8 @@
 })}
 	<button
 		class={[
-			'rounded-md p-1.5 transition-colors duration-150 ease-in-out hover:bg-orange-200/50 focus:ring-2 focus:ring-orange-300 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
-			isActive && 'bg-orange-200/70 text-orange-600'
+			'hover:bg-accent-quiet/50 focus:ring-accent rounded-md p-1.5 transition-colors duration-150 ease-in-out focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+			isActive && 'bg-accent-quiet/70 text-accent'
 		]}
 		{onclick}
 		{disabled}
@@ -98,7 +98,7 @@
 {/snippet}
 
 <div
-	class="flex h-(--toolbar-l) w-full justify-center bg-orange-100/95 px-2 py-1 shadow-md backdrop-blur-sm"
+	class="bg-accent-quiet/95 flex h-(--toolbar-l) w-full justify-center px-2 py-1 shadow-md backdrop-blur-sm"
 >
 	<!-- History Controls Group -->
 
@@ -113,7 +113,7 @@
 		Icon: Redo
 	})}
 
-	<Separator.Root class="mx-1 my-1 w-[1px] self-stretch bg-orange-200" />
+	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
 
 	{#snippet defaultHeadingButton()}
 		<Heading class="ml-1" />
@@ -180,7 +180,7 @@
 		Icon: CodeBlock
 	})}
 
-	<Separator.Root class="mx-1 my-1 w-[1px] self-stretch bg-orange-200" />
+	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
 
 	<!-- Text Formatting Group -->
 	{@render toolBarButton({
@@ -229,7 +229,7 @@
 		})}
 	</LinkPopover>
 
-	<Separator.Root class="mx-1 my-1 w-[1px] self-stretch bg-orange-200" />
+	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
 
 	<!-- supper script and subscript group-->
 
@@ -263,7 +263,7 @@
 		Icon: BookText
 	})}
 
-	<Separator.Root class="mx-1 my-1 w-[1px] self-stretch bg-orange-200" />
+	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
 
 	<!-- Alignment Group -->
 	{@render toolBarButton({
@@ -287,7 +287,7 @@
 		Icon: AlignJustify
 	})}
 
-	<Separator.Root class="mx-1 my-1 w-[1px] self-stretch bg-orange-200" />
+	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
 
 	<!-- Add image -->
 

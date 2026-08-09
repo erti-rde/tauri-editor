@@ -94,8 +94,8 @@
 	<button
 		{onclick}
 		class={[
-			'rounded p-1.5 transition-colors duration-150 ease-in-out hover:bg-orange-100 focus:ring-2 focus:ring-orange-300 focus:outline-none',
-			name && isActive(name) && 'bg-orange-200 text-orange-800 hover:bg-orange-300'
+			'hover:bg-accent-quiet focus:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus:ring-2 focus:outline-none',
+			name && isActive(name) && 'bg-accent-quiet text-accent hover:bg-accent-quiet'
 		]}
 	>
 		<Icon class="h-4 w-4" />
@@ -104,7 +104,7 @@
 
 <div bind:this={element} style="visibility: hidden;">
 	<div
-		class="ring-opacity-5 flex items-center gap-1 rounded-lg bg-white px-2 py-1 shadow-lg ring-1 ring-black"
+		class="ring-opacity-5 bg-surface-raised ring-line-strong flex items-center gap-1 rounded-lg px-2 py-1 shadow-lg ring-1"
 	>
 		{#each bubbleMenuItems as { name, Icon, onclick } (name)}
 			{@render BubbleButton({ name, Icon, onclick })}

@@ -180,21 +180,21 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-100 flex items-center justify-center bg-black/50"
+		class="bg-surface-overlay/50 fixed inset-0 z-100 flex items-center justify-center"
 		style="z-index: 100;"
 	>
 		<dialog
 			open
-			class="relative z-10 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+			class="bg-surface-raised relative z-10 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] flex-col overflow-hidden rounded-lg shadow-xl"
 			aria-labelledby="settings-title"
 			use:clickOutside
 			onoutclick={closeSettings}
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-				<h2 id="settings-title" class="text-xl font-semibold text-gray-800">Settings</h2>
+			<div class="border-line flex items-center justify-between border-b px-5 py-4">
+				<h2 id="settings-title" class="text-ink text-xl font-semibold">Settings</h2>
 				<button
-					class="rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+					class="text-ink-muted hover:bg-surface-sunken hover:text-ink rounded-full p-1 transition-colors"
 					onclick={closeSettings}
 				>
 					<Icon icon="X" />
@@ -204,12 +204,12 @@
 			<!-- Content -->
 			<div class="flex flex-1 overflow-hidden">
 				<!-- Sidebar -->
-				<div class="w-48 border-r border-gray-200 bg-gray-50">
+				<div class="border-line bg-surface-sunken w-48 border-r">
 					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'appearance', label: 'Appearance' }] as tab (tab.id)}
 						<button
-							class="w-full border-l-2 px-4 py-3 text-left transition-colors hover:bg-gray-100 {activeTab ===
+							class="hover:bg-surface-sunken w-full border-l-2 px-4 py-3 text-left transition-colors {activeTab ===
 							tab.id
-								? 'border-orange-500 bg-gray-100 font-medium'
+								? 'border-accent bg-surface-sunken font-medium'
 								: 'border-transparent'}"
 							onclick={() => setActiveTab(tab.id)}
 						>
@@ -219,7 +219,7 @@
 				</div>
 
 				<!-- Settings panels -->
-				<div class="relative flex-1 bg-white">
+				<div class="bg-surface-raised relative flex-1">
 					<!-- General Settings -->
 					<div
 						class="absolute inset-0 overflow-y-auto {activeTab === 'general'
@@ -227,12 +227,12 @@
 							: 'hidden'} p-5"
 					>
 						<div class="mb-8">
-							<h3 class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">
+							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
 								General Settings
 							</h3>
 
 							<div class="mb-6">
-								<label for="word-count" class="mb-2 block font-medium text-gray-700">
+								<label for="word-count" class="text-ink mb-2 block font-medium">
 									Word Count Target
 								</label>
 								<div class="relative">
@@ -241,10 +241,10 @@
 										type="number"
 										bind:value={wordCount}
 										min="0"
-										class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
+										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
 									/>
 								</div>
-								<p class="mt-1 text-sm text-gray-500">Set your target word count for documents</p>
+								<p class="text-ink-muted mt-1 text-sm">Set your target word count for documents</p>
 							</div>
 
 							<div class="mb-6">
@@ -252,13 +252,11 @@
 									<input
 										type="checkbox"
 										bind:checked={allowNetwork}
-										class="mt-1 h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+										class="border-line-strong text-accent focus:ring-accent mt-1 h-4 w-4 rounded"
 									/>
 									<span>
-										<span class="block font-medium text-gray-700"
-											>Look up citation details online</span
-										>
-										<span class="mt-1 block text-sm text-gray-500">
+										<span class="text-ink block font-medium">Look up citation details online</span>
+										<span class="text-ink-muted mt-1 block text-sm">
 											Sends a paper's identifier — or its title and the opening of its first page —
 											to doi.org and crossref.org, and allows citation styles to be downloaded. With
 											this off, Erti reads the identifier printed in each paper and nothing leaves
@@ -270,7 +268,7 @@
 
 							{#if allowNetwork}
 								<div class="mb-6">
-									<label for="crossref-mailto" class="mb-2 block font-medium text-gray-700">
+									<label for="crossref-mailto" class="text-ink mb-2 block font-medium">
 										Contact address for Crossref (optional)
 									</label>
 									<input
@@ -278,9 +276,9 @@
 										type="email"
 										bind:value={crossrefMailto}
 										placeholder="you@university.edu"
-										class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
+										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
 									/>
-									<p class="mt-1 text-sm text-gray-500">
+									<p class="text-ink-muted mt-1 text-sm">
 										Crossref asks API users to identify themselves and gives those requests better
 										service. Yours to provide or leave blank.
 									</p>
@@ -296,19 +294,19 @@
 							: 'hidden'} p-5"
 					>
 						<div class="mb-8">
-							<h3 class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">
+							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
 								Citation Settings
 							</h3>
 
 							<div class="mb-6">
-								<label for="citation-style" class="mb-2 block font-medium text-gray-700">
+								<label for="citation-style" class="text-ink mb-2 block font-medium">
 									Citation Style
 								</label>
 								<div class="relative">
 									<select
 										id="citation-style"
 										bind:value={selectedStyle}
-										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
+										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
 									>
 										<option value="" disabled>Select a style</option>
 										{#each citationStyles as style (style.name)}
@@ -319,7 +317,7 @@
 										class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
 									>
 										<svg
-											class="h-5 w-5 text-gray-400"
+											class="text-ink-faint h-5 w-5"
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
@@ -333,19 +331,19 @@
 										</svg>
 									</div>
 								</div>
-								<p class="mt-1 text-sm text-gray-500">
+								<p class="text-ink-muted mt-1 text-sm">
 									Choose your preferred citation style for references
 								</p>
 							</div>
 							<div class="mb-6">
-								<label for="language" class="mb-2 block font-medium text-gray-700">
+								<label for="language" class="text-ink mb-2 block font-medium">
 									Citation Language
 								</label>
 								<div class="relative">
 									<select
 										id="language"
 										bind:value={selectedLocale}
-										class="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-2 pr-8 text-gray-800 transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
+										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
 									>
 										{#each Object.entries(locales) as [code, [native]] (code)}
 											<option value={code}>{native}</option>
@@ -355,7 +353,7 @@
 										class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
 									>
 										<svg
-											class="h-5 w-5 text-gray-400"
+											class="text-ink-faint h-5 w-5"
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
@@ -369,7 +367,7 @@
 										</svg>
 									</div>
 								</div>
-								<p class="mt-1 text-sm text-gray-500">Set the language for the citation</p>
+								<p class="text-ink-muted mt-1 text-sm">Set the language for the citation</p>
 							</div>
 						</div>
 					</div>
@@ -392,15 +390,15 @@
 			</div>
 
 			<!-- Footer -->
-			<div class="flex justify-end space-x-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
+			<div class="border-line bg-surface-sunken flex justify-end space-x-3 border-t px-5 py-4">
 				<button
-					class="rounded-md border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-100"
+					class="border-line-strong text-ink hover:bg-surface-sunken rounded-md border px-4 py-2 transition-colors"
 					onclick={closeSettings}
 				>
 					Cancel
 				</button>
 				<button
-					class="rounded-md border border-orange-500 bg-orange-500 px-4 py-2 text-white transition-colors hover:bg-orange-600"
+					class="border-accent bg-accent text-accent-ink hover:bg-accent rounded-md border px-4 py-2 transition-colors"
 					onclick={saveSettings}
 				>
 					Save changes
