@@ -37,6 +37,29 @@
 	];
 
 	const set = (patch: Partial<Appearance>) => void appearanceStore.update(patch);
+
+	/**
+	 * Which palette `System` is currently showing.
+	 *
+	 * Without this the option is indistinguishable from the palette it resolves
+	 * to — picking Erti Light on a light machine changes nothing visible, which
+	 * reads as a broken control rather than a correct one.
+	 */
+	let prefersDark = $state(false);
+	$effect(() => {
+		if (typeof window.matchMedia !== 'function') return;
+
+		const query = window.matchMedia('(prefers-color-scheme: dark)');
+		prefersDark = query.matches;
+
+		const onChange = (e: MediaQueryListEvent) => (prefersDark = e.matches);
+		query.addEventListener('change', onChange);
+		return () => query.removeEventListener('change', onChange);
+	});
+
+	const systemPalette = $derived(
+		PALETTES.find((p) => p.id === (prefersDark ? 'dark' : 'light'))?.label ?? ''
+	);
 </script>
 
 <div class="space-y-8">
@@ -64,9 +87,9 @@
 				</span>
 				<span>
 					<span class="text-ink block text-xs font-medium">System</span>
-					<span class="text-ink-muted block text-[11px]"
-						>Follow this computer, and switch with it</span
-					>
+					<span class="text-ink-muted block text-[11px]">
+						Follow this computer — showing {systemPalette} now, and switching with it
+					</span>
 				</span>
 			</button>
 

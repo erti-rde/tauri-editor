@@ -47,7 +47,7 @@ function createAppearanceStore() {
 		 * unreadable settings file should not keep someone out of their manuscript.
 		 */
 		async initialise() {
-			if (typeof window !== 'undefined') {
+			if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
 				media = window.matchMedia('(prefers-color-scheme: dark)');
 				// Following the system means following it while the app is open, not
 				// only at launch — macOS switches at sunset and the app should too.
