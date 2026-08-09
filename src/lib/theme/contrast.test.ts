@@ -114,6 +114,49 @@ describe.each(PALETTES.map((p) => [p.id, p.label] as const))('%s', (id) => {
 		expect(contrast(at('success'), at('surface'))).toBeGreaterThanOrEqual(AA_LARGE);
 	});
 
+	/*
+	 * Every surface a component actually puts text on.
+	 *
+	 * `ink-faint` was caught by opening the app, not by this suite, and the
+	 * reason is that the suite asserted the pairs someone thought of rather than
+	 * the pairs the markup uses. These are counted out of the components:
+	 * `bg-surface-sunken` and `bg-surface-hover` appear 18 times each,
+	 * `bg-surface-raised` 23, `bg-accent-quiet` 10 and `bg-surface-overlay` 4 —
+	 * and text sits on all of them.
+	 */
+	const TEXT_SURFACES = [
+		'surface',
+		'surface-raised',
+		'surface-sunken',
+		'surface-overlay',
+		'surface-hover',
+		'accent-quiet'
+	];
+
+	it.each(TEXT_SURFACES)('reads body text on %s', (surface) => {
+		expect(contrast(at('ink'), at(surface))).toBeGreaterThanOrEqual(AA);
+	});
+
+	it.each(TEXT_SURFACES)('reads muted text on %s', (surface) => {
+		expect(contrast(at('ink-muted'), at(surface))).toBeGreaterThanOrEqual(AA);
+	});
+
+	it('reads a warning against the surfaces it appears on', () => {
+		// Nine usages and, until now, no assertion at all: the "N sources need
+		// attention" banner and the unresolved-source markers are the interface
+		// telling someone their library is broken.
+		expect(contrast(at('warning'), at('surface'))).toBeGreaterThanOrEqual(AA);
+		expect(contrast(at('warning'), at('surface-sunken'))).toBeGreaterThanOrEqual(AA);
+	});
+
+	it('shows an active toolbar control', () => {
+		// `text-accent` on `bg-accent-quiet` is how a pressed toolbar button is
+		// drawn — and every such control renders an <Icon />, so this is the
+		// non-text threshold. The one place it coloured an actual number, the
+		// similarity badge on a result card, now takes `ink` instead.
+		expect(contrast(at('accent'), at('accent-quiet'))).toBeGreaterThanOrEqual(AA_LARGE);
+	});
+
 	it('keeps a filled accent button legible on hover', () => {
 		// The hover state is a button someone is looking straight at; it has to
 		// clear AA against the same ink as the resting state.

@@ -28,7 +28,7 @@
 	--surface-overlay: 220 22% 92%;
 
 	--ink: 234 16% 35%;
-	--ink-muted: 233 13% 41%;
+	--ink-muted: 233 13% 35%;
 	--ink-faint: 228 11% 55.5%;
 
 	--line: 223 16% 83%;
@@ -43,7 +43,13 @@
 	--accent-hover: 266 85% 50%;
 
 	--danger: 347 87% 44%;
-	--warning: 35 77% 49%;
+	/* Latte's own yellow is #DF8E1D, which reads 1.55:1 against the lightest
+	   surface it has to sit on — and warning is prose here: the failed-ingest
+	   message, "not found", "N sources need attention". The palette has no
+	   darker yellow to reach for, the way it had a darker mauve and teal, so
+	   this is its yellow deepened rather than an official value. Same hue and
+	   saturation, so it still reads as the palette's amber. */
+	--warning: 35 77% 25%;
 	--success: 183 74% 35%;
 
 	--selection: 266 85% 58%;
@@ -67,7 +73,7 @@
 	--surface-overlay: 231 19% 20%;
 
 	--ink: 227 70% 87%;
-	--ink-muted: 228 29% 73%;
+	--ink-muted: 228 29% 79%;
 	--ink-faint: 229 13% 54%;
 
 	--line: 230 16% 30%;
@@ -103,7 +109,7 @@
 	--surface-overlay: 233 23% 15%;
 
 	--ink: 227 68% 88%;
-	--ink-muted: 227 27% 72%;
+	--ink-muted: 227 27% 73.5%;
 	--ink-faint: 230 12% 49%;
 
 	--line: 230 19% 26%;
