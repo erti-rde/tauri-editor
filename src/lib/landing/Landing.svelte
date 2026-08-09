@@ -88,7 +88,7 @@
 		</header>
 
 		{#if recents.length > 0}
-			<h2 class="text-ink-faint mb-2 text-[11px] font-medium tracking-wide uppercase">Recent</h2>
+			<h2 class="text-ink-muted mb-2 text-[11px] font-medium tracking-wide uppercase">Recent</h2>
 
 			<ul class="border-line mb-6 divide-y rounded border">
 				{#each recents as project (project.path)}
@@ -102,11 +102,11 @@
 						>
 							<span class="min-w-0">
 								<span class="text-ink block truncate text-sm">{project.name}</span>
-								<span class="text-ink-faint block truncate font-mono text-[11px]">
+								<span class="text-ink-muted block truncate font-mono text-[11px]">
 									{project.path}
 								</span>
 							</span>
-							<span class="text-ink-faint ml-auto shrink-0 text-[11px] whitespace-nowrap">
+							<span class="text-ink-muted ml-auto shrink-0 text-[11px] whitespace-nowrap">
 								{#if gone}
 									<!-- Said rather than hidden: someone whose project has moved wants
 									     to know where Erti last saw it. -->
@@ -121,7 +121,7 @@
 
 						<button
 							type="button"
-							class="text-ink-faint hover:text-ink px-3 text-xs transition-colors"
+							class="text-ink-muted hover:text-ink px-3 text-xs transition-colors"
 							onclick={() => remove(project.path)}
 							aria-label="Remove {project.name} from this list"
 							title="Remove from this list"
@@ -143,7 +143,7 @@
 		</button>
 
 		{#if recents.length === 0}
-			<p class="text-ink-faint mt-3 text-xs">
+			<p class="text-ink-muted mt-3 text-xs">
 				Choose a folder containing your PDFs. Erti reads them, finds their citation details, and
 				keeps everything in that folder.
 			</p>

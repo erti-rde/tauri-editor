@@ -72,7 +72,7 @@
 		/>
 	{:else}
 		<button
-			class="text-ink-faint hover:bg-surface-hover hover:text-ink ml-1 shrink-0 rounded px-2 py-1 text-xs"
+			class="text-ink-muted hover:bg-surface-hover hover:text-ink ml-1 shrink-0 rounded px-2 py-1 text-xs"
 			onclick={startNaming}
 			title="New document"
 		>

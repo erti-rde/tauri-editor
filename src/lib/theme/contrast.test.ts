@@ -84,6 +84,18 @@ describe.each(PALETTES.map((p) => [p.id, p.label] as const))('%s', (id) => {
 		expect(contrast(at('ink-muted'), at('surface'))).toBeGreaterThanOrEqual(AA);
 	});
 
+	it('shows faint marks against their surface', () => {
+		// The gap this closes: `ink` and `ink-muted` were asserted and `ink-faint`
+		// was not, while it was setting the save state, project paths, timestamps
+		// and "No author" at between 2.31 and 3.89 to 1.
+		//
+		// Held to the non-text threshold rather than AA, because it cannot reach
+		// 4.5 and stay a third tier — `ink-muted` is already 4.77 on the light
+		// palette. So it stopped being a text colour instead, and everything that
+		// was text moved to `ink-muted`.
+		expect(contrast(at('ink-faint'), at('surface'))).toBeGreaterThanOrEqual(AA_LARGE);
+	});
+
 	it('reads the label on a primary button', () => {
 		// The one that shipped broken: 3.37:1 on the light palette.
 		expect(contrast(at('accent-ink'), at('accent'))).toBeGreaterThanOrEqual(AA);
