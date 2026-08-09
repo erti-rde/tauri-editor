@@ -26,15 +26,29 @@
 		/** Keyboard shortcut, shown after the label. */
 		shortcut?: string;
 		side?: 'top' | 'bottom' | 'left' | 'right';
-		children: Snippet;
+		/**
+		 * The control itself, given the trigger's props to spread onto its own
+		 * single root element — which then *becomes* the trigger.
+		 *
+		 * Not optional, and not a convenience. Rendering the control inside a
+		 * `Tooltip.Trigger` puts a `<button>` inside a `<button>`, which is invalid
+		 * HTML: the parser closes the outer one early, so the two end up siblings
+		 * and the trigger's listeners sit on an element that no longer wraps
+		 * anything. Delegation gives one element with both sets of props.
+		 */
+		children: Snippet<[Record<string, unknown>]>;
 	}
 
 	const { label, shortcut, side = 'bottom', children }: Props = $props();
 </script>
 
 <Tooltip.Root>
-	<Tooltip.Trigger aria-label={label}>
-		{@render children()}
+	<Tooltip.Trigger>
+		{#snippet child({ props })}
+			<!-- The name rides on the control, so a screen reader reads it whether or
+			     not the tooltip is on screen. A consumer that sets its own wins. -->
+			{@render children({ 'aria-label': label, ...props })}
+		{/snippet}
 	</Tooltip.Trigger>
 
 	<Tooltip.Portal>
