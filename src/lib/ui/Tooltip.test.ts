@@ -27,6 +27,20 @@ describe('a tooltip-wrapped control', () => {
 		expect(screen.getByLabelText('Insert a page break')).toBeInTheDocument();
 	});
 
+	it('makes the control itself the trigger, rather than wrapping it in one', () => {
+		// A <button> inside a <button> is invalid HTML: the parser closes the outer
+		// one early, so the trigger's listeners end up on an element that no longer
+		// contains the control. The fix is delegation, and this is what pins it.
+		render(TooltipHarness, { props: { withProvider: true } });
+
+		const control = screen.getByRole('button', { name: 'Insert a page break' });
+
+		expect(control.querySelector('button')).toBeNull();
+		expect(control.parentElement?.closest('button')).toBeNull();
+		// And the delegation actually happened — the control carries the trigger.
+		expect(control).toHaveAttribute('data-tooltip-trigger');
+	});
+
 	it('fails loudly without a provider rather than at runtime in the app', () => {
 		// Pinning the requirement: if bits-ui ever stops needing the provider this
 		// test says so, and until then a missing one cannot reach a release.
