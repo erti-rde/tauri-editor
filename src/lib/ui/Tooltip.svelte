@@ -15,6 +15,9 @@
 	 * appears after an unconfigurable delay, and is not shown on keyboard focus.
 	 * The label is also attached as an accessible name, so a screen reader gets
 	 * it whether or not the tooltip is on screen.
+	 *
+	 * Timing comes from the provider at the app root, so moving along a toolbar
+	 * does not replay the delay at every button.
 	 */
 
 	interface Props {
@@ -29,7 +32,7 @@
 	const { label, shortcut, side = 'bottom', children }: Props = $props();
 </script>
 
-<Tooltip.Root delayDuration={400}>
+<Tooltip.Root>
 	<Tooltip.Trigger aria-label={label}>
 		{@render children()}
 	</Tooltip.Trigger>
