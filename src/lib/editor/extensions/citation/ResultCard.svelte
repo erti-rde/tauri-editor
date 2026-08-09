@@ -106,7 +106,7 @@
 			researcher unsure which papers a project actually contains.
 		-->
 		<button
-			class="bg-accent-quiet text-ink hover:bg-accent-quiet flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60"
+			class="bg-accent text-accent-ink hover:bg-accent-hover flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60"
 			onclick={oncite}
 			disabled={busy}
 			title={sentenceMetadata.in_project === false

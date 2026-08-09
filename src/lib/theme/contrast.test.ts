@@ -95,8 +95,19 @@ describe.each(PALETTES.map((p) => [p.id, p.label] as const))('%s', (id) => {
 	});
 
 	it('shows danger and success against the surface', () => {
-		expect(contrast(at('danger'), at('surface'))).toBeGreaterThanOrEqual(AA_LARGE);
+		// danger is held to the body-text threshold, not the 3:1 one: StatusFooter
+		// and PdfReader both render error *prose* in it, and prose at 3:1 is the
+		// exact failure this suite exists to catch.
+		expect(contrast(at('danger'), at('surface'))).toBeGreaterThanOrEqual(AA);
 		expect(contrast(at('success'), at('surface'))).toBeGreaterThanOrEqual(AA_LARGE);
+	});
+
+	it('keeps a filled accent button legible on hover', () => {
+		// The hover state is a button someone is looking straight at; it has to
+		// clear AA against the same ink as the resting state.
+		expect(contrast(at('accent-ink'), at('accent-hover'))).toBeGreaterThanOrEqual(AA);
+		// And it has to actually differ from resting, or it is not a hover state.
+		expect(contrast(at('accent-hover'), at('accent'))).toBeGreaterThan(1.15);
 	});
 
 	it('separates a rule from the surface it divides', () => {

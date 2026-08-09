@@ -243,7 +243,7 @@
 									<input
 										type="checkbox"
 										bind:checked={allowNetwork}
-										class="border-line-strong text-accent focus:ring-accent mt-1 h-4 w-4 rounded"
+										class="accent-accent focus-visible:ring-accent mt-1 h-4 w-4"
 									/>
 									<span>
 										<span class="text-ink block font-medium">Look up citation details online</span>
@@ -380,7 +380,7 @@
 					Cancel
 				</Dialog.Close>
 				<button
-					class="border-accent bg-accent text-accent-ink hover:bg-accent/90 rounded border px-4 py-2 transition-colors"
+					class="border-accent bg-accent text-accent-ink hover:bg-accent-hover rounded border px-4 py-2 transition-colors"
 					onclick={saveSettings}
 				>
 					Save changes

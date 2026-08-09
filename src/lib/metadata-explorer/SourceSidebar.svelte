@@ -77,12 +77,16 @@
 		<h3 class="text-lg font-bold">Edit Source</h3>
 		<div>
 			<button
-				class="bg-accent text-accent-ink hover:bg-accent mr-2 rounded px-3 py-1"
+				class="bg-accent text-accent-ink hover:bg-accent-hover mr-2 rounded px-3 py-1"
 				onclick={handleSave}
 			>
 				Save
 			</button>
-			<button class="hover:bg-surface-hover rounded-full p-1" onclick={onclose}>
+			<button
+				class="hover:bg-surface-hover focus-visible:ring-accent rounded-full p-1 focus-visible:ring-2"
+				aria-label="Close source details"
+				onclick={onclose}
+			>
 				<Icon icon="X" class="h-5 w-5" />
 			</button>
 		</div>

@@ -45,6 +45,10 @@
 	--accent: 24 88% 40%;
 	--accent-ink: 0 0% 100%;
 	--accent-quiet: 24 90% 96%;
+	/* A filled accent button needs somewhere to go on hover. `hover:bg-accent`
+	   on a `bg-accent` button is what was there, which is no feedback at all.
+	   Darker in light themes, lighter in dark ones — always toward the ink. */
+	--accent-hover: 24 88% 33%;
 
 	--danger: 0 65% 48%;
 	--warning: 32 85% 42%;
@@ -87,6 +91,7 @@
 	--accent: 24 90% 58%;
 	--accent-ink: 24 40% 10%;
 	--accent-quiet: 24 30% 20%;
+	--accent-hover: 24 90% 67%;
 
 	--danger: 0 70% 62%;
 	--warning: 36 85% 60%;

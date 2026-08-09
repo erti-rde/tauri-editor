@@ -94,22 +94,25 @@
 	shortcut?: string;
 })}
 	<Tooltip {label} {shortcut}>
-		<button
-			class={[
-				'hover:bg-accent-quiet/50 focus:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
-				isActive && 'bg-accent-quiet text-accent'
-			]}
-			{onclick}
-			{disabled}
-			aria-pressed={isActive}
-		>
-			<Icon />
-		</button>
+		{#snippet children(tooltip)}
+			<button
+				{...tooltip}
+				class={[
+					'hover:bg-surface-hover focus-visible:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50',
+					isActive && 'bg-accent-quiet text-accent'
+				]}
+				{onclick}
+				{disabled}
+				aria-pressed={isActive}
+			>
+				<Icon />
+			</button>
+		{/snippet}
 	</Tooltip>
 {/snippet}
 
 <div
-	class="bg-accent-quiet/95 flex h-(--toolbar-l) w-full justify-center px-2 py-1 shadow-md backdrop-blur-sm"
+	class="bg-surface-raised/95 border-line flex h-(--toolbar-l) w-full justify-center border-b px-2 py-1 shadow-md backdrop-blur-sm"
 >
 	<!-- History Controls Group -->
 
@@ -128,7 +131,7 @@
 		shortcut: 'Mod Shift Z'
 	})}
 
-	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
+	<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
 
 	{#snippet defaultHeadingButton()}
 		<Heading class="ml-1" />
@@ -195,11 +198,11 @@
 		isActive: editor.isActive('codeBlock'),
 		disabled: !editor.can().chain().focus().toggleCodeBlock().run(),
 		Icon: CodeBlock,
-		label: 'Inline code',
-		shortcut: 'Mod E'
+		label: 'Code block',
+		shortcut: 'Mod Alt C'
 	})}
 
-	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
+	<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
 
 	<!-- Text Formatting Group -->
 	{@render toolBarButton({
@@ -261,7 +264,7 @@
 		})}
 	</LinkPopover>
 
-	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
+	<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
 
 	<!-- supper script and subscript group-->
 
@@ -302,7 +305,7 @@
 		label: 'Add the references section'
 	})}
 
-	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
+	<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
 
 	<!-- Alignment Group -->
 	{@render toolBarButton({
@@ -330,7 +333,7 @@
 		label: 'Justify'
 	})}
 
-	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
+	<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
 
 	<!-- Add image -->
 
@@ -367,17 +370,19 @@
 		{@render toolBarButton({
 			onclick: exportToPdf,
 			Icon: FileOutput,
-			label: 'Export as PDF',
-			shortcut: 'Mod P'
+			label: 'Export as PDF'
 		})}
 
 		<Tooltip label="Export a LaTeX bundle" shortcut="main.tex + references.bib">
-			<button
-				class="hover:bg-accent-quiet focus:ring-accent text-ink-muted hover:text-ink rounded px-1.5 py-1.5 font-mono text-[11px] transition-colors focus:ring-2 focus:outline-none"
-				onclick={exportToLatex}
-			>
-				.tex
-			</button>
+			{#snippet children(tooltip)}
+				<button
+					{...tooltip}
+					class="hover:bg-surface-hover focus-visible:ring-accent text-ink-muted hover:text-ink rounded px-1.5 py-1.5 font-mono text-[11px] transition-colors focus-visible:ring-2"
+					onclick={exportToLatex}
+				>
+					.tex
+				</button>
+			{/snippet}
 		</Tooltip>
 	</div>
 </div>

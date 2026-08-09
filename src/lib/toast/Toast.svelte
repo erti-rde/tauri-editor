@@ -56,8 +56,12 @@
 		class="absolute top-0 right-0 z-50 m-4 flex flex-col items-end gap-2 md:top-auto md:bottom-0"
 	>
 		{#each toasts as toast (toast.id)}
+			<!-- A paired surface and ink. It was `text-accent-ink` on a fixed
+			     `bg-neutral-800`: those two tokens have no relationship, and the
+			     palettes whose accent takes dark ink — Latte, Frappé, Night Owl —
+			     rendered near-black text on near-black. -->
 			<div
-				class="text-accent-ink rounded-lg bg-neutral-800 shadow-md"
+				class="bg-surface-overlay text-ink border-line rounded-lg border shadow-md"
 				in:fly={{ x: 20, duration: 300 }}
 				out:fade={{ duration: 200 }}
 				animate:flip={{ duration: 200 }}

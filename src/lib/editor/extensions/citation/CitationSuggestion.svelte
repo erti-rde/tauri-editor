@@ -249,9 +249,9 @@
 			</div>
 			<div class="flex gap-2">
 				<button
-					class="focus:ring-opacity-50 text-accent-ink bg-accent disabled:border-line-strong disabled:text-accent-ink border-accent hover:bg-accent focus:ring-accent disabled:bg-surface-sunken rounded
+					class="focus:ring-opacity-50 text-accent-ink bg-accent disabled:border-line-strong disabled:text-accent-ink border-accent hover:bg-accent-hover focus:ring-accent disabled:bg-surface-sunken rounded
           border px-3 py-1.5 text-sm font-medium
-          transition-colors focus:ring-2 focus:outline-none disabled:cursor-not-allowed"
+          transition-colors focus-visible:ring-2 disabled:cursor-not-allowed"
 					disabled={selectedItems.size === 0 && initialSelection.length === 0}
 					onclick={insertSelectedCitations}
 					aria-label="Insert selected citations"
