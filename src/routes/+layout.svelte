@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
+	import { Tooltip } from 'bits-ui';
+
 	import { Toast } from '$lib';
 	import { appearanceStore } from '$lib/theme/appearanceStore';
 	import '../global.css';
@@ -13,5 +15,13 @@
 	onMount(() => void appearanceStore.initialise());
 </script>
 
-<Toast />
-{@render children()}
+<!--
+	bits-ui's Tooltip needs a Provider ancestor: it owns the shared open/close
+	timing so that moving between two buttons does not replay the delay. One at
+	the root covers every tooltip in the app, and without it the components throw
+	on mount — which took the editor down rather than merely losing the tooltips.
+-->
+<Tooltip.Provider delayDuration={400} skipDelayDuration={300}>
+	<Toast />
+	{@render children()}
+</Tooltip.Provider>
