@@ -97,7 +97,7 @@
 			</button>
 			<button
 				bind:this={allowButton}
-				class="bg-accent text-accent-ink hover:bg-accent rounded-md px-4 py-2 font-medium"
+				class="bg-accent text-accent-ink hover:bg-accent-hover rounded-md px-4 py-2 font-medium"
 				onclick={() => choose(true)}
 			>
 				Allow lookups

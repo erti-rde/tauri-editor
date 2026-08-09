@@ -135,7 +135,7 @@
 
 		<button
 			type="button"
-			class="bg-accent text-accent-ink hover:bg-accent/90 w-full rounded px-4 py-2 text-sm font-medium transition-colors"
+			class="bg-accent text-accent-ink hover:bg-accent-hover w-full rounded px-4 py-2 text-sm font-medium transition-colors"
 			onclick={chooseFolder}
 			disabled={busy !== null}
 		>

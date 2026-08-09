@@ -94,8 +94,8 @@
 	<button
 		{onclick}
 		class={[
-			'hover:bg-accent-quiet focus:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus:ring-2 focus:outline-none',
-			name && isActive(name) && 'bg-accent-quiet text-accent hover:bg-accent-quiet'
+			'hover:bg-surface-hover focus-visible:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus-visible:ring-2',
+			name && isActive(name) && 'bg-accent-quiet text-accent hover:bg-surface-active'
 		]}
 	>
 		<Icon class="h-4 w-4" />

@@ -40,6 +40,7 @@
 	   colour 2.68:1, and near-black 5.87:1. */
 	--accent-ink: 220 23% 95%;
 	--accent-quiet: 223 16% 83%;
+	--accent-hover: 266 85% 50%;
 
 	--danger: 347 87% 44%;
 	--warning: 35 77% 49%;
@@ -75,6 +76,7 @@
 	--accent: 20 79% 70%;
 	--accent-ink: 229 20% 17%;
 	--accent-quiet: 230 16% 30%;
+	--accent-hover: 20 79% 78%;
 
 	--danger: 359 68% 71%;
 	--warning: 40 62% 73%;
@@ -110,6 +112,7 @@
 	--accent: 21 86% 73%;
 	--accent-ink: 236 23% 12%;
 	--accent-quiet: 230 19% 26%;
+	--accent-hover: 21 86% 81%;
 
 	--danger: 351 74% 73%;
 	--warning: 40 70% 78%;
@@ -145,6 +148,7 @@
 	--accent: 23 92% 75%;
 	--accent-ink: 240 23% 9%;
 	--accent-quiet: 237 16% 23%;
+	--accent-hover: 23 92% 83%;
 
 	--danger: 343 81% 75%;
 	--warning: 41 86% 83%;
@@ -180,6 +184,7 @@
 	--accent: 14 90% 70%;
 	--accent-ink: 215 100% 6%;
 	--accent-quiet: 207 48% 22%;
+	--accent-hover: 14 90% 78%;
 
 	--danger: 1 83% 63%;
 	--warning: 35 71% 74%;

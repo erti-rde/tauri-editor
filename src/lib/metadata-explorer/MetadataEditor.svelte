@@ -197,7 +197,7 @@
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Search sources..."
-					class="border-line-strong bg-surface-raised focus:border-accent focus:ring-accent block w-full rounded-md border py-2 pr-3 pl-10 text-sm placeholder-gray-400 focus:ring-1 focus:outline-none"
+					class="border-line-strong bg-surface-raised focus-visible:border-accent focus-visible:ring-accent block w-full rounded-md border py-2 pr-3 pl-10 text-sm focus-visible:ring-1"
 				/>
 			</div>
 		</div>
@@ -257,11 +257,11 @@
 										type="text"
 										bind:value={doiInput}
 										placeholder="10.1000/example or https://doi.org/…"
-										class="border-line-strong focus:border-accent focus:ring-accent flex-1 rounded-md border px-3 py-1 text-sm focus:ring-1 focus:outline-none"
+										class="border-line-strong focus-visible:border-accent focus-visible:ring-accent flex-1 rounded-md border px-3 py-1 text-sm focus-visible:ring-1"
 										onkeydown={(e) => e.key === 'Enter' && handleManualDoi(source)}
 									/>
 									<button
-										class="bg-accent text-accent-ink hover:bg-accent rounded-md px-3 py-1 text-sm font-medium disabled:opacity-50"
+										class="bg-accent text-accent-ink hover:bg-accent-hover rounded-md px-3 py-1 text-sm font-medium disabled:opacity-50"
 										disabled={busyWith === source.id || doiInput.trim().length === 0}
 										onclick={() => handleManualDoi(source)}
 									>

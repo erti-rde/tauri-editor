@@ -94,6 +94,7 @@
 	--color-accent: hsl(var(--accent));
 	--color-accent-ink: hsl(var(--accent-ink));
 	--color-accent-quiet: hsl(var(--accent-quiet));
+	--color-accent-hover: hsl(var(--accent-hover));
 
 	--color-danger: hsl(var(--danger));
 	--color-warning: hsl(var(--warning));

@@ -129,14 +129,14 @@
 			escapeKeydownBehavior="ignore"
 			interactOutsideBehavior="ignore"
 			trapFocus={false}
-			class="shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 border-line bg-accent-quiet w-full origin-(--bits-popover-content-transform-origin) rounded-[12px] border p-2"
+			class="shadow-popover data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 border-line bg-surface-overlay w-full origin-(--bits-popover-content-transform-origin) rounded-[12px] border p-2"
 			sideOffset={8}
 		>
 			<div class="flex items-center">
 				{#each tableFunctions as { icon: Icon, action, label } (label)}
 					<button
 						onclick={action}
-						class="text-ink hover:bg-accent-quiet flex items-center space-x-2 rounded-md p-2 text-sm"
+						class="text-ink hover:bg-surface-hover flex items-center space-x-2 rounded-md p-2 text-sm"
 					>
 						<Icon class="h-4 w-4" />
 					</button>
