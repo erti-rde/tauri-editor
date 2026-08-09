@@ -46,13 +46,13 @@
 	}
 </script>
 
-<div class="flex items-center gap-1 overflow-x-auto border-b border-gray-200 px-4 py-1">
+<div class="border-line bg-surface flex items-center gap-px overflow-x-auto border-b px-2">
 	{#each documents as document (document.path)}
 		<button
-			class="shrink-0 rounded-t-md border-b-2 px-3 py-1 text-sm whitespace-nowrap transition-colors
+			class="shrink-0 border-b-2 px-3 py-1.5 text-xs whitespace-nowrap transition-colors
 				{document.path === current?.path
-				? 'border-orange-500 font-medium text-gray-900'
-				: 'border-transparent text-gray-500 hover:text-gray-800'}"
+				? 'border-accent bg-surface-raised text-ink'
+				: 'text-ink-muted hover:bg-surface-raised hover:text-ink border-transparent'}"
 			onclick={() => onopen(document)}
 			aria-current={document.path === current?.path ? 'page' : undefined}
 		>
@@ -64,7 +64,7 @@
 		<input
 			bind:this={input}
 			bind:value={draft}
-			class="ml-1 w-40 shrink-0 rounded-md border border-orange-400 px-2 py-1 text-sm focus:outline-none"
+			class="border-accent bg-surface-raised text-ink ml-1 w-40 shrink-0 rounded border px-2 py-1 text-xs focus:outline-none"
 			placeholder="Chapter one"
 			aria-label="Name for the new document"
 			{onkeydown}
@@ -72,7 +72,7 @@
 		/>
 	{:else}
 		<button
-			class="ml-1 shrink-0 rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+			class="text-ink-faint hover:bg-surface-raised hover:text-ink ml-1 shrink-0 rounded px-2 py-1 text-xs"
 			onclick={startNaming}
 			title="New document"
 		>

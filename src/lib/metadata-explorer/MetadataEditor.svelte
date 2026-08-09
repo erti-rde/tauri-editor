@@ -294,9 +294,17 @@
 
 			<div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
 				{#each filteredSources as source (source.id)}
-					<div
-						class="grid cursor-pointer grid-cols-12 gap-3 px-3 py-3 transition-colors hover:bg-gray-50"
-						class:bg-blue-50={selectedSourceId === source.id}
+					<!--
+						A button rather than a div with a click handler: the row is the
+						control, so it has to be reachable by keyboard and announced as
+						something that can be activated. `text-left` and `w-full` keep the
+						grid looking as it did.
+					-->
+					<button
+						type="button"
+						class="hover:bg-surface-sunken grid w-full cursor-pointer grid-cols-12 gap-3 px-3 py-3 text-left transition-colors"
+						class:bg-accent-quiet={selectedSourceId === source.id}
+						aria-current={selectedSourceId === source.id ? 'true' : undefined}
 						onclick={() => handleSourceSelect(source.id)}
 					>
 						<!-- Title -->
@@ -324,7 +332,7 @@
 						<div class="col-span-3 flex items-center text-xs text-gray-500">
 							<span class="truncate">{source.file_name}</span>
 						</div>
-					</div>
+					</button>
 				{/each}
 			</div>
 		{/if}

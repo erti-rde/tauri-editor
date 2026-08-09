@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './lib/theme/tokens.css';
 @plugin 'tailwindcss-animate';
 
 :root {
@@ -62,6 +63,37 @@
 	--shadow-date-field-focus: 0px 0px 0px 3px rgba(24, 24, 27, 0.17);
 }
 @theme {
+	/*
+	 * The semantic layer. A component writes `bg-surface` or `text-ink-muted`
+	 * and gets the right value in whichever theme is on — which is what makes a
+	 * second theme a change to one CSS file rather than to every component.
+	 */
+	--color-surface: hsl(var(--surface));
+	--color-surface-raised: hsl(var(--surface-raised));
+	--color-surface-sunken: hsl(var(--surface-sunken));
+	--color-surface-overlay: hsl(var(--surface-overlay));
+	--color-page: hsl(var(--surface-page));
+	--color-page-ink: hsl(var(--ink-page));
+
+	--color-ink: hsl(var(--ink));
+	--color-ink-muted: hsl(var(--ink-muted));
+	--color-ink-faint: hsl(var(--ink-faint));
+
+	--color-line: hsl(var(--line));
+	--color-line-strong: hsl(var(--line-strong));
+
+	--color-accent: hsl(var(--accent));
+	--color-accent-ink: hsl(var(--accent-ink));
+	--color-accent-quiet: hsl(var(--accent-quiet));
+
+	--color-danger: hsl(var(--danger));
+	--color-warning: hsl(var(--warning));
+	--color-success: hsl(var(--success));
+
+	--font-ui: var(--ui-font);
+	--font-mono: var(--mono-font);
+	--font-page: var(--page-font);
+
 	--color-background: var(--background);
 	--color-background-alt: var(--background-alt);
 	--color-foreground: var(--foreground);
@@ -80,7 +112,6 @@
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);
 	--color-tertiary: var(--tertiary);
-	--color-line: var(--line);
 	--color-contrast: var(--contrast);
 
 	--shadow-mini: var(--shadow-mini);
@@ -606,4 +637,79 @@ body {
 	.page-break::after {
 		content: none;
 	}
+}
+
+/*
+ * The application frame.
+ *
+ * Thin rules rather than shadows, a chrome that recedes, and the manuscript as
+ * the one bright surface. Someone looks at this for hours: the interface earns
+ * attention only where the writing is.
+ */
+html {
+	font-size: var(--ui-size);
+}
+
+body {
+	background: hsl(var(--surface));
+	color: hsl(var(--ink));
+	font-family: var(--ui-font);
+	/* Interface text is small and dense the way an editor's is; the manuscript
+	   sets its own size below, because it has to look like a printed page. */
+	font-size: var(--ui-size);
+	-webkit-font-smoothing: antialiased;
+}
+
+::selection {
+	background: hsl(var(--selection) / 0.25);
+}
+
+/* Scrollbars, which are otherwise the loudest thing in a quiet interface (#4). */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: hsl(var(--line-strong)) transparent;
+}
+
+*::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	background: hsl(var(--line-strong));
+	border: 3px solid transparent;
+	background-clip: content-box;
+	border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background: hsl(var(--ink-faint));
+	background-clip: content-box;
+}
+
+/* Focus is visible everywhere rather than removed and forgotten: this is the
+   only way a keyboard user knows where they are. */
+:focus-visible {
+	outline: 2px solid hsl(var(--accent));
+	outline-offset: 1px;
+	border-radius: var(--radius);
+}
+
+/*
+ * The manuscript.
+ *
+ * A page, not a panel. It keeps a paper surface in both themes because long
+ * prose is harder to read inverted, and because what is on screen should look
+ * like what comes out of the printer.
+ */
+.manuscript {
+	background: hsl(var(--surface-page));
+	color: hsl(var(--ink-page));
+	font-family: var(--page-font);
+	font-size: var(--page-size);
+	line-height: 1.7;
 }

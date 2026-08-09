@@ -1,0 +1,121 @@
+/*
+ * Erti's surfaces, in both themes.
+ *
+ * The look is a code editor's rather than a word processor's: thin rules
+ * instead of shadows, a quiet chrome that recedes, and one bright surface — the
+ * manuscript — that the eye goes to. A researcher stares at this for hours, so
+ * the interface earns attention only where the writing is.
+ *
+ * Everything is a semantic name, never a colour. `--surface-raised` says what a
+ * thing is for; `--color-gray-100` says what it looked like on the day it was
+ * written, and is why a dark theme was impossible before. Adding a theme means
+ * adding one block here, and nothing in any component changes.
+ *
+ * Values are HSL with the channels split, so a token can be reused at partial
+ * alpha — `hsl(var(--ink) / 0.6)` — without a second variable for every tint.
+ */
+
+:root,
+[data-theme='light'] {
+	color-scheme: light;
+
+	/* Chrome: the app around the writing. Deliberately close in value, so the
+	   panels read as one quiet frame rather than a stack of boxes. */
+	--surface: 210 20% 98%;
+	--surface-raised: 0 0% 100%;
+	--surface-sunken: 210 16% 95%;
+	--surface-overlay: 0 0% 100%;
+
+	/* The manuscript. White in light, and near-white rather than dark in the
+	   dark theme, because a page of prose is not code. */
+	--surface-page: 0 0% 100%;
+	--ink-page: 0 0% 12%;
+
+	--ink: 215 25% 15%;
+	--ink-muted: 215 12% 45%;
+	--ink-faint: 215 10% 62%;
+
+	/* One-pixel rules do the work shadows would. */
+	--line: 214 15% 88%;
+	--line-strong: 214 12% 76%;
+
+	--accent: 24 88% 48%;
+	--accent-ink: 0 0% 100%;
+	--accent-quiet: 24 90% 96%;
+
+	--danger: 0 65% 48%;
+	--warning: 32 85% 42%;
+	--success: 150 45% 34%;
+
+	--selection: 24 88% 48%;
+	--shadow-overlay: 0 0% 0% / 0.12;
+}
+
+[data-theme='dark'] {
+	color-scheme: dark;
+
+	/* Not black. A true-black chrome next to a bright page is a headache after
+	   an hour, and editors settled on this range for the same reason. */
+	--surface: 220 14% 13%;
+	--surface-raised: 220 13% 16%;
+	--surface-sunken: 220 15% 10%;
+	--surface-overlay: 220 13% 18%;
+
+	/* The page stays paper: a manuscript is read, not scanned like code, and
+	   inverting it makes long prose harder to read rather than easier. This is
+	   dimmed rather than white so it does not glare against the chrome. */
+	--surface-page: 40 12% 92%;
+	--ink-page: 30 8% 14%;
+
+	--ink: 210 16% 88%;
+	--ink-muted: 214 10% 62%;
+	--ink-faint: 214 8% 45%;
+
+	--line: 220 10% 24%;
+	--line-strong: 220 9% 34%;
+
+	--accent: 24 90% 58%;
+	--accent-ink: 24 40% 10%;
+	--accent-quiet: 24 30% 20%;
+
+	--danger: 0 70% 62%;
+	--warning: 36 85% 60%;
+	--success: 150 40% 55%;
+
+	--selection: 24 90% 58%;
+	--shadow-overlay: 0 0% 0% / 0.5;
+}
+
+/*
+ * Type and spacing.
+ *
+ * The interface is small and dense the way an editor's is; the manuscript is
+ * not, because it has to look like the page it will be printed as. Both are
+ * user-adjustable, since a 14px UI is unusable for some people and the app is
+ * meant to be lived in.
+ */
+:root {
+	--ui-font:
+		ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+	--mono-font: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+	/* Serif for the manuscript: it is what journals print, and it signals that
+	   the page is a different kind of surface from the app. */
+	--page-font: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+
+	--ui-size: 13px;
+	--page-size: 16px;
+	--page-measure: 816px;
+
+	--radius: 4px;
+	--radius-lg: 6px;
+
+	/* Density. The compact end is the editor-like default; comfortable exists
+	   because pointing at a 22px row all day is not for everyone. */
+	--row-height: 26px;
+	--gap: 6px;
+}
+
+[data-density='comfortable'] {
+	--row-height: 32px;
+	--gap: 10px;
+}
