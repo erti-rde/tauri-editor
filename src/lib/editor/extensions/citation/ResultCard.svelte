@@ -29,7 +29,7 @@
 		if (score >= 0.8) return 'bg-surface-sunken text-success';
 		if (score >= 0.6) return 'bg-surface-sunken text-success';
 		if (score >= 0.4) return 'bg-surface-sunken text-warning';
-		if (score >= 0.2) return 'bg-accent-quiet text-accent';
+		if (score >= 0.2) return 'bg-accent-quiet text-ink';
 		return 'bg-surface-sunken text-danger';
 	}
 
