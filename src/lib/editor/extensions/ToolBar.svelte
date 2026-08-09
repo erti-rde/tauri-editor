@@ -11,6 +11,9 @@
 	// Import Icons for toolbar
 	import Bold from '~icons/lucide/bold';
 	import BookText from '~icons/lucide/book-text';
+	import BookOpen from '~icons/lucide/book-open';
+	import FilePen from '~icons/lucide/file-pen';
+	import FileOutput from '~icons/lucide/file-output';
 	import SeparatorHorizontal from '~icons/lucide/separator-horizontal';
 	import Italic from '~icons/lucide/italic';
 	import StrikeThrough from '~icons/lucide/strikethrough';
@@ -50,7 +53,6 @@
 
 	// toggleView and exportToPdf are used in the markup below, but
 	// @typescript-eslint/no-unused-vars does not track Svelte template references.
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let { editor, toggleView, exportToPdf, exportToLatex }: Props = $props();
 
 	function handleFormatSelect(format: string) {
@@ -348,20 +350,34 @@
 		})}
 	</TablePopover>
 
-	<!-- Right Side Controls -->
-	<!-- <div class="flex items-center gap-1">
-		<button class="toolbar-btn" onclick={toggleView}>
-			{#if editor.isEditable}
-				<Icon icon="BookOpen" size="s" />
-			{:else}
-				<Icon icon="FilePen" size="s" />
-			{/if}
-		</button>
-		<button class="toolbar-btn" onclick={exportToPdf}>
-			<Icon icon="FileOutput" size="s" />
-		</button>
-		<button class="toolbar-btn" onclick={exportToLatex} title="Export a LaTeX bundle">
-			.tex
-		</button>
-	</div> -->
+	<!--
+		Export and the read/write toggle, pushed to the right so the writing
+		controls stay together on the left. This group was commented out, which is
+		why export had no way in despite working.
+	-->
+	<div class="ml-auto flex items-center gap-1">
+		{@render toolBarButton({
+			onclick: toggleView,
+			Icon: editor.isEditable ? BookOpen : FilePen,
+			label: editor.isEditable ? 'Preview without editing' : 'Back to editing'
+		})}
+
+		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
+
+		{@render toolBarButton({
+			onclick: exportToPdf,
+			Icon: FileOutput,
+			label: 'Export as PDF',
+			shortcut: 'Mod P'
+		})}
+
+		<Tooltip label="Export a LaTeX bundle" shortcut="main.tex + references.bib">
+			<button
+				class="hover:bg-accent-quiet focus:ring-accent text-ink-muted hover:text-ink rounded px-1.5 py-1.5 font-mono text-[11px] transition-colors focus:ring-2 focus:outline-none"
+				onclick={exportToLatex}
+			>
+				.tex
+			</button>
+		</Tooltip>
+	</div>
 </div>

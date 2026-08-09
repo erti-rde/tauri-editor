@@ -13,8 +13,9 @@
 
 	import { load as loadStore } from '@tauri-apps/plugin-store';
 
-	import { createAutosave, type SaveState } from './autosave';
-	import { countDocument, progressTo, type WordCount } from './wordCount';
+	import { createAutosave } from './autosave';
+	import { countDocument } from './wordCount';
+	import { documentStatus } from '$lib/statusFooter/documentStatus';
 	import { parseCitationIds } from '$lib/citations/document';
 	import { toBibliography } from '$lib/export/bibtex';
 	import { toLatexDocument } from '$lib/export/latex';
@@ -43,7 +44,6 @@
 	 * made during a write were dropped — permanently, if the user stopped typing
 	 * there. The logic now lives in ./autosave with tests for that race.
 	 */
-	let saveState = $state<SaveState>('idle');
 	let unlistenClose: (() => void) | undefined;
 	/** Set when the open file could not be parsed, so autosave must not overwrite it. */
 	let readFailed = $state(false);
@@ -57,8 +57,6 @@
 	 * ever read it, so the figure that decides whether a paper can be submitted
 	 * was invisible.
 	 */
-	let words = $state<WordCount>({ body: 0, references: 0, total: 0, characters: 0 });
-	let wordTarget = $state(0);
 
 	const autosave = createAutosave({
 		write: async (content) => {
@@ -70,7 +68,7 @@
 
 			await writeTextFile(target.path, JSON.stringify(content));
 		},
-		onStateChange: (next) => (saveState = next),
+		onStateChange: (next) => documentStatus.report({ save: next }),
 		onError: (error) => {
 			// A failed save is the one thing the user must not miss. The content is
 			// kept and retried on a backoff, so this says that rather than implying
@@ -92,7 +90,9 @@
 		documentsStore.refresh();
 		if (!$documentsStore.current) await createFirstDocument();
 
-		wordTarget = Number((await (await loadStore('settings-store.json')).get('wordCount')) ?? 0);
+		documentStatus.report({
+			target: Number((await (await loadStore('settings-store.json')).get('wordCount')) ?? 0)
+		});
 
 		editor = createEditor({
 			editorProps: {
@@ -107,7 +107,7 @@
 			content: await getDocumentData(),
 
 			onUpdate: ({ editor }) => {
-				words = countDocument(editor.state.doc);
+				documentStatus.report({ words: countDocument(editor.state.doc) });
 
 				// A file that could not be parsed is left alone. Saving over it would
 				// replace whatever was recoverable with an empty document, which is
@@ -152,6 +152,9 @@
 	});
 
 	onDestroy(() => {
+		// The bar outlives the editor, so a closed manuscript must not leave a
+		// stale count sitting in it.
+		documentStatus.clear();
 		// Best-effort: a component teardown cannot be awaited. The close handler
 		// above is what actually guarantees the write; this covers switching away
 		// from a document while the app stays open.
@@ -432,44 +435,6 @@
 			/>
 
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} {exportToLatex} />
-
-			<!--
-				Whether the work is safe. A failed save keeps the content and retries,
-				so the message says that rather than implying the work is gone — and
-				it stays put instead of disappearing like a toast, because it is the
-				one thing the user must not miss.
-			-->
-			<div class="border-line flex items-center justify-end gap-4 border-b px-4 pb-1 text-[11px]">
-				<!--
-					Body words, with the references counted separately: a journal's
-					limit applies to the text, and folding the works cited into one
-					total would report an author as over a limit they had not crossed.
-				-->
-				<span
-					class="text-ink-faint font-mono"
-					title="{words.references} words in references and notes"
-				>
-					{words.body.toLocaleString()}
-					{words.body === 1 ? 'word' : 'words'}
-					{#if wordTarget > 0}
-						<span class:text-accent={progressTo(words.body, wordTarget).remaining < 0}>
-							/ {wordTarget.toLocaleString()}
-						</span>
-					{/if}
-				</span>
-
-				<span aria-live="polite">
-					{#if saveState === 'error'}
-						<span class="text-danger font-medium">Not saved — retrying, your work is kept</span>
-					{:else if saveState === 'saving'}
-						<span class="text-ink-muted">Saving…</span>
-					{:else if saveState === 'pending'}
-						<span class="text-ink-faint">Unsaved changes</span>
-					{:else}
-						<span class="text-ink-faint">Saved</span>
-					{/if}
-				</span>
-			</div>
 		</div>
 
 		<div class="bg-surface-sunken flex min-h-0 grow justify-center overflow-auto px-4 py-4">
