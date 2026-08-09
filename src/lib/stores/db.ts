@@ -35,6 +35,8 @@ export interface NewChunk {
 
 export interface ScoredChunk {
 	sha256: string;
+	/** Position within the source. `sha256:idx` is a result's stable identity. */
+	idx: number;
 	text: string;
 	page_start: number | null;
 	section: string | null;

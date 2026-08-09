@@ -77,7 +77,10 @@
 		},
 		{
 			Icon: Citation,
-			onclick: requestCitation
+			// Called through, not captured. The other three read `editor` lazily
+			// inside an arrow; passing the prop directly froze whichever function
+			// the parent happened to hold when this array was built.
+			onclick: () => requestCitation()
 		}
 	];
 </script>

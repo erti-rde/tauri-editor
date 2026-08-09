@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { run } from 'svelte/legacy';
+	import { untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	interface Props {
@@ -10,7 +11,12 @@
 	}
 
 	let { items, initialSelection = [], cl }: Props = $props();
-	let selectedItems: Set<string> = new SvelteSet(initialSelection);
+
+	// Read once, deliberately — `initialSelection` is the seed, and this set is
+	// then the user's own. Re-deriving it would undo their ticks every time the
+	// parent re-rendered. `untrack` says so, and silences the warning that would
+	// otherwise sit alongside the ones that were real.
+	let selectedItems: Set<string> = new SvelteSet(untrack(() => initialSelection));
 	let focusedIndex = $state(0);
 
 	// Helper function to check if an item has valid author data

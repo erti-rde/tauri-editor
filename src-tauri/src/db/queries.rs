@@ -43,6 +43,10 @@ pub struct NewChunk {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ScoredChunk {
     pub sha256: String,
+    /// Position of the chunk within its source. `(sha256, idx)` is the chunk's
+    /// primary key, and the only stable identity a result has — two chunks from
+    /// one PDF share a hash.
+    pub idx: i64,
     pub text: String,
     pub page_start: Option<i64>,
     pub section: Option<String>,
@@ -321,7 +325,7 @@ pub async fn search_similar(
     limit: usize,
     include_library: bool,
 ) -> Result<Vec<ScoredChunk>, String> {
-    let rows = sqlx::query("SELECT sha256, text, page_start, section, embedding FROM chunks")
+    let rows = sqlx::query("SELECT sha256, idx, text, page_start, section, embedding FROM chunks")
         .fetch_all(library)
         .await
         .map_err(|e| e.to_string())?;
@@ -341,6 +345,7 @@ pub async fn search_similar(
             let embedding = unpack_embedding(&r.get::<Vec<u8>, _>("embedding"));
             Some(ScoredChunk {
                 similarity: crate::commands::cosine_similarity(query_embedding, &embedding),
+                idx: r.get("idx"),
                 text: r.get("text"),
                 page_start: r.get("page_start"),
                 section: r.get("section"),

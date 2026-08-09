@@ -33,19 +33,22 @@
 		return 'bg-surface-sunken text-danger';
 	}
 
-	const similarityColor = getSimilarityColor(sentenceMetadata.similarity);
-	const scorePercentage = Math.round(sentenceMetadata.similarity * 100);
+	/*
+	 * Derived, not captured once.
+	 *
+	 * The results list reuses card instances between searches, so a plain
+	 * `const` read at init left the score, its colour and the DOI link showing
+	 * the *previous* search's match while the title and sentence beside them
+	 * updated. The score is what the researcher judges relevance by, and the
+	 * link would have opened the wrong paper.
+	 */
+	const similarityColor = $derived(getSimilarityColor(sentenceMetadata.similarity));
+	const scorePercentage = $derived(Math.round(sentenceMetadata.similarity * 100));
 
-	// Get URL from DOI or other source if available
-	function getSourceUrl() {
-		if (sentenceMetadata.metadata.DOI) {
-			return `https://doi.org/${sentenceMetadata.metadata.DOI}`;
-		}
-		return null;
-	}
-
-	const sourceUrl = getSourceUrl();
-	const needsExpander = sentenceMetadata.sentence.length > 120;
+	const sourceUrl = $derived(
+		sentenceMetadata.metadata.DOI ? `https://doi.org/${sentenceMetadata.metadata.DOI}` : null
+	);
+	const needsExpander = $derived(sentenceMetadata.sentence.length > 120);
 </script>
 
 <div

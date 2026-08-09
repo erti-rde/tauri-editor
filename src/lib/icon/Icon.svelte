@@ -102,10 +102,12 @@
 		l: 32
 	};
 
-	const dimensions = sizeMap[size];
-	const component = icons[icon];
-
-	const SvelteComponent = $derived(component);
+	// Both derived, because both props change: the status footer swaps its icon
+	// with the save state, and the toolbar swaps between editing and preview.
+	// `const component = icons[icon]` read once at init, and wrapping that in
+	// $derived only re-derived a value that could no longer change.
+	const dimensions = $derived(sizeMap[size]);
+	const SvelteComponent = $derived(icons[icon]);
 </script>
 
 <SvelteComponent style="width: {dimensions}px; height: {dimensions}px;" class={className} />

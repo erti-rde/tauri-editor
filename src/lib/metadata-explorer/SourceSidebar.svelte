@@ -25,7 +25,7 @@
 		);
 	});
 
-	const itemTypesFields = augmentedSchema.typeFields;
+	const itemTypesFields = $derived(augmentedSchema.typeFields);
 
 	/** CSL-JSON date fields look like `{ 'date-parts': [[yyyy, mm, dd]] }`. */
 	type CslDate = { 'date-parts'?: number[][] };
