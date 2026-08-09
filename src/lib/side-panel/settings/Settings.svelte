@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { Dialog, Tabs } from 'bits-ui';
+
 	import AppearanceSettings from './AppearanceSettings.svelte';
 	import { onMount } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { load as loadStore } from '@tauri-apps/plugin-store';
 	import type { Store } from '@tauri-apps/plugin-store';
 	import { Icon } from '$lib';
-	import { clickOutside } from '$utils/clickOutside.svelte';
 	import { getConsent, getMailto, setConsent, setMailto } from '$lib/stores/consent';
 
 	interface Props {
@@ -163,10 +164,6 @@
 		}
 	}
 
-	function setActiveTab(tab: string) {
-		activeTab = tab;
-	}
-
 	onMount(async () => {
 		store = await loadStore('settings-store.json');
 		wordCount = ((await store.get('wordCount')) as number) || 0;
@@ -178,54 +175,48 @@
 	});
 </script>
 
-{#if isOpen}
-	<div
-		class="bg-backdrop fixed inset-0 z-100 flex items-center justify-center"
-		style="z-index: 100;"
-	>
-		<dialog
-			open
-			class="bg-surface-raised relative z-10 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] flex-col overflow-hidden rounded-lg shadow-xl"
-			aria-labelledby="settings-title"
-			use:clickOutside
-			onoutclick={closeSettings}
+<!--
+	The dialog and its tabs come from bits-ui rather than being hand-rolled.
+	What that buys is not styling — it is the behaviour a modal has to have and
+	this one did not: Escape closes it, focus is trapped inside and restored to
+	whatever opened it, the page behind is inert and does not scroll, and screen
+	readers are told it is a dialog rather than reading a div.
+	The tabs likewise gain arrow-key navigation and the roles that make them tabs.
+-->
+<Dialog.Root bind:open={() => isOpen, (v) => !v && closeSettings()}>
+	<Dialog.Portal>
+		<Dialog.Overlay class="bg-backdrop fixed inset-0 z-100" />
+
+		<Dialog.Content
+			class="bg-surface-raised border-line fixed top-1/2 left-1/2 z-100 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border shadow-xl"
 		>
 			<!-- Header -->
 			<div class="border-line flex items-center justify-between border-b px-5 py-4">
-				<h2 id="settings-title" class="text-ink text-xl font-semibold">Settings</h2>
-				<button
+				<Dialog.Title class="text-ink text-xl font-semibold">Settings</Dialog.Title>
+				<Dialog.Close
 					class="text-ink-muted hover:bg-surface-hover hover:text-ink rounded-full p-1 transition-colors"
-					onclick={closeSettings}
+					aria-label="Close settings"
 				>
 					<Icon icon="X" />
-				</button>
+				</Dialog.Close>
 			</div>
 
-			<!-- Content -->
-			<div class="flex flex-1 overflow-hidden">
-				<!-- Sidebar -->
-				<div class="border-line bg-surface-sunken w-48 border-r">
+			<Tabs.Root bind:value={activeTab} orientation="vertical" class="flex flex-1 overflow-hidden">
+				<Tabs.List class="border-line bg-surface-sunken w-48 shrink-0 border-r">
 					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'appearance', label: 'Appearance' }] as tab (tab.id)}
-						<button
-							class="hover:bg-surface-hover w-full border-l-2 px-4 py-3 text-left transition-colors {activeTab ===
-							tab.id
-								? 'border-accent bg-surface-sunken font-medium'
-								: 'border-transparent'}"
-							onclick={() => setActiveTab(tab.id)}
+						<Tabs.Trigger
+							value={tab.id}
+							class="hover:bg-surface-hover data-[state=active]:border-accent data-[state=active]:bg-surface-raised w-full border-l-2 border-transparent px-4 py-3 text-left transition-colors data-[state=active]:font-medium"
 						>
 							{tab.label}
-						</button>
+						</Tabs.Trigger>
 					{/each}
-				</div>
+				</Tabs.List>
 
 				<!-- Settings panels -->
 				<div class="bg-surface-raised relative flex-1">
 					<!-- General Settings -->
-					<div
-						class="absolute inset-0 overflow-y-auto {activeTab === 'general'
-							? 'block'
-							: 'hidden'} p-5"
-					>
+					<Tabs.Content value="general" class="absolute inset-0 overflow-y-auto p-5">
 						<div class="mb-8">
 							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
 								General Settings
@@ -285,14 +276,10 @@
 								</div>
 							{/if}
 						</div>
-					</div>
+					</Tabs.Content>
 
 					<!-- Citation Settings -->
-					<div
-						class="absolute inset-0 overflow-y-auto {activeTab === 'citations'
-							? 'block'
-							: 'hidden'} p-5"
-					>
+					<Tabs.Content value="citations" class="absolute inset-0 overflow-y-auto p-5">
 						<div class="mb-8">
 							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
 								Citation Settings
@@ -370,14 +357,10 @@
 								<p class="text-ink-muted mt-1 text-sm">Set the language for the citation</p>
 							</div>
 						</div>
-					</div>
+					</Tabs.Content>
 
 					<!-- Appearance Settings -->
-					<div
-						class="absolute inset-0 overflow-y-auto {activeTab === 'appearance'
-							? 'block'
-							: 'hidden'} p-5"
-					>
+					<Tabs.Content value="appearance" class="absolute inset-0 overflow-y-auto p-5">
 						<div class="mb-8">
 							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
 								Appearance
@@ -385,25 +368,24 @@
 
 							<AppearanceSettings />
 						</div>
-					</div>
+					</Tabs.Content>
 				</div>
-			</div>
+			</Tabs.Root>
 
 			<!-- Footer -->
 			<div class="border-line bg-surface-sunken flex justify-end space-x-3 border-t px-5 py-4">
-				<button
-					class="border-line-strong text-ink hover:bg-surface-hover rounded-md border px-4 py-2 transition-colors"
-					onclick={closeSettings}
+				<Dialog.Close
+					class="border-line-strong text-ink hover:bg-surface-hover rounded border px-4 py-2 transition-colors"
 				>
 					Cancel
-				</button>
+				</Dialog.Close>
 				<button
-					class="border-accent bg-accent text-accent-ink hover:bg-accent rounded-md border px-4 py-2 transition-colors"
+					class="border-accent bg-accent text-accent-ink hover:bg-accent/90 rounded border px-4 py-2 transition-colors"
 					onclick={saveSettings}
 				>
 					Save changes
 				</button>
 			</div>
-		</dialog>
-	</div>
-{/if}
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
