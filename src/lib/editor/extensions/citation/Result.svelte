@@ -168,7 +168,7 @@
 		right: 0;
 		width: 30%;
 		height: calc(100% - var(--footer-status-bar-height) - var(--toolbar-l));
-		background-color: white;
+		background-color: hsl(var(--surface-raised));
 		box-shadow: -5px 0 5px -5px rgba(0, 0, 0, 0.5);
 		z-index: 5;
 		overflow-y: auto;

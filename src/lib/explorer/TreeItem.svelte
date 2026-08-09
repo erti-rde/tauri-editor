@@ -77,13 +77,13 @@
 	}
 
 	.item-header:hover {
-		background-color: rgba(0, 0, 0, 0.1);
+		background-color: hsl(var(--surface-raised));
 	}
 
 	.icon {
 		display: flex;
 		align-items: center;
-		color: #666;
+		color: hsl(var(--ink-muted));
 	}
 
 	.is-dir {

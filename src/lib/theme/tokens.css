@@ -39,7 +39,10 @@
 	--line: 214 15% 88%;
 	--line-strong: 214 12% 76%;
 
-	--accent: 24 88% 48%;
+	/* 40%, not 48%: white on the lighter orange measured 3.37:1, below the 4.5
+	   AA threshold, so the primary button was the least readable thing on screen.
+	   At 40% it is 4.66:1 and still unmistakably orange. */
+	--accent: 24 88% 40%;
 	--accent-ink: 0 0% 100%;
 	--accent-quiet: 24 90% 96%;
 

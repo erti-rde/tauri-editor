@@ -5,8 +5,8 @@
 
 :root {
 	--footer-status-bar-height: theme('space.6');
-	--hover-color: theme('colors.orange.200');
-	--border-color: theme('colors.slate.400');
+	--hover-color: hsl(var(--surface-raised));
+	--border-color: hsl(var(--line-strong));
 	--toolbar-l: theme('space.10');
 
 	--color-teal-50: #f0fdfa;
@@ -272,7 +272,7 @@
 }
 html {
 	overscroll-behavior: none;
-	background-color: var(--color-orange-50);
+	background-color: hsl(var(--surface-sunken));
 }
 body {
 	@apply antialiased;
@@ -280,17 +280,17 @@ body {
 
 .editor {
 	[data-type='citation'] {
-		background-color: theme('colors.teal.50');
+		background-color: hsl(var(--surface-sunken));
 		border-radius: theme('space.1');
 		padding: 0 theme('space.1');
-		color: theme('colors.teal.500');
+		color: hsl(var(--accent));
 		font-weight: 500;
 		cursor: pointer;
-		border: 1px solid theme('colors.teal.100');
+		border: 1px solid hsl(var(--line));
 	}
 
 	[data-type='citation']:hover {
-		background-color: theme('colors.teal.100');
+		background-color: hsl(var(--surface-sunken));
 	}
 
 	[data-type='citation'].ProseMirror-selectednode {
@@ -515,7 +515,7 @@ body {
    its absence is stated rather than left silent. */
 .bibliography-missing {
 	margin-top: 1rem;
-	color: #b45309;
+	color: hsl(var(--warning));
 	font-size: 0.875rem;
 }
 

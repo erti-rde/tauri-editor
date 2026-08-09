@@ -40,7 +40,7 @@
 
 <style>
 	button:hover {
-		background-color: var(--hover-color);
+		background-color: hsl(var(--surface-raised));
 		border-radius: 4px;
 	}
 </style>

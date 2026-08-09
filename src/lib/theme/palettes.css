@@ -10,6 +10,15 @@
  * code; these are colour values expressed against Erti's own token names.
  */
 
+/*
+ * Latte, with the roles chosen for legibility on its own base.
+ *
+ * Every value here is an official Catppuccin Latte colour; the palette simply
+ * offers lighter and darker options for the same role, and a light theme needs
+ * the darker ones. Peach at 2.64:1 and green at 2.96:1 against base cannot
+ * carry meaning, so the accent is mauve — which is Catppuccin's own default
+ * accent — and success is teal. Muted text moves from subtext0 to subtext1.
+ */
 [data-theme='catppuccin-latte'] {
 	color-scheme: light;
 
@@ -19,21 +28,24 @@
 	--surface-overlay: 220 22% 92%;
 
 	--ink: 234 16% 35%;
-	--ink-muted: 233 10% 47%;
+	--ink-muted: 233 13% 41%;
 	--ink-faint: 228 11% 65%;
 
 	--line: 223 16% 83%;
 	--line-strong: 228 11% 65%;
 
-	--accent: 22 99% 52%;
-	--accent-ink: 0 0% 100%;
+	--accent: 266 85% 58%;
+	/* Catppuccin's peach is the palette's own colour and is not ours to darken, so
+	   the button takes dark ink instead: white on peach is 2.98:1, its own text
+	   colour 2.68:1, and near-black 5.87:1. */
+	--accent-ink: 220 23% 95%;
 	--accent-quiet: 223 16% 83%;
 
 	--danger: 347 87% 44%;
 	--warning: 35 77% 49%;
-	--success: 109 58% 40%;
+	--success: 183 74% 35%;
 
-	--selection: 22 99% 52%;
+	--selection: 266 85% 58%;
 	--shadow-overlay: 0 0% 0% / 0.12;
 
 	/* The manuscript in this palette's own colours, used when the reader turns

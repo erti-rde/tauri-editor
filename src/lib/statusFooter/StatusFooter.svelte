@@ -51,13 +51,13 @@
 		height: var(--footer-status-bar-height);
 	}
 	.error {
-		color: red;
+		color: hsl(var(--danger));
 		font-weight: 800;
 	}
 	.loader {
 		width: 20px;
 		height: 20px;
-		border: 2px solid #fff;
+		border: 2px solid hsl(var(--ink-muted));
 		border-bottom-color: transparent;
 		border-radius: 50%;
 		display: inline-block;
