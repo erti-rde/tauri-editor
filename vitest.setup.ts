@@ -1,4 +1,25 @@
 import '@testing-library/jest-dom/vitest';
+import { afterAll } from 'vitest';
+
+/**
+ * Outlive the timers an unmounted overlay leaves behind.
+ *
+ * bits-ui's body-scroll-lock restores `document.body`'s style on a 24ms
+ * `setTimeout` rather than synchronously, so a same-tick destroy/create does
+ * not thrash the page. If a test file finishes inside that window, the timer
+ * fires after jsdom has been torn down, `document` is undefined, and it throws
+ * — outside any test, so every assertion still passes and the run exits 1
+ * regardless. "402 passed" next to a red gate is this.
+ *
+ * It is a race rather than a flake: won three times locally in a row, lost on
+ * CI. This waits it out once per file, which is where teardown happens, so the
+ * cost is ~30ms per file and not per test. Global rather than in the one file
+ * that hit it, because the next Dialog, Popover or Select test would rediscover
+ * this the same expensive way.
+ */
+afterAll(async () => {
+	await new Promise((resolve) => setTimeout(resolve, 30));
+});
 
 /**
  * jsdom does not implement matchMedia, and the appearance layer asks it which
