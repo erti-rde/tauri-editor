@@ -52,6 +52,13 @@
 
 	--selection: 24 88% 48%;
 	--shadow-overlay: 0 0% 0% / 0.12;
+	/* A scrim has to dim in every theme. --surface-overlay is white in a light
+	   palette, so using it at partial alpha washed the page out instead. */
+	--backdrop: 220 20% 12% / 0.45;
+	/* Hover and active must stay distinct from the surface they sit on;
+	   reusing a resting token made the feedback invisible. */
+	--surface-hover: 214 18% 92%;
+	--surface-active: 214 20% 87%;
 }
 
 [data-theme='dark'] {
@@ -87,6 +94,9 @@
 
 	--selection: 24 90% 58%;
 	--shadow-overlay: 0 0% 0% / 0.5;
+	--backdrop: 220 20% 4% / 0.6;
+	--surface-hover: 220 12% 21%;
+	--surface-active: 220 12% 26%;
 }
 
 /*

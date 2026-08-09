@@ -99,7 +99,7 @@
 				attributes: {
 					style: 'padding-left: 56px; padding-right: 56px',
 					class:
-						'manuscript focus:outline-none border border-line flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
+						'manuscript border border-line flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
 				}
 			},
 			autofocus: 'end',

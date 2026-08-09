@@ -82,7 +82,7 @@
 			>
 				Save
 			</button>
-			<button class="hover:bg-surface-sunken rounded-full p-1" onclick={onclose}>
+			<button class="hover:bg-surface-hover rounded-full p-1" onclick={onclose}>
 				<Icon icon="X" class="h-5 w-5" />
 			</button>
 		</div>

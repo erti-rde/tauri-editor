@@ -52,7 +52,7 @@
 			class="document-tab shrink-0 border-b-2 px-3 text-xs whitespace-nowrap transition-colors
 				{document.path === current?.path
 				? 'border-accent bg-surface-raised text-ink'
-				: 'text-ink-muted hover:bg-surface-raised hover:text-ink border-transparent'}"
+				: 'text-ink-muted hover:bg-surface-hover hover:text-ink border-transparent'}"
 			onclick={() => onopen(document)}
 			aria-current={document.path === current?.path ? 'page' : undefined}
 		>
@@ -64,7 +64,7 @@
 		<input
 			bind:this={input}
 			bind:value={draft}
-			class="border-accent bg-surface-raised text-ink ml-1 w-40 shrink-0 rounded border px-2 py-1 text-xs focus:outline-none"
+			class="border-accent bg-surface-raised text-ink ml-1 w-40 shrink-0 rounded border px-2 py-1 text-xs"
 			placeholder="Chapter one"
 			aria-label="Name for the new document"
 			{onkeydown}
@@ -72,7 +72,7 @@
 		/>
 	{:else}
 		<button
-			class="text-ink-faint hover:bg-surface-raised hover:text-ink ml-1 shrink-0 rounded px-2 py-1 text-xs"
+			class="text-ink-faint hover:bg-surface-hover hover:text-ink ml-1 shrink-0 rounded px-2 py-1 text-xs"
 			onclick={startNaming}
 			title="New document"
 		>
