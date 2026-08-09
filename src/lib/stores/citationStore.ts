@@ -13,6 +13,10 @@ export interface CitationItem {
 	author?: Array<{
 		family: string;
 		given: string;
+		// CSL-JSON's field for a name that does not split — an organisation, or a
+		// consortium. Crossref returns these for institutional authors, and code
+		// that only reads family/given renders them as an empty string.
+		literal?: string;
 		sequence?: string;
 		affiliation?: Array<{ name: string }>;
 	}>;

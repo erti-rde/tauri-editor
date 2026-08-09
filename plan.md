@@ -838,15 +838,33 @@ confirming the graceful message. Export snapshots must match the golden files.
 > than a timestamp. The metadata explorer's source rows became buttons, so they are keyboard
 > reachable at last.
 
-**Still outstanding — the component migration this phase is named for.** The primitives are still
-hand-rolled, now drawing on tokens rather than fixed colours, which is what makes replacing them
-mechanical rather than a rewrite:
+**The component migration this phase is named for — done, and the list was wrong twice.**
 
-- `ui/Dropdown` → DropdownMenu, `ui/form/Select` → Select, `ui/form/DateField` → Calendar +
-  DatePicker, `toast/Toast` → Sonner, `settings/Settings` → Dialog + Tabs, and `MetadataEditor`'s
-  hand-built 12-column grid → Data Table.
-- `bits-ui` 2.18.1 is already a dependency and supplies every one of these, so each is a
-  self-contained change rather than a new dependency decision.
+`ui/Dropdown`, `ui/form/Select` and `ui/form/DateField` were **already on bits-ui** when the list
+was written, so three of the six items were not work at all.
+
+`settings/Settings` → Dialog + Tabs was real and is done. The old modal was a `div`: no
+`role="dialog"`, no `aria-modal`, no Escape, no focus trap, and three buttons wearing tab styling
+with no `tablist`, no `aria-selected` and no arrow keys. Its close button had **no accessible
+name** — the old test located it as "the button with an empty name", which is what a screen reader
+read out.
+
+`AppearanceSettings` was not on the list and should have been: three `role="radiogroup"` containers
+over `<button role="radio">` with no `tabindex` and no key handling, so the groups announced
+themselves as radio groups and ignored every arrow key. Now on `RadioGroup`.
+
+**The claim that bits-ui supplies all six was false**, and it is the reason the last two items are
+still open. bits-ui has no Data Table and no toast — shadcn-svelte's Data Table is **TanStack
+Table** and Sonner is **`svelte-sonner`**. Both are new runtime dependencies in an offline-first,
+minimal-dependency app, so both are decisions rather than mechanical migrations:
+
+- **`toast/Toast` → Sonner.** 88 lines that work and are tested. The gain is animation polish, not
+  correctness or accessibility. Recommend declining unless stacking/swipe behaviour is wanted.
+- **`MetadataEditor`'s 12-column grid → Data Table.** What a Data Table would buy is column
+  sorting; filtering already exists. The grid's actual defect was not its lack of a library — the
+  header declared `1+5+3+3` and the rows rendered `5+3+3`, so **every column of data sat one grid
+  column to the left of the heading naming it**, and `Type` labelled nothing because the field was
+  never rendered. Fixed, with the display logic extracted to a tested module.
 
 _Verify:_ keyboard-only traversal of every migrated surface. Every palette on every screen — the
 contrast test covers the tokens, not the combinations a component actually uses. Existing component
