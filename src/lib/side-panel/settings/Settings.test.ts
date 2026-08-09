@@ -106,53 +106,58 @@ describe('Settings.svelte', () => {
 		});
 
 		// Test: All tabs render correctly
-		it('renders all three tabs correctly', async () => {
+		it('renders all three tabs as tabs', async () => {
 			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
-			// By role, not by text: "Appearance" is now both a tab and the heading of
-			// the panel it opens, and a bare text query cannot tell them apart.
-			expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument();
-			expect(screen.getByRole('button', { name: 'Citations' })).toBeInTheDocument();
-			expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument();
+
+			// role="tab", not role="button". Before the migration these were plain
+			// buttons in a div, so a screen reader announced three unrelated
+			// controls rather than a tab list, and arrow keys did nothing.
+			expect(screen.getByRole('tab', { name: 'General' })).toBeInTheDocument();
+			expect(screen.getByRole('tab', { name: 'Citations' })).toBeInTheDocument();
+			expect(screen.getByRole('tab', { name: 'Appearance' })).toBeInTheDocument();
+			expect(screen.getByRole('tablist')).toBeInTheDocument();
+		});
+
+		it('marks the open tab as selected', async () => {
+			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
+
+			expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
+			expect(screen.getByRole('tab', { name: 'Citations' })).toHaveAttribute(
+				'aria-selected',
+				'false'
+			);
+		});
+
+		it('is announced as a dialog', async () => {
+			// It was a div: no role, no aria-modal, so assistive technology had no
+			// way to know a modal had opened or where it ended.
+			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
+
+			const dialog = screen.getByRole('dialog');
+			expect(dialog).toBeInTheDocument();
+			expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
 		});
 
 		// Test: Each tab shows the correct content when selected
-		it('shows correct content for each tab', async () => {
+		it('shows one panel at a time and switches on click', async () => {
 			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
-			// Default tab should be "general"
+
+			// The panel is the tab's content now, so it is found through the role
+			// rather than by reaching for a class that said whether it was hidden.
+			expect(screen.getByRole('tabpanel')).toBeInTheDocument();
 			expect(screen.getByText('General Settings')).toBeVisible();
+			expect(screen.getByText('Word Count Target')).toBeVisible();
 
-			// Check that Word Count Target is visible in the general tab
-			const wordCountElement = screen.getByText('Word Count Target');
-			expect(wordCountElement).toBeVisible();
-			// The parent div should have a class that includes 'block' (visible)
-			const parentPanel = wordCountElement.closest('div[class*="absolute inset-0"]');
-			expect(parentPanel).not.toBeNull();
-			expect(parentPanel).toBeVisible();
-
-			// Find the Citations tab content - it should be in the DOM but hidden
-			const citationSettingsHeading = screen.getByText('Citation Settings');
-			const citationsPanel = citationSettingsHeading.closest('div[class*="absolute inset-0"]');
-			expect(citationsPanel).not.toBeNull();
-			expect(citationsPanel).toHaveClass('hidden');
-
-			// Switch to Citations tab
-			await fireEvent.click(screen.getByText('Citations'));
-			expect(citationSettingsHeading).toBeVisible();
+			await fireEvent.click(screen.getByRole('tab', { name: 'Citations' }));
+			expect(screen.getByText('Citation Settings')).toBeVisible();
 			expect(screen.getByText('Citation Style')).toBeVisible();
-			expect(screen.getByText('Citation Language')).toBeVisible();
+			// The other panel stays mounted but hidden, which is how Tabs keeps
+			// scroll position and form state when you switch back.
+			expect(screen.getByText('Word Count Target')).not.toBeVisible();
 
-			// General tab should now be hidden
-			expect(parentPanel).toHaveClass('hidden');
-
-			// Switch to Appearance tab
-			await fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+			await fireEvent.click(screen.getByRole('tab', { name: 'Appearance' }));
 			expect(screen.getByRole('heading', { name: 'Appearance' })).toBeVisible();
-			// The panel is real now; it used to promise a future update.
 			expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
-			expect(screen.getByRole('radio', { name: /System/ })).toBeVisible();
-
-			// Citations tab should now be hidden
-			expect(citationsPanel).toHaveClass('hidden');
 		});
 	});
 
@@ -162,7 +167,11 @@ describe('Settings.svelte', () => {
 			const closeSettings = vi.fn();
 			render(Settings, { props: { isOpen: true, closeSettings } });
 
-			const closeButton = screen.getByRole('button', { name: '' }); // Since we mocked the icon, it has no name
+			// Dialog.Close carries a real accessible name now. It had none before —
+			// the icon is mocked in tests, so the control was nameless to a screen
+			// reader too, and this test only found it because it was the only button
+			// without one.
+			const closeButton = screen.getByRole('button', { name: 'Close settings' });
 			await fireEvent.click(closeButton);
 
 			expect(closeSettings).toHaveBeenCalledTimes(1);
