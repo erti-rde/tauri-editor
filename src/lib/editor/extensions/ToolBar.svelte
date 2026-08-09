@@ -7,6 +7,7 @@
 	import { convertFileSrc } from '@tauri-apps/api/core';
 
 	import { Separator } from 'bits-ui';
+	import Tooltip from '$lib/ui/Tooltip.svelte';
 	// Import Icons for toolbar
 	import Bold from '~icons/lucide/bold';
 	import BookText from '~icons/lucide/book-text';
@@ -78,23 +79,31 @@
 	onclick,
 	disabled,
 	isActive,
-	Icon
+	Icon,
+	label,
+	shortcut
 }: {
 	onclick: () => void;
 	disabled?: boolean;
 	isActive?: boolean;
 	Icon: typeof SvelteComponent<SvelteHTMLElements['svg']>;
+	/** What the button does. Also its accessible name. */
+	label: string;
+	shortcut?: string;
 })}
-	<button
-		class={[
-			'hover:bg-accent-quiet/50 focus:ring-accent rounded-md p-1.5 transition-colors duration-150 ease-in-out focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
-			isActive && 'bg-accent-quiet/70 text-accent'
-		]}
-		{onclick}
-		{disabled}
-	>
-		<Icon />
-	</button>
+	<Tooltip {label} {shortcut}>
+		<button
+			class={[
+				'hover:bg-accent-quiet/50 focus:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+				isActive && 'bg-accent-quiet text-accent'
+			]}
+			{onclick}
+			{disabled}
+			aria-pressed={isActive}
+		>
+			<Icon />
+		</button>
+	</Tooltip>
 {/snippet}
 
 <div
@@ -105,12 +114,16 @@
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().undo().run(),
 		disabled: !editor.can().undo(),
-		Icon: Undo
+		Icon: Undo,
+		label: 'Undo',
+		shortcut: 'Mod Z'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().redo().run(),
 		disabled: !editor.can().redo(),
-		Icon: Redo
+		Icon: Redo,
+		label: 'Redo',
+		shortcut: 'Mod Shift Z'
 	})}
 
 	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
@@ -171,13 +184,17 @@
 		onclick: () => editor.chain().focus().toggleBlockquote().run(),
 		isActive: editor.isActive('blockquote'),
 		disabled: !editor.can().chain().focus().toggleBlockquote().run(),
-		Icon: Blockquote
+		Icon: Blockquote,
+		label: 'Block quote',
+		shortcut: 'Mod Shift B'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().toggleCodeBlock().run(),
 		isActive: editor.isActive('codeBlock'),
 		disabled: !editor.can().chain().focus().toggleCodeBlock().run(),
-		Icon: CodeBlock
+		Icon: CodeBlock,
+		label: 'Inline code',
+		shortcut: 'Mod E'
 	})}
 
 	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
@@ -187,37 +204,48 @@
 		onclick: () => editor.chain().focus().toggleBold().run(),
 		isActive: editor.isActive('bold'),
 		disabled: !editor.can().chain().focus().toggleBold().run(),
-		Icon: Bold
+		Icon: Bold,
+		label: 'Bold',
+		shortcut: 'Mod B'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().toggleItalic().run(),
 		isActive: editor.isActive('italic'),
 		disabled: !editor.can().chain().focus().toggleItalic().run(),
-		Icon: Italic
+		Icon: Italic,
+		label: 'Italic',
+		shortcut: 'Mod I'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().toggleStrike().run(),
 		isActive: editor.isActive('strike'),
 		disabled: !editor.can().chain().focus().toggleStrike().run(),
-		Icon: StrikeThrough
+		Icon: StrikeThrough,
+		label: 'Strikethrough',
+		shortcut: 'Mod Shift X'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().toggleUnderline().run(),
 		isActive: editor.isActive('underline'),
 		disabled: !editor.can().chain().focus().toggleUnderline().run(),
-		Icon: Underline
+		Icon: Underline,
+		label: 'Underline',
+		shortcut: 'Mod U'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().toggleCode().run(),
 		isActive: editor.isActive('code'),
 		disabled: !editor.can().chain().focus().toggleCode().run(),
-		Icon: InlineCode
+		Icon: InlineCode,
+		label: 'Inline code',
+		shortcut: 'Mod E'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().toggleHighlight().run(),
 		isActive: editor.isActive('highlight'),
 		disabled: !editor.can().chain().focus().toggleHighlight().run(),
-		Icon: Highlighter
+		Icon: Highlighter,
+		label: 'Highlight'
 	})}
 
 	<!-- Configure Link -->
@@ -225,7 +253,9 @@
 	<LinkPopover {editor} isActive={editor.isActive('link')}>
 		{@render toolBarButton({
 			onclick: () => null,
-			Icon: Link
+			Icon: Link,
+			label: 'Link',
+			shortcut: 'Mod K'
 		})}
 	</LinkPopover>
 
@@ -237,14 +267,18 @@
 		onclick: () => editor.chain().focus().toggleSubscript().run(),
 		isActive: editor.isActive('subscript'),
 		disabled: !editor.can().chain().focus().toggleSubscript().run(),
-		Icon: Subscript
+		Icon: Subscript,
+		label: 'Subscript',
+		shortcut: 'Mod ,'
 	})}
 
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().toggleSuperscript().run(),
 		isActive: editor.isActive('superscript'),
 		disabled: !editor.can().chain().focus().toggleSuperscript().run(),
-		Icon: Superscript
+		Icon: Superscript,
+		label: 'Superscript',
+		shortcut: 'Mod .'
 	})}
 
 	<!-- A break the author places. Print rules decide where a page *may* break;
@@ -252,7 +286,9 @@
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().insertPageBreak().run(),
 		isActive: editor.isActive('pageBreak'),
-		Icon: SeparatorHorizontal
+		Icon: SeparatorHorizontal,
+		label: 'Insert a page break',
+		shortcut: 'Mod Enter'
 	})}
 
 	<!-- The works cited. A document node, so it exports and paginates with the
@@ -260,7 +296,8 @@
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().insertBibliography().run(),
 		isActive: editor.isActive('bibliography'),
-		Icon: BookText
+		Icon: BookText,
+		label: 'Add the references section'
 	})}
 
 	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
@@ -269,22 +306,26 @@
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().setTextAlign('left').run(),
 		isActive: editor.isActive({ textAlign: 'left' }),
-		Icon: AlignLeft
+		Icon: AlignLeft,
+		label: 'Align left'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().setTextAlign('center').run(),
 		isActive: editor.isActive({ textAlign: 'center' }),
-		Icon: AlignCenter
+		Icon: AlignCenter,
+		label: 'Align centre'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().setTextAlign('right').run(),
 		isActive: editor.isActive({ textAlign: 'right' }),
-		Icon: AlignRight
+		Icon: AlignRight,
+		label: 'Align right'
 	})}
 	{@render toolBarButton({
 		onclick: () => editor.chain().focus().setTextAlign('justify').run(),
 		isActive: editor.isActive({ textAlign: 'justify' }),
-		Icon: AlignJustify
+		Icon: AlignJustify,
+		label: 'Justify'
 	})}
 
 	<Separator.Root class="bg-accent-quiet mx-1 my-1 w-[1px] self-stretch" />
@@ -293,7 +334,8 @@
 
 	{@render toolBarButton({
 		onclick: async () => await addImage(),
-		Icon: Image
+		Icon: Image,
+		label: 'Insert an image'
 	})}
 
 	<!-- Add table -->
@@ -301,7 +343,8 @@
 		{@render toolBarButton({
 			onclick: () => editor.commands.insertTable(),
 			isActive: editor.isActive('table'),
-			Icon: Table
+			Icon: Table,
+			label: 'Insert a table'
 		})}
 	</TablePopover>
 
