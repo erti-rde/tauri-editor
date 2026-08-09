@@ -21,6 +21,10 @@
 	}
 </script>
 
+<script lang="ts">
+	import { documentStatus } from './documentStatus';
+</script>
+
 <div
 	class="status-bar
     border-line
@@ -33,8 +37,9 @@
     px-3
     text-[11px]"
 >
-	{#if $statusData}
-		<div class="flex items-center gap-2">
+	<!-- Left: what the app is doing to your library. -->
+	<div class="flex items-center gap-2">
+		{#if $statusData}
 			{#if $statusData.type === 'error'}
 				<span class="error">X</span>
 				{$statusData.message}
@@ -42,8 +47,40 @@
 				<span class="loader"></span>
 				{$statusData.message}
 			{/if}
-		</div>
-	{/if}
+		{/if}
+	</div>
+
+	<!-- Right: the manuscript. Glanced at rather than read, which is what a
+	     status bar is for. -->
+	<div class="flex items-center gap-4">
+		{#if $documentStatus.words}
+			<span
+				class="font-mono"
+				title="{$documentStatus.words
+					.references} words in references and notes, which journal limits usually exclude"
+			>
+				{$documentStatus.words.body.toLocaleString()}
+				{$documentStatus.words.body === 1 ? 'word' : 'words'}
+				{#if $documentStatus.target > 0}
+					<span class={$documentStatus.words.body > $documentStatus.target ? 'text-warning' : ''}>
+						/ {$documentStatus.target.toLocaleString()}
+					</span>
+				{/if}
+			</span>
+		{/if}
+
+		<span aria-live="polite">
+			{#if $documentStatus.save === 'error'}
+				<span class="text-danger font-medium">Not saved — retrying</span>
+			{:else if $documentStatus.save === 'saving'}
+				Saving…
+			{:else if $documentStatus.save === 'pending'}
+				<span class="text-ink-faint">Unsaved</span>
+			{:else}
+				<span class="text-ink-faint">Saved</span>
+			{/if}
+		</span>
+	</div>
 </div>
 
 <style>
