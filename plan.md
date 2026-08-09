@@ -36,8 +36,9 @@ backed by a measurement rather than an impression.
 
 ## Progress
 
-Phases 0, 1, 2 and 4 are done; 3 is mostly done; 5 is under way. Every figure below is measured, and
-the measurement lives in the repository so it can be re-run rather than believed.
+Phases 0 to 5 are done. Phase 6's foundations are in and its component migration is not — see below.
+Every figure here is measured, and the measurement lives in the repository so it can be re-run rather
+than believed.
 
 |                                               | at the start        | now                                                       |
 | --------------------------------------------- | ------------------- | --------------------------------------------------------- |
@@ -805,33 +806,51 @@ document with citations, a table, an image and a bibliography to PDF and confirm
 screen. Export the LaTeX bundle and compile it both with local TeX present and with `PATH` stripped,
 confirming the graceful message. Export snapshots must match the golden files.
 
-### Phase 6 — UI/UX with shadcn-svelte
+### Phase 6 — UI/UX — **foundations done, component migration outstanding**
 
-Deferred to last so visual churn doesn't collide with the risky refactors. `shadcn-svelte` 1.4.2 is
-built on **Bits UI** + Tailwind and installs by copying components into the repo via CLI rather than
-as a dependency — and `bits-ui ^2.8.10` and Tailwind 4 are already dependencies, so the primitive
-layer is in place. (Caveat: the available `Shadcn_UI` MCP server is shadcn/ui **v4 for React** —
-useful for design and theme reference, not for Svelte code.)
+> **What is done.** A semantic token layer with seven palettes — Erti Light and Dark, four
+> Catppuccin variants and Night Owl — chosen in Settings alongside density, interface and manuscript
+> text size, manuscript typeface, and whether the page stays paper in a dark palette. The look is a
+> code editor's: thin rules rather than shadows, a chrome that recedes, and the manuscript as the one
+> bright surface.
+>
+> Tokens are semantic, never colours, so a palette is one block of assignments and no component
+> changes. Not a single fixed colour remains anywhere in `src` outside the two palette files.
+>
+> **Three defects this surfaced, all of which had shipped:**
+>
+> - `--accent` and `--line` were defined twice, and the legacy bits-ui block won at equal
+>   specificity. Because those values are whole colours rather than channel triples,
+>   `hsl(var(--accent))` became `hsl(#e1f3fe)` — invalid CSS — so every accent and every rule in the
+>   app resolved to nothing, in every theme.
+> - Both light palettes failed WCAG AA on the primary button: 3.37:1 for Erti and 2.98:1 for
+>   Catppuccin Latte, against a 4.5:1 threshold. Three further Latte failures were found by the test
+>   rather than by eye.
+> - Hover and active reused resting surfaces, so the feedback vanished where they matched; the modal
+>   scrim used a token that is white in light palettes, so it washed the page out instead of dimming.
+>
+> A contrast test now reads the token values out of the stylesheets and computes the ratios: 59
+> assertions across all seven palettes, so a palette added later cannot ship unreadable.
+>
+> Tooltips on all twenty-two toolbar buttons (**#6**, **#7**, **#8**), with the label doubling as the
+> accessible name. Scrollbars styled (**#4**). A landing screen with recent projects (**#39**),
+> which remembers paths, marks folders that have moved as not found, and says "yesterday" rather
+> than a timestamp. The metadata explorer's source rows became buttons, so they are keyboard
+> reachable at last.
 
-- Establish the token system and **dark mode**, replacing the hardcoded hex colours scattered
-  through components (`bg-[#FAFBFD]`, `border-[#C7C7C7]`, `bg-white` in
-  [Editor.svelte](src/lib/editor/Editor.svelte)) and reconciling them with the 399-line
-  `src/global.css` of CSS vars.
-- Migrate hand-rolled primitives: `ui/Dropdown` → DropdownMenu, `ui/form/Select` → Select,
-  `ui/form/DateField` → Calendar + DatePicker (already using `@internationalized/date`, which
-  Bits UI uses too), `toast/Toast` → Sonner, `settings/Settings` → Dialog + Tabs,
-  `MetadataEditor`'s hand-built 12-column grid → Data Table.
-- Tooltip component and its two consumers (**#6**, **#7**, **#8**); scrollbar styling (**#4**).
-- Real Landing / onboarding with recent projects, replacing the 30-line orange-button screen, plus
-  the logo (**#39**).
-- Fix the accessibility bugs this surfaces — e.g.
-  [MetadataEditor.svelte:153](src/lib/metadata-explorer/MetadataEditor.svelte:153) puts `onclick` on
-  a bare `<div>`: not keyboard-reachable, no role.
+**Still outstanding — the component migration this phase is named for.** The primitives are still
+hand-rolled, now drawing on tokens rather than fixed colours, which is what makes replacing them
+mechanical rather than a rewrite:
 
-_Verify:_ keyboard-only traversal of every migrated surface. Both colour schemes on every screen.
-Existing component tests updated rather than deleted.
+- `ui/Dropdown` → DropdownMenu, `ui/form/Select` → Select, `ui/form/DateField` → Calendar +
+  DatePicker, `toast/Toast` → Sonner, `settings/Settings` → Dialog + Tabs, and `MetadataEditor`'s
+  hand-built 12-column grid → Data Table.
+- `bits-ui` 2.18.1 is already a dependency and supplies every one of these, so each is a
+  self-contained change rather than a new dependency decision.
 
----
+_Verify:_ keyboard-only traversal of every migrated surface. Every palette on every screen — the
+contrast test covers the tokens, not the combinations a component actually uses. Existing component
+tests updated rather than deleted.
 
 ## 11. Verification baseline
 
