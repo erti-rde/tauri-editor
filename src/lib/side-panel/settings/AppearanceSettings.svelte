@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { RadioGroup } from 'bits-ui';
+
 	import { appearanceStore } from '$lib/theme/appearanceStore';
 	import {
 		PAGE_SIZE_RANGE,
@@ -39,6 +41,20 @@
 	const set = (patch: Partial<Appearance>) => void appearanceStore.update(patch);
 
 	/**
+	 * One card, three groups.
+	 *
+	 * These were `<button role="radio">` in a `role="radiogroup"` div with no
+	 * `tabindex` and no key handling: a screen reader announced a radio group,
+	 * and arrow keys did nothing. `RadioGroup` brings roving tabindex, arrow and
+	 * Home/End navigation and the ARIA wiring, so the selected style keys off
+	 * `data-state` — bits-ui's own attribute — rather than a re-derived boolean.
+	 */
+	const choice =
+		'border-line hover:border-line-strong data-[state=checked]:border-accent ' +
+		'data-[state=checked]:bg-accent-quiet focus-visible:ring-accent focus-visible:ring-2 ' +
+		'flex items-center gap-2 rounded border px-2 py-2 text-left transition-colors';
+
+	/**
 	 * Which palette `System` is currently showing.
 	 *
 	 * Without this the option is indistinguishable from the palette it resolves
@@ -70,17 +86,13 @@
 			researchers already read code in.
 		</p>
 
-		<div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Theme">
-			<button
-				type="button"
-				role="radio"
-				aria-checked={$appearanceStore.theme === 'system'}
-				class="col-span-2 flex items-center gap-3 rounded border px-3 py-2 text-left transition-colors
-					{$appearanceStore.theme === 'system'
-					? 'border-accent bg-accent-quiet'
-					: 'border-line hover:border-line-strong'}"
-				onclick={() => set({ theme: 'system' })}
-			>
+		<RadioGroup.Root
+			class="grid grid-cols-2 gap-2"
+			aria-label="Theme"
+			value={$appearanceStore.theme}
+			onValueChange={(theme) => set({ theme: theme as Appearance['theme'] })}
+		>
+			<RadioGroup.Item value="system" class="{choice} col-span-2 gap-3 px-3">
 				<span class="border-line-strong flex shrink-0 overflow-hidden rounded-sm border">
 					<span class="h-5 w-3" data-theme="light" style="background: hsl(var(--surface))"></span>
 					<span class="h-5 w-3" data-theme="dark" style="background: hsl(var(--surface))"></span>
@@ -91,19 +103,10 @@
 						Follow this computer — showing {systemPalette} now, and switching with it
 					</span>
 				</span>
-			</button>
+			</RadioGroup.Item>
 
 			{#each PALETTES as palette (palette.id)}
-				<button
-					type="button"
-					role="radio"
-					aria-checked={$appearanceStore.theme === palette.id}
-					class="flex items-center gap-2 rounded border px-2 py-2 text-left transition-colors
-						{$appearanceStore.theme === palette.id
-						? 'border-accent bg-accent-quiet'
-						: 'border-line hover:border-line-strong'}"
-					onclick={() => set({ theme: palette.id })}
-				>
+				<RadioGroup.Item value={palette.id} class={choice}>
 					<!-- The swatch is the palette applied to real elements, so it cannot
 					     drift from the tokens it is advertising. -->
 					<span
@@ -119,9 +122,9 @@
 						<span class="text-ink block truncate text-xs font-medium">{palette.label}</span>
 						<span class="text-ink-muted block text-[11px]">{paletteMode(palette.id)}</span>
 					</span>
-				</button>
+				</RadioGroup.Item>
 			{/each}
-		</div>
+		</RadioGroup.Root>
 
 		<label class="mt-3 flex items-start gap-2">
 			<input
@@ -144,23 +147,19 @@
 		<h3 class="text-ink mb-1 text-sm font-medium">Density</h3>
 		<p class="text-ink-muted mb-3 text-xs">How much fits on screen at once.</p>
 
-		<div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Density">
+		<RadioGroup.Root
+			class="grid grid-cols-2 gap-2"
+			aria-label="Density"
+			value={$appearanceStore.density}
+			onValueChange={(density) => set({ density: density as Density })}
+		>
 			{#each densities as option (option.value)}
-				<button
-					type="button"
-					role="radio"
-					aria-checked={$appearanceStore.density === option.value}
-					class="rounded border px-3 py-2 text-left transition-colors
-						{$appearanceStore.density === option.value
-						? 'border-accent bg-accent-quiet'
-						: 'border-line hover:border-line-strong'}"
-					onclick={() => set({ density: option.value })}
-				>
+				<RadioGroup.Item value={option.value} class="{choice} block px-3">
 					<span class="text-ink block text-xs font-medium">{option.label}</span>
 					<span class="text-ink-muted block text-[11px]">{option.hint}</span>
-				</button>
+				</RadioGroup.Item>
 			{/each}
-		</div>
+		</RadioGroup.Root>
 	</section>
 
 	<section>
@@ -203,18 +202,14 @@
 	<section>
 		<h3 class="text-ink mb-3 text-sm font-medium">Manuscript typeface</h3>
 
-		<div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Manuscript typeface">
+		<RadioGroup.Root
+			class="grid grid-cols-3 gap-2"
+			aria-label="Manuscript typeface"
+			value={$appearanceStore.pageFont}
+			onValueChange={(pageFont) => set({ pageFont: pageFont as Appearance['pageFont'] })}
+		>
 			{#each pageFonts as option (option.value)}
-				<button
-					type="button"
-					role="radio"
-					aria-checked={$appearanceStore.pageFont === option.value}
-					class="rounded border px-3 py-2 text-left transition-colors
-						{$appearanceStore.pageFont === option.value
-						? 'border-accent bg-accent-quiet'
-						: 'border-line hover:border-line-strong'}"
-					onclick={() => set({ pageFont: option.value })}
-				>
+				<RadioGroup.Item value={option.value ?? 'serif'} class="{choice} block px-3">
 					<span
 						class="text-ink block text-xs font-medium"
 						style="font-family: {option.value === 'serif'
@@ -226,9 +221,9 @@
 						{option.label}
 					</span>
 					<span class="text-ink-muted block text-[11px]">{option.hint}</span>
-				</button>
+				</RadioGroup.Item>
 			{/each}
-		</div>
+		</RadioGroup.Root>
 	</section>
 
 	<section class="border-line border-t pt-4">
