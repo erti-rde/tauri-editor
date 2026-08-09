@@ -637,6 +637,20 @@ body {
 		break-inside: avoid;
 	}
 
+	/*
+	 * Zoom is how large the page is drawn, not how large it is. Someone reading
+	 * at 66% to check their figure placement must not then export a manuscript
+	 * at two-thirds size — which is exactly what would happen, silently, and
+	 * only be visible once the PDF was open.
+	 *
+	 * Reset on the viewport, not on `.manuscript`: zoom multiplies down the tree,
+	 * so `zoom: 1` on a descendant means "the same as my parent" rather than
+	 * "unzoomed", and would leave the 66% in place.
+	 */
+	.page-viewport {
+		zoom: 1 !important;
+	}
+
 	/* A heading stranded at the foot of a page, or one line of a paragraph
 	   carried over, is what makes a printed manuscript look unfinished. */
 	.manuscript h1,

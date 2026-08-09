@@ -27,6 +27,7 @@
 	import EditorContent from './core/EditorContent.svelte';
 	import { paginatedExtensions } from './core/extensions';
 	import { applyPageSetup, pageSetupStore, paperById } from './pagination';
+	import { zoomStore } from './pagination/zoom';
 
 	import type { Readable } from 'svelte/store';
 	import BubbleMenu from './extensions/BubbleMenu.svelte';
@@ -464,7 +465,13 @@
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} {exportToLatex} />
 		</div>
 
-		<div class="bg-surface-sunken flex min-h-0 grow justify-center overflow-auto px-4 py-4">
+		<!-- The zoom is set here rather than on the manuscript itself, so the
+		     scrollable area shrinks with the page instead of leaving the reader
+		     scrolling past the end of a document that visibly stopped. -->
+		<div
+			class="page-viewport bg-surface-sunken flex min-h-0 grow justify-center overflow-auto px-4 py-4"
+			style="zoom: {$zoomStore}"
+		>
 			<EditorContent editor={$editor} />
 			<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
 
