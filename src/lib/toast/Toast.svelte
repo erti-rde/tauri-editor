@@ -32,7 +32,7 @@
 		addToast({
 			description: message,
 			title: 'error',
-			color: 'bg-red-500'
+			color: 'bg-danger'
 		});
 	}
 
@@ -40,7 +40,7 @@
 		addToast({
 			description: message,
 			title: 'success',
-			color: 'bg-green-500'
+			color: 'bg-success'
 		});
 	}
 </script>
@@ -57,7 +57,7 @@
 	>
 		{#each toasts as toast (toast.id)}
 			<div
-				class="rounded-lg bg-neutral-800 text-white shadow-md"
+				class="text-accent-ink rounded-lg bg-neutral-800 shadow-md"
 				in:fly={{ x: 20, duration: 300 }}
 				out:fade={{ duration: 200 }}
 				animate:flip={{ duration: 200 }}

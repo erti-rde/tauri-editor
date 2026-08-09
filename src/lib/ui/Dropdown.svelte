@@ -39,10 +39,13 @@
 <DropdownMenu.Root bind:open {...restProps}>
 	<DropdownMenu.Trigger>
 		<div
-			class={['mr-1 flex h-full w-full items-center', activeItem && 'rounded-md bg-orange-200/70']}
+			class={[
+				'mr-1 flex h-full w-full items-center',
+				activeItem && 'bg-accent-quiet/70 rounded-md'
+			]}
 		>
 			{#if activeItem}
-				<activeItem.icon class="ml-1 text-orange-600" />
+				<activeItem.icon class="text-accent ml-1" />
 			{:else}
 				{@render buttonText()}
 			{/if}
@@ -51,7 +54,7 @@
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Portal>
 		<DropdownMenu.Content
-			class="shadow-popover rounded-xl border border-slate-500 bg-white px-1 py-1.5 outline-hidden focus-visible:outline-hidden"
+			class="shadow-popover bg-surface-raised border-line-strong rounded-xl border px-1 py-1.5 outline-hidden focus-visible:outline-hidden"
 			{...contentProps}
 		>
 			<DropdownMenu.Group aria-label={ariaLabel}>
@@ -61,12 +64,12 @@
 							item.callBack();
 							activeItem = item;
 						}}
-						class="flex h-10 items-center rounded-xs py-3 pr-1.5 pl-3 text-sm font-medium ring-0! ring-transparent! transition-colors hover:bg-orange-100 focus-visible:outline-none data-highlighted:bg-orange-100"
+						class="hover:bg-accent-quiet data-highlighted:bg-accent-quiet flex h-10 items-center rounded-xs py-3 pr-1.5 pl-3 text-sm font-medium ring-0! ring-transparent! transition-colors focus-visible:outline-none"
 						textValue={item.label}
 					>
 						{#if item.icon}
 							<div class="flex items-center">
-								<item.icon class={['mr-2 h-6 w-6', item.isActive && 'text-orange-600']} />
+								<item.icon class={['mr-2 h-6 w-6', item.isActive && 'text-accent']} />
 								{item.label}
 							</div>
 						{:else}

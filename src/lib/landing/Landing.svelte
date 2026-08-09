@@ -27,7 +27,7 @@
 
 <div>
 	<p>To get started open your project</p>
-	<button class="w-100px bg-orange-200 p-2" onclick={handleFolderOpen}>Open</button>
+	<button class="w-100px bg-accent-quiet p-2" onclick={handleFolderOpen}>Open</button>
 </div>
 
 <style>

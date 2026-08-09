@@ -1,0 +1,171 @@
+/*
+ * Named palettes.
+ *
+ * Erti's own two are in tokens.css; these are the editor themes researchers
+ * already have their eyes trained on. Values are the published ones, converted
+ * to the HSL channels the token contract uses — a palette is a block of token
+ * assignments and nothing more, which is the point of the semantic layer.
+ *
+ * Catppuccin is MIT licensed. Night Owl is MIT licensed. Neither is vendored as
+ * code; these are colour values expressed against Erti's own token names.
+ */
+
+[data-theme='catppuccin-latte'] {
+	color-scheme: light;
+
+	--surface: 220 23% 95%;
+	--surface-raised: 223 16% 83%;
+	--surface-sunken: 220 21% 89%;
+	--surface-overlay: 220 22% 92%;
+
+	--ink: 234 16% 35%;
+	--ink-muted: 233 10% 47%;
+	--ink-faint: 228 11% 65%;
+
+	--line: 223 16% 83%;
+	--line-strong: 228 11% 65%;
+
+	--accent: 22 99% 52%;
+	--accent-ink: 0 0% 100%;
+	--accent-quiet: 223 16% 83%;
+
+	--danger: 347 87% 44%;
+	--warning: 35 77% 49%;
+	--success: 109 58% 40%;
+
+	--selection: 22 99% 52%;
+	--shadow-overlay: 0 0% 0% / 0.12;
+
+	/* The manuscript in this palette's own colours, used when the reader turns
+	   the paper page off. */
+	--surface-page-themed: 0 0% 100%;
+	--ink-page-themed: 234 16% 35%;
+}
+
+[data-theme='catppuccin-frappe'] {
+	color-scheme: dark;
+
+	--surface: 229 19% 23%;
+	--surface-raised: 230 16% 30%;
+	--surface-sunken: 229 20% 17%;
+	--surface-overlay: 231 19% 20%;
+
+	--ink: 227 70% 87%;
+	--ink-muted: 228 29% 73%;
+	--ink-faint: 229 13% 52%;
+
+	--line: 230 16% 30%;
+	--line-strong: 229 13% 52%;
+
+	--accent: 20 79% 70%;
+	--accent-ink: 229 20% 17%;
+	--accent-quiet: 230 16% 30%;
+
+	--danger: 359 68% 71%;
+	--warning: 40 62% 73%;
+	--success: 96 44% 68%;
+
+	--selection: 20 79% 70%;
+	--shadow-overlay: 0 0% 0% / 0.5;
+
+	/* The manuscript in this palette's own colours, used when the reader turns
+	   the paper page off. */
+	--surface-page-themed: 231 19% 20%;
+	--ink-page-themed: 227 70% 87%;
+}
+
+[data-theme='catppuccin-macchiato'] {
+	color-scheme: dark;
+
+	--surface: 232 23% 18%;
+	--surface-raised: 230 19% 26%;
+	--surface-sunken: 236 23% 12%;
+	--surface-overlay: 233 23% 15%;
+
+	--ink: 227 68% 88%;
+	--ink-muted: 227 27% 72%;
+	--ink-faint: 230 12% 49%;
+
+	--line: 230 19% 26%;
+	--line-strong: 230 12% 49%;
+
+	--accent: 21 86% 73%;
+	--accent-ink: 236 23% 12%;
+	--accent-quiet: 230 19% 26%;
+
+	--danger: 351 74% 73%;
+	--warning: 40 70% 78%;
+	--success: 105 48% 72%;
+
+	--selection: 21 86% 73%;
+	--shadow-overlay: 0 0% 0% / 0.5;
+
+	/* The manuscript in this palette's own colours, used when the reader turns
+	   the paper page off. */
+	--surface-page-themed: 233 23% 15%;
+	--ink-page-themed: 227 68% 88%;
+}
+
+[data-theme='catppuccin-mocha'] {
+	color-scheme: dark;
+
+	--surface: 240 21% 15%;
+	--surface-raised: 237 16% 23%;
+	--surface-sunken: 240 23% 9%;
+	--surface-overlay: 240 21% 12%;
+
+	--ink: 226 64% 88%;
+	--ink-muted: 228 24% 72%;
+	--ink-faint: 231 11% 47%;
+
+	--line: 237 16% 23%;
+	--line-strong: 231 11% 47%;
+
+	--accent: 23 92% 75%;
+	--accent-ink: 240 23% 9%;
+	--accent-quiet: 237 16% 23%;
+
+	--danger: 343 81% 75%;
+	--warning: 41 86% 83%;
+	--success: 115 54% 76%;
+
+	--selection: 23 92% 75%;
+	--shadow-overlay: 0 0% 0% / 0.5;
+
+	/* The manuscript in this palette's own colours, used when the reader turns
+	   the paper page off. */
+	--surface-page-themed: 240 21% 12%;
+	--ink-page-themed: 226 64% 88%;
+}
+
+[data-theme='night-owl'] {
+	color-scheme: dark;
+
+	--surface: 207 95% 8%;
+	--surface-raised: 207 48% 22%;
+	--surface-sunken: 215 100% 6%;
+	--surface-overlay: 209 93% 5%;
+
+	--ink: 217 34% 88%;
+	--ink-muted: 216 23% 71%;
+	--ink-faint: 180 9% 43%;
+
+	--line: 207 48% 22%;
+	--line-strong: 180 9% 43%;
+
+	--accent: 14 90% 70%;
+	--accent-ink: 215 100% 6%;
+	--accent-quiet: 207 48% 22%;
+
+	--danger: 1 83% 63%;
+	--warning: 35 71% 74%;
+	--success: 84 62% 63%;
+
+	--selection: 14 90% 70%;
+	--shadow-overlay: 0 0% 0% / 0.5;
+
+	/* The manuscript in this palette's own colours, used when the reader turns
+	   the paper page off. */
+	--surface-page-themed: 209 93% 5%;
+	--ink-page-themed: 217 34% 88%;
+}

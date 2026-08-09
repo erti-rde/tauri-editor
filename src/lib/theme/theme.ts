@@ -6,8 +6,31 @@
  * every user a flash of the wrong one on every launch.
  */
 
-export type ThemeChoice = 'light' | 'dark' | 'system';
+/**
+ * The palettes on offer.
+ *
+ * Erti's own two, plus the editor themes researchers already have their eyes
+ * trained on. A palette is a block of token assignments in CSS and nothing
+ * more — this list only has to agree with the selectors in palettes.css.
+ */
+export const PALETTES = [
+	{ id: 'light', label: 'Erti Light', mode: 'light' },
+	{ id: 'dark', label: 'Erti Dark', mode: 'dark' },
+	{ id: 'catppuccin-latte', label: 'Catppuccin Latte', mode: 'light' },
+	{ id: 'catppuccin-frappe', label: 'Catppuccin Frappé', mode: 'dark' },
+	{ id: 'catppuccin-macchiato', label: 'Catppuccin Macchiato', mode: 'dark' },
+	{ id: 'catppuccin-mocha', label: 'Catppuccin Mocha', mode: 'dark' },
+	{ id: 'night-owl', label: 'Night Owl', mode: 'dark' }
+] as const;
+
+export type PaletteId = (typeof PALETTES)[number]['id'];
+export type ThemeChoice = PaletteId | 'system';
 export type Density = 'compact' | 'comfortable';
+
+const PALETTE_IDS = PALETTES.map((p) => p.id) as readonly string[];
+
+export const paletteMode = (id: PaletteId): 'light' | 'dark' =>
+	PALETTES.find((p) => p.id === id)?.mode ?? 'light';
 
 export interface Appearance {
 	theme: ThemeChoice;
@@ -18,6 +41,15 @@ export interface Appearance {
 	pageSize: number;
 	/** Typeface for the manuscript. */
 	pageFont: 'serif' | 'sans' | 'mono';
+	/**
+	 * Keep the manuscript on a paper surface in dark palettes.
+	 *
+	 * On by default because long prose is harder to read inverted, and because
+	 * what is on screen should look like what comes out of the printer. It is a
+	 * choice rather than a rule, since someone who picked an editor palette may
+	 * well want the whole window in it.
+	 */
+	paperPage: boolean;
 }
 
 export const DEFAULT_APPEARANCE: Appearance = {
@@ -25,7 +57,8 @@ export const DEFAULT_APPEARANCE: Appearance = {
 	density: 'compact',
 	uiSize: 13,
 	pageSize: 16,
-	pageFont: 'serif'
+	pageFont: 'serif',
+	paperPage: true
 };
 
 /** Sizes outside this are unreadable or unusable rather than merely unusual. */
@@ -48,14 +81,16 @@ export function normalise(input: Partial<Appearance> | null | undefined): Appear
 	const raw = input ?? {};
 
 	return {
-		theme: (['light', 'dark', 'system'] as const).includes(raw.theme as ThemeChoice)
-			? (raw.theme as ThemeChoice)
-			: DEFAULT_APPEARANCE.theme,
+		theme:
+			raw.theme === 'system' || PALETTE_IDS.includes(raw.theme as string)
+				? (raw.theme as ThemeChoice)
+				: DEFAULT_APPEARANCE.theme,
 		density: raw.density === 'comfortable' ? 'comfortable' : 'compact',
 		uiSize: clamp(Number(raw.uiSize ?? DEFAULT_APPEARANCE.uiSize), UI_SIZE_RANGE),
 		pageSize: clamp(Number(raw.pageSize ?? DEFAULT_APPEARANCE.pageSize), PAGE_SIZE_RANGE),
 		pageFont:
-			raw.pageFont && raw.pageFont in PAGE_FONTS ? raw.pageFont : DEFAULT_APPEARANCE.pageFont
+			raw.pageFont && raw.pageFont in PAGE_FONTS ? raw.pageFont : DEFAULT_APPEARANCE.pageFont,
+		paperPage: raw.paperPage !== false
 	};
 }
 
@@ -64,7 +99,8 @@ export function systemTheme(matches: boolean): 'light' | 'dark' {
 	return matches ? 'dark' : 'light';
 }
 
-export function resolveTheme(choice: ThemeChoice, prefersDark: boolean): 'light' | 'dark' {
+/** The palette actually in force, resolving `system` against the OS. */
+export function resolveTheme(choice: ThemeChoice, prefersDark: boolean): PaletteId {
 	return choice === 'system' ? systemTheme(prefersDark) : choice;
 }
 
@@ -79,8 +115,13 @@ export function applyAppearance(
 	appearance: Appearance,
 	prefersDark: boolean
 ): void {
-	root.dataset.theme = resolveTheme(appearance.theme, prefersDark);
+	const palette = resolveTheme(appearance.theme, prefersDark);
+
+	root.dataset.theme = palette;
 	root.dataset.density = appearance.density;
+	// The page follows the palette only when the reader asks it to; the default
+	// keeps prose on paper.
+	root.dataset.page = appearance.paperPage ? 'paper' : 'themed';
 
 	root.style.setProperty('--ui-size', `${appearance.uiSize}px`);
 	root.style.setProperty('--page-size', `${appearance.pageSize}px`);

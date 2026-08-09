@@ -68,28 +68,28 @@
 </script>
 
 <div
-	class="fixed top-0 right-0 z-10 h-full w-[400px] overflow-auto border-l border-gray-200 bg-white shadow-lg"
+	class="border-line bg-surface-raised fixed top-0 right-0 z-10 h-full w-[400px] overflow-auto border-l shadow-lg"
 	transition:fly={{ x: 400, duration: 300 }}
 >
 	<div
-		class="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3"
+		class="border-line bg-surface-raised sticky top-0 z-20 flex items-center justify-between border-b px-4 py-3"
 	>
 		<h3 class="text-lg font-bold">Edit Source</h3>
 		<div>
 			<button
-				class="mr-2 rounded bg-orange-500 px-3 py-1 text-white hover:bg-orange-600"
+				class="bg-accent text-accent-ink hover:bg-accent mr-2 rounded px-3 py-1"
 				onclick={handleSave}
 			>
 				Save
 			</button>
-			<button class="rounded-full p-1 hover:bg-gray-100" onclick={onclose}>
+			<button class="hover:bg-surface-sunken rounded-full p-1" onclick={onclose}>
 				<Icon icon="X" class="h-5 w-5" />
 			</button>
 		</div>
 	</div>
 	<div class="p-4">
 		<div class="mb-4">
-			<label class="mb-1 block text-sm font-medium text-gray-700">
+			<label class="text-ink mb-1 block text-sm font-medium">
 				Source Type
 				<Select
 					placeholder="Select Source type"
@@ -117,11 +117,11 @@
 									onValueChange={(value) => value && handleDateValueChange(cslField, value)}
 								/>
 							{:else}
-								<label class="mb-1 block text-sm font-medium text-gray-700">
+								<label class="text-ink mb-1 block text-sm font-medium">
 									{label}
 									<input
 										type={inputType}
-										class="w-full rounded-md border border-gray-300 p-2"
+										class="border-line-strong w-full rounded-md border p-2"
 										bind:value={source[cslField]}
 										oninput={(event) => (source[cslField] = event.currentTarget.value)}
 									/>
@@ -132,7 +132,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="text-gray-500 italic">Select a source type to see available fields</div>
+			<div class="text-ink-muted italic">Select a source type to see available fields</div>
 		{/if}
 	</div>
 </div>

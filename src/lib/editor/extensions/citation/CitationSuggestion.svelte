@@ -128,7 +128,7 @@
 
 <!-- <NodeViewWrapper> -->
 <div
-	class="citation-suggestions flex w-[380px] flex-col overflow-hidden rounded-lg bg-white shadow-md"
+	class="citation-suggestions bg-surface-raised flex w-[380px] flex-col overflow-hidden rounded-lg shadow-md"
 	role="dialog"
 	aria-label="Citation suggestions"
 >
@@ -141,11 +141,12 @@
 						id="citation-item-{index}"
 						role="option"
 						aria-selected={selectedItems.has(item.id)}
-						class="cursor-pointer border-l-[3px] border-transparent px-4 py-3 transition-colors"
-						class:bg-teal-50={focusedIndex === index && !isInvalid}
-						class:bg-red-50={focusedIndex === index && isInvalid}
-						class:border-l-teal-500={focusedIndex === index && !isInvalid}
-						class:border-l-red-400={focusedIndex === index && isInvalid}
+						class="cursor-pointer border-l-[3px] px-4 py-3 transition-colors
+							{focusedIndex !== index
+							? 'border-transparent'
+							: isInvalid
+								? 'border-l-danger bg-danger/10'
+								: 'border-l-accent bg-accent-quiet'}"
 						tabindex="-1"
 						onclick={() => toggleItemSelection(item)}
 						onkeydown={(e) => handleKeyDown(e, item)}
@@ -154,7 +155,7 @@
 							{#if isInvalid}
 								<!-- Warning indicator for invalid sources -->
 								<div
-									class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-red-300 text-red-500"
+									class="border-danger text-danger mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2"
 									aria-hidden="true"
 								>
 									<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -170,13 +171,17 @@
 								<!-- Normal checkbox for valid sources -->
 								<div
 									class="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2"
-									class:bg-teal-500={selectedItems.has(item.id)}
-									class:border-slate-300={!selectedItems.has(item.id)}
-									class:border-teal-500={selectedItems.has(item.id)}
+									class:bg-accent={selectedItems.has(item.id)}
+									class:border-line-strong={!selectedItems.has(item.id)}
+									class:border-accent={selectedItems.has(item.id)}
 									aria-hidden="true"
 								>
 									{#if selectedItems.has(item.id)}
-										<svg viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5 text-white">
+										<svg
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="text-accent-ink h-3.5 w-3.5"
+										>
 											<path
 												fill-rule="evenodd"
 												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -189,16 +194,16 @@
 
 							<div class="flex flex-1 flex-col gap-1">
 								<div class="flex items-baseline justify-between">
-									<span class="flex items-center gap-1 font-semibold text-gray-900">
+									<span class="text-ink flex items-center gap-1 font-semibold">
 										{#if hasValidAuthor(item)}
 											{#each item.author as author, idx (idx)}
 												{`${author.given || ''} ${author.family || ''}${idx !== item.author.length - 1 ? ', ' : ''}`}
 											{/each}
 										{:else}
-											<span class="flex items-center text-red-500">
+											<span class="text-danger flex items-center">
 												Unknown Author
 												<span
-													class="ml-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-xs text-red-400"
+													class="border-danger bg-surface-sunken text-danger ml-1 rounded-full border px-1.5 py-0.5 text-xs"
 												>
 													Missing Data
 												</span>
@@ -206,12 +211,12 @@
 										{/if}
 									</span>
 								</div>
-								<span class="text-[0.95em] leading-relaxed text-gray-700 italic">
+								<span class="text-ink text-[0.95em] leading-relaxed italic">
 									{item.title || 'Untitled'}
 								</span>
 
 								{#if isInvalid}
-									<p class="mt-1 text-xs text-red-500">
+									<p class="text-danger mt-1 text-xs">
 										This source is missing author information and cannot be cited until the source
 										information is updated.
 									</p>
@@ -223,11 +228,11 @@
 			</ul>
 		</div>
 
-		<div class="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3">
-			<div class="flex gap-3 text-xs text-gray-600">
+		<div class="border-line bg-surface-sunken flex items-center justify-between border-t px-4 py-3">
+			<div class="text-ink-muted flex gap-3 text-xs">
 				<span class="flex items-center gap-1">
 					<kbd
-						class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded border border-slate-300 bg-slate-100 px-1 font-mono text-[11px] shadow-sm"
+						class="border-line-strong bg-surface-sunken inline-flex h-[18px] min-w-[18px] items-center justify-center rounded border px-1 font-mono text-[11px] shadow-sm"
 					>
 						↵
 					</kbd>
@@ -235,7 +240,7 @@
 				</span>
 				<span class="flex items-center gap-1">
 					<kbd
-						class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded border border-slate-300 bg-slate-100 px-1 font-mono text-[11px] shadow-sm"
+						class="border-line-strong bg-surface-sunken inline-flex h-[18px] min-w-[18px] items-center justify-center rounded border px-1 font-mono text-[11px] shadow-sm"
 					>
 						Tab
 					</kbd>
@@ -244,9 +249,9 @@
 			</div>
 			<div class="flex gap-2">
 				<button
-					class="focus:ring-opacity-50 rounded border border-teal-600 bg-teal-500 px-3 py-1.5 text-sm font-medium text-white
-          transition-colors hover:bg-teal-600 focus:ring-2 focus:ring-teal-400 focus:outline-none
-          disabled:cursor-not-allowed disabled:border-slate-400 disabled:bg-slate-300 disabled:text-slate-50"
+					class="focus:ring-opacity-50 text-accent-ink bg-accent disabled:border-line-strong disabled:text-accent-ink border-accent hover:bg-accent focus:ring-accent disabled:bg-surface-sunken rounded
+          border px-3 py-1.5 text-sm font-medium
+          transition-colors focus:ring-2 focus:outline-none disabled:cursor-not-allowed"
 					disabled={selectedItems.size === 0 && initialSelection.length === 0}
 					onclick={insertSelectedCitations}
 					aria-label="Insert selected citations"
@@ -260,7 +265,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="px-4 py-6 text-center text-gray-500 italic">No citations found</div>
+		<div class="text-ink-muted px-4 py-6 text-center italic">No citations found</div>
 	{/if}
 </div>
 

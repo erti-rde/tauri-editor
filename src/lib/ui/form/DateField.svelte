@@ -9,9 +9,10 @@
 </script>
 
 <DateField.Root bind:value bind:placeholder {...restProps}>
-	<DateField.Label class="mb-1 block text-sm font-medium text-gray-700">{labelText}</DateField.Label
+	<DateField.Label class="text-ink mb-1 block text-sm font-medium">{labelText}</DateField.Label>
+	<DateField.Input
+		class="border-line-strong data-invalid:border-danger w-full rounded-md border p-2"
 	>
-	<DateField.Input class="w-full rounded-md border border-gray-300 p-2 data-invalid:border-red-400">
 		{#snippet children({ segments })}
 			{#each segments as { part, value }, i (i)}
 				<DateField.Segment {part}>

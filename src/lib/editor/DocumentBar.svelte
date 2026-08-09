@@ -49,7 +49,7 @@
 <div class="border-line bg-surface flex items-center gap-px overflow-x-auto border-b px-2">
 	{#each documents as document (document.path)}
 		<button
-			class="shrink-0 border-b-2 px-3 py-1.5 text-xs whitespace-nowrap transition-colors
+			class="document-tab shrink-0 border-b-2 px-3 text-xs whitespace-nowrap transition-colors
 				{document.path === current?.path
 				? 'border-accent bg-surface-raised text-ink'
 				: 'text-ink-muted hover:bg-surface-raised hover:text-ink border-transparent'}"

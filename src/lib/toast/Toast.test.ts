@@ -48,7 +48,8 @@ describe('Toast Component', () => {
 
 		const title = screen.getByText('success');
 		const messageInToast = screen.getByText(message);
-		const greenDot = document.querySelector('.bg-green-500');
+		// The status dot is now a semantic token, so it means the same in every palette.
+		const greenDot = document.querySelector('.bg-success');
 
 		expect(title).toBeTruthy();
 		expect(messageInToast).toBeTruthy();
@@ -62,7 +63,7 @@ describe('Toast Component', () => {
 
 		const title = screen.getByText('error');
 		const message = screen.getByText('error message');
-		const redDot = document.querySelector('.bg-red-500');
+		const redDot = document.querySelector('.bg-danger');
 
 		expect(title).toBeTruthy();
 		expect(message).toBeTruthy();
