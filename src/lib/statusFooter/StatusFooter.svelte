@@ -79,9 +79,9 @@
 				{:else if $documentStatus.save === 'saving'}
 					Saving…
 				{:else if $documentStatus.save === 'pending'}
-					<span class="text-ink-faint">Unsaved</span>
+					<span class="text-ink-muted">Unsaved</span>
 				{:else}
-					<span class="text-ink-faint">Saved</span>
+					<span class="text-ink-muted">Saved</span>
 				{/if}
 			</span>
 		{/if}

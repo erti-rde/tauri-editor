@@ -182,7 +182,7 @@
 
 			<div class="relative max-w-md">
 				<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-					<Icon icon="Search" class="text-ink-faint h-4 w-4" />
+					<Icon icon="Search" class="text-ink-muted h-4 w-4" />
 				</div>
 				<input
 					type="text"
@@ -268,7 +268,7 @@
 
 		{#if loading}
 			<div class="flex h-20 items-center justify-center">
-				<div class="text-ink-faint animate-pulse">Loading sources...</div>
+				<div class="text-ink-muted animate-pulse">Loading sources...</div>
 			</div>
 		{:else if filteredSources.length === 0}
 			<div class="bg-surface-sunken rounded-lg p-4 text-center">
@@ -328,7 +328,7 @@
 							{#if describeAuthors(source.metadata)}
 								<span class="truncate">{describeAuthors(source.metadata)}</span>
 							{:else}
-								<span class="text-ink-faint flex items-center text-xs">
+								<span class="text-ink-muted flex items-center text-xs">
 									<span>No author</span>
 								</span>
 							{/if}

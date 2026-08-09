@@ -33,7 +33,12 @@
 
 	--ink: 215 25% 15%;
 	--ink-muted: 215 12% 45%;
-	--ink-faint: 215 10% 62%;
+	/* Not for text. It reads at ~3:1, which is the threshold for a border or an
+	   icon and well under the 4.5 that prose needs — and it cannot be raised to
+	   4.5 without collapsing onto --ink-muted, which is 4.77 here. It was
+	   carrying the save state, project paths and timestamps at 2.3:1; those are
+	   --ink-muted now. Use this for disabled states and decoration only. */
+	--ink-faint: 215 10% 56.5%;
 
 	/* One-pixel rules do the work shadows would. */
 	--line: 214 15% 88%;
