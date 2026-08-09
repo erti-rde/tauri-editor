@@ -125,7 +125,14 @@
 		</div>
 	{:then matches}
 		{#if matches.length > 0}
-			{#each matches as match, i (i)}
+			<!--
+				Keyed by the chunk's own identity, not by position. Keying by index
+				made Svelte reuse a card for whatever landed in that slot next, so a
+				second search left each card's expanded state — and, until the
+				derivations inside it were fixed, its score and DOI link — belonging
+				to the previous search's match.
+			-->
+			{#each matches as match (`${match.sha256}:${match.idx}`)}
 				<ResultCard
 					sentenceMetadata={match}
 					oncite={() => cite(match)}
