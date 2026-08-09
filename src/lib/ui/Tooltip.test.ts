@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 
-import TooltipHarness from './TooltipHarness.test.svelte';
+import TooltipHarness from './TooltipHarness.svelte';
 
 /**
  * The gap this closes: every gate passed while the app would not start.
