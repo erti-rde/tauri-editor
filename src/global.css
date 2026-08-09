@@ -578,12 +578,13 @@ body {
  * otherwise appear in someone's submission, and a missing rule is invisible
  * until it is in a PDF on an editor's desk.
  */
-@page {
-	size: letter;
-	/* Journals ask for one inch, and it is what Word gives by default, so a
-	   manuscript exported here matches what a co-author sends back. */
-	margin: 1in;
-}
+/*
+ * `@page` is not here. It is written at runtime by the page-setup store, into a
+ * <style> element, because the rule takes no custom properties — `size:
+ * var(--paper)` is not valid CSS, which is why paper size could not be a
+ * setting. See src/lib/editor/pagination/paper.ts for the rule and, more
+ * importantly, for why its margin is zero while the page box draws its own.
+ */
 
 @media print {
 	body * {
@@ -598,15 +599,42 @@ body {
 	.manuscript {
 		position: absolute;
 		inset: 0;
-		/* The page furniture belongs to the screen: on paper the margin comes
-		   from @page, and the border and shadow would print as artefacts. */
-		width: 100%;
-		max-width: none;
+		/* The border and shadow are screen furniture and would print as artefacts.
+		   Width is left alone: when the document is paginated the element is
+		   exactly one sheet wide by construction, and overriding it to 100% would
+		   stretch a Letter layout across whatever the printer's sheet happens to
+		   be — reflowing the text and changing the page count between what the
+		   author saw and what the journal receives. */
 		margin: 0;
-		padding: 0 !important;
 		border: none !important;
 		box-shadow: none !important;
 		background: white;
+	}
+
+	/*
+	 * The gap between pages is the desk the sheets are lying on rather than part
+	 * of any sheet, so it must not print. Collapsing it to nothing — not merely
+	 * hiding it — is what keeps each page box starting where the printer's page
+	 * starts; a hidden element that still occupies 24px would walk the content
+	 * down the sheet a little further on every page.
+	 */
+	.rm-pagination-gap {
+		display: none !important;
+		height: 0 !important;
+		border: none !important;
+	}
+
+	/* A break is where the printer should break, now that the gap is gone. */
+	.rm-page-break {
+		break-after: page;
+	}
+
+	/* Running heads are real content and do print — that is how a page number
+	   reaches the PDF at all, since Chromium will not put a page counter into an
+	   @page margin box for HTML. */
+	.rm-page-header,
+	.rm-page-footer {
+		break-inside: avoid;
 	}
 
 	/* A heading stranded at the foot of a page, or one line of a paragraph
