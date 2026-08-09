@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AppearanceSettings from './AppearanceSettings.svelte';
 	import { onMount } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { load as loadStore } from '@tauri-apps/plugin-store';
@@ -380,15 +381,11 @@
 							: 'hidden'} p-5"
 					>
 						<div class="mb-8">
-							<h3 class="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">
-								Appearance Settings
+							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
+								Appearance
 							</h3>
 
-							<div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-								<p class="text-gray-600 italic">
-									Appearance settings will be available in a future update.
-								</p>
-							</div>
+							<AppearanceSettings />
 						</div>
 					</div>
 				</div>

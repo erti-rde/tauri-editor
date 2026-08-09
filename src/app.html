@@ -5,6 +5,19 @@
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		%sveltekit.head%
+		<script>
+			// Runs before the first paint. The stored appearance arrives a tick later
+			// from the settings file, so the OS preference is used until then —
+			// without this, every launch on a dark-mode machine flashes white.
+			try {
+				document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)')
+					.matches
+					? 'dark'
+					: 'light';
+			} catch {
+				document.documentElement.dataset.theme = 'light';
+			}
+		</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>

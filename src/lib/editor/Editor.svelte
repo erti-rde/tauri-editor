@@ -99,7 +99,7 @@
 				attributes: {
 					style: 'padding-left: 56px; padding-right: 56px',
 					class:
-						'manuscript focus:outline-none bg-white border border-[#C7C7C7] flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
+						'manuscript focus:outline-none border border-line flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
 				}
 			},
 			autofocus: 'end',
@@ -422,7 +422,7 @@
 </script>
 
 {#if $editor}
-	<div class="flex h-full w-full flex-col bg-[#FAFBFD]">
+	<div class="bg-surface flex h-full w-full flex-col">
 		<div class="z-10 mb-1 shrink-0">
 			<DocumentBar
 				documents={$documentsStore.documents}
@@ -439,13 +439,16 @@
 				it stays put instead of disappearing like a toast, because it is the
 				one thing the user must not miss.
 			-->
-			<div class="flex items-center justify-end gap-4 px-4 pb-1 text-xs">
+			<div class="border-line flex items-center justify-end gap-4 border-b px-4 pb-1 text-[11px]">
 				<!--
 					Body words, with the references counted separately: a journal's
 					limit applies to the text, and folding the works cited into one
 					total would report an author as over a limit they had not crossed.
 				-->
-				<span class="text-gray-400" title="{words.references} words in references and notes">
+				<span
+					class="text-ink-faint font-mono"
+					title="{words.references} words in references and notes"
+				>
 					{words.body.toLocaleString()}
 					{words.body === 1 ? 'word' : 'words'}
 					{#if wordTarget > 0}
@@ -457,19 +460,19 @@
 
 				<span aria-live="polite">
 					{#if saveState === 'error'}
-						<span class="font-medium text-red-600">Not saved — retrying, your work is kept</span>
+						<span class="text-danger font-medium">Not saved — retrying, your work is kept</span>
 					{:else if saveState === 'saving'}
-						<span class="text-gray-500">Saving…</span>
+						<span class="text-ink-muted">Saving…</span>
 					{:else if saveState === 'pending'}
-						<span class="text-gray-400">Unsaved changes</span>
+						<span class="text-ink-faint">Unsaved changes</span>
 					{:else}
-						<span class="text-gray-400">Saved</span>
+						<span class="text-ink-faint">Saved</span>
 					{/if}
 				</span>
 			</div>
 		</div>
 
-		<div class="flex min-h-0 grow justify-center overflow-auto bg-[#f9fbfd] px-4">
+		<div class="bg-surface-sunken flex min-h-0 grow justify-center overflow-auto px-4 py-4">
 			<EditorContent editor={$editor} />
 			<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
 

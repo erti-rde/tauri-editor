@@ -108,9 +108,11 @@ describe('Settings.svelte', () => {
 		// Test: All tabs render correctly
 		it('renders all three tabs correctly', async () => {
 			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
-			expect(screen.getByText('General')).toBeInTheDocument();
-			expect(screen.getByText('Citations')).toBeInTheDocument();
-			expect(screen.getByText('Appearance')).toBeInTheDocument();
+			// By role, not by text: "Appearance" is now both a tab and the heading of
+			// the panel it opens, and a bare text query cannot tell them apart.
+			expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument();
+			expect(screen.getByRole('button', { name: 'Citations' })).toBeInTheDocument();
+			expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument();
 		});
 
 		// Test: Each tab shows the correct content when selected
@@ -143,11 +145,11 @@ describe('Settings.svelte', () => {
 			expect(parentPanel).toHaveClass('hidden');
 
 			// Switch to Appearance tab
-			await fireEvent.click(screen.getByText('Appearance'));
-			expect(screen.getByText('Appearance Settings')).toBeVisible();
-			expect(
-				screen.getByText('Appearance settings will be available in a future update.')
-			).toBeVisible();
+			await fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+			expect(screen.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+			// The panel is real now; it used to promise a future update.
+			expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+			expect(screen.getByRole('radio', { name: /System/ })).toBeVisible();
 
 			// Citations tab should now be hidden
 			expect(citationsPanel).toHaveClass('hidden');

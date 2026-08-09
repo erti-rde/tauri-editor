@@ -23,15 +23,15 @@
 
 <div
 	class="status-bar
+    border-line
+    bg-surface
+    text-ink-muted
     flex
     items-center
     justify-between
     border-t
-    border-teal-900
-    bg-teal-900
-    px-4
-    text-xs
-    text-white"
+    px-3
+    text-[11px]"
 >
 	{#if $statusData}
 		<div class="flex items-center gap-2">
