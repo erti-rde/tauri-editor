@@ -83,4 +83,16 @@ describe('applying it', () => {
 
 		expect(root.style.getPropertyValue('--page-font')).toContain('monospace');
 	});
+
+	it('does not take a font name off the prototype chain', () => {
+		// `in` walks the prototype, so `"toString"` and `"__proto__"` passed the
+		// check and were written into the stylesheet as a font family.
+		const root = document.createElement('html');
+
+		for (const hostile of ['toString', '__proto__', 'constructor']) {
+			applyAppearance(root, normalise({ pageFont: hostile as never }), false);
+
+			expect(root.style.getPropertyValue('--page-font')).toContain('Iowan Old Style');
+		}
+	});
 });

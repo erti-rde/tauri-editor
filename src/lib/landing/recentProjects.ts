@@ -60,11 +60,21 @@ export function withProject(
 export function normaliseRecents(input: unknown): RecentProject[] {
 	if (!Array.isArray(input)) return [];
 
+	// A path appears once. Svelte keys the list by path, so a duplicate from a
+	// settings file written by an older build crashes the landing screen rather
+	// than merely showing the row twice.
+	const seen = new Set<string>();
+
 	return input
 		.filter(
 			(entry): entry is RecentProject =>
 				!!entry && typeof entry.path === 'string' && entry.path.length > 0
 		)
+		.filter((entry) => {
+			if (seen.has(entry.path)) return false;
+			seen.add(entry.path);
+			return true;
+		})
 		.map((entry) => ({
 			path: entry.path,
 			name: typeof entry.name === 'string' && entry.name ? entry.name : projectName(entry.path),
@@ -118,7 +128,12 @@ export function describeWhen(iso: string, now = new Date()): string {
 	if (days <= 0) return 'today';
 	if (days === 1) return 'yesterday';
 	if (days < 7) return `${days} days ago`;
-	if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-	if (days < 365) return `${Math.floor(days / 30)} months ago`;
+	if (days < 30) return plural(Math.floor(days / 7), 'week');
+	if (days < 365) return plural(Math.floor(days / 30), 'month');
 	return 'over a year ago';
+}
+
+/** "1 week ago", not "1 weeks ago". */
+function plural(count: number, unit: string): string {
+	return `${count} ${unit}${count === 1 ? '' : 's'} ago`;
 }
