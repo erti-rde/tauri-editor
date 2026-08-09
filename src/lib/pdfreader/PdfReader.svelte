@@ -91,6 +91,6 @@
 	}
 
 	.error {
-		color: red;
+		color: hsl(var(--danger));
 	}
 </style>
