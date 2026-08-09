@@ -8,6 +8,7 @@
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { Icon } from '$lib';
 	import { augmentSchema } from './adapterCslZotero';
+	import { describeAuthors, describeType } from './sourceRows';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 
 	type Source = {
@@ -123,16 +124,6 @@
 		}
 	}
 
-	function getAuthorDisplay(source: Source) {
-		if (!source.metadata) return null;
-		const authors = source.metadata.author;
-		if (authors && authors.length > 0) {
-			return `${authors[0].family}, ${authors[0].given}`;
-		}
-
-		return null;
-	}
-
 	function handleSourceSelect(sourceId: string) {
 		selectedSourceId = sourceId;
 		const source = sources.find((s) => s.id === sourceId);
@@ -173,7 +164,7 @@
 			? sources.filter(
 					(s) =>
 						(s.metadata?.title || s.file_name).toLowerCase().includes(searchQuery.toLowerCase()) ||
-						(getAuthorDisplay(s) || '').toLowerCase().includes(searchQuery.toLowerCase())
+						(describeAuthors(s.metadata) || '').toLowerCase().includes(searchQuery.toLowerCase())
 				)
 			: sources;
 	});
@@ -286,10 +277,18 @@
 				</p>
 			</div>
 		{:else}
-			<!-- Table-like layout for sources -->
+			<!--
+				Table-like layout for sources.
+
+				The header and the rows have to declare the same tracks. They did
+				not: the header spanned 1+5+3+3 and the rows 5+3+3, so every column
+				of data sat one grid column to the left of the heading naming it,
+				and "Type" labelled nothing at all — the field was never rendered,
+				though every resolved source carries one.
+			-->
 			<div class="text-ink-muted mb-2 grid grid-cols-12 gap-3 px-3 text-xs font-medium uppercase">
-				<div class="col-span-1">Type</div>
-				<div class="col-span-5">Title</div>
+				<div class="col-span-2">Type</div>
+				<div class="col-span-4">Title</div>
 				<div class="col-span-3">Author</div>
 				<div class="col-span-3">File</div>
 			</div>
@@ -309,8 +308,13 @@
 						aria-current={selectedSourceId === source.id ? 'true' : undefined}
 						onclick={() => handleSourceSelect(source.id)}
 					>
+						<!-- Type -->
+						<div class="col-span-2 flex items-center">
+							<span class="text-ink-muted truncate text-xs">{describeType(source.metadata)}</span>
+						</div>
+
 						<!-- Title -->
-						<div class="col-span-5 flex items-center">
+						<div class="col-span-4 flex items-center">
 							<div class="truncate">
 								<span class="font-medium">{source.metadata?.title || source.file_name}</span>
 								{#if !source.metadata?.title}
@@ -321,8 +325,8 @@
 
 						<!-- Author -->
 						<div class="text-ink-muted col-span-3 flex items-center text-sm">
-							{#if getAuthorDisplay(source)}
-								<span class="truncate">{getAuthorDisplay(source)}</span>
+							{#if describeAuthors(source.metadata)}
+								<span class="truncate">{describeAuthors(source.metadata)}</span>
 							{:else}
 								<span class="text-ink-faint flex items-center text-xs">
 									<span>No author</span>
