@@ -89,7 +89,9 @@ export function normalise(input: Partial<Appearance> | null | undefined): Appear
 		uiSize: clamp(Number(raw.uiSize ?? DEFAULT_APPEARANCE.uiSize), UI_SIZE_RANGE),
 		pageSize: clamp(Number(raw.pageSize ?? DEFAULT_APPEARANCE.pageSize), PAGE_SIZE_RANGE),
 		pageFont:
-			raw.pageFont && raw.pageFont in PAGE_FONTS ? raw.pageFont : DEFAULT_APPEARANCE.pageFont,
+			raw.pageFont && Object.hasOwn(PAGE_FONTS, raw.pageFont)
+				? raw.pageFont
+				: DEFAULT_APPEARANCE.pageFont,
 		paperPage: raw.paperPage !== false
 	};
 }

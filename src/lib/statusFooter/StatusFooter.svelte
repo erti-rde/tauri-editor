@@ -69,17 +69,22 @@
 			</span>
 		{/if}
 
-		<span aria-live="polite">
-			{#if $documentStatus.save === 'error'}
-				<span class="text-danger font-medium">Not saved — retrying</span>
-			{:else if $documentStatus.save === 'saving'}
-				Saving…
-			{:else if $documentStatus.save === 'pending'}
-				<span class="text-ink-faint">Unsaved</span>
-			{:else}
-				<span class="text-ink-faint">Saved</span>
-			{/if}
-		</span>
+		<!-- Only once a manuscript is actually open. `clear()` resets save to
+		     `idle`, which otherwise rendered a confident "Saved" on the landing
+		     screen, about nothing. The word count is the open-document signal. -->
+		{#if $documentStatus.words !== null}
+			<span aria-live="polite">
+				{#if $documentStatus.save === 'error'}
+					<span class="text-danger font-medium">Not saved — retrying</span>
+				{:else if $documentStatus.save === 'saving'}
+					Saving…
+				{:else if $documentStatus.save === 'pending'}
+					<span class="text-ink-faint">Unsaved</span>
+				{:else}
+					<span class="text-ink-faint">Saved</span>
+				{/if}
+			</span>
+		{/if}
 	</div>
 </div>
 

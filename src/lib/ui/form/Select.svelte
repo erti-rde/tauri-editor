@@ -24,7 +24,7 @@ from the perspective of the consumer of this component, it will be typed appropr
 -->
 <Select.Root bind:value={value as never} {...restProps}>
 	<Select.Trigger
-		class="border-line-strong bg-surface-raised text-ink hover:border-line-strong focus:border-accent focus:ring-accent/20 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm shadow-sm focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+		class="border-line-strong bg-surface-raised text-ink hover:border-line-strong focus-visible:border-accent focus-visible:ring-accent/20 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm shadow-sm focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		<span class="truncate">
 			{#if selectedLabel}

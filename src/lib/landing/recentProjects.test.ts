@@ -60,6 +60,20 @@ describe('reading what was stored', () => {
 	it('fills in a name that was not stored', () => {
 		expect(normaliseRecents([{ path: '/Users/ako/thesis' }])[0].name).toBe('thesis');
 	});
+
+	it('lists a path once, however many times it was stored', () => {
+		// Svelte keys the landing list by path, so a duplicate is not a cosmetic
+		// repeat — it takes the launch screen down with a duplicate-key error.
+		const list = normaliseRecents([
+			{ path: '/a', openedAt: '2020-01-02' },
+			{ path: '/a', openedAt: '2020-01-01' },
+			{ path: '/b', openedAt: '2020-01-01' }
+		]);
+
+		expect(list.map((p) => p.path)).toEqual(['/a', '/b']);
+		// The first wins, because the list is already newest-first.
+		expect(list[0].openedAt).toBe('2020-01-02');
+	});
 });
 
 describe('saying when', () => {
@@ -71,9 +85,16 @@ describe('saying when', () => {
 		expect(ago(0)).toBe('today');
 		expect(ago(1)).toBe('yesterday');
 		expect(ago(3)).toBe('3 days ago');
-		expect(ago(10)).toBe('1 weeks ago');
 		expect(ago(60)).toBe('2 months ago');
 		expect(ago(500)).toBe('over a year ago');
+	});
+
+	it('counts in singular where the count is one', () => {
+		// This assertion previously read `'1 weeks ago'` — the test encoded the
+		// bug as the expectation, which is why nothing caught it.
+		expect(ago(10)).toBe('1 week ago');
+		expect(ago(35)).toBe('1 month ago');
+		expect(ago(20)).toBe('2 weeks ago');
 	});
 
 	it('says nothing rather than something wrong', () => {
