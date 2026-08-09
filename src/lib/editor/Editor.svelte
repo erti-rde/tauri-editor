@@ -25,7 +25,8 @@
 	import DocumentBar from './DocumentBar.svelte';
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
-	import { editorExtensions } from './core/extensions';
+	import { paginatedExtensions } from './core/extensions';
+	import { applyPageSetup, pageSetupStore, paperById } from './pagination';
 
 	import type { Readable } from 'svelte/store';
 	import BubbleMenu from './extensions/BubbleMenu.svelte';
@@ -94,16 +95,24 @@
 			target: Number((await (await loadStore('settings-store.json')).get('wordCount')) ?? 0)
 		});
 
+		// Before the editor is built: pagination has to be configured with the
+		// paper size, and reading it afterwards would lay the first document out
+		// as Letter and then reflow it.
+		await pageSetupStore.initialise();
+		const setup = get(pageSetupStore);
+
 		editor = createEditor({
 			editorProps: {
 				attributes: {
-					style: 'padding-left: 56px; padding-right: 56px',
-					class:
-						'manuscript border border-line flex flex-col w-[816px] pt-10 pr-14 pb-10 cursor-text'
+					// Width and padding come from the page setup now. They were
+					// hard-coded to US Letter, so choosing A4 would have left the text
+					// column at Letter's width on an A4 sheet.
+					style: `width: ${paperById(setup.paper).widthPx}px`,
+					class: 'manuscript border border-line flex flex-col cursor-text'
 				}
 			},
 			autofocus: 'end',
-			extensions: editorExtensions,
+			extensions: paginatedExtensions(setup),
 			content: await getDocumentData(),
 
 			onUpdate: ({ editor }) => {
@@ -149,6 +158,24 @@
 				$editor.commands.updateAllCitation();
 			}
 		});
+	});
+
+	/**
+	 * Re-lay the pages when the setup changes.
+	 *
+	 * Settings applies immediately rather than on Save, and page setup is a
+	 * choice nobody can evaluate without seeing it — a 1.5in margin is an
+	 * abstraction until the text column narrows in front of you.
+	 */
+	$effect(() => {
+		const setup = $pageSetupStore;
+		const instance = $editor;
+		if (!instance) return;
+
+		applyPageSetup(instance, setup);
+		// The element's own width is not the paginator's business, and it has to
+		// track the paper or an A4 document sits in a Letter-wide column.
+		instance.view.dom.style.width = `${paperById(setup.paper).widthPx}px`;
 	});
 
 	onDestroy(() => {

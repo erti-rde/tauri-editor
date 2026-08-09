@@ -11,6 +11,7 @@ import { Bibliography } from '../extensions/citation/Bibliography';
 import { Citation } from '../extensions/citation/Citation';
 import { PageBreak } from '../extensions/PageBreak';
 import { Notes } from '../extensions/citation/Notes';
+import { DEFAULT_PAGE_SETUP, pagination, type PageSetup } from '../pagination';
 
 /**
  * The editor's extension set.
@@ -49,3 +50,15 @@ export const editorExtensions = [
 	Bibliography,
 	PageBreak
 ];
+
+/**
+ * The same set, with pages laid out to the author's page setup.
+ *
+ * A function because pagination needs the paper size, and that is a setting
+ * read from disk after this module loads. `editorExtensions` stays exported and
+ * unpaginated so the extension tests keep constructing an editor without a DOM
+ * to measure — pagination measures rendered heights, which jsdom does not have.
+ */
+export function paginatedExtensions(setup: PageSetup = DEFAULT_PAGE_SETUP) {
+	return [...editorExtensions, pagination(setup)];
+}
