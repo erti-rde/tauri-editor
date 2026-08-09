@@ -106,14 +106,6 @@ describe.each(PALETTES.map((p) => [p.id, p.label] as const))('%s', (id) => {
 		expect(contrast(at('accent'), at('surface'))).toBeGreaterThanOrEqual(AA_LARGE);
 	});
 
-	it('shows danger and success against the surface', () => {
-		// danger is held to the body-text threshold, not the 3:1 one: StatusFooter
-		// and PdfReader both render error *prose* in it, and prose at 3:1 is the
-		// exact failure this suite exists to catch.
-		expect(contrast(at('danger'), at('surface'))).toBeGreaterThanOrEqual(AA);
-		expect(contrast(at('success'), at('surface'))).toBeGreaterThanOrEqual(AA_LARGE);
-	});
-
 	/*
 	 * Every surface a component actually puts text on.
 	 *
@@ -141,12 +133,25 @@ describe.each(PALETTES.map((p) => [p.id, p.label] as const))('%s', (id) => {
 		expect(contrast(at('ink-muted'), at(surface))).toBeGreaterThanOrEqual(AA);
 	});
 
-	it('reads a warning against the surfaces it appears on', () => {
-		// Nine usages and, until now, no assertion at all: the "N sources need
-		// attention" banner and the unresolved-source markers are the interface
-		// telling someone their library is broken.
-		expect(contrast(at('warning'), at('surface'))).toBeGreaterThanOrEqual(AA);
-		expect(contrast(at('warning'), at('surface-sunken'))).toBeGreaterThanOrEqual(AA);
+	/*
+	 * The three colours that report state, on the two surfaces they report it on.
+	 *
+	 * All three are prose, which is why they are held to AA and not to 3:1:
+	 * danger is "Not saved — retrying" in the status bar and the error banner on
+	 * the main route; warning is the failed-ingest message and "N sources need
+	 * attention"; success is the similarity score on a result card. A status
+	 * message nobody can read is the one message that has to be readable.
+	 *
+	 * `surface-sunken` is in here because that is what every one of those banners
+	 * and badges actually sits on — asserting against `--surface` alone is what
+	 * let `warning` ship at 2.35:1.
+	 */
+	it.each(
+		['danger', 'warning', 'success'].flatMap((ink) =>
+			['surface', 'surface-sunken'].map((surface) => [ink, surface] as const)
+		)
+	)('reads %s on %s', (ink, surface) => {
+		expect(contrast(at(ink), at(surface))).toBeGreaterThanOrEqual(AA);
 	});
 
 	it('shows an active toolbar control', () => {

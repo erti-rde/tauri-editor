@@ -13,22 +13,35 @@
 /*
  * Latte, with the roles chosen for legibility on its own base.
  *
- * Every value here is an official Catppuccin Latte colour; the palette simply
- * offers lighter and darker options for the same role, and a light theme needs
- * the darker ones. Peach at 2.64:1 and green at 2.96:1 against base cannot
- * carry meaning, so the accent is mauve — which is Catppuccin's own default
- * accent — and success is teal. Muted text moves from subtext0 to subtext1.
+ * Most values here are official Catppuccin Latte colours, picked from the
+ * lighter and darker options the palette offers for the same role: peach at
+ * 2.64:1 and green at 2.96:1 against base cannot carry meaning, so the accent
+ * is mauve — Catppuccin's own default — and success is teal, with muted text at
+ * subtext1 rather than subtext0.
+ *
+ * Three are not official, because a light base leaves nowhere else to go, and
+ * they are commented individually where they appear: `warning` and `success`
+ * are the palette's yellow and teal deepened to clear 4.5:1 as prose, and
+ * `accent-quiet` is a mauve tint rather than a grey. Every colour that carries
+ * information is held to the same threshold as Erti's own palettes; a theme is
+ * a set of colours, not an exemption.
  */
 [data-theme='catppuccin-latte'] {
 	color-scheme: light;
 
+	/* A light theme lifts toward white, so raised is lighter than base and
+	   sunken is darker. This had raised at surface0 — 83%, twelve points
+	   *darker* than the 95% base — which is the dark-theme direction, and it
+	   pushed muted text down to the same lightness as body text to stay legible
+	   on it. The surface family is base/mantle/crust; surface0 is Catppuccin's
+	   colour for rules and controls, which is what it does here now. */
 	--surface: 220 23% 95%;
-	--surface-raised: 223 16% 83%;
-	--surface-sunken: 220 21% 89%;
-	--surface-overlay: 220 22% 92%;
+	--surface-raised: 0 0% 100%;
+	--surface-sunken: 220 22% 92%;
+	--surface-overlay: 0 0% 100%;
 
 	--ink: 234 16% 35%;
-	--ink-muted: 233 13% 35%;
+	--ink-muted: 233 13% 41%;
 	--ink-faint: 228 11% 55.5%;
 
 	--line: 223 16% 83%;
@@ -39,10 +52,12 @@
 	   the button takes dark ink instead: white on peach is 2.98:1, its own text
 	   colour 2.68:1, and near-black 5.87:1. */
 	--accent-ink: 220 23% 95%;
-	--accent-quiet: 223 16% 83%;
+	/* A quiet tint of this palette's own mauve, rather than surface0 — which is
+	   a grey, and made a selected control look merely recessed. */
+	--accent-quiet: 266 60% 93%;
 	--accent-hover: 266 85% 50%;
 
-	--danger: 347 87% 44%;
+	--danger: 347 87% 41.5%;
 	/* Latte's own yellow is #DF8E1D, which reads 1.55:1 against the lightest
 	   surface it has to sit on — and warning is prose here: the failed-ingest
 	   message, "not found", "N sources need attention". The palette has no
@@ -50,7 +65,9 @@
 	   this is its yellow deepened rather than an official value. Same hue and
 	   saturation, so it still reads as the palette's amber. */
 	--warning: 35 77% 25%;
-	--success: 183 74% 35%;
+	/* Teal deepened for the same reason as the yellow above: at its published
+	   35% it reads 2.77:1 on the surface the similarity badge sits on. */
+	--success: 183 74% 25.5%;
 
 	--selection: 266 85% 58%;
 	--shadow-overlay: 0 0% 0% / 0.12;
@@ -60,8 +77,8 @@
 	--surface-page-themed: 0 0% 100%;
 	--ink-page-themed: 234 16% 35%;
 	--backdrop: 223 20% 12% / 0.45;
-	--surface-hover: 223 16% 79%;
-	--surface-active: 223 16% 75%;
+	--surface-hover: 220 21% 89%;
+	--surface-active: 223 16% 83%;
 }
 
 [data-theme='catppuccin-frappe'] {
