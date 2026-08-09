@@ -61,7 +61,7 @@
 
 <svelte:window onkeydown={trapFocus} />
 
-<div class="bg-surface-overlay/50 fixed inset-0 z-100 flex items-center justify-center">
+<div class="bg-backdrop fixed inset-0 z-100 flex items-center justify-center">
 	<div
 		bind:this={dialog}
 		class="bg-surface-raised w-[520px] max-w-[90%] rounded-lg p-6 shadow-xl"
@@ -90,7 +90,7 @@
 
 		<div class="flex justify-end gap-2">
 			<button
-				class="border-line-strong text-ink hover:bg-surface-sunken rounded-md border px-4 py-2"
+				class="border-line-strong text-ink hover:bg-surface-hover rounded-md border px-4 py-2"
 				onclick={() => choose(false)}
 			>
 				Stay offline

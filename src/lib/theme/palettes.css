@@ -52,6 +52,9 @@
 	   the paper page off. */
 	--surface-page-themed: 0 0% 100%;
 	--ink-page-themed: 234 16% 35%;
+	--backdrop: 223 20% 12% / 0.45;
+	--surface-hover: 223 16% 79%;
+	--surface-active: 223 16% 75%;
 }
 
 [data-theme='catppuccin-frappe'] {
@@ -84,6 +87,9 @@
 	   the paper page off. */
 	--surface-page-themed: 231 19% 20%;
 	--ink-page-themed: 227 70% 87%;
+	--backdrop: 230 20% 4% / 0.6;
+	--surface-hover: 230 16% 34%;
+	--surface-active: 230 16% 38%;
 }
 
 [data-theme='catppuccin-macchiato'] {
@@ -116,6 +122,9 @@
 	   the paper page off. */
 	--surface-page-themed: 233 23% 15%;
 	--ink-page-themed: 227 68% 88%;
+	--backdrop: 230 20% 4% / 0.6;
+	--surface-hover: 230 19% 30%;
+	--surface-active: 230 19% 34%;
 }
 
 [data-theme='catppuccin-mocha'] {
@@ -148,6 +157,9 @@
 	   the paper page off. */
 	--surface-page-themed: 240 21% 12%;
 	--ink-page-themed: 226 64% 88%;
+	--backdrop: 237 20% 4% / 0.6;
+	--surface-hover: 237 16% 27%;
+	--surface-active: 237 16% 31%;
 }
 
 [data-theme='night-owl'] {
@@ -180,4 +192,7 @@
 	   the paper page off. */
 	--surface-page-themed: 209 93% 5%;
 	--ink-page-themed: 217 34% 88%;
+	--backdrop: 207 20% 4% / 0.6;
+	--surface-hover: 207 48% 26%;
+	--surface-active: 207 48% 30%;
 }

@@ -233,14 +233,14 @@
 
 								<div class="flex shrink-0 gap-2">
 									<button
-										class="hover:bg-surface-sunken border-warning text-warning rounded-md border px-3 py-1 text-sm disabled:opacity-50"
+										class="hover:bg-surface-hover border-warning text-warning rounded-md border px-3 py-1 text-sm disabled:opacity-50"
 										disabled={busyWith === source.id}
 										onclick={() => handleRetry(source)}
 									>
 										{busyWith === source.id ? 'Working…' : 'Retry'}
 									</button>
 									<button
-										class="hover:bg-surface-sunken border-warning text-warning rounded-md border px-3 py-1 text-sm"
+										class="hover:bg-surface-hover border-warning text-warning rounded-md border px-3 py-1 text-sm"
 										onclick={() => {
 											doiFor = doiFor === source.id ? null : source.id;
 											doiInput = '';
@@ -304,7 +304,7 @@
 					-->
 					<button
 						type="button"
-						class="hover:bg-surface-sunken grid w-full cursor-pointer grid-cols-12 gap-3 px-3 py-3 text-left transition-colors"
+						class="hover:bg-surface-hover grid w-full cursor-pointer grid-cols-12 gap-3 px-3 py-3 text-left transition-colors"
 						class:bg-accent-quiet={selectedSourceId === source.id}
 						aria-current={selectedSourceId === source.id ? 'true' : undefined}
 						onclick={() => handleSourceSelect(source.id)}

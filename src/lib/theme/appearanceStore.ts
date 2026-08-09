@@ -32,8 +32,18 @@ function createAppearanceStore() {
 
 	function apply(next: Appearance) {
 		set(next);
-		if (typeof document !== 'undefined') {
-			applyAppearance(document.documentElement, next, prefersDark());
+		if (typeof document === 'undefined') return;
+
+		applyAppearance(document.documentElement, next, prefersDark());
+
+		// Mirrored somewhere synchronous. The settings file is read after mount,
+		// which is a frame too late: someone who chose light on a dark machine
+		// would see dark first on every launch. localStorage is readable by the
+		// inline script in app.html before anything paints.
+		try {
+			localStorage.setItem('erti.theme', next.theme);
+		} catch {
+			// Private mode, or storage full. The OS preference is a fine fallback.
 		}
 	}
 

@@ -96,7 +96,7 @@
 					<li class="flex items-stretch">
 						<button
 							type="button"
-							class="hover:bg-surface-sunken flex min-w-0 grow items-baseline gap-3 px-3 py-2 text-left transition-colors disabled:cursor-not-allowed"
+							class="hover:bg-surface-hover flex min-w-0 grow items-baseline gap-3 px-3 py-2 text-left transition-colors disabled:cursor-not-allowed"
 							onclick={() => openProject(project.path)}
 							disabled={gone || busy !== null}
 						>

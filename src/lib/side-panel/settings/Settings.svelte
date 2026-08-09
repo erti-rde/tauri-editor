@@ -180,7 +180,7 @@
 
 {#if isOpen}
 	<div
-		class="bg-surface-overlay/50 fixed inset-0 z-100 flex items-center justify-center"
+		class="bg-backdrop fixed inset-0 z-100 flex items-center justify-center"
 		style="z-index: 100;"
 	>
 		<dialog
@@ -194,7 +194,7 @@
 			<div class="border-line flex items-center justify-between border-b px-5 py-4">
 				<h2 id="settings-title" class="text-ink text-xl font-semibold">Settings</h2>
 				<button
-					class="text-ink-muted hover:bg-surface-sunken hover:text-ink rounded-full p-1 transition-colors"
+					class="text-ink-muted hover:bg-surface-hover hover:text-ink rounded-full p-1 transition-colors"
 					onclick={closeSettings}
 				>
 					<Icon icon="X" />
@@ -207,7 +207,7 @@
 				<div class="border-line bg-surface-sunken w-48 border-r">
 					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'appearance', label: 'Appearance' }] as tab (tab.id)}
 						<button
-							class="hover:bg-surface-sunken w-full border-l-2 px-4 py-3 text-left transition-colors {activeTab ===
+							class="hover:bg-surface-hover w-full border-l-2 px-4 py-3 text-left transition-colors {activeTab ===
 							tab.id
 								? 'border-accent bg-surface-sunken font-medium'
 								: 'border-transparent'}"
@@ -392,7 +392,7 @@
 			<!-- Footer -->
 			<div class="border-line bg-surface-sunken flex justify-end space-x-3 border-t px-5 py-4">
 				<button
-					class="border-line-strong text-ink hover:bg-surface-sunken rounded-md border px-4 py-2 transition-colors"
+					class="border-line-strong text-ink hover:bg-surface-hover rounded-md border px-4 py-2 transition-colors"
 					onclick={closeSettings}
 				>
 					Cancel

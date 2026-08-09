@@ -6,14 +6,20 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		%sveltekit.head%
 		<script>
-			// Runs before the first paint. The stored appearance arrives a tick later
-			// from the settings file, so the OS preference is used until then —
-			// without this, every launch on a dark-mode machine flashes white.
+			// Runs before the first paint, so nothing flashes the wrong theme.
+			//
+			// The settings file is only readable after mount, which is a frame too
+			// late — someone who chose light on a dark machine would see dark first
+			// on every launch. The choice is mirrored into localStorage, which is
+			// synchronous and readable here.
 			try {
-				document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)')
-					.matches
-					? 'dark'
-					: 'light';
+				var chosen = localStorage.getItem('erti.theme');
+				document.documentElement.dataset.theme =
+					chosen && chosen !== 'system'
+						? chosen
+						: window.matchMedia('(prefers-color-scheme: dark)').matches
+							? 'dark'
+							: 'light';
 			} catch {
 				document.documentElement.dataset.theme = 'light';
 			}

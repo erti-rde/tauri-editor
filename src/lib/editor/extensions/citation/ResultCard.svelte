@@ -133,7 +133,7 @@
 				href={sourceUrl}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="bg-surface-sunken text-ink hover:bg-surface-sunken flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors"
+				class="bg-surface-sunken text-ink hover:bg-surface-hover flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors"
 			>
 				<Icon icon="ExternalLink" size="s" />
 				<span class="ml-1">View online</span>

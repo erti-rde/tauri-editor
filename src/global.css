@@ -45,11 +45,16 @@
 	--dark-10: hsla(240 6% 10% / 0.1);
 	--dark-40: hsla(240 6% 10% / 0.4);
 	--dark-04: hsla(240 6% 10% / 0.04);
-	--accent: hsl(204 94% 94%);
-	--accent-foreground: hsl(204 80% 16%);
+	/* Renamed from --accent/--line, which collided with the semantic tokens of
+	   the same name defined in theme/tokens.css. The import comes first, so at
+	   equal specificity these later declarations won — and `hsl(var(--accent))`
+	   became `hsl(#e1f3fe)`, which is not valid CSS, so every accent and every
+	   rule in the app resolved to nothing. */
+	--bits-accent: hsl(204 94% 94%);
+	--bits-accent-foreground: hsl(204 80% 16%);
 	--destructive: hsl(347 77% 50%);
 	--tertiary: hsl(37.7 92.1% 50.2%);
-	--line: hsl(0 0% 100%);
+	--bits-line: hsl(0 0% 100%);
 
 	/* black */
 	--contrast: hsl(0 0% 0%);
@@ -73,6 +78,9 @@
 	--color-surface-raised: hsl(var(--surface-raised));
 	--color-surface-sunken: hsl(var(--surface-sunken));
 	--color-surface-overlay: hsl(var(--surface-overlay));
+	--color-surface-hover: hsl(var(--surface-hover));
+	--color-surface-active: hsl(var(--surface-active));
+	--color-backdrop: hsl(var(--backdrop));
 	--color-page: hsl(var(--surface-page));
 	--color-page-ink: hsl(var(--ink-page));
 
@@ -109,8 +117,8 @@
 	--color-dark-10: var(--dark-10);
 	--color-dark-40: var(--dark-40);
 	--color-dark-04: var(--dark-04);
-	--color-accent: var(--accent);
-	--color-accent-foreground: var(--accent-foreground);
+	--color-bits-accent: var(--bits-accent);
+	--color-bits-accent-foreground: var(--bits-accent-foreground);
 	--color-destructive: var(--destructive);
 	--color-tertiary: var(--tertiary);
 	--color-contrast: var(--contrast);
