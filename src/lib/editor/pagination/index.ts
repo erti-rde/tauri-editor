@@ -28,6 +28,7 @@ export {
 	paperById,
 	SPACINGS,
 	spacingById,
+	toLatexPageSetup,
 	type MarginId,
 	type Margins,
 	type PageSetup,

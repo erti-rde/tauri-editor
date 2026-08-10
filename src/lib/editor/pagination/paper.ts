@@ -247,6 +247,22 @@ export function toPageRule(setup: PageSetup): string {
 	return `@page { size: ${paper.css}; margin: ${margin}in; }`;
 }
 
+/**
+ * The same setup as LaTeX understands it.
+ *
+ * Without this the bundle compiles to `article`'s defaults — US Letter, a
+ * margin near 1.9in, single-spaced — so the same manuscript exported as a PDF
+ * and as a `.tex` came out as two different documents, and a co-author opening
+ * it in Overleaf saw something the author never did.
+ */
+export function toLatexPageSetup(setup: PageSetup) {
+	return {
+		paperOption: `${paperById(setup.paper).id}paper`,
+		marginInches: marginById(setup.margin).inches,
+		spacing: spacingById(setup.spacing).value
+	};
+}
+
 /** Substitute the page placeholders. Used for the print-time running heads. */
 export function fillPlaceholders(template: string, page: number, total: number): string {
 	return template.replaceAll('{page}', String(page)).replaceAll('{total}', String(total));

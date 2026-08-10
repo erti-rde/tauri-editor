@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
@@ -26,7 +26,13 @@
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
 	import { paginatedExtensions } from './core/extensions';
-	import { applyPageSetup, observePageCount, pageSetupStore, paperById } from './pagination';
+	import {
+		applyPageSetup,
+		observePageCount,
+		pageSetupStore,
+		paperById,
+		toLatexPageSetup
+	} from './pagination';
 	import { zoomStore } from './pagination/zoom';
 
 	import type { Readable } from 'svelte/store';
@@ -37,6 +43,14 @@
 	let editor = $state() as Readable<Editor>;
 	let editable = true;
 	let currentDir = '';
+	/**
+	 * Set once the editor exists.
+	 *
+	 * The page-setup effects need to know there is an editor without reading
+	 * the store that holds it — that store publishes on every transaction, and
+	 * an effect which both reads it and dispatches transactions never settles.
+	 */
+	let editorReady = $state(false);
 
 	/**
 	 * Autosave, which has to keep every keystroke.
@@ -135,6 +149,11 @@
 			}
 		});
 
+		// Last, so the page-setup effects only run once there is something to
+		// apply a setup to. They cannot watch `editor` itself: it publishes on
+		// every transaction, and applying a setup dispatches transactions.
+		editorReady = true;
+
 		// Closing the window is the last chance to write, and `beforeunload` cannot
 		// take it: the browser does not await a promise, so the webview can go away
 		// mid-write and lose the work. Tauri's close request can be held open,
@@ -171,10 +190,19 @@
 	 * Settings applies immediately rather than on Save, and page setup is a
 	 * choice nobody can evaluate without seeing it — a 1.5in margin is an
 	 * abstraction until the text column narrows in front of you.
+	 *
+	 * `$editor` is deliberately read through `untrack`. It is a store that
+	 * publishes on *every* editor transaction, and applying a setup dispatches
+	 * transactions — so reading it here reactively made this effect its own
+	 * trigger and Svelte stopped it with `effect_update_depth_exceeded`. The
+	 * setup is the only thing this should react to; `editorReady` is what says
+	 * there is something to apply it to.
 	 */
 	$effect(() => {
 		const setup = $pageSetupStore;
-		const instance = $editor;
+		if (!editorReady) return;
+
+		const instance = untrack(() => $editor);
 		if (!instance) return;
 
 		applyPageSetup(instance, setup);
@@ -183,9 +211,17 @@
 		instance.view.dom.style.width = `${paperById(setup.paper).widthPx}px`;
 	});
 
-	/** Keep the page count current, for "{total}" and for the status bar. */
+	/**
+	 * Keep the page count current, for "{total}" and for the status bar.
+	 *
+	 * Same reason for `untrack`: tracking `$editor` would tear down and rebuild
+	 * the observer on every keystroke, which is both wasteful and a way to miss
+	 * the mutation it was watching for.
+	 */
 	$effect(() => {
-		const instance = $editor;
+		if (!editorReady) return;
+
+		const instance = untrack(() => $editor);
 		if (!instance) return;
 
 		return observePageCount(instance.view.dom as HTMLElement);
@@ -255,7 +291,13 @@
 
 			await writeTextFile(
 				await pathJoin(dir, 'main.tex'),
-				toLatexDocument(doc, { title: current.title, citationKeys: keys })
+				toLatexDocument(doc, {
+					title: current.title,
+					citationKeys: keys,
+					// The same paper, margins and spacing the PDF gets, so the two
+					// exports are the same document.
+					page: toLatexPageSetup(get(pageSetupStore))
+				})
 			);
 			await writeTextFile(await pathJoin(dir, 'references.bib'), bibtex);
 

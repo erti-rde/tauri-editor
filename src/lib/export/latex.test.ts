@@ -201,3 +201,58 @@ describe('a complete document', () => {
 		expect(toLatexDocument(doc(para(text('x'))))).not.toContain('\\maketitle');
 	});
 });
+
+describe('the page the bundle compiles to', () => {
+	const page = (over: Partial<Parameters<typeof toLatexDocument>[1]> = {}) =>
+		toLatexDocument(doc(para(text('x'))), {
+			page: { paperOption: 'a4paper', marginInches: 1, spacing: 1.15 },
+			...over
+		});
+
+	it('is the paper the author chose, not the class default', () => {
+		// Without this the bundle compiles to `article`'s defaults and the same
+		// manuscript exported two ways is two different documents — a co-author
+		// opening it in Overleaf sees something the author never saw.
+		expect(page()).toContain('\\documentclass[a4paper]{article}');
+	});
+
+	it('is the margin the author chose', () => {
+		// article's own is close to 1.9in, which is nobody's submission
+		// requirement and not what was on screen.
+		expect(page()).toContain('\\usepackage[margin=1in]{geometry}');
+	});
+
+	it('is double-spaced when the manuscript is', () => {
+		const out = toLatexDocument(doc(para(text('x'))), {
+			page: { paperOption: 'letterpaper', marginInches: 1, spacing: 2 }
+		});
+
+		expect(out).toContain('\\usepackage{setspace}');
+		expect(out).toContain('\\doublespacing');
+		expect(out).not.toContain('\\onehalfspacing');
+	});
+
+	it('is one-and-a-half spaced when the manuscript is', () => {
+		const out = toLatexDocument(doc(para(text('x'))), {
+			page: { paperOption: 'letterpaper', marginInches: 1, spacing: 1.5 }
+		});
+
+		expect(out).toContain('\\onehalfspacing');
+		expect(out).not.toContain('\\doublespacing');
+	});
+
+	it('leaves setspace out when it would do nothing', () => {
+		// An unused package is one more thing to collide with a journal's own
+		// class file, which is why the preamble is kept to what the body needs.
+		expect(page()).not.toContain('setspace');
+	});
+
+	it('says nothing about the page when it was not told', () => {
+		// Callers that predate the page model still produce a valid document.
+		const out = toLatexDocument(doc(para(text('x'))));
+
+		expect(out).toContain('\\documentclass{article}');
+		expect(out).not.toContain('geometry');
+		expect(out).not.toContain('setspace');
+	});
+});
