@@ -604,25 +604,51 @@ body {
  */
 
 @media print {
-	body * {
-		visibility: hidden;
+	/*
+	 * Anything that neither contains the manuscript nor belongs to it is app
+	 * chrome, and does not print.
+	 *
+	 * `display: none` rather than `visibility: hidden`, which is what was here:
+	 * an invisible toolbar still occupies its forty pixels at the top of the
+	 * first sheet, pushing the text down and shifting every page break after it.
+	 * Stated as a rule about the manuscript rather than a list of things to
+	 * hide, so a panel added later cannot appear in someone's submission.
+	 */
+	body *:not(:has(.manuscript), .manuscript, .manuscript *) {
+		display: none !important;
 	}
 
-	.manuscript,
-	.manuscript * {
-		visibility: visible;
+	/*
+	 * Every ancestor stops constraining the manuscript.
+	 *
+	 * This is the one that silently ruins an export: the editor scrolls, and a
+	 * container with `overflow: auto` clips at its scroll viewport when printed
+	 * — so a twelve-page thesis produces a one-page PDF ending mid-sentence, and
+	 * only the PDF shows it. The screen heights (`h-screen`, `h-full`) and the
+	 * flex layout do the same in miniature.
+	 */
+	:has(.manuscript) {
+		display: block !important;
+		height: auto !important;
+		min-height: 0 !important;
+		max-height: none !important;
+		overflow: visible !important;
+		padding: 0 !important;
+		margin: 0 !important;
+		background: white !important;
 	}
 
 	.manuscript {
-		position: absolute;
-		inset: 0;
-		/* The border and shadow are screen furniture and would print as artefacts.
-		   Width is left alone: when the document is paginated the element is
-		   exactly one sheet wide by construction, and overriding it to 100% would
-		   stretch a Letter layout across whatever the printer's sheet happens to
-		   be — reflowing the text and changing the page count between what the
-		   author saw and what the journal receives. */
-		margin: 0;
+		/* Static, not absolute. An absolutely positioned element is taken out of
+		   flow and does not fragment across sheets — which was survivable when the
+		   manuscript was one long column and is not now that it is a stack of
+		   pages. Width is left alone: the element is exactly one sheet wide by
+		   construction, and forcing it to 100% would stretch a Letter layout onto
+		   whatever the printer's paper happens to be, reflowing the text and
+		   changing the page count between what the author saw and what the journal
+		   receives. */
+		position: static;
+		margin: 0 auto;
 		border: none !important;
 		box-shadow: none !important;
 		background: white;
