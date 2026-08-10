@@ -57,6 +57,24 @@ export interface LatexOptions {
 	bibliographyName?: string;
 	/** sha256 → citation key, from the bibliography export. */
 	citationKeys?: Record<string, string>;
+	/**
+	 * The page as the author set it up.
+	 *
+	 * Without this the `.tex` compiles to `article`'s defaults — US Letter,
+	 * roughly 1.9in margins, single-spaced — so the same manuscript exported two
+	 * ways came out as two different documents. A co-author opening the bundle
+	 * in Overleaf would see something the author never saw.
+	 */
+	page?: LatexPageSetup;
+}
+
+/** The subset of the page setup LaTeX can express. */
+export interface LatexPageSetup {
+	/** `letterpaper`, `a4paper`, `legalpaper` — a documentclass option. */
+	paperOption: string;
+	marginInches: number;
+	/** Unitless multiplier. 1.15 and below is treated as single. */
+	spacing: number;
 }
 
 const MARKS: Record<string, (inner: string) => string> = {
@@ -203,12 +221,16 @@ export function toLatexBody(doc: JSONContent, options: LatexOptions = {}): strin
 
 /** A complete, compilable `.tex`. */
 export function toLatexDocument(doc: JSONContent, options: LatexOptions = {}): string {
-	const { title, author, documentClass = 'article' } = options;
+	const { title, author, documentClass = 'article', page } = options;
+
+	// The paper goes as a class option rather than through geometry, because a
+	// journal's own class reads it there and some ignore geometry entirely.
+	const classOptions = page ? `[${page.paperOption}]` : '';
 
 	// Only what the body can actually need. A preamble full of unused packages is
 	// the first thing a journal's class file collides with.
 	const preamble = [
-		`\\documentclass{${documentClass}}`,
+		`\\documentclass${classOptions}{${documentClass}}`,
 		'\\usepackage[utf8]{inputenc}',
 		'\\usepackage[T1]{fontenc}',
 		'\\usepackage{graphicx}',
@@ -216,6 +238,19 @@ export function toLatexDocument(doc: JSONContent, options: LatexOptions = {}): s
 		'\\usepackage[normalem]{ulem}',
 		'\\usepackage{soul}'
 	];
+
+	if (page) {
+		// article's default margin is close to 1.9in, which is nobody's
+		// submission requirement and not what the author saw on screen.
+		preamble.push(`\\usepackage[margin=${page.marginInches}in]{geometry}`);
+
+		// setspace only when it is doing something. Single is the default, and an
+		// unused package is one more thing to collide with a journal's class file.
+		if (page.spacing > 1.15) {
+			preamble.push('\\usepackage{setspace}');
+			preamble.push(page.spacing >= 2 ? '\\doublespacing' : '\\onehalfspacing');
+		}
+	}
 
 	if (title) preamble.push(`\\title{${escapeLatex(title)}}`);
 	if (author) preamble.push(`\\author{${escapeLatex(author)}}`);

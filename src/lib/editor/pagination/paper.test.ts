@@ -6,6 +6,7 @@ import {
 	PAPERS,
 	SPACINGS,
 	spacingById,
+	toLatexPageSetup,
 	fillPlaceholders,
 	normalisePageSetup,
 	paperById,
@@ -151,6 +152,36 @@ describe('line spacing', () => {
 
 	it('falls back to something readable rather than undefined', () => {
 		expect(spacingById('triple').id).toBe('single');
+	});
+});
+
+describe('the same page, as LaTeX', () => {
+	it('names paper the way a documentclass option is spelled', () => {
+		// `a4paper`, not `a4`. A wrong option here is a class error at compile
+		// time, which the author sees only after uploading to Overleaf.
+		expect(toLatexPageSetup({ ...DEFAULT_PAGE_SETUP, paper: 'a4' }).paperOption).toBe('a4paper');
+		expect(toLatexPageSetup({ ...DEFAULT_PAGE_SETUP, paper: 'letter' }).paperOption).toBe(
+			'letterpaper'
+		);
+		expect(toLatexPageSetup({ ...DEFAULT_PAGE_SETUP, paper: 'legal' }).paperOption).toBe(
+			'legalpaper'
+		);
+	});
+
+	it('carries the margin and spacing the screen is using', () => {
+		const out = toLatexPageSetup({ ...DEFAULT_PAGE_SETUP, margin: 'wide', spacing: 'double' });
+
+		expect(out.marginInches).toBe(1.5);
+		expect(out.spacing).toBe(2);
+	});
+
+	it.each(PAPERS.map((p) => p.id))('agrees with the printed page on %s', (paper) => {
+		// Three exports of one manuscript — screen, PDF, .tex — and all three have
+		// to be the same document.
+		const setup = { ...DEFAULT_PAGE_SETUP, paper };
+
+		expect(toLatexPageSetup(setup).paperOption).toContain(paperById(paper).id);
+		expect(toLatexPageSetup(setup).marginInches).toBe(toPixelConfig(setup).marginLeft / 96);
 	});
 });
 
