@@ -4,12 +4,14 @@
 	import {
 		MARGINS,
 		PAPERS,
+		SPACINGS,
 		marginById,
 		pageSetupStore,
 		paperById,
 		type MarginId,
 		type PaperId,
-		type RunningHeads
+		type RunningHeads,
+		type SpacingId
 	} from '$lib/editor/pagination';
 
 	/**
@@ -100,6 +102,28 @@
 	</section>
 
 	<section>
+		<h3 class="text-ink mb-1 text-sm font-medium">Line spacing</h3>
+		<p class="text-ink-muted mb-3 text-xs">
+			Most journals require a double-spaced manuscript for review, so there is room to write between
+			the lines. It is a submission requirement rather than a matter of taste.
+		</p>
+
+		<RadioGroup.Root
+			class="grid grid-cols-3 gap-2"
+			aria-label="Line spacing"
+			value={$pageSetupStore.spacing}
+			onValueChange={(spacing) => set({ spacing: spacing as SpacingId })}
+		>
+			{#each SPACINGS as option (option.id)}
+				<RadioGroup.Item value={option.id} class="{choice} block px-3">
+					<span class="text-ink block text-xs font-medium">{option.label}</span>
+					<span class="text-ink-muted block text-[11px]">{option.hint}</span>
+				</RadioGroup.Item>
+			{/each}
+		</RadioGroup.Root>
+	</section>
+
+	<section>
 		<h3 class="text-ink mb-1 text-sm font-medium">Header and footer</h3>
 		<p class="text-ink-muted mb-3 text-xs">
 			Repeated on every page. Write
@@ -129,6 +153,21 @@
 	</section>
 
 	<section>
+		<label class="mb-3 flex items-start gap-2">
+			<input
+				type="checkbox"
+				class="accent-accent mt-0.5"
+				checked={$pageSetupStore.firstPageBare}
+				onchange={(e) => set({ firstPageBare: e.currentTarget.checked })}
+			/>
+			<span>
+				<span class="text-ink block text-xs">Leave the first page bare</span>
+				<span class="text-ink-muted block text-[11px]">
+					No header or footer on page one. A title page carries no page number in any style guide.
+				</span>
+			</span>
+		</label>
+
 		<label class="flex items-start gap-2">
 			<input
 				type="checkbox"

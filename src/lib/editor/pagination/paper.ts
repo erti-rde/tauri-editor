@@ -118,18 +118,60 @@ export const DEFAULT_RUNNING_HEADS: RunningHeads = {
 	footerRight: 'Page {page} of {total}'
 };
 
+/**
+ * Line spacing, which for a manuscript is a submission requirement.
+ *
+ * "Double-spaced throughout" is in the author guidelines of most journals that
+ * still send papers out for review, because it leaves room to write between the
+ * lines. It is not a typographic preference — a single-spaced submission comes
+ * back unread — and until now there was no way to produce one here.
+ */
+export type SpacingId = 'single' | 'onehalf' | 'double';
+
+export interface Spacing {
+	id: SpacingId;
+	label: string;
+	/** Unitless, so it multiplies whatever size the manuscript is set in. */
+	value: number;
+	hint: string;
+}
+
+export const SPACINGS: readonly Spacing[] = [
+	// Not 1: a manuscript set solid is unreadable on screen, and "single" in
+	// Word has always meant roughly 1.15 rather than exactly the font size.
+	{ id: 'single', label: 'Single', value: 1.15, hint: 'For reading and for a final PDF' },
+	{ id: 'onehalf', label: '1.5', value: 1.5, hint: 'Common for theses' },
+	{ id: 'double', label: 'Double', value: 2, hint: 'What most journals require' }
+];
+
+export const DEFAULT_SPACING: SpacingId = 'single';
+
+export function spacingById(id: string): Spacing {
+	return SPACINGS.find((s) => s.id === id) ?? SPACINGS[0];
+}
+
 export interface PageSetup {
 	paper: PaperId;
 	margin: MarginId;
+	spacing: SpacingId;
 	/** Pages as pages, rather than one unbroken scroll. */
 	paginate: boolean;
+	/**
+	 * Leave the running heads off the first page.
+	 *
+	 * A title page carries no page number in any style guide, and a running head
+	 * on it is the mark of a manuscript put together in a hurry.
+	 */
+	firstPageBare: boolean;
 	runningHeads: RunningHeads;
 }
 
 export const DEFAULT_PAGE_SETUP: PageSetup = {
 	paper: DEFAULT_PAPER,
 	margin: DEFAULT_MARGIN,
+	spacing: DEFAULT_SPACING,
 	paginate: true,
+	firstPageBare: false,
 	runningHeads: DEFAULT_RUNNING_HEADS
 };
 
@@ -145,9 +187,13 @@ export function normalisePageSetup(raw: Partial<PageSetup> | null | undefined): 
 	return {
 		paper: paperById(String(raw.paper)).id,
 		margin: marginById(String(raw.margin)).id,
+		spacing: spacingById(String(raw.spacing)).id,
 		// Only an explicit false turns pagination off, so a settings file written
 		// before this existed still gets pages.
 		paginate: raw.paginate !== false,
+		// The opposite default: absent means "not asked for", and quietly removing
+		// someone's page number from page one would be the surprising choice.
+		firstPageBare: raw.firstPageBare === true,
 		runningHeads: {
 			headerLeft: text(heads.headerLeft, DEFAULT_RUNNING_HEADS.headerLeft),
 			headerRight: text(heads.headerRight, DEFAULT_RUNNING_HEADS.headerRight),
