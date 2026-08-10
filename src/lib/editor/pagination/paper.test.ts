@@ -4,6 +4,8 @@ import {
 	DEFAULT_PAGE_SETUP,
 	MARGINS,
 	PAPERS,
+	SPACINGS,
+	spacingById,
 	fillPlaceholders,
 	normalisePageSetup,
 	paperById,
@@ -128,6 +130,30 @@ describe('the rule the printer is given', () => {
 	});
 });
 
+describe('line spacing', () => {
+	it('offers double, which is what most journals require', () => {
+		expect(spacingById('double').value).toBe(2);
+	});
+
+	it('does not set single solid', () => {
+		// A manuscript at exactly 1 is unreadable, and "single" in Word has never
+		// meant the font size exactly.
+		expect(spacingById('single').value).toBeGreaterThan(1);
+		expect(spacingById('single').value).toBeLessThan(1.3);
+	});
+
+	it('increases with each step', () => {
+		const values = SPACINGS.map((s) => s.value);
+
+		expect(values).toEqual([...values].sort((a, b) => a - b));
+		expect(new Set(values).size).toBe(values.length);
+	});
+
+	it('falls back to something readable rather than undefined', () => {
+		expect(spacingById('triple').id).toBe('single');
+	});
+});
+
 describe('reading a stored page setup', () => {
 	it('gives pages to a settings file written before this existed', () => {
 		// Absent means "not yet chosen", not "turned off" — a manuscript that
@@ -150,6 +176,15 @@ describe('reading a stored page setup', () => {
 		expect(setup.paper).toBe('letter');
 		expect(setup.margin).toBe('normal');
 		expect(setup.runningHeads.footerRight).toBe('Page {page} of {total}');
+	});
+
+	it('leaves the first page alone unless asked', () => {
+		// The opposite default to `paginate`: absent means "not asked for", and
+		// silently removing someone's page number from page one would surprise.
+		expect(normalisePageSetup({}).firstPageBare).toBe(false);
+		expect(normalisePageSetup({ firstPageBare: true }).firstPageBare).toBe(true);
+		// Not merely truthy — a hand-edited file can hold anything.
+		expect(normalisePageSetup({ firstPageBare: 'yes' as never }).firstPageBare).toBe(false);
 	});
 
 	it('keeps a running head someone deliberately emptied', () => {

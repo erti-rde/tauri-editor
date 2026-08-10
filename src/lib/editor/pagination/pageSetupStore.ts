@@ -1,7 +1,13 @@
 import { writable, get } from 'svelte/store';
 import { load as loadStore, type Store } from '@tauri-apps/plugin-store';
 
-import { DEFAULT_PAGE_SETUP, normalisePageSetup, toPageRule, type PageSetup } from './paper';
+import {
+	DEFAULT_PAGE_SETUP,
+	normalisePageSetup,
+	spacingById,
+	toPageRule,
+	type PageSetup
+} from './paper';
 
 /**
  * How the page is set up, and where that gets applied.
@@ -48,6 +54,17 @@ function createPageSetupStore() {
 	function apply(next: PageSetup) {
 		set(next);
 		applyPageRule(next);
+
+		// Line spacing rides on a custom property rather than being written onto
+		// the editor element, so it applies to the manuscript in print too — where
+		// the element's inline styles survive but the editor instance is not
+		// around to have been asked.
+		if (typeof document !== 'undefined') {
+			document.documentElement.style.setProperty(
+				'--page-spacing',
+				String(spacingById(next.spacing).value)
+			);
+		}
 	}
 
 	return {

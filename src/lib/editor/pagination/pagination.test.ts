@@ -158,6 +158,24 @@ describe('applying a changed setup', () => {
 		expect(e.storage.PaginationPlus.pageHeight).toBe(a4.heightPx);
 	});
 
+	it('leaves page one bare when asked', () => {
+		// A title page carries no page number in any style guide. The library takes
+		// per-page overrides, so this is an empty header and footer for page 1.
+		const e = makeEditor({ ...DEFAULT_PAGE_SETUP, firstPageBare: true });
+
+		expect(e.storage.PaginationPlus.customHeader[1]).toEqual({ headerLeft: '', headerRight: '' });
+		expect(e.storage.PaginationPlus.customFooter[1]).toEqual({ footerLeft: '', footerRight: '' });
+	});
+
+	it('overrides nothing when it is not asked for', () => {
+		// An override left behind would silently strip the page number from page
+		// one of every document afterwards.
+		const e = makeEditor({ ...DEFAULT_PAGE_SETUP, firstPageBare: false });
+
+		expect(e.storage.PaginationPlus.customHeader[1]).toBeUndefined();
+		expect(e.storage.PaginationPlus.customFooter[1]).toBeUndefined();
+	});
+
 	it('starts with the running heads the setup names', () => {
 		const e = makeEditor({
 			...DEFAULT_PAGE_SETUP,

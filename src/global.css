@@ -816,7 +816,12 @@ body {
 	color: hsl(var(--ink-page));
 	font-family: var(--page-font);
 	font-size: var(--page-size);
-	line-height: 1.7;
+	/* A setting, because "double-spaced throughout" is in the author guidelines
+	   of most journals that still send papers out for review — it leaves room to
+	   write between the lines, and a single-spaced submission comes back unread.
+	   The paginator measures rendered heights, so changing this re-flows the
+	   pages on its own. */
+	line-height: var(--page-spacing, 1.15);
 }
 
 /*

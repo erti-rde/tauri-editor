@@ -26,12 +26,16 @@ export {
 	marginById,
 	normalisePageSetup,
 	paperById,
+	SPACINGS,
+	spacingById,
 	type MarginId,
 	type Margins,
 	type PageSetup,
 	type Paper,
 	type PaperId,
-	type RunningHeads
+	type RunningHeads,
+	type Spacing,
+	type SpacingId
 } from './paper';
 
 export { pageSetupStore } from './pageSetupStore';
@@ -71,8 +75,26 @@ export function pagination(setup: PageSetup = DEFAULT_PAGE_SETUP) {
 		headerLeft: substituteTotal(setup.runningHeads.headerLeft),
 		headerRight: substituteTotal(setup.runningHeads.headerRight),
 		footerLeft: substituteTotal(setup.runningHeads.footerLeft),
-		footerRight: substituteTotal(setup.runningHeads.footerRight)
+		footerRight: substituteTotal(setup.runningHeads.footerRight),
+		...bareFirstPage(setup)
 	});
+}
+
+/**
+ * Clear the running heads on page one, when asked.
+ *
+ * A title page carries no page number in any style guide. The library takes
+ * per-page overrides keyed by page number, so this is an empty header and
+ * footer for page 1 rather than anything structural.
+ */
+function bareFirstPage(setup: PageSetup) {
+	if (!setup.firstPageBare) return {};
+
+	const empty = { headerLeft: '', headerRight: '' };
+	return {
+		customHeader: { 1: empty },
+		customFooter: { 1: { footerLeft: '', footerRight: '' } }
+	};
 }
 
 /**
@@ -104,6 +126,12 @@ export function applyPageSetup(editor: Editor, setup: PageSetup) {
 			substituteTotal(setup.runningHeads.footerRight)
 		)
 		.run();
+
+	// Page one is set separately, because the per-page override is a distinct
+	// argument to the same commands rather than part of the general content.
+	if (setup.firstPageBare) {
+		editor.chain().updateHeaderContent('', '', 1).updateFooterContent('', '', 1).run();
+	}
 
 	// Separate, because enabling and disabling rebuilds the decorations wholesale
 	// and must land after the dimensions it will lay out with.
