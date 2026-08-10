@@ -23,6 +23,7 @@
 
 <script lang="ts">
 	import { documentStatus } from './documentStatus';
+	import { pageCount } from '$lib/editor/pagination/pageCount';
 </script>
 
 <div
@@ -66,6 +67,15 @@
 						/ {$documentStatus.target.toLocaleString()}
 					</span>
 				{/if}
+			</span>
+		{/if}
+
+		<!-- How long the thing actually is, in the unit a submission is measured
+		     in. Gated on the same open-document signal as the save state. -->
+		{#if $documentStatus.words !== null}
+			<span class="font-mono">
+				{$pageCount}
+				{$pageCount === 1 ? 'page' : 'pages'}
 			</span>
 		{/if}
 

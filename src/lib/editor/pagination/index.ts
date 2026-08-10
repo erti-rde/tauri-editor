@@ -2,6 +2,7 @@ import type { Editor } from '@tiptap/core';
 import { PaginationPlus } from 'tiptap-pagination-plus';
 
 import { DEFAULT_PAGE_SETUP, toPixelConfig, type PageSetup } from './paper';
+import { substituteTotal } from './pageCount';
 
 /**
  * Pages, from `tiptap-pagination-plus` (MIT).
@@ -34,6 +35,7 @@ export {
 } from './paper';
 
 export { pageSetupStore } from './pageSetupStore';
+export { observePageCount, pageCount } from './pageCount';
 
 /**
  * The extension, configured for the setup the editor starts with.
@@ -66,10 +68,10 @@ export function pagination(setup: PageSetup = DEFAULT_PAGE_SETUP) {
 		pageGapBorderSize: 1,
 		pageGapBorderColor: 'hsl(var(--line))',
 		pageBreakBackground: 'hsl(var(--surface))',
-		headerLeft: setup.runningHeads.headerLeft,
-		headerRight: setup.runningHeads.headerRight,
-		footerLeft: setup.runningHeads.footerLeft,
-		footerRight: setup.runningHeads.footerRight
+		headerLeft: substituteTotal(setup.runningHeads.headerLeft),
+		headerRight: substituteTotal(setup.runningHeads.headerRight),
+		footerLeft: substituteTotal(setup.runningHeads.footerLeft),
+		footerRight: substituteTotal(setup.runningHeads.footerRight)
 	});
 }
 
@@ -93,8 +95,14 @@ export function applyPageSetup(editor: Editor, setup: PageSetup) {
 			left: pixels.marginLeft,
 			right: pixels.marginRight
 		})
-		.updateHeaderContent(setup.runningHeads.headerLeft, setup.runningHeads.headerRight)
-		.updateFooterContent(setup.runningHeads.footerLeft, setup.runningHeads.footerRight)
+		.updateHeaderContent(
+			substituteTotal(setup.runningHeads.headerLeft),
+			substituteTotal(setup.runningHeads.headerRight)
+		)
+		.updateFooterContent(
+			substituteTotal(setup.runningHeads.footerLeft),
+			substituteTotal(setup.runningHeads.footerRight)
+		)
 		.run();
 
 	// Separate, because enabling and disabling rebuilds the decorations wholesale
