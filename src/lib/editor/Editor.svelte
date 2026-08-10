@@ -26,7 +26,7 @@
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
 	import { paginatedExtensions } from './core/extensions';
-	import { applyPageSetup, pageSetupStore, paperById } from './pagination';
+	import { applyPageSetup, observePageCount, pageSetupStore, paperById } from './pagination';
 	import { zoomStore } from './pagination/zoom';
 
 	import type { Readable } from 'svelte/store';
@@ -109,7 +109,11 @@
 					// hard-coded to US Letter, so choosing A4 would have left the text
 					// column at Letter's width on an A4 sheet.
 					style: `width: ${paperById(setup.paper).widthPx}px`,
-					class: 'manuscript border border-line flex flex-col cursor-text'
+					// No `flex`: the paginator positions each page break with `float`
+					// and `clear`, and floats are ignored inside a flex container —
+					// every break became a flex item a full page tall, pushing the
+					// text 13,000px down a 14,835px-high "page".
+					class: 'manuscript border border-line cursor-text'
 				}
 			},
 			autofocus: 'end',
@@ -177,6 +181,14 @@
 		// The element's own width is not the paginator's business, and it has to
 		// track the paper or an A4 document sits in a Letter-wide column.
 		instance.view.dom.style.width = `${paperById(setup.paper).widthPx}px`;
+	});
+
+	/** Keep the page count current, for "{total}" and for the status bar. */
+	$effect(() => {
+		const instance = $editor;
+		if (!instance) return;
+
+		return observePageCount(instance.view.dom as HTMLElement);
 	});
 
 	onDestroy(() => {

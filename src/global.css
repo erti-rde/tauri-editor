@@ -546,6 +546,23 @@ body {
  * Visible on screen, because a break that cannot be seen is one they will
  * forget and then discover in the PDF.
  */
+
+/*
+ * "of 12", in a running head.
+ *
+ * The pagination library substitutes `{page}` and, despite documenting it, not
+ * `{total}` — a footer reading "Page 3 of {total}" is worse than no footer.
+ * There is no CSS counter for this: a counter can say which page this is,
+ * because that is a running total, but nothing can know how many pages there
+ * will be until the last one is laid out. So the count is measured from the DOM
+ * and arrives here as a property.
+ */
+.erti-page-total::after {
+	/* Quoted by the writer, since `content` takes a string and `content: var(--x)`
+	   holding a number is invalid and silently renders nothing. */
+	content: var(--erti-page-total, '');
+}
+
 .page-break {
 	position: relative;
 	margin: 1.5rem 0;
