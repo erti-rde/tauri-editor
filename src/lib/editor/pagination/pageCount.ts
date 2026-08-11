@@ -26,9 +26,20 @@ export const PAGE_TOTAL_CLASS = 'erti-page-total';
  */
 export const pageCount = writable(1);
 
-/** Every page break ends a page, and the last page has no break after it. */
+/**
+ * One `.rm-page-break` per page, not per boundary between them.
+ *
+ * Measured rather than assumed, after this reported one page too many: a
+ * three-paragraph document that fits on a single sheet renders exactly one
+ * break and one footer, and a document filling two sheets renders two of each.
+ * The element is a spacer that *makes* a page rather than a rule drawn between
+ * two, so adding one for "the last page" counts a page that is not there.
+ *
+ * The floor is 1 because an unpaginated document has no breaks at all, and no
+ * document has ever had nought pages.
+ */
 export function countPages(root: Element): number {
-	return root.querySelectorAll('.rm-page-break').length + 1;
+	return Math.max(1, root.querySelectorAll('.rm-page-break').length);
 }
 
 /**
