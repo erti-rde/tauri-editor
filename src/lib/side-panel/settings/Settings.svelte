@@ -3,6 +3,7 @@
 
 	import AppearanceSettings from './AppearanceSettings.svelte';
 	import PageSetupSettings from './PageSetupSettings.svelte';
+	import { autoReferences } from '$lib/editor/references/referencesStore';
 	import { onMount } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { load as loadStore } from '@tauri-apps/plugin-store';
@@ -172,6 +173,10 @@
 		selectedLocale = ((await store.get('selectedLocale')) as string) || 'en-GB';
 		allowNetwork = (await getConsent()) === 'granted';
 		crossrefMailto = (await getMailto()) ?? '';
+		// The editor initialises this too, but Settings opens from the landing
+		// screen where there is no editor — without this the box would show the
+		// default rather than the choice someone already made.
+		await autoReferences.initialise();
 		await loadResources();
 	});
 </script>
@@ -285,6 +290,22 @@
 							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
 								Citation Settings
 							</h3>
+
+							<label class="mb-6 flex items-start gap-3">
+								<input
+									type="checkbox"
+									class="accent-accent mt-1 h-4 w-4"
+									checked={$autoReferences}
+									onchange={(e) => void autoReferences.update(e.currentTarget.checked)}
+								/>
+								<span>
+									<span class="text-ink block font-medium">Add a reference list automatically</span>
+									<span class="text-ink-muted mt-1 block text-sm">
+										The first citation in a document brings a works-cited list with it. Delete the
+										list and it stays deleted — this only ever adds the first one.
+									</span>
+								</span>
+							</label>
 
 							<div class="mb-6">
 								<label for="citation-style" class="text-ink mb-2 block font-medium">

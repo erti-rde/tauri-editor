@@ -34,6 +34,9 @@
 		toLatexPageSetup
 	} from './pagination';
 	import { zoomStore } from './pagination/zoom';
+	import { createReferencesWatcher } from './references/autoReferences';
+	import { readDocumentShape } from './references/documentShape';
+	import { autoReferences } from './references/referencesStore';
 
 	import type { Readable } from 'svelte/store';
 	import BubbleMenu from './extensions/BubbleMenu.svelte';
@@ -114,6 +117,7 @@
 		// paper size, and reading it afterwards would lay the first document out
 		// as Letter and then reflow it.
 		await pageSetupStore.initialise();
+		await autoReferences.initialise();
 		const setup = get(pageSetupStore);
 
 		editor = createEditor({
@@ -404,6 +408,10 @@
 		documentsStore.open(next);
 		$editor.commands.setContent(content);
 		$editor.commands.updateAllCitation();
+		// A dismissal belongs to the document it was made in. Without this,
+		// deleting the reference list in one chapter would suppress it in every
+		// chapter opened afterwards.
+		references.reset();
 	}
 
 	/** An empty manuscript, written only if that name is genuinely free. */
@@ -492,11 +500,31 @@
 		showCitationPanel = true;
 	}
 
+	/**
+	 * The reference list, added by the first citation that needs one.
+	 *
+	 * Checked here rather than on every update: this is the only moment a
+	 * document can gain its first citation, and walking a long manuscript on
+	 * each keystroke to ask a question whose answer rarely changes is waste.
+	 * A deletion is still caught, because the next citation sees that the list
+	 * that was there has gone.
+	 */
+	const references = createReferencesWatcher();
+
+	function considerReferences() {
+		const shape = readDocumentShape($editor.state.doc);
+
+		if (references.observe({ enabled: $autoReferences, ...shape })) {
+			$editor.commands.insertBibliography();
+		}
+	}
+
 	function handleCitationSelect(citation: { id: string; inlineCitation: string }) {
 		$editor.commands.insertCitation({
 			id: citation.id,
 			label: citation.inlineCitation
 		});
+		considerReferences();
 		handlePanelClose();
 	}
 
