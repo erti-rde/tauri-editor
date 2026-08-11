@@ -548,6 +548,51 @@ body {
  */
 
 /*
+ * Tables, put back the way TipTap draws them.
+ *
+ * The pagination library injects its own table rules so a table can be split
+ * across a page boundary, and the central one is `table { display: contents }`
+ * — which removes the table box altogether. With no box there is no
+ * `table-layout: fixed` and no colgroup, so the measured width went to zero,
+ * the columns collapsed onto their content, and TipTap's column resizing —
+ * which drags the colgroup widths — had nothing to drag.
+ *
+ * These win on specificity rather than with `!important`, since the element
+ * carrying `.rm-with-pagination` is the manuscript itself.
+ *
+ * The trade-off is deliberate: a table taller than the page will now run past
+ * the boundary instead of splitting. A table that splits badly is a worse
+ * outcome than one that has to be resized, `break-inside: avoid` already keeps
+ * it whole in print, and a table nobody can resize is broken every day rather
+ * than occasionally.
+ */
+.manuscript.rm-with-pagination table {
+	display: table;
+	table-layout: fixed;
+	width: 100%;
+}
+
+.manuscript.rm-with-pagination table > tr,
+.manuscript.rm-with-pagination table tbody > tr {
+	display: table-row;
+	min-width: 0;
+}
+
+.manuscript.rm-with-pagination table tbody {
+	display: table-row-group;
+	max-height: none;
+	overflow: visible;
+}
+
+.manuscript.rm-with-pagination table tr td,
+.manuscript.rm-with-pagination table tr th {
+	/* `break-all` splits words mid-character, which is unreadable in prose and
+	   wrong for a table of author names or measurements. */
+	word-break: normal;
+	overflow-wrap: break-word;
+}
+
+/*
  * "of 12", in a running head.
  *
  * The pagination library substitutes `{page}` and, despite documenting it, not
@@ -667,10 +712,15 @@ body {
 		border: none !important;
 	}
 
-	/* A break is where the printer should break, now that the gap is gone. */
-	.rm-page-break {
-		break-after: page;
-	}
+	/*
+	 * No `break-after: page` here, which is what was written first and was wrong.
+	 *
+	 * A `.rm-page-break` is not a rule drawn between two pages; it is a spacer
+	 * whose height *is* a page, pushing the following content down by one sheet.
+	 * The rhythm is already there, so forcing a break on top of it asked the
+	 * printer for a second one at the same place — a blank sheet between every
+	 * pair of pages, and one at the end.
+	 */
 
 	/* Running heads are real content and do print — that is how a page number
 	   reaches the PDF at all, since Chromium will not put a page counter into an

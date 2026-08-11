@@ -35,21 +35,26 @@ afterEach(() => {
 });
 
 describe('counting the pages', () => {
-	it('counts the page after the last break', () => {
-		// Three breaks end three pages and a fourth begins; the last page has no
-		// break after it, so the naive count is always one short.
-		expect(countPages(pagedRoot(3))).toBe(4);
+	it('counts one page per break, not one per boundary between them', () => {
+		// This read `breaks + 1` and reported a page too many on every document.
+		// Measured in a browser: a three-paragraph manuscript that fits on one
+		// sheet renders exactly one break and one footer, and one filling two
+		// sheets renders two of each. The element is a spacer whose height *is* a
+		// page rather than a rule drawn between two.
+		expect(countPages(pagedRoot(1))).toBe(1);
+		expect(countPages(pagedRoot(3))).toBe(3);
 	});
 
 	it('calls an unbroken document one page', () => {
-		// Never zero. A document always has a page, and "0 pages" is never true.
+		// Pagination turned off leaves no breaks at all, and no document has ever
+		// had nought pages.
 		expect(countPages(pagedRoot(0))).toBe(1);
 	});
 });
 
 describe('publishing the count', () => {
 	it('sets the store and the property up front', () => {
-		const root = pagedRoot(2);
+		const root = pagedRoot(3);
 
 		const stop = observePageCount(root);
 
@@ -62,7 +67,7 @@ describe('publishing the count', () => {
 	});
 
 	it('follows the document as it grows', async () => {
-		const root = pagedRoot(1);
+		const root = pagedRoot(2);
 		const stop = observePageCount(root);
 		expect(get(pageCount)).toBe(2);
 
@@ -80,7 +85,7 @@ describe('publishing the count', () => {
 	});
 
 	it('stops counting once torn down', async () => {
-		const root = pagedRoot(1);
+		const root = pagedRoot(2);
 		const stop = observePageCount(root);
 		stop();
 
