@@ -37,7 +37,10 @@
 	import { createReferencesWatcher } from './references/autoReferences';
 	import { readDocumentShape } from './references/documentShape';
 	import { autoReferences } from './references/referencesStore';
+	import { readOutline, headingAt, sameOutline } from '$lib/outline/outline';
+	import { outlineStore } from '$lib/outline/outlineStore';
 
+	import type { EditorState } from '@tiptap/pm/state';
 	import type { Readable } from 'svelte/store';
 	import BubbleMenu from './extensions/BubbleMenu.svelte';
 	import Result from './extensions/citation/Result.svelte';
@@ -140,6 +143,7 @@
 
 			onUpdate: ({ editor }) => {
 				documentStatus.report({ words: countDocument(editor.state.doc) });
+				publishOutline(editor);
 
 				// A file that could not be parsed is left alone. Saving over it would
 				// replace whatever was recoverable with an empty document, which is
@@ -150,8 +154,22 @@
 				// save actually runs, so a burst of typing costs one write and always
 				// writes the newest document.
 				autosave.schedule(() => editor.getJSON());
+			},
+
+			// Moving the cursor changes which section the reader is in without
+			// changing the document, so onUpdate never fires for it.
+			onSelectionUpdate: ({ editor }) => publishOutline(editor)
+		});
+
+		// The panel is a sibling in the layout rather than a child, so this is how
+		// it reaches back in: only the editor holds the view, and scrolling to a
+		// document position needs the view rather than the document.
+		outlineStore.report({
+			navigate: (pos) => {
+				$editor.chain().focus().setTextSelection(pos).scrollIntoView().run();
 			}
 		});
+		publishOutline($editor);
 
 		// Last, so the page-setup effects only run once there is something to
 		// apply a setup to. They cannot watch `editor` itself: it publishes on
@@ -232,6 +250,9 @@
 	});
 
 	onDestroy(() => {
+		// The panel outlives the editor too, and a stale `navigate` would call into
+		// a destroyed view.
+		outlineStore.clear();
 		// The bar outlives the editor, so a closed manuscript must not leave a
 		// stale count sitting in it.
 		documentStatus.clear();
@@ -510,6 +531,31 @@
 	 * that was there has gone.
 	 */
 	const references = createReferencesWatcher();
+
+	/**
+	 * Keep the outline panel in step with the document.
+	 *
+	 * The headings are recomputed on every change and almost always come back
+	 * identical — typing inside a paragraph cannot alter them — so they are
+	 * compared before publishing. The cursor's section is cheap and does move
+	 * constantly, so it is published on its own.
+	 */
+	let lastOutline: ReturnType<typeof readOutline> = [];
+
+	// Typed by what it reads rather than by our Editor subclass: the callbacks
+	// hand back TipTap's own Editor, which has no `contentElement`.
+	function publishOutline(instance: { state: EditorState }) {
+		const headings = readOutline(instance.state.doc);
+		const activePos = headingAt(headings, instance.state.selection.from)?.pos ?? null;
+
+		if (sameOutline(headings, lastOutline)) {
+			outlineStore.report({ activePos });
+			return;
+		}
+
+		lastOutline = headings;
+		outlineStore.report({ headings, activePos });
+	}
 
 	function considerReferences() {
 		const shape = readDocumentShape($editor.state.doc);

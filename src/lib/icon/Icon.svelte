@@ -8,6 +8,7 @@
 	import FilePlus from '~icons/lucide/file-Plus';
 	import FileWarning from '~icons/lucide/file-warning';
 	import Files from '~icons/lucide/files';
+	import ListTree from '~icons/lucide/list-tree';
 	import Pencil from '~icons/lucide/pencil';
 	import Quote from '~icons/lucide/quote';
 	import Trash from '~icons/lucide/trash-2';
@@ -72,6 +73,7 @@
 		Settings,
 		ExternalLink,
 		Books,
+		ListTree,
 		Search,
 		Filter,
 		Edit,
