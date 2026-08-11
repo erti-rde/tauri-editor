@@ -17,23 +17,46 @@ vi.mock('@tauri-apps/api/core');
 vi.mock('@tauri-apps/api/path');
 vi.mock('@tauri-apps/api/dialog');
 
+/**
+ * Located by name rather than by position.
+ *
+ * These read `getAllByRole('button')[2]`, so adding the outline button to the
+ * rail moved every index and broke two tests that were about something else.
+ * Naming the controls is also the fix for the underlying problem: they were
+ * icon-only with no accessible name, and a screen reader announced four
+ * buttons called "button".
+ */
 describe('Panel.svelte (with real Settings)', () => {
 	it('calls toggleSidePanel with correct arguments', async () => {
 		const toggleSidePanel = vi.fn();
-		const { getAllByRole } = render(Panel, { props: { toggleSidePanel } });
-		const buttons = getAllByRole('button');
-		await fireEvent.click(buttons[0]);
+		const { getByRole } = render(Panel, { props: { toggleSidePanel } });
+
+		await fireEvent.click(getByRole('button', { name: 'Files' }));
 		expect(toggleSidePanel).toHaveBeenCalledWith('fileExplorer');
-		await fireEvent.click(buttons[1]);
+
+		await fireEvent.click(getByRole('button', { name: 'Outline' }));
+		expect(toggleSidePanel).toHaveBeenCalledWith('outline');
+
+		await fireEvent.click(getByRole('button', { name: 'Sources' }));
 		expect(toggleSidePanel).toHaveBeenCalledWith('metadataExplorer');
+	});
+
+	it('names every control in the rail', () => {
+		// The gap this closes: four icon-only buttons, no labels, and a test that
+		// could only tell them apart by counting.
+		const { getAllByRole } = render(Panel, { props: { toggleSidePanel: vi.fn() } });
+
+		for (const button of getAllByRole('button')) {
+			expect(button).toHaveAccessibleName();
+		}
 	});
 
 	it('toggles settings modal open/close and renders Settings', async () => {
 		const toggleSidePanel = vi.fn();
-		const { getAllByRole, getByRole, queryByRole, findByRole } = render(Panel, {
+		const { getByRole, queryByRole, findByRole } = render(Panel, {
 			props: { toggleSidePanel }
 		});
-		const settingsButton = getAllByRole('button')[2];
+		const settingsButton = getByRole('button', { name: 'Settings' });
 		// Initially closed
 		expect(queryByRole('dialog')).not.toBeInTheDocument();
 		// Open settings

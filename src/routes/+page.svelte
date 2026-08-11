@@ -11,6 +11,7 @@
 		StatusFooter,
 		MetadataEditor
 	} from '$lib';
+	import Outline from '$lib/outline/Outline.svelte';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
 	import { errorToast } from '$lib/toast/Toast.svelte';
@@ -126,8 +127,17 @@
 			<SidePanel {toggleSidePanel} />
 		</div>
 		{#if vaultIsOpen}
-			<div class={['shrink-0', !isExplorerOpen && 'w-0 p-0']}>
-				<Explorer {isExplorerOpen} />
+			<div class={['shrink-0 overflow-hidden', !isExplorerOpen && 'w-0 p-0']}>
+				{#if panelName === 'outline'}
+					<!-- The outline shares the sidebar with the file tree rather than
+					     replacing the manuscript: it is for moving around the document
+					     you are looking at, so it has to be beside it. -->
+					<div class="border-line h-full w-64 border-r">
+						<Outline />
+					</div>
+				{:else}
+					<Explorer {isExplorerOpen} />
+				{/if}
 			</div>
 
 			<div class="grow">
