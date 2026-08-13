@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 
 	import { invoke } from '@tauri-apps/api/core';
 
@@ -19,47 +19,58 @@
 	let pdfUrl = $state('');
 	let loading = $state(false);
 	let error: string | null = $state(null);
-	let mounted = $state(false);
-	let currentPath: string | null = $state(null); // Track current PDF path
+	let currentPath: string | null = $state(null);
 
-	onMount(() => {
-		mounted = true;
-		return () => {
-			mounted = false;
-		};
+	/**
+	 * Which load is the current one.
+	 *
+	 * Switching tabs quickly starts a second read before the first returns, and
+	 * without this the slower one wins and the pane shows the paper you just
+	 * navigated away from.
+	 */
+	let generation = 0;
+
+	onDestroy(() => {
+		// Each load makes a blob URL, and the browser keeps the bytes alive until
+		// it is revoked. A few dozen papers over a session is real memory.
+		generation++;
+		if (pdfUrl) URL.revokeObjectURL(pdfUrl);
 	});
 
 	$effect(() => {
-		if (path && currentPath !== path) renderPdf(path);
+		if (path && currentPath !== path) void renderPdf(path);
 	});
 
 	async function renderPdf(pdfPath: string) {
-		// Prevent re-rendering the same PDF
-		if (currentPath === pdfPath || !mounted) {
-			return;
-		}
+		const mine = ++generation;
 
 		loading = true;
 		error = null;
 		currentPath = pdfPath;
 
 		try {
-			// Get base64 encoded PDF data from Tauri backend
-			invoke('read_pdf_file', { path: pdfPath }).then((res) => {
-				const uint8Array = base64ToUint8Array(res as string);
-				const blob = new Blob([uint8Array], { type: 'application/pdf' });
-				pdfUrl = URL.createObjectURL(blob);
-			});
+			// Awaited, so a failure lands in the catch below. This used to call
+			// `.then()` inside a try block, which cannot catch an async rejection —
+			// so a PDF that would not read surfaced as an unhandled rejection and
+			// the reader sat on an empty viewer instead of saying what went wrong.
+			const encoded = await invoke<string>('read_pdf_file', { path: pdfPath });
+			if (mine !== generation) return;
+
+			const blob = new Blob([base64ToUint8Array(encoded)], { type: 'application/pdf' });
+			const next = URL.createObjectURL(blob);
+
+			if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+			pdfUrl = next;
 		} catch (e) {
-			if (mounted) {
-				console.error('Error rendering PDF:', e);
-				error = e instanceof Error ? e.message : 'Failed to render PDF';
-				currentPath = null; // Reset current path on error
-			}
+			if (mine !== generation) return;
+
+			console.error('Could not open the PDF:', e);
+			error = e instanceof Error ? e.message : String(e);
+			// Cleared so the same file can be tried again; leaving it set made a
+			// failed paper permanently unopenable until the tab was closed.
+			currentPath = null;
 		} finally {
-			if (mounted) {
-				loading = false;
-			}
+			if (mine === generation) loading = false;
 		}
 	}
 
@@ -76,10 +87,15 @@
 </script>
 
 <div class="flex h-full w-full flex-col items-center">
-	{#if loading}
-		<div class="loading">Loading PDF...</div>
-	{:else if error}
+	{#if error}
 		<div class="error">{error}</div>
+	{:else if loading || !pdfUrl}
+		<!--
+			`!pdfUrl` matters as much as `loading`. The viewer was mounted before
+			the bytes arrived, with `?file=` empty, and failed to load nothing —
+			which is the error that reached the user.
+		-->
+		<div class="loading">Loading PDF…</div>
 	{:else}
 		<div class="h-full w-full overflow-auto">
 			<iframe
