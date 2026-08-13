@@ -20,7 +20,7 @@
 	import { toBibliography } from '$lib/export/bibtex';
 	import { toLatexDocument } from '$lib/export/latex';
 	import { DOCUMENT_EXTENSION, toDocumentFileName, type ProjectDocument } from './documents';
-	import { documentsStore } from '$lib/stores/documents.svelte';
+	import { documentsStore, requested } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
 	import DocumentBar from './DocumentBar.svelte';
 	import { Editor } from './core/Editor';
@@ -247,6 +247,28 @@
 		if (!instance) return;
 
 		return observePageCount(instance.view.dom as HTMLElement);
+	});
+
+	/**
+	 * Open a manuscript the file tree or the tab strip asked for.
+	 *
+	 * They know which document was clicked but cannot open one: that means
+	 * saving the outgoing manuscript, reading the new file and replacing the
+	 * editor's content, none of which they have an editor for. So they leave a
+	 * request and this performs it.
+	 *
+	 * `untrack` for the same reason as the effects above — `openDocument` reads
+	 * the documents store and then writes to it, which would make this effect
+	 * its own trigger.
+	 */
+	$effect(() => {
+		const wanted = $requested;
+		if (!wanted || !editorReady) return;
+
+		// Cleared before the attempt, so a document that fails to open is not
+		// retried on every subsequent update.
+		documentsStore.taken();
+		untrack(() => void openDocument(wanted));
 	});
 
 	onDestroy(() => {

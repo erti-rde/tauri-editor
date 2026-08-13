@@ -6,7 +6,9 @@
 	import X from '~icons/lucide/x';
 
 	import { workspaceStore } from './workspaceStore';
-	import type { Pane, Workspace } from './tabs';
+	import { documentsStore } from '$lib/stores/documents.svelte';
+	import { get } from 'svelte/store';
+	import type { Pane, Tab, Workspace } from './tabs';
 
 	/**
 	 * One pane's open files.
@@ -25,6 +27,22 @@
 	const { pane, workspace, focused }: Props = $props();
 
 	const canSplit = $derived(workspace.panes.length < 2 && pane.tabs.length > 0);
+
+	/**
+	 * Show a tab, and for a manuscript actually load it.
+	 *
+	 * Making the tab active only decides which pane shows the editor. Which
+	 * manuscript the editor holds is a separate question, and one only the editor
+	 * can answer — it has to save the outgoing document first — so this asks.
+	 */
+	function activate(tab: Tab) {
+		workspaceStore.open(tab, pane.id);
+
+		if (tab.kind !== 'document') return;
+
+		const document = get(documentsStore).documents.find((d) => d.path === tab.id);
+		if (document) documentsStore.request(document);
+	}
 </script>
 
 <div
@@ -48,11 +66,11 @@
 					aria-selected={isActive}
 					class="group border-line flex max-w-52 min-w-0 shrink-0 cursor-pointer items-center gap-1.5 border-r px-3 text-xs transition-colors
 						{isActive ? 'bg-surface text-ink' : 'text-ink-muted hover:bg-surface-hover hover:text-ink'}"
-					onclick={() => workspaceStore.open(tab, pane.id)}
+					onclick={() => activate(tab)}
 					onkeydown={(e) => {
 						if (e.key === 'Enter' || e.key === ' ') {
 							e.preventDefault();
-							workspaceStore.open(tab, pane.id);
+							activate(tab);
 						}
 					}}
 					onauxclick={(e) => {
