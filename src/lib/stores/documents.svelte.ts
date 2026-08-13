@@ -17,6 +17,14 @@ interface DocumentsState {
 	current: ProjectDocument | null;
 }
 
+/**
+ * A manuscript someone has asked to open, waiting for the editor to do it.
+ *
+ * Separate from `current` because they mean different things: `current` is what
+ * the editor is showing, and this is what it has been asked to show next.
+ */
+export const requested = writable<ProjectDocument | null>(null);
+
 function createDocumentsStore() {
 	const { subscribe, update, set } = writable<DocumentsState>({ documents: [], current: null });
 
@@ -48,6 +56,28 @@ function createDocumentsStore() {
 		/** Switch to a manuscript. The caller saves the outgoing one first. */
 		open(document: ProjectDocument) {
 			update((state) => ({ ...state, current: document }));
+		},
+
+		/**
+		 * Ask for a manuscript to be opened, from somewhere that cannot open one.
+		 *
+		 * The file tree and the tab strip know which document you clicked, but
+		 * opening one means saving the outgoing manuscript, reading the new file
+		 * and replacing the editor's content — all of which needs the editor. They
+		 * put the request here and the editor performs it.
+		 *
+		 * Deliberately not `open()`: that only moves the pointer. Setting `current`
+		 * from outside makes the editor's own guard — "already current, nothing to
+		 * do" — true before the content has been loaded, so the manuscript on
+		 * screen would stay the old one under the new one's name.
+		 */
+		request(document: ProjectDocument) {
+			requested.set(document);
+		},
+
+		/** Taken by the editor once the request has been carried out. */
+		taken() {
+			requested.set(null);
 		},
 
 		/** Add a manuscript that has just been written to disk, and open it. */
