@@ -3,6 +3,7 @@
 	import type { FileItem } from '$lib/stores/fileSystem.svelte';
 	import { fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import TreeItem from './TreeItem.svelte';
+	import { workspaceStore } from '$lib/workspace/workspaceStore';
 
 	interface Props {
 		item: FileItem;
@@ -16,9 +17,22 @@
 	function handleClick() {
 		if (item.is_dir) {
 			isExpanded = !isExpanded;
-		} else {
-			fileSystemState.currentFile = item.path;
+			return;
 		}
+
+		fileSystemState.currentFile = item.path;
+
+		// Opening a file adds a tab rather than replacing what is on screen, so a
+		// paper can sit beside the chapter that cites it.
+		if (item.path.toLowerCase().endsWith('.pdf')) {
+			workspaceStore.open({ id: item.path, kind: 'pdf', title: fileName(item.path) });
+		}
+	}
+
+	/** The last path segment, without its extension — what a tab should say. */
+	function fileName(path: string): string {
+		const base = path.split(/[\\/]/).pop() ?? path;
+		return base.replace(/\.pdf$/i, '');
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {

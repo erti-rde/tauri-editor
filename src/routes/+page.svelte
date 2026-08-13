@@ -2,21 +2,14 @@
 	import { onMount } from 'svelte';
 	import { appDataDir, homeDir, join } from '@tauri-apps/api/path';
 	import { load as loadStore } from '@tauri-apps/plugin-store';
-	import {
-		Editor,
-		Explorer,
-		Landing,
-		PdfReader,
-		SidePanel,
-		StatusFooter,
-		MetadataEditor
-	} from '$lib';
+	import { Explorer, Landing, SidePanel, StatusFooter, MetadataEditor } from '$lib';
+	import Workspace from '$lib/workspace/Workspace.svelte';
 	import Outline from '$lib/outline/Outline.svelte';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
 	import { errorToast } from '$lib/toast/Toast.svelte';
 	import ConsentPrompt from '$lib/consent/ConsentPrompt.svelte';
-	import { fileSystemStore, fileSystemState } from '$lib/stores/fileSystem.svelte';
+	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
 	import type { PanelNames } from '$types/page';
@@ -38,10 +31,6 @@
 		}
 		panelName = newSidePanelName;
 	}
-
-	let isItPdf = $derived(() => {
-		return fileSystemState.currentFile && fileSystemState.currentFile.endsWith('.pdf');
-	});
 
 	async function handleProjectOpening() {
 		// The project database lives at <project>/.erti/project.db and is created
@@ -140,13 +129,14 @@
 				{/if}
 			</div>
 
-			<div class="grow">
+			<div class="min-w-0 grow">
 				{#if panelName == 'metadataExplorer'}
 					<MetadataEditor />
-				{:else if isItPdf()}
-					<PdfReader />
 				{:else}
-					<Editor />
+					<!-- Panes and tabs, rather than one slot switched by a mode flag.
+					     Opening a paper used to replace the manuscript; now it sits
+					     beside it. -->
+					<Workspace />
 				{/if}
 			</div>
 		{:else}

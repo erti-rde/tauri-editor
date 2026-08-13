@@ -2,7 +2,19 @@
 	import { onMount } from 'svelte';
 
 	import { invoke } from '@tauri-apps/api/core';
-	import { fileSystemState } from '$lib/stores/fileSystem.svelte';
+
+	/**
+	 * Which PDF to show, rather than "the" PDF.
+	 *
+	 * This read the one globally-current file, which meant exactly one PDF could
+	 * be on screen — so it could not be a tab, and two papers could not be read
+	 * side by side.
+	 */
+	interface Props {
+		path: string;
+	}
+
+	const { path }: Props = $props();
 
 	let pdfUrl = $state('');
 	let loading = $state(false);
@@ -18,9 +30,7 @@
 	});
 
 	$effect(() => {
-		if (fileSystemState.currentFile && currentPath !== fileSystemState.currentFile) {
-			renderPdf(fileSystemState.currentFile);
-		}
+		if (path && currentPath !== path) renderPdf(path);
 	});
 
 	async function renderPdf(pdfPath: string) {
