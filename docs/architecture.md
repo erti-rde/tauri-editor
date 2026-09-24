@@ -101,7 +101,9 @@ Each recipe ends with what to test. Run `pnpm verify` before opening the PR (CLA
    `commands.yourCommand(…)` appears in `src/lib/ipc/bindings.ts`.
 6. Call it from TS as `call(commands.yourCommand(…))`, or `run(…)` when it returns nothing, and
    show failures with `describeError`. Importing `invoke` directly is an ESLint error.
-7. Add it to the fake backend (M1a-1) so harness journeys can use it.
+7. Add its handler to `fakeCommands` in `src/lib/harness/fakeBackend.ts`. The fake is typed
+   from the bindings, so `pnpm check` fails until it's there. Make it behave like the query
+   (ordering, limits, which errors), not a canned answer: journeys and vitest both run on it.
 
 Test: a Rust integration test in `src-tauri/tests/` that goes **through the command**, not just
 the query (see `tests/ipc_errors.rs` for why). CI fails if `bindings.ts` is stale.
@@ -157,6 +159,15 @@ Put it in the `lib/` folder of its domain, with no Tauri, Svelte or `$lib` alias
 
 See "Seeing the app" in [CLAUDE.md](../CLAUDE.md): the fake-backend harness in a browser,
 and probe builds for the real webview.
+
+### Test against the backend
+
+- **A journey** (Playwright, `e2e/`): start from `launch(page)` in `e2e/harness.ts`. Every
+  journey fails on a console error or a command the fake doesn't handle, without asking.
+- **A component or store** (vitest): `useFakeBackend()` from `$lib/harness/testing` instead of
+  `vi.mock('@tauri-apps/…')`. `backend()` exposes its files, stores and calls to assert on.
+  Change the world with `useFakeBackend(() => ({ ...defaultFixture(), … }))`.
+- **A plugin call the app hasn't made before** gets a handler in `src/lib/harness/install.ts`.
 
 ## Known rough edges
 

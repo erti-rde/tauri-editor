@@ -24,3 +24,8 @@ tests/fixtures/retrieval/last-run.json
 
 # Copied from pdfjs-dist by scripts/sync-pdf-assets.mjs
 static/pdf-assets/
+
+# Playwright output (M1a-1). Screenshots from `pnpm e2e:shots` land in e2e/shots/.
+e2e/.results/
+e2e/.report/
+e2e/shots/

@@ -61,12 +61,14 @@ Everything else: decide, follow the docs above, and record non-obvious choices i
 
 ## Seeing the app
 
-- **Browser (fake backend):** the app-in-browser harness (M1a-1) boots `+page.svelte` on
-  `mockIPC`. Until it exists, a throwaway route under `src/routes/__look/` that installs
-  `mockIPC` and then dynamically imports `../+page.svelte` works. Never commit such a route.
+- **Browser (fake backend):** the harness (M1a-1) runs the real `+page.svelte` on an
+  in-memory backend at `/harness`, in `--mode harness` only. `pnpm e2e:shots` writes
+  screenshots of the main screens to `e2e/shots/` for a PR. To look around by hand, start Vite
+  with `--mode harness` and open `/harness` (`?consent=unasked` and `?recents=none` pick a
+  world). A new command or plugin call needs a handler in `src/lib/harness/`, or journeys fail.
 - **Starting Vite:** `preview_start` fails in this sandbox (`EPERM: uv_cwd`). Run
-  `node node_modules/vite/bin/vite.js dev --port 1421 --strictPort` in the background, then
-  `preview_start` with the URL.
+  `node node_modules/vite/bin/vite.js dev --mode harness --port 1421 --strictPort` in the
+  background, then `preview_start` with the URL.
 - **The real app, no clicking:** build with a temporary probe that runs in the webview on
   startup and writes results to `BaseDirectory.AppData`, then run
   `pnpm exec tauri build --debug --no-bundle` and `src-tauri/target/debug/Erti`, and read the

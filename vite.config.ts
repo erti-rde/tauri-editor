@@ -14,5 +14,12 @@ export default defineConfig({
 	],
 	optimizeDeps: {
 		include: ['pdfjs-dist']
+	},
+	server: {
+		fs: {
+			// The browser harness (M1a-1) reads the bundled styles as the app reads
+			// them from its Resource directory, and opens a fixture paper.
+			allow: ['src-tauri/resources/csl', 'tests/fixtures/harness']
+		}
 	}
 });
