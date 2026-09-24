@@ -1,370 +1,336 @@
 # Erti 1.0 — Release Plan
 
-The working plan from here to a releasable 1.0. [plan.md](plan.md) is the record of how the
-foundations were hardened; this file is the route from there to a release, and it is kept current as
-work lands — a milestone is ticked when its _Verify_ passes, not when its code merges.
+The route from here to a releasable 1.0, kept current as work lands. **A box is ticked when its
+_Verify_ passes, not when its code merges.** [plan.md](plan.md) is the record of how the
+foundations were hardened; this file is what happens next.
+
+| Document                             | Holds                                                          |
+| ------------------------------------ | -------------------------------------------------------------- |
+| **plan-v1.md** (this)                | Release criteria, milestones, sequencing, risks, decisions     |
+| [docs/adr/](docs/adr/README.md)      | The nine architecture decisions 1.0 rests on                   |
+| [docs/security.md](docs/security.md) | Threat model and the ten 1.0 security tasks (`SEC-n`)          |
+| [docs/testing.md](docs/testing.md)   | Test layers, per-milestone test plans, the release test matrix |
+| [docs/release.md](docs/release.md)   | Release pipeline, free distribution, updater, versioning       |
 
 ---
 
-## 0. Where we actually are (audited 2026-09-24)
+## 0. Where we are (2026-09-24)
 
-|                    |                                                                      |
-| ------------------ | -------------------------------------------------------------------- |
-| Version            | 0.2.5 (`package.json`, `tauri.conf.json`, `Cargo.toml`)              |
-| Frontend tests     | **995 pass**, 2 skipped, 66 files                                    |
-| Rust tests         | **47 pass** (26 unit, 21 integration)                                |
-| `svelte-check`     | 0 errors, 0 warnings, 1,216 files                                    |
-| Branch             | `phase-7/document-structure`, 12 commits ahead of `main` (after M0)  |
-| Uncommitted        | Committed in M0 (5 commits, 2026-09-24); see below                   |
-| Open GitHub issues | 16, of which at least 4 are already done (§2)                        |
-| Release pipeline   | Windows-only matrix, paused; no updater, no signing, no notarisation |
+|                  |                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| Version          | 0.2.5                                                                                    |
+| `main`           | Document structure, reading & annotation, notes panel, CSL index refresh — all merged    |
+| Tests            | 1,010 vitest on `main` (1,014 with #109), 47 cargo; `svelte-check` and lint clean        |
+| Coverage         | 71% lines. The orchestration layer is dark: `Editor.svelte` 4.7%, `pdf_handlers.ts` 7.9% |
+| End-to-end       | **Nothing runs the real app** (docs/testing.md)                                          |
+| Open PRs         | #108 (CodeRabbit follow-up for #107), #109 (CSP `connect-src` allowlist)                 |
+| Open issues      | 11: #104 #103 #102 #101 #100 #99 #48 #39 #23 #17 #11                                     |
+| Release pipeline | Ten defects; can't ship 1.0 as-is (docs/release.md)                                      |
 
-### What the audit found uncommitted — now committed
+**What the planning pass found**, beyond the first draft of this plan:
 
-About 15,000 lines sat in the working tree, last touched 2026-09-06. M0 committed them as
-`462a232`…`3c74fe7`, each commit type-checked on its own:
-
-- **Reading & annotation** — highlights, underlines, area snapshots, page notes; eight renamable
-  labels (Claim, Evidence, Method, Limitation, Definition, Counter-point, Interesting, My opinion);
-  printed page labels (`p. 853`, not sheet 11); reading position per paper.
-- **Notes panel** — every mark across every paper, searchable by text or meaning, project first then
-  library. It **follows the writing**: with nothing typed, it shows the notes that bear on the
-  paragraph under the cursor.
-- **NoteNudge** — a quiet margin dot beside a paragraph you have unused notes about.
-- **Import** of highlights already made in Zotero, Preview or Adobe, marked `imported`, undoable.
-- **Export** of notes to Markdown and a re-importable JSON sidecar.
-- **Show in PDF** — jump from a note or result to the exact place in the paper (#37).
-- Schema migrations 3–5 (`annotations`, `annotation_images`, `annotation_embeddings`,
-  `annotation_labels`, `reading_positions`, mark style, page label) and a migration freeze test.
-- pdf.js assets copied from `pdfjs-dist` at build time instead of 376 vendored files.
-
-So the notes feature is already about 60% of the way there. **What's missing is notes that aren't
-attached to a PDF page**: a note about a paper as a whole, and any note on a source that has no PDF
-at all.
+- **Network lookups are very likely blocked inside the app.** The CSP has no `connect-src`, so
+  it falls back to `default-src 'self'`, and Tauri's docs say the policy is injected in dev as
+  well as release. A page carrying the identical policy was refused by `doi.org`, Crossref and
+  GitHub, while the same page without it reached all three. The tests run in Node, where there
+  is no CSP. **Not yet observed in the app itself.** #109 fixes it with an enforced allowlist,
+  and its checklist is that observation.
+- **Manuscripts have no file format** (bare editor JSON, no version) and **citations don't
+  travel**: a co-author sees `[source removed]`. This must be fixed before 1.0 puts files in the
+  wild (ADR 002).
+- **The webview can read all of `$HOME` and delete within it**, and three Rust commands read any
+  path with no scope at all. One script injection away from the whole disk (SEC-1, SEC-2).
+- **The library has no backup**, though it now holds irreplaceable notes (ADR 008).
+- **Nothing can remove a source** from the library (ADR 003).
+- `citation-js` fails the offline gate (its core pulls in a network client), so BibTeX import
+  uses the Better BibTeX parser instead (ADR 009).
 
 ---
 
-## 1. What "1.0" means — release criteria
+## 1. What "1.0" means
 
-1.0 ships when every line here is true and was verified, not assumed:
+1.0 ships when every line is true **and verified**:
 
-1. **The core loop works on a real library** — 200+ PDFs including two-column journals, ingested
-   with network lookups on and off, with no stuck or poisoned sources.
-2. **Any source can be cited** — PDF, book, chapter, web page, or a paper read in print — and every
-   source can carry notes.
-3. **Nothing the user writes can be lost** — autosave (done), plus version history they can
-   restore from.
-4. **The writing companion is useful and quiet** — related notes and passages appear beside the
-   paragraph being written, and never interrupt.
-5. **Attribution check** exists as a review you run, not a monitor, and never produces a score.
-6. **The document can leave Erti in the formats people need** — PDF, verified on every platform
-   rather than assumed (today it is `window.print()`, and webview print differs per OS), LaTeX
-   (done) and DOCX.
-7. **A researcher can move in** — import from BibTeX/RIS/CSL-JSON, not only folders of PDFs.
-8. **It installs on every platform we ship at no cost to the project.** There's no paid code
-   signing, so each platform gets a tested, illustrated first-open guide, and a working in-app
-   updater.
-9. **Every privacy claim in the README is re-verified** against network traffic on the release
-   build.
-10. **AGPL obligations are met in-app** — About screen with source link, licence, third-party
+1. **The core loop works on a real library.** 200+ PDFs including two-column journals, ingested
+   with lookups on and off, with no stuck or poisoned sources.
+2. **Any work can be cited, and every source can carry notes.** PDF, book, chapter, web page, a
+   paper read in print; pinpoint pages from notes and highlights.
+3. **Manuscripts are a versioned format that carries its sources.** A co-author without your
+   PDFs sees every citation.
+4. **Nothing the user writes or marks can be lost.** Autosave, manuscript version history, and
+   rotating library backups.
+5. **The writing companion is useful and quiet.** Related notes and passages beside the
+   paragraph, never interrupting, with no measurable typing lag.
+6. **The attribution check is a review you run,** measured against a labelled fixture set, never
+   producing a score.
+7. **A researcher can move in and out.** Import BibTeX/RIS/CSL-JSON; export PDF (verified per
+   platform), LaTeX and DOCX.
+8. **What leaves the machine is exactly what the README lists,** enforced by the CSP in the
+   webview, inventoried in Rust, and confirmed by a network capture of the release build.
+9. **The security baseline holds.** SEC-1 to SEC-6 and SEC-11 are done; the threat model is re-run on the
+   finished surface.
+10. **It installs on macOS, Windows and Linux at no cost to the project,** with a tested
+    first-open guide, checksums, and a signed in-app updater behind consent.
+11. **AGPL obligations are met in-app.** About screen, source link, licences, third-party
     notices, model licence.
+12. **A 0.9 beta has been used by researchers** other than the maintainers, and what they hit is
+    fixed or deliberately deferred.
 
 ---
 
-## 2. GitHub issues — triage
+## 2. Sequencing
 
-| #   | Title                                      | Verdict                                                                 |
-| --- | ------------------------------------------ | ----------------------------------------------------------------------- |
-| 58  | Create a split view                        | **Close** — shipped in `34381a5`                                        |
-| 37  | Jump to exact location in PDF              | **Close after M0** — `showInPdf.ts` (uncommitted)                       |
-| 8   | Tooltip on files icon                      | **Close** — `Panel.svelte` has `title`/`aria-label`                     |
-| 4   | Scrollbar colours                          | **Close** — plan.md Phase 6 records it done                             |
-| 48  | New PDF overwrites values of existing PDFs | **Re-test, likely close** — filename-keyed pipeline replaced by hashing |
-| 49  | DOI placeholder on new source              | **Close as obsolete** — CSL-JSON NULL until resolved, `doi` column      |
-| 39  | Logo                                       | **1.0** — M7, needed for icons and installer                            |
-| 23  | File operations from explorer              | **1.0, reduced** — rename/delete/duplicate manuscripts only (M5)        |
-| 103 | Font family and size in toolbar            | **1.0** — M5                                                            |
-| 104 | Line numbers for peer review               | **1.x**                                                                 |
-| 99  | Fold document bar into tab strip           | **1.x**                                                                 |
-| 100 | Draggable split divider                    | **1.0** — small, and the split looks broken without it                  |
-| 101 | Drag tabs between panes                    | **1.x**                                                                 |
-| 102 | Footnotes at foot of page                  | **1.x** — needs a paged-media layer (plan.md: endnotes, named as such)  |
-| 11  | Draggable editor blocks                    | **1.x**                                                                 |
-| 17  | Semantic Scholar recommendations           | **1.x** — network; needs its own consent entry                          |
+```
+M0 land what exists ──▶ M1a safety net + format ──▶ M1b sources, notes, import ──┬──▶ M2 index ──▶ M3 companion ──┐
+                                 │                                                ├──▶ M4 attribution check ───────┤
+                                 └──────────────────────────────────────────────▶ M5 writing essentials ─────────┤
+M7a release pipeline (independent — start alongside M1a) ─────────────────────────────────────────────────────────┤
+                                                                                                        ▼
+                                                                      M6 scale & quality gates ──▶ M7b 0.9 beta ──▶ 1.0
+```
+
+- **M1a → M1b is the critical path.** Everything after it reads the manuscript format,
+  resolves canonical ids, or needs the E2E harness. It was one milestone of 17 items; it's split
+  so that the part everything depends on (harnesses, security boundary, backups, file format)
+  finishes first and can ship on its own. M5 needs only M1a.
+- **M4 doesn't wait for M2.** The attribution check is shingle-based (ADR 006), independent of
+  the vector index.
+- **M7a (pipeline) is infrastructure** with no dependency on features. Building it early means
+  the 0.9 beta isn't blocked on CI work at the end.
+
+| Milestone                    | Size | Depends on |
+| ---------------------------- | ---- | ---------- |
+| M0 Land what exists          | S    | —          |
+| M1a Safety net + file format | M    | M0         |
+| M1b Sources, notes, import   | L    | M1a        |
+| M2 Retrieval index           | M    | M1b        |
+| M3 Writing companion         | M    | M2         |
+| M4 Attribution check         | L    | M1b        |
+| M5 Writing essentials        | L    | M1a        |
+| M6 Scale & quality gates     | M    | M2–M5      |
+| M7a Release pipeline         | M    | —          |
+| M7b Beta → 1.0               | M    | M6, M7a    |
+
+Sizes are relative (S ≈ days, M ≈ 1–2 weeks, L ≈ 3+ weeks of focused work). Summed, that's
+roughly **4–6 months of focused single-maintainer work**. Calendar dates wait until capacity is
+known. **Proposed cut line (not yet agreed):** if M1b overruns by more than half its size, M4
+(the largest feature, and the one no other criterion depends on) moves to 1.1 by an explicit
+decision in §6, rather than by drift.
 
 ---
 
-## 3. Design of the new work
+## 3. Milestones
 
-### 3.1 Sources without a PDF
+Tags point at the source of each item: `ADR-n`, `SEC-n` (docs/security.md), `TEST`
+(docs/testing.md), `REL` (docs/release.md).
 
-**The constraint.** A source's identity is the SHA-256 of its PDF bytes (`sources.sha256`), and that
-id is also the citation id (`citationStore` keys on it). No file means no identity, so there's
-currently no way to cite a book read in print.
+### M0 — Land what exists _(S)_
 
-**Design.**
+- [x] Commit the ~15k lines of uncommitted reading/notes work in reviewable commits; merged to
+      `main` via #106
+- [x] Recover the CSL style-index work from a stale worktree (plan.md D10) — #107: 986 → 2,862
+      styles, weekly upstream check
+- [x] Drop the unused `tauri-plugin-sql` config
+- [x] Close #8, #4, #49; #58 and #37 closed by #106
+- [ ] Merge #108 (review follow-up for #107)
+- [ ] Merge #109 (CSP allowlist) **and verify in the app:** a DOI resolves, an arXiv paper
+      resolves, a new citation style downloads
+- [ ] Remove `tauri-plugin-shell`; `opener` covers opening links — SEC-6
+- [ ] Re-test #48 against hash-keyed ingest; close or reproduce
+- [ ] Clean up the stale worktree `.claude/worktrees/distracted-chatelet-d0168b` and its branch
+- [ ] Commit this planning set: `plan-v1.md`, `docs/adr/`, `docs/security.md`,
+      `docs/testing.md`, `docs/release.md`
 
-- A source without a file gets id `erti:<uuid>` in the same column. Citations, overrides,
-  `source_set` and rendering all key on this column and keep working unchanged.
-- It has no `locations`, no `chunks`, and no `ingest_status` row. Nothing waits on ingest.
-- Created from: manual entry (a type-aware form driven by the Zotero schema `MetadataEditor`
-  already uses), a DOI or ISBN lookup (behind the existing consent gate), or an import (§3.4).
-- **Attaching a PDF later is the hard part.** The file gets its own hash and chunks, but manuscripts
-  on disk — including co-authors' copies — already cite `erti:<uuid>`. Re-keying them isn't
-  possible. So add `source_aliases(alias TEXT PRIMARY KEY, sha256 TEXT)`: the file hash becomes an
-  alias that resolves to the canonical id, and search results map through it. **Spike this first
-  (M1.1)** — it decides whether the approach holds.
+_Verify:_ CI green on `main`. In `pnpm tauri dev`: highlight a PDF, find it in the Notes panel,
+restart, still there; with lookups on, a new PDF resolves its metadata.
 
-### 3.2 Notes per source
+### M1a — Safety net and file format _(M, critical path)_
 
-A new `source_notes` table in the **library** DB. Notes follow the paper across projects, for the
-same reason annotations live there.
+Everything here is either a precondition for changing files and schemas safely, or the file
+format itself, which is the one thing that can't be changed after 1.0 puts files in the wild.
 
-```sql
-CREATE TABLE source_notes (
-    id         TEXT PRIMARY KEY,          -- uuid, survives sidecar round-trips
-    sha256     TEXT NOT NULL REFERENCES sources(sha256) ON DELETE CASCADE,
-    body       TEXT NOT NULL,             -- the note, Markdown
-    quote      TEXT,                      -- exact words transcribed from the source, if any
-    page_label TEXT,                      -- "p. 42" as printed, for pinpoint citation
-    label_id   TEXT,                      -- same labels as highlights
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-```
+- [ ] App-in-browser harness: Playwright + `mockIPC` with an in-memory fake backend; boots
+      `+page.svelte` — TEST
+- [ ] Real-app E2E: WebdriverIO + `tauri-driver` on Linux/xvfb in CI; journeys 1–2 — TEST
+- [ ] Scope the Rust path commands to the project root and known locations — SEC-1
+- [ ] Verify the effective fs scope, then narrow it (no `$HOME` write, no `remove`) — SEC-2
+- [ ] Library backups with `VACUUM INTO`, **always before a migration** — ADR-8
+- [ ] `adapterCslZotero.ts` tests to ≥ 90% before manual entry builds on it (#67) — TEST
+- [ ] Extract manuscript load/save out of `Editor.svelte` into a tested module — ADR-1
+- [ ] Manuscript format 1: the doc at the root plus a namespaced `erti` key with embedded CSL;
+      format-0 read path; newer-format refusal; **a 1.0 file survives a 0.2.5 load** — ADR-2
+- [ ] `compile_latex` passes `-no-shell-escape` explicitly — SEC-11
 
-- A separate table rather than a new `annotations.kind`, because `annotations.page` is `NOT NULL`
-  and changing the `kind` CHECK means rebuilding the table that holds work that cannot be
-  regenerated (schema.rs already argues this).
-- `quote` + `page_label` are what make a print-book reader first class. "p. 42: '…'" is exactly
-  what someone reading on paper writes down, and it's exactly what the citation (pinpoint) and the
-  attribution check (verbatim source text) need.
-- Embedded through the same path as annotations, so they appear in the Notes panel, the writing
-  companion and the check with no special-casing.
-- UI: a Notes tab on each source in the Sources panel, and a "New source + note" flow for a book
-  that isn't in the library yet.
+_Verify:_ E2E journeys 1–2 pass in CI; a migration takes a backup first; `../` and symlink
+escapes are refused; a 1.0 manuscript opened by the 0.2.5 loader keeps every paragraph; a
+manuscript sent to a clean library renders every citation from the embedded sources.
 
-### 3.3 One engine, three surfaces
+### M1b — Sources, notes and import _(L, critical path)_
 
-The writing companion, the note nudge and the attribution check all ask the same question —
-_what in my notes and library is this passage close to?_ — at different thresholds. Build that
-once.
+- [ ] **Spike:** aliases hold (attach a PDF to a cited no-file source; every citation still
+      renders; search reports the canonical id) — ADR-3
+- [ ] Library migration 6: `source_aliases`, `source_notes`, `source_note_embeddings` — ADR-3,
+      ADR-4
+- [ ] `canonical(id)` in Rust and TS against one shared fixture table — ADR-3
+- [ ] Remove a source (refuses while cited, unless confirmed) — ADR-3
+- [ ] Manual source entry, type-aware — ADR-3
+- [ ] DOI lookup for manual entry (doi.org is already allowed). **ISBN lookup deferred to 1.x:**
+      it needs a new external service, and choosing one is a privacy decision, not a detail
+- [ ] Source notes UI in the Sources panel; "new source + note" flow; in the Notes panel,
+      search and sidecar export — ADR-4
+- [ ] Import BibTeX (`@retorquere/bibtex-parser`) / RIS / CSL-JSON with dedupe; attach named
+      files; measure bundle size — ADR-9
+- [ ] Shape guards and size limits for envelope, CSL-JSON, sidecars and imports, with hostile
+      fixtures — SEC-3, SEC-4
 
-```
-paragraph (cursor leaves, or idle)          whole document (on request)
-        │                                           │
-        ▼                                           ▼
-  embed 1 paragraph ─┐                    sentence walk with PM positions
-                     ▼                              │
-     in-memory index: normalised vectors            ▼
-     ├─ highlights + page notes        shingle index (verbatim / near-verbatim)
-     ├─ source notes (+ quotes)        ├─ quotes in notes & highlights  ← highest precision
-     └─ library chunks                 ├─ library chunks
-                     │                 └─ other manuscripts in the project (self-reuse)
-                     ▼                              │
-             WRITING COMPANION                      ▼
-     related notes · related passages      ATTRIBUTION CHECK (report)
-     margin nudge (notes only)             citation-aware · quote-aware · no score
-```
+_Verify:_ cite a print book with a pinpoint in APA, Chicago notes and IEEE. Attach its PDF;
+every citation still renders. Import a 500-entry Zotero `.bib` over an ingested folder with no
+duplicates. E2E journey 3 passes in CI.
 
-**Why the engine needs work before any of this.** `search_similar` reads every row of `chunks` on
-each call, and computes scalar single-threaded cosine that recomputes the query's norm for every
-chunk. At 20 papers (5,601 chunks) that's fine. At 200 papers (~56,000 chunks, ~86 MB of BLOBs)
-it's a noticeable delay per query, and it doesn't work at all for batch use. The fix is modest:
+### M2 — Retrieval index _(M)_
 
-- Store vectors pre-normalised, so cosine becomes a dot product.
-- Keep a matrix in memory in Rust, built on library open and updated on ingest/delete, instead of
-  `SELECT … FROM chunks` per query.
-- `rayon` across rows for batch queries.
+- [ ] In-memory normalised index in Rust over chunks, annotations and source notes; one query
+      API, one result type with `kind` — ADR-5
+- [ ] Every write command keeps the index consistent, with a test per command — ADR-5
+- [ ] Note-matching eval set added to the retrieval harness — TEST
+- [ ] Latency and memory budget measured on a synthetic 56k-row library; int8 fallback only if
+      the budget is broken — ADR-5
 
-That's enough for the companion (one paragraph at a time). The check leads with shingles, so its
-cost doesn't depend on embeddings at all.
+_Verify:_ Recall@k and MRR don't regress; a single-paragraph query at 56k rows is under 50 ms; the
+index build is under 2 s; memory is recorded.
 
-### 3.4 Moving in: import
+### M3 — Writing companion _(M)_
 
-- **BibTeX / RIS / CSL-JSON** files → sources without PDFs (§3.1). Where an entry names a file
-  path (Zotero's BibTeX export does), attach it and ingest.
-- `bibtex.ts` already exports; import is the missing direction.
-- Dedup on DOI, then normalised title + year, so importing a library on top of an ingested folder
-  doesn't double every paper.
+- [ ] Related notes **and** related passages for the paragraph at the cursor, refreshed on
+      paragraph exit or idle, never per keystroke
+- [ ] One-click cite with the pinpoint page from the note, highlight or chunk
+- [ ] NoteNudge covers source notes; still at most one dot per paragraph
+- [ ] Settings: companion on/off, nudge on/off
+- [ ] Empty and failure states that say what happened
 
-### 3.5 Attribution check — 1.0 scope
+_Verify:_ typing-latency benchmark with companion on vs off within the recorded threshold; it
+never takes focus or animates in.
 
-The Phase 7 epic, rescoped from the review in this chat's history:
+### M4 — Attribution check _(L)_
 
-- **In scope:** verbatim and near-verbatim matching (shingles, document-frequency discount for
-  stock phrasing) against note quotes, highlights, library chunks, and the project's other
-  manuscripts. Citation-aware (same-source citation nearby) and quote-aware. Also detects
-  **drifted quotations** (cited and quoted, but not the source's words) and **wrong-source
-  citations**.
-- **Presented as a review you run** from a Check panel and offered before export. Results open
-  the source in the split view at the matched page, via `showInPdf`.
-- **Fixes:** Quote and cite (with pinpoint page) · Cite only · Block quote · Show me the source ·
-  Dismiss. Not "add quotation marks" on its own.
-- **Dismissals** go in a project migration (`PROJECT_VERSION` 1→2 — the first real project
-  upgrade, so it needs a test against a v1 database), keyed on normalised sentence text plus
-  source id.
-- **Hard rules:** no document-level score or percentage, ever. Never "no issues found" — say
-  "142 sentences checked against 23 sources in your library". Don't run automatically on a
-  document you didn't write.
-- **Out of 1.0:** paraphrase detection (the semantic pass) and inline decorations while writing.
-  Both wait until the report mode has measured the real false-positive rate.
-- **Gate:** a labelled fixture set and harness, in the style of `eval_retrieval`, measured
-  **before** the UI is built.
-
----
-
-## 4. Milestones
-
-Each milestone ends with its _Verify_. Tick items as they land.
-
-### M0 — Land what exists _(days)_
-
-- [x] Commit the uncommitted work in reviewable, logical commits: focus refactor `462a232`,
-      library schema + Rust `246903f`, reader + pdf assets `faf774e`, result → PDF `80a78c6`,
-      notes panel + nudge `3c74fe7`. Every commit passes `svelte-check` in isolation
-- [x] Remove the stale `plugins.sql.preload` from `tauri.conf.json`; the plugin is gone
-- [ ] Merge `phase-7/document-structure` → `main` — PR
-      [#106](https://github.com/erti-rde/tauri-editor/pull/106) open, awaiting review
-- [x] Close #8, #4, #49 (closed 2026-09-24); #58 and #37 close when #106 merges
-- [ ] Re-test #48 against the hash-keyed ingest
-- [x] Rename the attribution epic out of "Phase 7". It's M4 in this plan and was never filed on
-      GitHub
-- [x] Recover the CSL style-index work from a stale worktree (plan.md D10). Ported onto `main`,
-      index regenerated fresh (986 → 2,862 styles, IEEE/Nature/Science added, dead entries gone),
-      weekly upstream check in CI — PR [#107](https://github.com/erti-rde/tauri-editor/pull/107)
-
-_Verify:_ CI green on `main` with all four jobs. A fresh clone runs `pnpm tauri dev`, opens a
-project, highlights a PDF, finds the highlight in the Notes panel, and sees it survive a restart.
-
-### M1 — Sources & notes model
-
-- [ ] **M1.1 Spike:** `erti:<uuid>` sources + `source_aliases`; prove that attaching a PDF to a
-      cited no-file source keeps every existing citation rendering
-- [ ] Library migration 6: `source_notes`, `source_aliases`
-- [ ] Manual source entry — type-aware form, validated against citeproc rendering
-- [ ] DOI / ISBN lookup for manual entry (consent-gated; README enumerates the new endpoint)
-- [ ] Source notes UI in the Sources panel; "new source + note" flow
-- [ ] Source notes in the Notes panel, search and Markdown/JSON export
-- [ ] Import BibTeX / RIS / CSL-JSON with dedup; attach files named in the entry
-
-_Verify:_ cite a print book with a pinpoint page in APA, Chicago notes and IEEE. Add its PDF
-later; every existing citation still renders, and its passages now appear in search. Import a
-500-entry Zotero BibTeX export over an ingested folder with no duplicate sources.
-
-### M2 — Retrieval engine
-
-- [ ] Pre-normalised vectors (a migration that re-normalises existing rows, or doing it at load)
-- [ ] In-memory index in Rust with lifecycle tied to library open / ingest / delete
-- [ ] One query API across highlights, page notes, source notes and chunks, with per-kind results
-- [ ] Extend the eval harness with a note-matching set (paragraph → the note written about it)
-- [ ] Performance budget recorded in-repo: single-paragraph query at 200 papers
-
-_Verify:_ Recall@5 and MRR on the existing set don't regress. Query latency at 56k chunks is
-measured and meets the budget. Memory cost of the index is measured and recorded.
-
-### M3 — Writing companion
-
-- [ ] Companion view: related notes **and** related passages for the paragraph at the cursor,
-      refreshed when the cursor leaves a paragraph or on idle — never per keystroke
-- [ ] One-click cite from a result, with pinpoint page from the note, highlight or chunk
-- [ ] NoteNudge extended to source notes; still at most one dot per paragraph
-- [ ] Settings: companion on/off, nudge on/off (the nudge setting exists)
-- [ ] Empty and failure states say what happened ("no notes on this project's sources yet"), not a
-      silent blank
-
-_Verify:_ on a multi-thousand-word document, typing latency is unchanged with the companion open
-(measured). The companion never takes focus, never animates in, never opens anything unasked.
-
-### M4 — Attribution check (1.0 scope, §3.5)
-
-- [ ] Fixture set + harness first; record precision/recall per category
+- [ ] **Labelled fixture set and harness first,** with a confusion matrix committed — TEST
 - [ ] Sentence walk with ProseMirror positions
-- [ ] Shingle index + document frequency in Rust (library chunks, note quotes, highlights, project
-      manuscripts)
-- [ ] Citation-aware and quote-aware classification; drifted quotes; wrong-source citations
-- [ ] Check panel + "check before export" prompt; open the match in the split view
-- [ ] Fix actions; dismissals (project migration 2)
-- [ ] Naming and copy reviewed against the README consent language
+- [ ] Manuscript-indexed, corpus-streamed shingle matching over chunks, highlights, note quotes
+      and project manuscripts — ADR-6
+- [ ] Classification: citation-aware (canonical ids), quote-aware, drifted quotes, wrong-source
+      citations; mutation-tested — ADR-6, TEST
+- [ ] Check panel + "check before export"; results open the source in the split view at the
+      matched page
+- [ ] Fixes: Quote and cite · Cite only · Block quote · Show me the source · Dismiss
+- [ ] Dismissals: project migration 2, tested against a v1 project DB
+- [ ] Copy reviewed against the README's voice. No score, ever; never "no issues found"
 
-_Verify:_ a planted document (verbatim-uncited, verbatim-cited-unquoted, drifted quote,
-wrong-source, self-reuse, stock phrase, clean) returns the expected set. The harness shows the
-precision the thresholds were chosen at.
+_Verify:_ the planted document returns the expected set; the harness shows the precision the
+thresholds were chosen at; a 10k-word check over 56k chunks is within budget.
 
-### M5 — Writing essentials
+### M5 — Writing essentials _(L)_
 
-- [ ] Version history: snapshot on a timer and before risky operations; browse and restore
-- [ ] Find & replace in the manuscript
-- [ ] Spellcheck — verify the webview actually spellchecks the editor on each platform; set it
-      explicitly
-- [ ] **PDF export verified per platform.** `window.print()` → Save as PDF on macOS
-      (WKWebView), Windows (WebView2) and Linux (WebKitGTK, where webview print has historically
-      been unreliable). Wherever it falls short, add a direct "Export PDF…" that writes a file
-- [ ] **DOCX export**, with citations and bibliography as rendered text
-- [ ] Font family & size in the toolbar (#103)
-- [ ] Rename / duplicate / delete manuscripts from the explorer (#23, reduced)
+- [ ] Version history as plain snapshot files; thinning; preview and restore — ADR-7
+- [ ] Find & replace (never inside a citation node; one undo step)
+- [ ] Spellcheck verified in each platform's webview and set explicitly
+- [ ] **PDF export verified per platform;** a direct "Export PDF…" wherever print falls short
+- [ ] **DOCX export** with real footnotes for note styles; goldens for all five vendored styles
+      — ADR-9
+- [ ] Font family and size in the toolbar (#103)
+- [ ] Rename, duplicate and delete manuscripts, moving their history (#23, reduced)
 - [ ] Draggable split divider (#100)
-- [ ] Library location as a setting (schema.rs says "user-configurable"; `+page.svelte` hard-codes
-      `~/Erti/library.db`)
+- [ ] Library location as a setting
 
-_Verify:_ restore a manuscript from yesterday's snapshot. Round-trip a DOCX with citations, a
-table, an image and a bibliography through Word and LibreOffice. Move the library and reopen.
+_Verify:_ restore yesterday's snapshot; a DOCX with citations, a table, an image and a note-style
+bibliography opens correctly in Word and LibreOffice; move the library and reopen.
 
-### M6 — Scale & quality gates
+### M6 — Scale and quality gates _(M)_
 
-- [ ] The plan.md §11 verification run, which is still outstanding: 200+ PDFs, two-column
-      journals, network resolver on and off, the retry path
-- [ ] Keyboard-only traversal of every surface, including the new ones
-- [ ] Every palette on every screen, new surfaces included
-- [ ] Network capture of the release build against the README's list of what leaves the machine
-- [ ] Error log to a local file the user can open and attach to a bug report (nothing is sent)
+- [ ] The 200+ PDF run, scripted, with results committed: ingest time, failures by cause,
+      metadata rate with lookups on and off, index build, RSS — TEST
+- [ ] Input limits set from those measurements — SEC-4
+- [ ] pdf.js: `isEvalSupported: false`; plan the pdfjs-dist upgrade — SEC-5
+- [ ] Network capture of the release build against the README list — criterion 8
+- [ ] Keyboard-only traversal and every palette on every new surface
+- [ ] A local error log the user can open and attach to a report (nothing is sent)
+- [ ] Re-run the threat model on the finished surface — SEC-10
 
-_Verify:_ the numbers are written into this file, beside the criteria in §1.
+_Verify:_ the numbers sit beside the criteria in §1; E2E journeys 1–5 pass on the 200-PDF
+library.
 
-### M7 — Release engineering
+### M7a — Release pipeline _(M, start alongside M1a)_
 
-- [ ] Version 1.0.0 in `package.json`, `tauri.conf.json`, `Cargo.toml`; real `authors`
+- [ ] Rewrite `release.yaml` to the design in docs/release.md, fixing all ten defects — REL
+- [ ] Updater keypair generated offline, custody and rotation written down — SEC-9
+- [ ] `tauri-plugin-updater` behind consent; README entry; Rust network inventory — SEC-8
+- [ ] `pnpm audit` / `cargo audit` in CI; actions SHA-pinned in the release job — SEC-7
+- [ ] Apply to SignPath Foundation for Windows signing
+- [ ] macOS: sign with a **free self-signed certificate** (a stable identity kept as a CI secret)
+      rather than ad-hoc. macOS ties privacy permissions such as Documents-folder access to the
+      code signature, and an ad-hoc signature changes with every build, so each update would
+      likely re-prompt for folder access. Gatekeeper still warns either way. **Verify in the 0.9
+      beta:** update twice; does macOS keep folder access?
+- [ ] `pnpm release X.Y.Z` script + `git-cliff` changelog
+- [ ] First-open guide with screenshots per platform; checksum instructions
 - [ ] Logo and icon set (#39); sensible default window size (currently 800×600)
-- [ ] About screen: version, AGPL-3.0, source link, third-party notices, MiniLM licence
-- [ ] `tauri-plugin-updater` with signed update manifests
-- [ ] macOS: **ad-hoc** signing (`signingIdentity: "-"`). It's free, and Apple Silicon won't run
-      a completely unsigned binary at all
-- [ ] Windows: unsigned installer; apply to **SignPath Foundation**, which signs open-source
-      projects for free. If they accept us, their signing replaces the SmartScreen step in the
-      guide
-- [ ] Linux: AppImage + deb (no signing needed)
-- [ ] **First-open guide** per platform, with screenshots. macOS 15+: System Settings → Privacy &
-      Security → Open Anyway, since the right-click → Open bypass no longer works there. Windows
-      SmartScreen: More info → Run anyway. Linux AppImage: `chmod +x`. Linked from README, the
-      landing page and the release notes. It also explains _why_ (a free project and the cost of
-      certificates), in the README's voice
-- [ ] Publish SHA-256 checksums with every release, so an unsigned download can still be verified
-- [ ] Updater keypair (free, separate from OS signing) generated and stored as repo secrets
-- [ ] Fix `release.yaml`: platform matrix, pnpm version, multi-line changelog (the current `echo`
-      into `$GITHUB_OUTPUT` truncates to one line)
-- [ ] README and landing page updated for 1.0; short user guide
-- [ ] A 0.9 beta to a handful of researchers before the tag
+- [ ] About screen: version, AGPL-3.0, source link, third-party notices, model licence
 
-_Verify:_ install the published artefacts on a clean machine per platform, open a real project, and
-update from 0.9 to 1.0 through the in-app updater.
+_Verify:_ a dry-run tag produces a draft release with all four builds, `SHA256SUMS.txt` and
+`latest.json`; the smoke test catches a deliberately removed model file.
+
+### M7b — Beta to 1.0 _(M)_
+
+- [ ] 0.9.0 beta to a handful of researchers; collect what they hit
+- [ ] Fix or deliberately defer every beta finding, recorded here
+- [ ] Release test matrix complete on the 1.0 draft — TEST
+- [ ] Update from 0.9 to 1.0 through the updater on every platform
+- [ ] README, landing page and user guide updated for 1.0
+- [ ] Publish
+
+---
+
+## 4. Risks
+
+| Risk                                                         | Likelihood | Impact | Mitigation                                                                                                                             |
+| ------------------------------------------------------------ | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Aliases prove insufficient (edge cases in merge/attach)      | Medium     | High   | Spike first in M1; fallback is the table rebuild ADR-3 rejected, costed before committing                                              |
+| A format change destroys manuscripts opened by an older Erti | Was High   | High   | Found in review: the first envelope design did exactly that. Doc stays at the root (ADR 002 amendment), plus a cross-version load test |
+| The new format corrupts a manuscript on first save           | Low        | High   | Format-0 read path kept; snapshot before first format-1 write; round-trip property tests                                               |
+| In-app behaviour differs from tests again (like the CSP)     | High       | High   | Real-app E2E in M1, before features build on assumptions                                                                               |
+| Unsigned installs put researchers off                        | High       | Medium | Tested first-open guide; checksums; SignPath application; the "why" explained honestly                                                 |
+| Attribution check false positives erode trust                | Medium     | High   | Fixture harness gates the UI; review mode only; no score; dismissals persist                                                           |
+| The companion makes typing lag                               | Medium     | Medium | Paragraph-exit/idle triggers; latency benchmark as a gate; off switch                                                                  |
+| Updater private key lost                                     | Low        | High   | Stored in two places before the first signed release; rotation procedure written                                                       |
+| Scope creep from open issues and new ideas                   | High       | Medium | §5 is the parking lot; anything new needs an explicit decision here to enter 1.0                                                       |
+| One maintainer; knowledge in heads                           | Medium     | High   | ADRs, this plan, and the test docs are that knowledge written down                                                                     |
 
 ---
 
 ## 5. After 1.0
 
-Paraphrase-level attribution and inline mode · real footnotes (#102) · line numbers (#104) ·
-document bar in the tab strip (#99) · drag tabs between panes (#101) · draggable blocks (#11) ·
-Semantic Scholar recommendations (#17) · the embedding model bake-off (plan.md §12) ·
-collaboration.
+Paraphrase-level attribution and inline mode · real footnotes in the editor (#102) · line
+numbers (#104) · document bar in the tab strip (#99) · drag tabs between panes (#101) ·
+draggable blocks (#11) · Semantic Scholar recommendations (#17, needs its own consent entry) ·
+the embedding model bake-off (plan.md §12) · a zip container for manuscripts with embedded
+images · collaboration · macOS E2E once a WKWebView driver exists.
 
 ---
 
 ## 6. Decisions
 
-| Decision                          | Choice                                                                                                                                             | Why                                                                                              |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Uncommitted annotation/notes work | Commit in logical pieces on `phase-7/document-structure`, then merge                                                                               | It's a finished feature that passes the full suite, and it exists only in the working tree       |
-| Platforms                         | macOS, Windows, Linux                                                                                                                              | No paid signing, so signing no longer decides which platforms ship                               |
-| Code signing                      | **None paid.** macOS ad-hoc; Windows unsigned, with a free SignPath Foundation application; Linux unsigned. First-open guide + published checksums | No budget, and "always free" rules out a paid tier to fund certificates                          |
-| Attribution check in 1.0          | Review mode, verbatim/near-verbatim, drifted quotes, wrong-source; no paraphrase, no inline                                                        | Highest precision for the effort; the FP rate gets measured before anything speaks while writing |
-| Formats in 1.0                    | PDF (verified per platform), DOCX, BibTeX/RIS/CSL-JSON import, version history                                                                     | User requirement, 2026-09-24                                                                     |
+| Decision                       | Choice                                                                                                                                                       | Why                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Uncommitted reading/notes work | Committed in logical pieces and merged (#106)                                                                                                                | A finished, tested feature that existed only in a working tree                             |
+| Platforms                      | macOS (arm64 + Intel), Windows, Linux                                                                                                                        | Signing no longer gates platforms                                                          |
+| Code signing                   | **None paid.** macOS self-signed stable identity (ad-hoc as fallback); Windows unsigned + SignPath Foundation application; Linux unsigned. Guide + checksums | No budget; "always free". Self-signed over ad-hoc to keep macOS permissions across updates |
+| Attribution check in 1.0       | Review mode; verbatim and near-verbatim, drifted quotes, wrong-source; no paraphrase, no inline                                                              | Highest precision for the effort; FP rate measured before anything speaks while writing    |
+| Formats in 1.0                 | PDF (verified per platform), DOCX, BibTeX/RIS/CSL-JSON import, version history                                                                               | User requirement, 2026-09-24                                                               |
+| Architecture                   | ADR 001–009                                                                                                                                                  | docs/adr/                                                                                  |
+| BibTeX parser                  | `@retorquere/bibtex-parser`, not citation-js                                                                                                                 | citation-js's core depends on a network client (ADR 009)                                   |
+| Network allowlist              | CSP `connect-src` = the README's list, pinned by a test                                                                                                      | The privacy promise enforced rather than stated (#109)                                     |
+| Updater                        | Behind consent, like lookups                                                                                                                                 | It's a network call; the README promise covers it                                          |
+| Library backups                | In M1a, not M5                                                                                                                                               | M1b adds a library migration, and ADR 008 requires a backup before every migration         |
+| Manuscript format shape        | Doc at the root + namespaced `erti` key (ADR 002 amendment)                                                                                                  | The first design made older versions overwrite the file with nothing                       |
+| M1 split                       | M1a (safety net + format) / M1b (sources, notes, import)                                                                                                     | 17 items on one critical-path milestone; the part everything needs now finishes first      |
+| ISBN lookup                    | Deferred to 1.x                                                                                                                                              | It needs a new external service, and picking one is a privacy decision                     |
+| Cut line                       | **Proposed, needs your call:** M4 moves to 1.1 if M1b overruns by half                                                                                       | A single maintainer; better a decided cut than a drifting date                             |
