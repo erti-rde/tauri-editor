@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { Icon } from '$lib';
+	import { showInPdf } from '$lib/pdfreader/showInPdf';
 
 	interface Props {
 		sentenceMetadata: {
+			/** The paper this passage came from, by content hash. */
+			sha256: string;
 			similarity: number;
 			sentence: string;
 			metadata: CitationItem;
@@ -22,6 +25,22 @@
 
 	function toggleExpand() {
 		isExpanded = !isExpanded;
+	}
+
+	/**
+	 * Open the paper at this passage.
+	 *
+	 * The card has said "p. 4, Results" since the chunker started recording it,
+	 * and finding page 4 was still the researcher's job. The passage text goes
+	 * along as the quote so the reader marks the sentence itself rather than
+	 * dropping the reader at the top of a dense page (#37).
+	 */
+	function showSource() {
+		void showInPdf({
+			sha256: sentenceMetadata.sha256,
+			page: sentenceMetadata.page_start ?? 1,
+			selector: { quote: sentenceMetadata.sentence }
+		});
 	}
 
 	// Helper to determine similarity score color
@@ -127,6 +146,17 @@
 				{/if}
 			</span>
 		</button>
+
+		{#if sentenceMetadata.page_start}
+			<button
+				class="bg-surface-sunken text-ink hover:bg-surface-hover flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors"
+				onclick={showSource}
+				title="Open the paper at this passage"
+			>
+				<Icon icon="BookOpen" size="s" />
+				<span class="ml-1">Show in PDF</span>
+			</button>
+		{/if}
 
 		{#if sourceUrl}
 			<!-- sourceUrl is an external DOI or publisher link from the source metadata,
