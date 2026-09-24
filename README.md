@@ -16,10 +16,12 @@ Concretely, Erti asks once before anything is sent, and works fully offline if y
 
 If you allow lookups, this is what leaves the machine and nothing else:
 
-- **The identifier printed in a paper** — its DOI or arXiv ID — sent to `doi.org` to fetch authors, title and journal. This is the usual case: it resolved every paper in our benchmark corpus.
+- **The identifier printed in a paper** — its DOI or arXiv ID — sent to `doi.org` to fetch authors, title and journal. `doi.org` passes the request on to the registry that issued the identifier: `api.crossref.org` for most journal articles, `data.crosscite.org` for arXiv and DataCite. This is the usual case: it resolved every paper in our benchmark corpus.
 - **Only when no identifier can be found**, a search query to `crossref.org` containing the paper's **title and authors** — or, if the PDF's embedded title is unusable, **the first 400 characters of its opening page**.
 - **An email address, if you enter one** in Settings, which Crossref asks for so it can contact you about heavy use. Optional and blank by default.
-- **A citation style file** from GitHub, when you choose one.
+- **A citation style file** from GitHub (`raw.githubusercontent.com`), when you choose one, and the citation language file that goes with it.
+
+That list is enforced, not only promised: the app's content security policy allows connections to those four hosts and refuses every other.
 
 Your PDFs, your notes and your writing are never uploaded, in any case. The search that finds relevant passages runs entirely on your machine.
 
