@@ -230,9 +230,9 @@ Each milestone ends with its _Verify_. Tick items as they land.
 - [ ] Re-test #48 against the hash-keyed ingest
 - [x] Rename the attribution epic out of "Phase 7". It's M4 in this plan and was never filed on
       GitHub
-- [ ] **Another worktree has uncommitted work:** `.claude/worktrees/distracted-chatelet-d0168b`
-      holds a CSL style-index refresh and a `csl-styles.yaml` workflow (plan.md D10). Land it or
-      discard it deliberately
+- [x] Recover the CSL style-index work from a stale worktree (plan.md D10). Ported onto `main`,
+      index regenerated fresh (986 → 2,862 styles, IEEE/Nature/Science added, dead entries gone),
+      weekly upstream check in CI — PR [#107](https://github.com/erti-rde/tauri-editor/pull/107)
 
 _Verify:_ CI green on `main` with all four jobs. A fresh clone runs `pnpm tauri dev`, opens a
 project, highlights a PDF, finds the highlight in the Notes panel, and sees it survive a restart.
