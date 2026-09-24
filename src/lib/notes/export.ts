@@ -1,4 +1,5 @@
 import type { Annotation, AnnotationLabel } from '$lib/stores/db';
+import { guardSidecar, LimitError } from '$lib/guard';
 
 /**
  * Notes, on their way out.
@@ -103,25 +104,19 @@ export interface Sidecar {
  * what it claims should leave the library exactly as it was.
  */
 export function parseSidecar(text: string): Sidecar | null {
+	let parsed: unknown;
 	try {
-		const parsed = JSON.parse(text);
-
-		if (parsed?.format !== 'erti-annotations') return null;
-		if (typeof parsed.version !== 'number') return null;
-		if (!Array.isArray(parsed.annotations)) return null;
-
-		// Every record has to carry the fields a mark cannot be drawn without.
-		const usable = parsed.annotations.every(
-			(annotation: unknown) =>
-				typeof annotation === 'object' &&
-				annotation !== null &&
-				typeof (annotation as Annotation).id === 'string' &&
-				typeof (annotation as Annotation).sha256 === 'string' &&
-				typeof (annotation as Annotation).page === 'number'
-		);
-
-		return usable ? (parsed as Sidecar) : null;
+		parsed = JSON.parse(text);
 	} catch {
+		return null;
+	}
+	try {
+		// Fields are allowlisted and sized, and every record has to carry what a
+		// mark can't be drawn without (M1b-10). A file over the size limit is
+		// refused with a message, rather than reported as not being a sidecar.
+		return guardSidecar(parsed) as unknown as Sidecar;
+	} catch (error) {
+		if (error instanceof LimitError) throw error;
 		return null;
 	}
 }

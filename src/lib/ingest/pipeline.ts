@@ -16,6 +16,7 @@
 
 import type { Chunk } from './chunk';
 import type { ResolvedVia } from './resolve';
+import { guardCslItem } from '$lib/guard';
 
 /** A file the scan found, reduced to what the decision needs. */
 export interface ScannedFile {
@@ -129,7 +130,9 @@ export async function commitIngest(
 	if (resolved) {
 		await deps.setSourceMetadata({
 			sha256,
-			cslJson: JSON.stringify(resolved.metadata),
+			// A lookup's reply is someone else's data: only CSL's own fields, of
+			// the right kinds and sizes, are kept (M1b-10).
+			cslJson: JSON.stringify(guardCslItem(resolved.metadata)),
 			zoteroType: (resolved.metadata.zotero_type as string) ?? null,
 			doi: resolved.doi,
 			resolvedVia: resolved.via

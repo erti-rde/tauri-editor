@@ -155,6 +155,32 @@ describe('committing an ingested source', () => {
 		expect(calls).toEqual(['setSourceMetadata', 'storeChunks']);
 	});
 
+	// M1b-10: a lookup's reply is someone else's data.
+	it('stores only the CSL fields of what a lookup returned', async () => {
+		const { deps } = recordingDeps();
+		const reply = JSON.parse(
+			'{"type":"article-journal","title":["A paper"],"ISSN":["1","2"],"zotero_type":"journalArticle","indexed":{"date-time":"2026"},"__proto__":{"polluted":true},"author":[{"family":"Doe","affiliation":[{"name":"X"}],"sequence":"first"}]}'
+		);
+
+		await commitIngest(
+			'sha',
+			'p.pdf',
+			[chunk('body')],
+			[[0.1]],
+			{ ...resolved, metadata: reply },
+			deps
+		);
+
+		const stored = JSON.parse(vi.mocked(deps.setSourceMetadata).mock.calls[0][0].cslJson);
+		expect(stored).toEqual({
+			type: 'article-journal',
+			title: 'A paper',
+			ISSN: '1',
+			zotero_type: 'journalArticle',
+			author: [{ family: 'Doe' }]
+		});
+	});
+
 	it('leaves the source unready when the metadata write fails', async () => {
 		const { calls, deps } = recordingDeps({
 			setSourceMetadata: vi.fn(async () => {
