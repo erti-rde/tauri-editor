@@ -22,7 +22,7 @@ work lands — a milestone is ticked when its _Verify_ passes, not when its code
 ### What the audit found uncommitted — now committed
 
 About 15,000 lines sat in the working tree, last touched 2026-09-06. M0 committed them as
-`04f0fca`…`33a7c30`, each commit type-checked on its own:
+`462a232`…`3c74fe7`, each commit type-checked on its own:
 
 - **Reading & annotation** — highlights, underlines, area snapshots, page notes; eight renamable
   labels (Claim, Evidence, Method, Limitation, Definition, Counter-point, Interesting, My opinion);
@@ -220,9 +220,9 @@ Each milestone ends with its _Verify_. Tick items as they land.
 
 ### M0 — Land what exists _(days)_
 
-- [x] Commit the uncommitted work in reviewable, logical commits: focus refactor `04f0fca`,
-      library schema + Rust `e6a7eda`, reader + pdf assets `a8d9880`, result → PDF `b936188`,
-      notes panel + nudge `33a7c30`. Every commit passes `svelte-check` in isolation
+- [x] Commit the uncommitted work in reviewable, logical commits: focus refactor `462a232`,
+      library schema + Rust `246903f`, reader + pdf assets `faf774e`, result → PDF `80a78c6`,
+      notes panel + nudge `3c74fe7`. Every commit passes `svelte-check` in isolation
 - [x] Remove the stale `plugins.sql.preload` from `tauri.conf.json`; the plugin is gone
 - [ ] Merge `phase-7/document-structure` → `main` — PR
       [#106](https://github.com/erti-rde/tauri-editor/pull/106) open, awaiting review
