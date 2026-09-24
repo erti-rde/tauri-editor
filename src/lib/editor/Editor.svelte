@@ -2,6 +2,7 @@
 	import { onDestroy, onMount, untrack } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
+	import { addToProject } from '$lib/stores/db';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
@@ -39,6 +40,15 @@
 	import { autoReferences } from './references/referencesStore';
 	import { readOutline, headingAt, sameOutline } from '$lib/outline/outline';
 	import { outlineStore } from '$lib/outline/outlineStore';
+	import {
+		citedSources,
+		draftContext,
+		draftMatches,
+		paragraphAt,
+		worthNudging
+	} from '$lib/notes/draftContext';
+	import { showNudge } from './extensions/NoteNudge';
+	import { nudgeSetting } from '$lib/notes/nudgeSetting';
 
 	import type { EditorState } from '@tiptap/pm/state';
 	import type { Readable } from 'svelte/store';
@@ -144,6 +154,7 @@
 			onUpdate: ({ editor }) => {
 				documentStatus.report({ words: countDocument(editor.state.doc) });
 				publishOutline(editor);
+				publishDraftContext(editor);
 
 				// A file that could not be parsed is left alone. Saving over it would
 				// replace whatever was recoverable with an empty document, which is
@@ -158,7 +169,10 @@
 
 			// Moving the cursor changes which section the reader is in without
 			// changing the document, so onUpdate never fires for it.
-			onSelectionUpdate: ({ editor }) => publishOutline(editor)
+			onSelectionUpdate: ({ editor }) => {
+				publishOutline(editor);
+				publishDraftContext(editor);
+			}
 		});
 
 		// The panel is a sibling in the layout rather than a child, so this is how
@@ -170,6 +184,8 @@
 			}
 		});
 		publishOutline($editor);
+		publishDraftContext($editor);
+		draftContext.report({ cite: citeSource });
 
 		// Last, so the page-setup effects only run once there is something to
 		// apply a setup to. They cannot watch `editor` itself: it publishes on
@@ -275,6 +291,8 @@
 		// The panel outlives the editor too, and a stale `navigate` would call into
 		// a destroyed view.
 		outlineStore.clear();
+		clearTimeout(draftTimer);
+		draftContext.clear();
 		// The bar outlives the editor, so a closed manuscript must not leave a
 		// stale count sitting in it.
 		documentStatus.clear();
@@ -566,6 +584,29 @@
 
 	// Typed by what it reads rather than by our Editor subclass: the callbacks
 	// hand back TipTap's own Editor, which has no `contentElement`.
+	/**
+	 * Tell the notes panel what is being written, once the writer pauses.
+	 *
+	 * On idle rather than on every transaction. Publishing per keystroke would
+	 * re-run a search — and an embedding — for every character typed, and the
+	 * panel would churn through half-formed matches while a sentence is still
+	 * being made. Waiting for a pause is also closer to when the question
+	 * "have I read anything about this" actually occurs to someone.
+	 */
+	const DRAFT_IDLE_MS = 400;
+
+	let draftTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function publishDraftContext(instance: { state: EditorState }) {
+		clearTimeout(draftTimer);
+
+		draftTimer = setTimeout(() => {
+			draftContext.report({
+				paragraph: paragraphAt(instance.state.doc, instance.state.selection.from)
+			});
+		}, DRAFT_IDLE_MS);
+	}
+
 	function publishOutline(instance: { state: EditorState }) {
 		const headings = readOutline(instance.state.doc);
 		const activePos = headingAt(headings, instance.state.selection.from)?.pos ?? null;
@@ -578,6 +619,78 @@
 		lastOutline = headings;
 		outlineStore.report({ headings, activePos });
 	}
+
+	/**
+	 * Cite the paper a note came from.
+	 *
+	 * The same path the citation panel takes, so citing from a note and citing
+	 * from a search result are one action as far as the manuscript is concerned:
+	 * the source joins the project if it was not in it, the engine is reloaded
+	 * before the citation is inserted, and a source with no resolved metadata is
+	 * refused with something to do about it rather than a citation that renders
+	 * as removed.
+	 */
+	async function citeSource(sha256: string) {
+		try {
+			if (!citationStore.getAllSourcesAsJson()[sha256]) {
+				await addToProject(sha256);
+				await citationStore.initializeCitationStore();
+			}
+
+			if (!citationStore.getAllSourcesAsJson()[sha256]) {
+				errorToast(
+					'That paper has no citation details yet, so it cannot be cited. It has been added to this project — open the metadata explorer to paste a DOI or enter the details.'
+				);
+				return;
+			}
+
+			$editor.commands.insertCitation({
+				id: JSON.stringify([sha256]),
+				label: citationStore.previewCitation([sha256])
+			});
+			considerReferences();
+		} catch (failure) {
+			console.error('Could not cite that paper:', failure);
+			errorToast('Could not cite that paper.');
+		}
+	}
+
+	/**
+	 * Put a mark beside the paragraph when there is a note about it going unused.
+	 *
+	 * The two halves of the question live apart on purpose: the panel can search
+	 * and cannot read the document; this can read the document and cannot search.
+	 * So the panel reports what it found and this decides whether it is worth
+	 * saying — which mostly means checking whether the paragraph already cites it,
+	 * because pointing at something the writer has plainly already used is the
+	 * nagging that gets a feature switched off.
+	 */
+	$effect(() => {
+		const matches = $draftMatches;
+		// Read so turning the setting off clears any mark already on screen.
+		void $nudgeSetting;
+		if (!editorReady) return;
+
+		untrack(() => {
+			const view = $editor.view;
+			const { doc, selection } = view.state;
+
+			const resolved = doc.resolve(selection.from);
+			const paragraph = resolved.parent;
+
+			if (!$nudgeSetting || paragraph.textContent.trim() !== matches.paragraph) {
+				showNudge(view, { pos: null, count: 0 });
+				return;
+			}
+
+			const worth = worthNudging(matches.sources, citedSources(paragraph));
+
+			showNudge(view, {
+				pos: worth.length > 0 ? resolved.before(resolved.depth) : null,
+				count: worth.length
+			});
+		});
+	});
 
 	function considerReferences() {
 		const shape = readDocumentShape($editor.state.doc);
