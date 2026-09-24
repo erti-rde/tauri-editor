@@ -224,8 +224,10 @@ Each milestone ends with its _Verify_. Tick items as they land.
       library schema + Rust `e6a7eda`, reader + pdf assets `a8d9880`, result → PDF `b936188`,
       notes panel + nudge `33a7c30`. Every commit passes `svelte-check` in isolation
 - [x] Remove the stale `plugins.sql.preload` from `tauri.conf.json`; the plugin is gone
-- [ ] Merge `phase-7/document-structure` → `main`
-- [ ] Close #58, #37, #8, #4, #49; re-test #48
+- [ ] Merge `phase-7/document-structure` → `main` — PR
+      [#106](https://github.com/erti-rde/tauri-editor/pull/106) open, awaiting review
+- [x] Close #8, #4, #49 (closed 2026-09-24); #58 and #37 close when #106 merges
+- [ ] Re-test #48 against the hash-keyed ingest
 - [x] Rename the attribution epic out of "Phase 7". It's M4 in this plan and was never filed on
       GitHub
 - [ ] **Another worktree has uncommitted work:** `.claude/worktrees/distracted-chatelet-d0168b`
