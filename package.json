@@ -12,6 +12,8 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"preinstall": "npx only-allow pnpm",
+		"csl:generate": "node scripts/generate-csl-styles.js",
+		"csl:check": "node scripts/check-csl-styles.js",
 		"test": "vitest run",
 		"prepare": "husky",
 		"test:watch": "vitest",

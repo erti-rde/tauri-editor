@@ -42,6 +42,37 @@ We welcome contributions from developers, researchers, and anyone passionate abo
 5. Push your branch: `git push origin feature/your-feature-name`
 6. Open a Pull Request
 
+### Updating the bundled citation styles
+
+`src-tauri/resources/csl/cslStyles.json` is a snapshot of the independent styles
+published by [citation-style-language/styles](https://github.com/citation-style-language/styles).
+Upstream renames and removes styles regularly, and every stale entry is a style
+that fails to download when a user selects it in Settings.
+
+```bash
+pnpm csl:check
+```
+
+`pnpm csl:check` diffs the index against the upstream file listing in a single
+API call and fails on any entry that no longer exists, explaining what replaced
+it. CI runs it weekly (`.github/workflows/csl-styles.yaml`) and on any PR that
+touches the index. When it fails:
+
+```bash
+pnpm csl:generate
+```
+
+`pnpm csl:generate` rebuilds the index from scratch: it lists the repository,
+downloads every style to read its `<title>`, and writes the result sorted by
+display name. It takes about a minute and doubles as proof that every URL it
+writes resolves. Add `--dry-run` to see what would change without writing, and
+`--http` to `csl:check` to request every indexed URL rather than trusting the
+listing.
+
+Styles under `dependent/` upstream are deliberately excluded: they hold no
+formatting rules of their own, so citeproc-js cannot build an engine from one
+without first resolving its independent parent.
+
 ### Commit Message Format
 
 ```txt
