@@ -54,7 +54,7 @@ Risk = impact × likelihood, High / Medium / Low.
 | T10 | T      | Sidecar / annotation import plants misleading marks as the user's own                                      | Imported marks are `origin = 'imported'` and removable in one action                                                                                                   | None for 1.0                                                                                                                                  | Low      |
 | T11 | S      | A co-author's manuscript cites a source id that resolves to a different work in your library               | Content-addressed ids for PDFs                                                                                                                                         | `erti:` uuids are random, so collisions are negligible; envelope snapshot shows the author's metadata                                         | Low      |
 | T12 | I      | SQL injection via search boxes                                                                             | sqlx parameters everywhere; LIKE wildcards escaped (tested)                                                                                                            | None                                                                                                                                          | Low      |
-| T14 | E      | Imported or co-author metadata reaches a `.bib` compiled locally; shell escape if the user's TeX allows it | `escapeBibtex` escapes braces and backslashes; TeX Live defaults to restricted shell escape                                                                            | No explicit `-no-shell-escape`; safety depends on the user's TeX configuration                                                                | Low      |
+| T14 | E      | Imported or co-author metadata reaches a `.bib` compiled locally; shell escape if the user's TeX allows it | `escapeBibtex` escapes braces and backslashes; `latexmk`/`pdflatex` run with `-no-shell-escape`, `latexmk` with `-norc` (M1a-9); tectonic has it off                   | A TeX bug that escapes without shell escape                                                                                                   | Low      |
 | T13 | E      | `shell:allow-open` opens attacker-chosen URLs/paths                                                        | Default shell scope limits `open` to URL schemes                                                                                                                       | The plugin is unused from JS (`opener` does the job); dead privilege                                                                          | Low      |
 
 ## 1.0 security tasks
@@ -94,8 +94,9 @@ Ordered by what they cut off. Each lands in the milestone that touches the area.
    secrets and in the maintainer's password manager. Rotation procedure written down before 1.0,
    because rotating means shipping a release signed by the old key that carries the new pubkey.
 10. **Re-run this model** — M6, against the finished 1.0 surface.
-11. **Compile LaTeX with `-no-shell-escape` explicitly (T14)** — M1a. `compile_latex` runs
-    `latexmk`/`pdflatex` with no shell-escape flag. TeX Live's default (restricted) and escaped
+11. **Compile LaTeX with `-no-shell-escape` explicitly (T14)** — done in M1a-9, which also
+    passes `-norc` to `latexmk`, so a `latexmkrc` (Perl) in a shared project folder isn't run.
+    Was: `compile_latex` ran `latexmk`/`pdflatex` with no shell-escape flag. TeX Live's default (restricted) and escaped
     `.bib` fields make it safe today, but imports and co-authors' manuscripts now feed
     third-party metadata into files Erti compiles on the user's machine. Safety shouldn't depend
     on each user's TeX configuration.

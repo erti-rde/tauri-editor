@@ -67,6 +67,43 @@ pub struct CompileResult {
     pub log: String,
 }
 
+/// The arguments each engine is run with.
+///
+/// Shell escape is off explicitly (SEC-11). A `.bib` carries metadata from
+/// Crossref, imports and co-authors, and `\write18` in it would otherwise run
+/// whatever the user's TeX configuration allows: TeX Live's default is a
+/// restricted whitelist, but a machine set up for `minted` or `pythontex` has
+/// it fully on, and Erti shouldn't inherit that.
+///
+/// - `latexmk`: `-pdf` selects pdflatex, and `-no-shell-escape` is passed on to
+///   it. `-norc` skips latexmkrc files, which are Perl: one in the project
+///   folder would run as code, and the bundle Erti writes needs no settings.
+/// - `pdflatex`: `-no-shell-escape` directly.
+/// - `tectonic`: no flag. Shell escape is off unless asked for with
+///   `-Z shell-escape`, and there is no configuration file that turns it on.
+///
+/// The interaction mode stops an engine waiting at a prompt no one is there to
+/// answer.
+fn engine_args(engine: &str) -> &'static [&'static str] {
+    match engine {
+        "latexmk" => &[
+            "-norc",
+            "-pdf",
+            "-no-shell-escape",
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "main.tex",
+        ],
+        "tectonic" => &["main.tex"],
+        _ => &[
+            "-no-shell-escape",
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "main.tex",
+        ],
+    }
+}
+
 /// Compile `main.tex` in a bundle directory.
 ///
 /// The log is returned either way. A TeX error is famously hard to read, but it
@@ -97,25 +134,7 @@ pub async fn compile_latex(
 
     tokio::task::spawn_blocking(move || {
         let mut command = Command::new(&engine);
-
-        match engine.as_str() {
-            // -pdf selects pdflatex; the interaction mode stops it stopping at a
-            // prompt no one is there to answer.
-            "latexmk" => {
-                command.args([
-                    "-pdf",
-                    "-interaction=nonstopmode",
-                    "-halt-on-error",
-                    "main.tex",
-                ]);
-            }
-            "tectonic" => {
-                command.args(["main.tex"]);
-            }
-            _ => {
-                command.args(["-interaction=nonstopmode", "-halt-on-error", "main.tex"]);
-            }
-        }
+        command.args(engine_args(&engine));
 
         let output = command
             .current_dir(&dir)
@@ -146,6 +165,42 @@ pub async fn compile_latex(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // M1a-9 AC-2
+    #[test]
+    fn no_engine_is_run_with_shell_escape() {
+        for engine in ["latexmk", "pdflatex"] {
+            let args = engine_args(engine);
+            assert!(args.contains(&"-no-shell-escape"), "{engine}: {args:?}");
+            assert!(!args
+                .iter()
+                .any(|a| a.contains("-shell-escape") && *a != "-no-shell-escape"));
+            assert!(!args.iter().any(|a| a.contains("shell-restricted")));
+        }
+        // Off by default in tectonic; asking for it is the only way on.
+        assert!(!engine_args("tectonic")
+            .iter()
+            .any(|a| a.contains("shell-escape")));
+    }
+
+    // M1a-9 AC-2
+    #[test]
+    fn latexmk_reads_no_rc_files() {
+        // A latexmkrc is Perl, and one in the project folder would run as code.
+        assert_eq!(engine_args("latexmk")[0], "-norc");
+    }
+
+    #[test]
+    fn every_engine_compiles_main_tex_without_stopping_to_ask() {
+        for engine in ENGINES {
+            let args = engine_args(engine);
+            assert_eq!(args.last(), Some(&"main.tex"), "{engine}");
+            if engine != "tectonic" {
+                assert!(args.contains(&"-interaction=nonstopmode"), "{engine}");
+                assert!(args.contains(&"-halt-on-error"), "{engine}");
+            }
+        }
+    }
 
     #[tokio::test]
     async fn an_unknown_engine_is_refused() {
