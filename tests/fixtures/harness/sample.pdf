@@ -1,0 +1,96 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 658 >>
+stream
+BT
+/F1 11 Tf
+14 TL
+72 740 Td
+/F1 16 Tf
+(Sample Paper for the Erti Harness) Tj
+/F1 11 Tf
+T*
+T*
+() Tj
+T*
+(Abstract. Attention-only models replaced recurrence in machine) Tj
+T*
+(translation because they train in parallel and reach better quality) Tj
+T*
+(at lower cost. This short document exists so that tests can open,) Tj
+T*
+(read and mark up a real PDF without shipping anyone else's work.) Tj
+T*
+() Tj
+T*
+(1 Introduction) Tj
+T*
+(Self-attention relates every position of a sequence to every other) Tj
+T*
+(position in a single step. Multi-head attention runs several of these) Tj
+T*
+(in parallel, each free to attend to a different kind of relation.) Tj
+T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 484 >>
+stream
+BT
+/F1 11 Tf
+14 TL
+72 740 Td
+(2 Method) Tj
+T*
+(We employ eight parallel attention layers, or heads. Each head uses a) Tj
+T*
+(smaller dimension, so the total cost is close to one full-size head.) Tj
+T*
+() Tj
+T*
+(3 Results) Tj
+T*
+(Pre-trained bidirectional encoders extended the approach to a wide) Tj
+T*
+(range of tasks, reporting strong results on eleven benchmarks.) Tj
+T*
+() Tj
+T*
+(4 Limitations) Tj
+T*
+(Attention is quadratic in sequence length, which limits long inputs.) Tj
+T*
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000317 00000 n 
+0000001026 00000 n 
+0000001152 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info << /Title (Sample Paper for the Erti Harness) >> >>
+startxref
+1687
+%%EOF

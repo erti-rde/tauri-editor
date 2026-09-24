@@ -44,6 +44,48 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+  e2e:
+    name: Browser journeys
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The version comes from the lockfile, so the browser always matches the
+      # Playwright that drives it.
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The harness route is dead code outside `--mode harness`; this proves the
+      # build Erti ships agrees (M1a-1 AC-1).
+      - name: The harness stays out of the production build
+        run: pnpm build && node scripts/check-harness-excluded.mjs
+
+      # The real app on the fake backend (M1a-1). A console error or a command
+      # the fake doesn't know fails a journey.
+      - name: Journeys
+        run: pnpm e2e
+
+      - name: Keep what failed
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results
+          path: |
+            e2e/.results
+            e2e/.report
+          retention-days: 7
+
   corpus:
     name: Ingest quality on real papers
     runs-on: ubuntu-latest

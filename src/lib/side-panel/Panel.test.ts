@@ -3,19 +3,13 @@ import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 import Panel from './Panel.svelte';
 
+import { useFakeBackend } from '$lib/harness/testing';
+
 // Mock the Icon component only
 vi.mock('$lib', () => ({ Icon: () => '<svg></svg>' }));
-// Do NOT mock Settings, let it render the real component
-vi.mock('@tauri-apps/plugin-fs', () => ({
-	readTextFile: vi.fn().mockResolvedValue('[]'),
-	BaseDirectory: {}
-}));
-vi.mock('@tauri-apps/plugin-store', () => ({
-	load: vi.fn().mockResolvedValue({ get: vi.fn().mockResolvedValue(undefined), set: vi.fn() })
-}));
-vi.mock('@tauri-apps/api/core');
-vi.mock('@tauri-apps/api/path');
-vi.mock('@tauri-apps/api/dialog');
+// Settings renders for real, over the same fake backend the browser harness
+// uses rather than a hand-written mock of each plugin.
+useFakeBackend();
 
 /**
  * Located by name rather than by position.

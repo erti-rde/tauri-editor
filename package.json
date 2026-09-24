@@ -16,11 +16,14 @@
 		"csl:check": "node scripts/check-csl-styles.js",
 		"test": "vitest run",
 		"ipc:bindings": "cd src-tauri && UPDATE_BINDINGS=1 cargo test --test ipc_bindings",
-		"verify": "pnpm lint && pnpm check && pnpm test && cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
+		"verify": "pnpm lint && pnpm check && pnpm test && pnpm e2e && cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
 		"prepare": "husky",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
-		"sync:pdf-assets": "node scripts/sync-pdf-assets.mjs"
+		"sync:pdf-assets": "node scripts/sync-pdf-assets.mjs",
+		"harness:build": "pnpm sync:pdf-assets && vite build --mode harness",
+		"e2e": "playwright test",
+		"e2e:shots": "ERTI_SHOTS=1 playwright test shots"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^19.8.1",
@@ -31,6 +34,7 @@
 		"@iconify-json/mdi": "^1.2.3",
 		"@iconify-json/ph": "^1.2.2",
 		"@internationalized/date": "^3.12.2",
+		"@playwright/test": "1.63.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.70.1",
 		"@sveltejs/vite-plugin-svelte": "^5.1.1",
