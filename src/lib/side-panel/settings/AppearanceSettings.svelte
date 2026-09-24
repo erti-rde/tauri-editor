@@ -51,7 +51,7 @@
 	 */
 	const choice =
 		'border-line hover:border-line-strong data-[state=checked]:border-accent ' +
-		'data-[state=checked]:bg-accent-quiet focus-visible:ring-accent focus-visible:ring-2 ' +
+		'data-[state=checked]:bg-accent-quiet ' +
 		'flex items-center gap-2 rounded border px-2 py-2 text-left transition-colors';
 
 	/**

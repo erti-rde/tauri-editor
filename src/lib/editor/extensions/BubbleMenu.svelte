@@ -97,7 +97,7 @@
 	<button
 		{onclick}
 		class={[
-			'hover:bg-surface-hover focus-visible:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus-visible:ring-2',
+			'hover:bg-surface-hover rounded p-1.5 transition-colors duration-150 ease-in-out',
 			name && isActive(name) && 'bg-accent-quiet text-accent hover:bg-surface-active'
 		]}
 	>

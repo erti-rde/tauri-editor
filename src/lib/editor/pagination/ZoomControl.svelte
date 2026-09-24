@@ -16,7 +16,7 @@
 	const atMax = $derived($zoomStore >= ZOOM_MAX - 0.001);
 
 	const step =
-		'text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:ring-accent rounded p-1 transition-colors focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-40';
+		'text-ink-muted hover:bg-surface-hover hover:text-ink rounded p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40';
 </script>
 
 <div class="flex shrink-0 items-center gap-0.5">
@@ -32,7 +32,7 @@
 		{#snippet children(tooltip)}
 			<button
 				{...tooltip}
-				class="text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:ring-accent min-w-[3.25rem] rounded px-1 py-1 font-mono text-[11px] tabular-nums transition-colors focus-visible:ring-2"
+				class="text-ink-muted hover:bg-surface-hover hover:text-ink min-w-[3.25rem] rounded px-1 py-1 font-mono text-[11px] tabular-nums transition-colors"
 				onclick={() => zoomStore.reset()}
 			>
 				{formatZoom($zoomStore)}

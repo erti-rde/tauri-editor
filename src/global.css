@@ -836,12 +836,35 @@ body {
 	background-clip: content-box;
 }
 
-/* Focus is visible everywhere rather than removed and forgotten: this is the
-   only way a keyboard user knows where they are. */
+/*
+ * Focus, once.
+ *
+ * Visible everywhere rather than removed and forgotten: this is the only way a
+ * keyboard user knows where they are. But *only* here — components used to add
+ * a Tailwind ring on top of this, and the two indicators stacked into a halo
+ * four or five pixels deep around every button in a dense toolbar. Two
+ * mechanisms for one thing is also two places to tune it and two ways for them
+ * to disagree.
+ *
+ * Two pixels rather than one: WCAG's focus-appearance minimum is a two-pixel
+ * perimeter, and on a thin control a hairline is not an indicator. The offset
+ * is what keeps it off the glyphs inside a small icon button.
+ */
 :focus-visible {
 	outline: 2px solid hsl(var(--accent));
 	outline-offset: 1px;
 	border-radius: var(--radius);
+}
+
+/*
+ * Inside the edge, for anything that fills its container.
+ *
+ * An outline is drawn outside the box, so on a scroll region pinned to its
+ * pane's edges it lands under the neighbouring panel and is invisible. Negative
+ * offset draws it within.
+ */
+.focus-inset:focus-visible {
+	outline-offset: -2px;
 }
 
 /*

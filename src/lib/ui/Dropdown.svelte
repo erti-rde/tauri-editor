@@ -64,7 +64,7 @@
 							item.callBack();
 							activeItem = item;
 						}}
-						class="hover:bg-accent-quiet data-highlighted:bg-accent-quiet flex h-10 items-center rounded-xs py-3 pr-1.5 pl-3 text-sm font-medium ring-0! ring-transparent! transition-colors focus-visible:outline-none"
+						class="hover:bg-accent-quiet data-highlighted:bg-accent-quiet flex h-10 items-center rounded-xs py-3 pr-1.5 pl-3 text-sm font-medium ring-0! ring-transparent! transition-colors"
 						textValue={item.label}
 					>
 						{#if item.icon}
