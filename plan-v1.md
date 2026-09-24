@@ -29,17 +29,18 @@ foundations were hardened; this file is what happens next.
 
 **What the planning pass found**, beyond the first draft of this plan:
 
-- **Network lookups are very likely blocked inside the app.** The CSP has no `connect-src`, so
-  it falls back to `default-src 'self'`, and Tauri's docs say the policy is injected in dev as
-  well as release. A page carrying the identical policy was refused by `doi.org`, Crossref and
-  GitHub, while the same page without it reached all three. The tests run in Node, where there
-  is no CSP. **Not yet observed in the app itself.** #109 fixes it with an enforced allowlist,
-  and its checklist is that observation.
+- **Every network lookup is blocked inside the app.** The CSP has no `connect-src`, so it falls
+  back to `default-src 'self'`. **Observed in the real app:** a probe built into Erti found every
+  request to `doi.org`, Crossref and GitHub refused with a `connect-src` violation. The same
+  build with #109's policy reached all of them and still refused `example.com`. The tests run in
+  Node, where there is no CSP, so they never saw it.
 - **Manuscripts have no file format** (bare editor JSON, no version) and **citations don't
   travel**: a co-author sees `[source removed]`. This must be fixed before 1.0 puts files in the
   wild (ADR 002).
-- **The webview can read all of `$HOME` and delete within it**, and three Rust commands read any
-  path with no scope at all. One script injection away from the whole disk (SEC-1, SEC-2).
+- **Three Rust commands read any path with no scope at all**, and the webview can read all of
+  `$HOME`, so one script injection could read the whole home folder (SEC-1). Writes are
+  narrower than they look: the same probe was **refused** when writing or deleting in `$HOME`,
+  because Tauri 2 scopes each fs permission separately (SEC-2, corrected).
 - **The library has no backup**, though it now holds irreplaceable notes (ADR 008).
 - **Nothing can remove a source** from the library (ADR 003).
 - `citation-js` fails the offline gate (its core pulls in a network client), so BibTeX import
@@ -133,8 +134,8 @@ Tags point at the source of each item: `ADR-n`, `SEC-n` (docs/security.md), `TES
 - [x] Drop the unused `tauri-plugin-sql` config
 - [x] Close #8, #4, #49; #58 and #37 closed by #106
 - [ ] Merge #108 (review follow-up for #107)
-- [ ] Merge #109 (CSP allowlist) **and verify in the app:** a DOI resolves, an arXiv paper
-      resolves, a new citation style downloads
+- [ ] Merge #109 (CSP allowlist). The network layer is **verified in the real app** (probe build:
+      blocked on `main`, reached with #109); still worth one click-through of a real resolve
 - [ ] Remove `tauri-plugin-shell`; `opener` covers opening links — SEC-6
 - [ ] Re-test #48 against hash-keyed ingest; close or reproduce
 - [ ] Clean up the stale worktree `.claude/worktrees/distracted-chatelet-d0168b` and its branch
@@ -153,7 +154,8 @@ format itself, which is the one thing that can't be changed after 1.0 puts files
       `+page.svelte` — TEST
 - [ ] Real-app E2E: WebdriverIO + `tauri-driver` on Linux/xvfb in CI; journeys 1–2 — TEST
 - [ ] Scope the Rust path commands to the project root and known locations — SEC-1
-- [ ] Verify the effective fs scope, then narrow it (no `$HOME` write, no `remove`) — SEC-2
+- [ ] Narrow the fs permissions: keep `remove` away from project folders (deletes go through a Rust
+      command that moves to the OS trash). `$HOME` writes are already refused (verified) — SEC-2
 - [ ] Library backups with `VACUUM INTO`, **always before a migration** — ADR-8
 - [ ] `adapterCslZotero.ts` tests to ≥ 90% before manual entry builds on it (#67) — TEST
 - [ ] Extract manuscript load/save out of `Editor.svelte` into a tested module — ADR-1
