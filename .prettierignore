@@ -20,3 +20,6 @@ src-tauri/gen/
 
 # Agent worktrees hold full nested checkouts of this repo
 .claude/
+
+# Generated from the Rust commands (ADR 011); formatting it would break the drift check.
+src/lib/ipc/bindings.ts

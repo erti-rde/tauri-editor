@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { call, commands } from '$lib/ipc';
 import { get } from 'svelte/store';
 
 import {
@@ -48,6 +48,10 @@ interface PdfDocumentInfo {
 
 let cslToZoteroTypeMap: Map<string, string> | undefined;
 
+/**
+ * One chunk's vector. Embeddings are finite floats; the generated type allows
+ * null only because JSON writes a NaN as null, which the model never produces.
+ */
 export interface EmbeddingResult {
 	chunk_text: string;
 	embedding: number[];
@@ -72,9 +76,9 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 		const pdfMetadata = await getPdfMetadata(pages, sha256, fileName, pdfDoc);
 
 		const chunks = chunkPages(pages);
-		const embeddingResults = (await invoke('embed_chunks', {
-			chunks: chunks.map((c) => c.text)
-		})) as EmbeddingResult[];
+		const embeddingResults = (await call(
+			commands.embedChunks(chunks.map((c) => c.text))
+		)) as EmbeddingResult[];
 
 		// The write order, and the guard on a mismatched batch, live in
 		// ingest/pipeline so they can be tested. Both were wrong in review.

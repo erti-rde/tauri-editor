@@ -15,7 +15,7 @@ use sqlx::Row;
 
 use super::{pack_embedding, unpack_embedding};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct Source {
     pub sha256: String,
     pub file_name: String,
@@ -29,25 +29,36 @@ pub struct Source {
     pub last_error: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct NewChunk {
     pub text: String,
     pub embedding: Vec<f32>,
+    #[specta(optional)]
+    #[specta(type = Option<specta_typescript::Number>)]
     pub page_start: Option<i64>,
+    #[specta(optional)]
+    #[specta(type = Option<specta_typescript::Number>)]
     pub page_end: Option<i64>,
+    #[specta(optional)]
     pub section: Option<String>,
+    #[specta(optional)]
+    #[specta(type = Option<specta_typescript::Number>)]
     pub char_start: Option<i64>,
+    #[specta(optional)]
+    #[specta(type = Option<specta_typescript::Number>)]
     pub char_end: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct ScoredChunk {
     pub sha256: String,
     /// Position of the chunk within its source. `(sha256, idx)` is the chunk's
     /// primary key, and the only stable identity a result has — two chunks from
     /// one PDF share a hash.
+    #[specta(type = specta_typescript::Number)]
     pub idx: i64,
     pub text: String,
+    #[specta(type = Option<specta_typescript::Number>)]
     pub page_start: Option<i64>,
     pub section: Option<String>,
     pub similarity: f32,
@@ -389,6 +400,14 @@ pub async fn set_embedding_meta(
 }
 
 /// The model that produced the stored vectors, if any are stored yet.
+/// Which model produced the stored vectors.
+#[derive(Debug, Serialize, specta::Type)]
+pub struct EmbeddingMeta {
+    pub model_id: String,
+    #[specta(type = specta_typescript::Number)]
+    pub dims: i64,
+}
+
 pub async fn embedding_meta(pool: &SqlitePool) -> Result<Option<(String, i64)>, String> {
     let row = sqlx::query("SELECT model_id, dims FROM embedding_meta WHERE id = 1")
         .fetch_optional(pool)
@@ -406,20 +425,23 @@ pub async fn embedding_meta(pool: &SqlitePool) -> Result<Option<(String, i64)>, 
 /// it is stored in PDF user space rather than screen pixels. `quote` with the
 /// text either side finds it again when the geometry stops agreeing, and is
 /// also what makes the passage searchable rather than merely positioned.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct Annotation {
     pub id: String,
     pub sha256: String,
     /// 'highlight' | 'area' | 'page-note'
     pub kind: String,
     pub label_id: Option<String>,
+    #[specta(type = specta_typescript::Number)]
     pub page: i64,
     /// JSON array of `{x, y, w, h}` in PDF user space; None for a page note.
     pub rects: Option<String>,
     pub quote: Option<String>,
     pub prefix: Option<String>,
     pub suffix: Option<String>,
+    #[specta(type = Option<specta_typescript::Number>)]
     pub char_start: Option<i64>,
+    #[specta(type = Option<specta_typescript::Number>)]
     pub char_end: Option<i64>,
     pub note: Option<String>,
     /// 'fill' | 'underline' — how the mark is drawn, not what it means.
@@ -435,22 +457,36 @@ pub struct Annotation {
 
 /// An annotation on its way in. The id is chosen by the caller so the same
 /// record keeps its identity through an export and back.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct NewAnnotation {
     pub id: String,
     pub sha256: String,
     pub kind: String,
+    #[specta(optional)]
     pub label_id: Option<String>,
+    #[specta(type = specta_typescript::Number)]
     pub page: i64,
+    #[specta(optional)]
     pub rects: Option<String>,
+    #[specta(optional)]
     pub quote: Option<String>,
+    #[specta(optional)]
     pub prefix: Option<String>,
+    #[specta(optional)]
     pub suffix: Option<String>,
+    #[specta(optional)]
+    #[specta(type = Option<specta_typescript::Number>)]
     pub char_start: Option<i64>,
+    #[specta(optional)]
+    #[specta(type = Option<specta_typescript::Number>)]
     pub char_end: Option<i64>,
+    #[specta(optional)]
     pub note: Option<String>,
+    #[specta(optional)]
     pub style: Option<String>,
+    #[specta(optional)]
     pub page_label: Option<String>,
+    #[specta(optional)]
     pub origin: Option<String>,
 }
 
@@ -591,13 +627,14 @@ pub async fn delete_imported_annotations(pool: &SqlitePool, sha256: &str) -> Res
 }
 
 /// What a highlight colour means.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct AnnotationLabel {
     pub id: String,
     pub name: String,
     /// `H S% L%`, matching the theme tokens rather than a hex string, so a
     /// label sits in the same colour system as the rest of the interface.
     pub colour: String,
+    #[specta(type = specta_typescript::Number)]
     pub position: i64,
     pub enabled: bool,
 }
@@ -855,7 +892,7 @@ pub async fn annotation_embedding_hash(
 }
 
 /// A mark, ranked against something the researcher is looking for.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct ScoredAnnotation {
     #[serde(flatten)]
     pub annotation: Annotation,

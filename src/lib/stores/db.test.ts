@@ -67,10 +67,12 @@ describe('database client', () => {
 		invoke.mockResolvedValue([]);
 
 		await db.searchSources('a claim to support');
+		// Generated commands send null for an omitted option; Rust reads null and
+		// absence alike as None (ADR 011).
 		expect(invoke).toHaveBeenCalledWith('search_sources', {
 			query: 'a claim to support',
-			limit: undefined,
-			includeLibrary: undefined
+			limit: null,
+			includeLibrary: null
 		});
 
 		await db.searchSources('a claim', { limit: 10, includeLibrary: true });

@@ -20,15 +20,15 @@ jobs:
     name: Lint, typecheck, test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       # No version pin here: the `packageManager` field in package.json is the
       # single source of truth, and pnpm/action-setup reads it.
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -48,13 +48,13 @@ jobs:
     name: Ingest quality on real papers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -66,7 +66,7 @@ jobs:
       # is the manifest, so arXiv is asked only when the corpus itself changes.
       - name: Cache the benchmark corpus
         id: corpus
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: tests/fixtures/retrieval/papers
           key: retrieval-corpus-${{ hashFiles('tests/fixtures/retrieval/corpus.json') }}
@@ -89,7 +89,7 @@ jobs:
     name: Clippy, test, build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 

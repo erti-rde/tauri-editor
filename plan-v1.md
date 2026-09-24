@@ -278,19 +278,20 @@ release matrix).
 What the plan rests on that was tested rather than assumed. Anything still open is listed with
 where it will be settled.
 
-| Assumption                                            | Result                                                                            | How                                                             |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Network lookups work in the app                       | **False on `main`**: every lookup blocked by CSP; fixed by #109                   | Probe built into the real app, old vs new policy                |
-| A fresh install can write                             | **False**: the editor won't mount without a downloaded style → M0-3               | Real `+page.svelte` on a fake backend, with and without a style |
-| The webview can delete in `$HOME`                     | **False**: writes and removes refused; the home scope is read-only                | Probe built into the real app                                   |
-| The first envelope design is safe for older versions  | **False**: 0.2.5 would load it as invalid and autosave it empty → ADR 002 amended | Loaded through the installed TipTap                             |
-| The app can boot in a browser for tests               | **True**: 7 IPC commands to the consent screen, ~25 to the editor                 | Spike route with `mockIPC`                                      |
-| ONNX Runtime ships for Intel Mac                      | **True**: static 1.20.0 for all four targets, SHA-256 verified by the build       | `ort-sys` `dist.txt` and `build.rs`                             |
-| BibTeX parser and docx are affordable                 | **True**: 109 KB and 102 KB gzip; load lazily                                     | Bundled with esbuild                                            |
-| The BibTeX parser preserves titles                    | **False by default**: sentence-cases titles; must be switched off → M1b-9 AC-2    | Parsed a fixture                                                |
-| Print-to-PDF works on Linux (WebKitGTK)               | Open → M5-4                                                                       | Needs Linux; by hand                                            |
-| Self-signed macOS builds keep folder access on update | Open → M7a-6, in the beta                                                         | Needs two signed releases                                       |
-| Updater avoids SmartScreen on Windows                 | Open → the beta                                                                   | Needs a Windows install                                         |
+| Assumption                                            | Result                                                                                                     | How                                                             |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Network lookups work in the app                       | **False on `main`**: every lookup blocked by CSP; fixed by #109                                            | Probe built into the real app, old vs new policy                |
+| A fresh install can write                             | **False**: the editor won't mount without a downloaded style → M0-3                                        | Real `+page.svelte` on a fake backend, with and without a style |
+| The webview can delete in `$HOME`                     | **False**: writes and removes refused; the home scope is read-only                                         | Probe built into the real app                                   |
+| The first envelope design is safe for older versions  | **False**: 0.2.5 would load it as invalid and autosave it empty → ADR 002 amended                          | Loaded through the installed TipTap                             |
+| The app can boot in a browser for tests               | **True**: 7 IPC commands to the consent screen, ~25 to the editor                                          | Spike route with `mockIPC`                                      |
+| ONNX Runtime ships for Intel Mac                      | **True**: static 1.20.0 for all four targets, SHA-256 verified by the build                                | `ort-sys` `dist.txt` and `build.rs`                             |
+| BibTeX parser and docx are affordable                 | **True**: 109 KB and 102 KB gzip; load lazily                                                              | Bundled with esbuild                                            |
+| tauri-specta works on Tauri 2.11 (M1a-10)             | **True**: all 42 commands generate; runtime dispatch unchanged; typed errors reach the real webview intact | Spike, then a probe in the built app                            |
+| The BibTeX parser preserves titles                    | **False by default**: sentence-cases titles; must be switched off → M1b-9 AC-2                             | Parsed a fixture                                                |
+| Print-to-PDF works on Linux (WebKitGTK)               | Open → M5-4                                                                                                | Needs Linux; by hand                                            |
+| Self-signed macOS builds keep folder access on update | Open → M7a-6, in the beta                                                                                  | Needs two signed releases                                       |
+| Updater avoids SmartScreen on Windows                 | Open → the beta                                                                                            | Needs a Windows install                                         |
 
 ---
 

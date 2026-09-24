@@ -1,4 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
+import { call, commands, run } from '$lib/ipc';
+import type * as ipc from '$lib/ipc';
 
 /**
  * Typed client for the database.
@@ -8,53 +9,36 @@ import { invoke } from '@tauri-apps/api/core';
  * capabilities — previously any frontend code could run arbitrary statements
  * through `executeQuery(anyString)`, and the statement/read routing this file
  * used to do is gone with it.
+ *
+ * The types come from the generated bindings (ADR 011), so a field added or
+ * renamed in Rust fails to compile here rather than arriving as `undefined`.
+ * A few string fields are narrowed to the values the database's CHECK
+ * constraints allow; each narrowing says which constraint it relies on.
  */
 
-export interface Source {
-	sha256: string;
-	file_name: string;
-	path: string | null;
-	/** CSL-JSON, with any project-local override already applied. */
-	csl_json: string | null;
-	zotero_type: string | null;
-	doi: string | null;
-	resolved_via: string | null;
-	state: 'pending' | 'ready' | 'failed';
-	last_error: string | null;
-}
+/** Ingest state, as `ingest_status.state`'s CHECK constraint allows. */
+export type IngestState = 'pending' | 'ready' | 'failed';
 
-export interface NewChunk {
-	text: string;
-	embedding: number[];
-	page_start?: number | null;
-	page_end?: number | null;
-	section?: string | null;
-	char_start?: number | null;
-	char_end?: number | null;
-}
+export type Source = Omit<ipc.Source, 'state'> & { state: IngestState };
 
-export interface ScoredChunk {
-	sha256: string;
-	/** Position within the source. `sha256:idx` is a result's stable identity. */
-	idx: number;
-	text: string;
-	page_start: number | null;
-	section: string | null;
-	similarity: number;
-	/** False when the chunk comes from outside the current project's source set. */
-	in_project: boolean;
-}
+export type NewChunk = ipc.NewChunk;
+
+/**
+ * A scored passage. `similarity` is never null in practice: cosine similarity
+ * returns 0 for a zero vector rather than NaN.
+ */
+export type ScoredChunk = Omit<ipc.ScoredChunk, 'similarity'> & { similarity: number };
 
 /** Open the shared source library, creating it on first run. */
-export const openLibrary = (path: string) => invoke<void>('open_library', { path });
+export const openLibrary = (path: string) => run(commands.openLibrary(path));
 
 /** Open a project folder, creating `<root>/.erti/project.db` if needed. */
-export const openProject = (root: string) => invoke<void>('open_project', { root });
+export const openProject = (root: string) => run(commands.openProject(root));
 
-export const projectRoot = () => invoke<string>('project_root');
+export const projectRoot = () => call(commands.projectRoot());
 
 /** SHA-256 of a file's contents; the identity a source is stored under. */
-export const hashFile = (path: string) => invoke<string>('hash_file', { path });
+export const hashFile = (path: string) => call(commands.hashFile(path));
 
 /**
  * Record a source and add it to the open project.
@@ -64,16 +48,16 @@ export const hashFile = (path: string) => invoke<string>('hash_file', { path });
  * it and its chunks can be reused as-is.
  */
 export const registerSource = (sha256: string, path: string, fileName: string) =>
-	invoke<boolean>('register_source', { sha256, path, fileName });
+	call(commands.registerSource(sha256, path, fileName));
 
 /** Hashes still needing ingest, including ones that previously failed. */
-export const sourcesNeedingIngest = () => invoke<string[]>('sources_needing_ingest');
+export const sourcesNeedingIngest = () => call(commands.sourcesNeedingIngest());
 
 export const storeChunks = (sha256: string, chunks: NewChunk[]) =>
-	invoke<void>('store_chunks', { sha256, chunks });
+	run(commands.storeChunks(sha256, chunks));
 
 export const markIngestFailed = (sha256: string, error: string) =>
-	invoke<void>('mark_ingest_failed', { sha256, error });
+	run(commands.markIngestFailed(sha256, error));
 
 export const setSourceMetadata = (args: {
 	sha256: string;
@@ -81,16 +65,25 @@ export const setSourceMetadata = (args: {
 	zoteroType?: string | null;
 	doi?: string | null;
 	resolvedVia: string;
-}) => invoke<void>('set_source_metadata', args);
+}) =>
+	run(
+		commands.setSourceMetadata(
+			args.sha256,
+			args.cslJson,
+			args.zoteroType ?? null,
+			args.doi ?? null,
+			args.resolvedVia
+		)
+	);
 
 /** Sources in the open project, with project-local overrides applied. */
-export const projectSources = () => invoke<Source[]>('project_sources');
+export const projectSources = () => call(commands.projectSources()) as Promise<Source[]>;
 
-export const addToProject = (sha256: string) => invoke<void>('add_to_project', { sha256 });
+export const addToProject = (sha256: string) => run(commands.addToProject(sha256));
 
 /** Correct a source's metadata for this project only, leaving the library's copy alone. */
 export const setMetadataOverride = (sha256: string, cslJson: string) =>
-	invoke<void>('set_metadata_override', { sha256, cslJson });
+	run(commands.setMetadataOverride(sha256, cslJson));
 
 /**
  * Rank sources against text the user is writing.
@@ -100,25 +93,17 @@ export const setMetadataOverride = (sha256: string, cslJson: string) =>
  * and results carry `in_project` so those can still be listed first.
  */
 export const searchSources = (query: string, opts?: { limit?: number; includeLibrary?: boolean }) =>
-	invoke<ScoredChunk[]>('search_sources', {
-		query,
-		limit: opts?.limit,
-		includeLibrary: opts?.includeLibrary
-	});
+	call(commands.searchSources(query, opts?.limit ?? null, opts?.includeLibrary ?? null)) as Promise<
+		ScoredChunk[]
+	>;
 
 /** The model that produced the stored vectors, or null if nothing is stored yet. */
-export const embeddingMeta = () => invoke<[string, number] | null>('embedding_meta');
+export const embeddingMeta = () => call(commands.embeddingMeta());
 
 export const setEmbeddingMeta = (modelId: string, dims: number) =>
-	invoke<void>('set_embedding_meta', { modelId, dims });
+	run(commands.setEmbeddingMeta(modelId, dims));
 
-export interface SalvageReport {
-	imported: number;
-	/** Rows a previous run already carried forward. */
-	already_present: number;
-	skipped_empty: number;
-	skipped_unprocessed: number;
-}
+export type SalvageReport = ipc.SalvageReport;
 
 /**
  * Carry metadata forward from the pre-hybrid database, if one exists.
@@ -132,21 +117,21 @@ export interface SalvageReport {
  * The old database is only read, and stays on disk.
  */
 export const importLegacyMetadata = (legacyDbPath: string) =>
-	invoke<SalvageReport>('import_legacy_metadata', { legacyDbPath });
+	call(commands.importLegacyMetadata(legacyDbPath));
 
 /** Metadata previously resolved for this filename, if any. */
-export const legacyMetadataFor = (fileName: string) =>
-	invoke<string | null>('legacy_metadata_for', { fileName });
+export const legacyMetadataFor = (fileName: string) => call(commands.legacyMetadataFor(fileName));
 
-export const markLegacyConsumed = (fileName: string) =>
-	invoke<void>('mark_legacy_consumed', { fileName });
+export const markLegacyConsumed = (fileName: string) => run(commands.markLegacyConsumed(fileName));
 
 /* ------------------------------------------------------------- annotations */
 
+/** As `annotations.kind`'s CHECK constraint allows. */
 export type AnnotationKind = 'highlight' | 'area' | 'page-note';
 
 /**
- * How a mark is drawn, not what it means.
+ * How a mark is drawn, not what it means, as `annotations.style`'s CHECK
+ * constraint allows.
  *
  * A highlight and an underline mark the same passage for the same reason —
  * readers use both the way they use two pens — so this is a style rather than
@@ -154,36 +139,24 @@ export type AnnotationKind = 'highlight' | 'area' | 'page-note';
  */
 export type MarkStyle = 'fill' | 'underline';
 
-/** Where a mark came from, so imported ones can be told apart and undone. */
+/**
+ * Where a mark came from, so imported ones can be told apart and undone, as
+ * `annotations.origin`'s CHECK constraint allows.
+ */
 export type AnnotationOrigin = 'erti' | 'imported';
 
-export interface Annotation {
-	id: string;
-	sha256: string;
+/**
+ * A mark on a paper.
+ *
+ * `page` is where the mark is in the file; `page_label` is the page number the
+ * paper itself prints, when it differs. A journal article beginning on page 843
+ * calls its eleventh sheet 853, and 853 is what a citation has to say.
+ */
+export type Annotation = Omit<ipc.Annotation, 'kind' | 'style' | 'origin'> & {
 	kind: AnnotationKind;
-	label_id: string | null;
-	page: number;
-	/** JSON array of `{x, y, w, h}` in PDF user space. Null for a page note. */
-	rects: string | null;
-	quote: string | null;
-	prefix: string | null;
-	suffix: string | null;
-	char_start: number | null;
-	char_end: number | null;
-	note: string | null;
 	style: MarkStyle;
-	/**
-	 * The page number the paper itself prints, when it differs from the sheet.
-	 *
-	 * `page` is where the mark is in the file. A journal article beginning on
-	 * page 843 calls its eleventh sheet 853, and 853 is what a citation has to
-	 * say — "p. 11" points at nothing a reader of the journal can find.
-	 */
-	page_label: string | null;
 	origin: AnnotationOrigin;
-	created_at: string;
-	updated_at: string;
-}
+};
 
 /**
  * An annotation on its way in.
@@ -191,62 +164,42 @@ export interface Annotation {
  * The id is chosen here rather than by the database, so the same record keeps
  * its identity through an export to a sidecar and back on another machine.
  */
-export interface NewAnnotation {
-	id: string;
-	sha256: string;
+export type NewAnnotation = Omit<ipc.NewAnnotation, 'kind' | 'style' | 'origin'> & {
 	kind: AnnotationKind;
-	label_id?: string | null;
-	page: number;
-	rects?: string | null;
-	quote?: string | null;
-	prefix?: string | null;
-	suffix?: string | null;
-	char_start?: number | null;
-	char_end?: number | null;
-	note?: string | null;
 	style?: MarkStyle | null;
-	page_label?: string | null;
 	origin?: AnnotationOrigin | null;
-}
+};
 
-export interface AnnotationLabel {
-	id: string;
-	name: string;
-	/** `H S% L%`, matching the theme tokens rather than a hex string. */
-	colour: string;
-	position: number;
-	enabled: boolean;
-}
+export type AnnotationLabel = ipc.AnnotationLabel;
 
 /** Save an annotation, or update one that already exists. */
 export const saveAnnotation = (annotation: NewAnnotation) =>
-	invoke<void>('save_annotation', { annotation });
+	run(commands.saveAnnotation(annotation));
 
 export const annotationsForSource = (sha256: string) =>
-	invoke<Annotation[]>('annotations_for_source', { sha256 });
+	call(commands.annotationsForSource(sha256)) as Promise<Annotation[]>;
 
 export const allAnnotations = (options: { limit?: number; offset?: number } = {}) =>
-	invoke<Annotation[]>('all_annotations', {
-		limit: options.limit ?? null,
-		offset: options.offset ?? null
-	});
+	call(commands.allAnnotations(options.limit ?? null, options.offset ?? null)) as Promise<
+		Annotation[]
+	>;
 
-export const deleteAnnotation = (id: string) => invoke<void>('delete_annotation', { id });
+export const deleteAnnotation = (id: string) => run(commands.deleteAnnotation(id));
 
 /** Undo an import, leaving marks the reader made themselves untouched. */
 export const deleteImportedAnnotations = (sha256: string) =>
-	invoke<number>('delete_imported_annotations', { sha256 });
+	call(commands.deleteImportedAnnotations(sha256));
 
-export const annotationLabels = () => invoke<AnnotationLabel[]>('annotation_labels');
+export const annotationLabels = () => call(commands.annotationLabels());
 
-export const saveLabel = (label: AnnotationLabel) => invoke<void>('save_label', { label });
+export const saveLabel = (label: AnnotationLabel) => run(commands.saveLabel(label));
 
 /**
  * Remove a label. Highlights filed under it become unlabelled rather than being
  * deleted — the mark was a judgement about the passage, and losing the colour
  * is not a reason to lose it.
  */
-export const deleteLabel = (id: string) => invoke<void>('delete_label', { id });
+export const deleteLabel = (id: string) => run(commands.deleteLabel(id));
 
 /**
  * Put back any default labels that are missing, leaving edited ones alone.
@@ -255,7 +208,7 @@ export const deleteLabel = (id: string) => invoke<void>('delete_label', { id });
  * every launch is what made a deliberately deleted label reappear the next
  * morning.
  */
-export const restoreDefaultLabels = () => invoke<number>('restore_default_labels');
+export const restoreDefaultLabels = () => call(commands.restoreDefaultLabels());
 
 /**
  * Rename every label after the colour it is.
@@ -264,23 +217,16 @@ export const restoreDefaultLabels = () => invoke<number>('restore_default_labels
  * highlights mean. Returns how many changed, so nothing is claimed when nothing
  * happened.
  */
-export const nameLabelsAfterColours = () => invoke<number>('name_labels_after_colours');
+export const nameLabelsAfterColours = () => call(commands.nameLabelsAfterColours());
 
 export const saveReadingPosition = (
 	sha256: string,
 	page: number,
 	scroll?: number | null,
 	scale?: string | null
-) =>
-	invoke<void>('save_reading_position', {
-		sha256,
-		page,
-		scroll: scroll ?? null,
-		scale: scale ?? null
-	});
+) => run(commands.saveReadingPosition(sha256, page, scroll ?? null, scale ?? null));
 
-export const readingPosition = (sha256: string) =>
-	invoke<number | null>('reading_position', { sha256 });
+export const readingPosition = (sha256: string) => call(commands.readingPosition(sha256));
 
 /**
  * The path a paper was last seen at.
@@ -289,15 +235,14 @@ export const readingPosition = (sha256: string) =>
  * rather than owning a copy, so a paper that has moved still cites correctly and
  * only opening it degrades.
  */
-export const pathForSource = (sha256: string) =>
-	invoke<string | null>('path_for_source', { sha256 });
+export const pathForSource = (sha256: string) => call(commands.pathForSource(sha256));
 
-export const sourceForPath = (path: string) => invoke<string | null>('source_for_path', { path });
+export const sourceForPath = (path: string) => call(commands.sourceForPath(path));
 
 export const saveAnnotationImage = (id: string, png: number[]) =>
-	invoke<void>('save_annotation_image', { id, png });
+	run(commands.saveAnnotationImage(id, png));
 
-export const annotationImage = (id: string) => invoke<number[] | null>('annotation_image', { id });
+export const annotationImage = (id: string) => call(commands.annotationImage(id));
 
 /**
  * Embed a mark's text so it can be found by meaning.
@@ -307,7 +252,7 @@ export const annotationImage = (id: string) => invoke<number[] | null>('annotati
  * should not cost an inference.
  */
 export const embedAnnotation = (id: string, text: string) =>
-	invoke<boolean>('embed_annotation', { id, text });
+	call(commands.embedAnnotation(id, text));
 
 /**
  * Give every mark that has none a vector, and say how many.
@@ -316,17 +261,14 @@ export const embedAnnotation = (id: string, text: string) =>
  * library is open, while the model is loading. A highlight is never lost to it,
  * but the mark then cannot be found by meaning, with nothing to say so.
  */
-export const embedPendingAnnotations = () => invoke<number>('embed_pending_annotations');
+export const embedPendingAnnotations = () => call(commands.embedPendingAnnotations());
 
-/** A mark, ranked against what the researcher is looking for. */
-export interface ScoredAnnotation extends Annotation {
-	/** Cosine similarity for a search by meaning; 1 for a literal match. */
-	similarity: number;
-	/** False when the mark is on a paper outside the open project. */
-	in_project: boolean;
-	/** The paper's filename, so a result can say where it came from. */
-	file_name: string | null;
-}
+/**
+ * A mark, ranked against what the researcher is looking for: cosine similarity
+ * for a search by meaning, 1 for a literal match, so never null.
+ */
+export type ScoredAnnotation = Annotation &
+	Omit<ipc.ScoredAnnotation, keyof ipc.Annotation | 'similarity'> & { similarity: number };
 
 /**
  * Search the marks.
@@ -340,8 +282,6 @@ export const searchAnnotations = (
 	query: string,
 	options: { limit?: number; semantic?: boolean } = {}
 ) =>
-	invoke<ScoredAnnotation[]>('search_annotations', {
-		query,
-		limit: options.limit ?? null,
-		semantic: options.semantic ?? false
-	});
+	call(
+		commands.searchAnnotations(query, options.limit ?? null, options.semantic ?? false)
+	) as Promise<ScoredAnnotation[]>;

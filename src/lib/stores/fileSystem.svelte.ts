@@ -1,13 +1,17 @@
 import { writable } from 'svelte/store';
-import { invoke } from '@tauri-apps/api/core';
+import { call, commands } from '$lib/ipc';
+import type * as ipc from '$lib/ipc';
 
-export interface FileItem {
+/**
+ * An entry in the project folder, as `read_directory` returns it.
+ *
+ * Derived from the generated type (ADR 011); `children` is also allowed to be
+ * absent, because tests and the document list build entries by hand.
+ */
+export type FileItem = Omit<ipc.FileItem, 'children'> & {
 	id?: number;
-	name: string;
-	path: string;
-	is_dir: boolean;
-	children?: FileItem[];
-}
+	children?: FileItem[] | null;
+};
 
 interface FileSystemStore {
 	items: FileItem[];
@@ -34,7 +38,7 @@ function createFileSystemStore() {
 		async readDirectory(path: string) {
 			update((state) => ({ ...state, loading: true, error: null }));
 			try {
-				const items = await invoke<FileItem[]>('read_directory', { path });
+				const items: FileItem[] = await call(commands.readDirectory(path));
 				update((state) => ({
 					...state,
 					items,

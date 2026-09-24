@@ -19,7 +19,9 @@ export default ts.config(
 			'src-tauri/target/**',
 			'src-tauri/gen/**',
 			// Agent worktrees hold full nested checkouts of this repo.
-			'.claude/**'
+			'.claude/**',
+			// Generated from the Rust commands (ADR 011).
+			'src/lib/ipc/bindings.ts'
 		]
 	},
 	js.configs.recommended,
@@ -43,6 +45,26 @@ export default ts.config(
 					argsIgnorePattern: '^_',
 					varsIgnorePattern: '^_',
 					caughtErrorsIgnorePattern: '^_'
+				}
+			]
+		}
+	},
+	{
+		// One way to call Rust (ADR 011). Generated commands check names, arguments
+		// and results at compile time; a hand-written invoke checks none of them.
+		files: ['src/**/*.{ts,svelte}'],
+		ignores: ['src/lib/ipc/**', 'src/**/*.test.ts'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{
+							name: '@tauri-apps/api/core',
+							importNames: ['invoke'],
+							message: "Call Rust through `commands` from '$lib/ipc' (ADR 011)."
+						}
+					]
 				}
 			]
 		}
