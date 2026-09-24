@@ -9,6 +9,7 @@
 	import type { Store } from '@tauri-apps/plugin-store';
 	import { Icon } from '$lib';
 	import { getConsent, getMailto, setConsent, setMailto } from '$lib/stores/consent';
+	import { errorToast } from '$lib/toast/Toast.svelte';
 
 	interface Props {
 		isOpen: boolean;
@@ -25,6 +26,20 @@
 	let citationStyles: { name: string; download_url: string }[] = $state([]);
 	let locales: { [key: string]: string[] } = $state({});
 	let activeTab = $state('general');
+	let styleFilter = $state('');
+
+	// The bundled index lists every independent CSL style, close to three
+	// thousand, which is far too many to scroll through.
+	const visibleStyles = $derived.by(() => {
+		const query = styleFilter.trim().toLowerCase();
+		if (!query) return citationStyles;
+
+		const matches = citationStyles.filter((style) => style.name.toLowerCase().includes(query));
+		// Keep the current selection rendered, otherwise narrowing the list would
+		// drop the <select> binding to the first remaining option.
+		const selected = citationStyles.find((style) => style.name === selectedStyle);
+		return selected && !matches.includes(selected) ? [selected, ...matches] : matches;
+	});
 
 	// Governs every outbound request: metadata lookups and citation-style
 	// downloads alike.
@@ -57,6 +72,7 @@
 					: {};
 		} catch (error) {
 			console.error('Error loading resources:', error);
+			errorToast('Could not load the bundled citation styles.');
 		}
 	}
 
@@ -92,14 +108,20 @@
 					try {
 						const response = await fetch(style.download_url);
 						if (!response.ok) {
-							throw new Error(`Failed to fetch style: ${response.status}`);
+							// A 404 means the bundled index has drifted from the upstream
+							// style repository; `pnpm csl:check` catches that in CI.
+							throw new Error(
+								response.status === 404
+									? `"${selectedStyle}" is no longer published by the CSL style repository. Please choose another style.`
+									: `Could not download "${selectedStyle}" (HTTP ${response.status}). Check your connection and try again.`
+							);
 						}
 						const styleXml = await response.text();
 
 						// Verify that we received valid XML
 						if (!styleXml || !styleXml.trim().startsWith('<')) {
 							console.error('Invalid style XML received:', styleXml?.substring(0, 100));
-							throw new Error('Invalid style XML');
+							throw new Error(`"${selectedStyle}" could not be read as a citation style.`);
 						}
 
 						await store.set('cslXml', styleXml);
@@ -108,6 +130,7 @@
 						console.error('Error fetching style:', error);
 						// If fetch fails, keep the old style selected
 						await store.set('selectedStyle', oldStyle);
+						selectedStyle = oldStyle ?? '';
 						throw error;
 					}
 				}
@@ -125,14 +148,16 @@
 				try {
 					const response = await fetch(localeUrl);
 					if (!response.ok) {
-						throw new Error(`Failed to fetch locale: ${response.status}`);
+						throw new Error(
+							`Could not download the ${selectedLocale} citation language (HTTP ${response.status}).`
+						);
 					}
 					const localeXml = await response.text();
 
 					// Verify that we received valid XML
 					if (!localeXml || !localeXml.trim().startsWith('<')) {
 						console.error('Invalid locale XML received:', localeXml?.substring(0, 100));
-						throw new Error('Invalid locale XML');
+						throw new Error(`The ${selectedLocale} citation language could not be read.`);
 					}
 
 					await store.set('localeXml', localeXml);
@@ -141,6 +166,7 @@
 					console.error('Error fetching locale:', error);
 					// If fetch fails, keep the old locale selected
 					await store.set('selectedLocale', oldLocale);
+					selectedLocale = oldLocale ?? 'en-GB';
 					throw error;
 				}
 			}
@@ -162,6 +188,10 @@
 			closeSettings();
 		} catch (error) {
 			console.error('Error saving settings:', error);
+			// The dialog stays open so the failed choice can be corrected. The error
+			// used to go only to a console nobody has open, and the style simply
+			// did not change.
+			errorToast(error instanceof Error ? error.message : 'Could not save your settings.');
 		}
 	}
 
@@ -290,6 +320,13 @@
 								<label for="citation-style" class="text-ink mb-2 block font-medium">
 									Citation Style
 								</label>
+								<input
+									type="search"
+									bind:value={styleFilter}
+									aria-label="Filter citation styles"
+									placeholder="Search styles"
+									class="border-line-strong bg-surface-raised text-ink mb-2 w-full rounded-md border px-4 py-2 transition-colors"
+								/>
 								<div class="relative">
 									<select
 										id="citation-style"
@@ -297,7 +334,7 @@
 										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
 									>
 										<option value="" disabled>Select a style</option>
-										{#each citationStyles as style (style.name)}
+										{#each visibleStyles as style (style.download_url)}
 											<option value={style.name}>{style.name}</option>
 										{/each}
 									</select>
@@ -320,7 +357,12 @@
 									</div>
 								</div>
 								<p class="text-ink-muted mt-1 text-sm">
-									Choose your preferred citation style for references
+									{#if styleFilter.trim()}
+										{visibleStyles.length} of {citationStyles.length} styles match "{styleFilter.trim()}"
+									{:else}
+										Choose your preferred citation style for references ({citationStyles.length}
+										available)
+									{/if}
 								</p>
 							</div>
 							<div class="mb-6">

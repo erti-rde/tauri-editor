@@ -12,8 +12,9 @@ vi.mock('$lib/stores/consent', () => ({
 	setMailto: vi.fn().mockResolvedValue(undefined)
 }));
 
-const { mockStore } = vi.hoisted(() => {
+const { mockStore, mockErrorToast } = vi.hoisted(() => {
 	return {
+		mockErrorToast: vi.fn(),
 		mockStore: {
 			get: vi.fn((key) => {
 				switch (key) {
@@ -45,6 +46,10 @@ vi.mock('@tauri-apps/plugin-store', () => {
 
 // Mock required dependencies
 vi.mock('$lib', () => ({ Icon: () => '<svg></svg>' }));
+vi.mock('$lib/toast/Toast.svelte', () => ({
+	errorToast: mockErrorToast,
+	successToast: vi.fn()
+}));
 
 // Mock window.dispatchEvent
 global.dispatchEvent = vi.fn();
@@ -221,6 +226,56 @@ describe('Settings.svelte', () => {
 
 			// Also verify that closeSettings was called
 			expect(closeSettings).toHaveBeenCalled();
+		});
+
+		// Test: a style whose URL has gone stale upstream is reported, not swallowed
+		it('surfaces a 404 from the style repository instead of failing silently', async () => {
+			const closeSettings = vi.fn();
+			render(Settings, { props: { isOpen: true, closeSettings } });
+			await fireEvent.click(screen.getByRole('tab', { name: 'Citations' }));
+
+			await waitFor(() => {
+				expect(screen.getByRole('option', { name: 'Chicago' })).toBeInTheDocument();
+			});
+
+			// Picking a different style is what triggers the download.
+			await fireEvent.change(screen.getByLabelText('Citation Style'), {
+				target: { value: 'Chicago' }
+			});
+			vi.mocked(global.fetch).mockResolvedValueOnce({
+				ok: false,
+				status: 404
+			} as Response);
+
+			await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+			await waitFor(() => {
+				expect(mockErrorToast).toHaveBeenCalledWith(
+					expect.stringContaining('no longer published by the CSL style repository')
+				);
+			});
+			// The dialog stays open so the user can pick a style that works.
+			expect(closeSettings).not.toHaveBeenCalled();
+			expect(mockStore.set).toHaveBeenCalledWith('selectedStyle', 'APA');
+		});
+
+		// Test: the style list can be narrowed down
+		it('filters the style list while keeping the current selection selectable', async () => {
+			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
+			await fireEvent.click(screen.getByRole('tab', { name: 'Citations' }));
+
+			await waitFor(() => {
+				expect(screen.getByRole('option', { name: 'Chicago' })).toBeInTheDocument();
+			});
+
+			await fireEvent.input(screen.getByLabelText('Filter citation styles'), {
+				target: { value: 'ml' }
+			});
+
+			expect(screen.getByRole('option', { name: 'MLA' })).toBeInTheDocument();
+			expect(screen.queryByRole('option', { name: 'Chicago' })).not.toBeInTheDocument();
+			// APA does not match the query but is the saved selection, so it stays.
+			expect(screen.getByRole('option', { name: 'APA' })).toBeInTheDocument();
 		});
 	});
 });

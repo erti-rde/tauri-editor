@@ -1,0 +1,34 @@
+name: CSL styles
+
+# The bundled style index (src-tauri/resources/csl/cslStyles.json) is a snapshot
+# of citation-style-language/styles. Upstream renames, removes and demotes
+# styles continuously, and every stale entry is a style that 404s for users when
+# they pick it. Check weekly instead of finding out from a bug report.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  pull_request:
+    paths:
+      - 'src-tauri/resources/csl/cslStyles.json'
+      - 'scripts/*csl*'
+      - '.github/workflows/csl-styles.yaml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # No dependencies: the script only uses Node built-ins.
+      - name: Check the style index against upstream
+        run: node scripts/check-csl-styles.js
+        env:
+          # Anonymous GitHub API calls from Actions runners are rate limited per IP.
+          GITHUB_TOKEN: ${{ github.token }}
