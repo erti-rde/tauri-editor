@@ -18,7 +18,7 @@
 			}
 		],
 		"security": {
-			"csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost",
+			"csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' ipc: http://ipc.localhost https://doi.org https://api.crossref.org https://data.crosscite.org https://raw.githubusercontent.com; img-src 'self' asset: http://asset.localhost",
 			"assetProtocol": {
 				"enable": true
 			}
