@@ -7,7 +7,7 @@
 	rootPath = $fileSystemStore.currentPath;
 </script>
 
-<div class="flex h-[100%] w-[100%] flex-col rounded-xl text-neutral-900">
+<div class="text-ink flex h-[100%] w-[100%] flex-col rounded-xl">
 	{#if rootPath}
 		{#if $fileSystemStore.error}
 			<div class="p-4 text-center">

@@ -65,7 +65,8 @@ Depends on: M1c-2, M1c-3, M1c-4, M1a-1
 
 Depends on: M1c-2
 
-- AC-1 A vitest guard counts, per file outside `src/lib/ui`: raw `<button>`, raw `<input>`,
+- AC-1 Raw colour classes are already forbidden outright by `rawColours.test.ts` (zero
+  allowed). A vitest guard counts, per file outside `src/lib/ui`: raw `<button>`, raw `<input>`,
   `text-[Npx]`, off-token radii (`rounded-md|lg|xl|[…]` where not allowed) and shadows outside
   overlays.
 - AC-2 `design-system-baseline.json` records today's counts. A file above its baseline fails,

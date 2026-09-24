@@ -100,7 +100,7 @@
 				{#if label.id === mark.label_id}✓{/if}
 			</span>
 			<span
-				class="inline-block h-3 w-3 shrink-0 rounded-sm ring-1 ring-black/15 ring-inset"
+				class="ring-line-strong inline-block h-3 w-3 shrink-0 rounded-sm ring-1 ring-inset"
 				style:background="hsl({label.colour})"
 			></span>
 			<span>{label.name}</span>
