@@ -7,7 +7,7 @@
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
-	import { exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+	import { mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 	import { call, commands } from '$lib/ipc';
 
 	import { get } from 'svelte/store';
@@ -15,6 +15,7 @@
 	import { load as loadStore } from '@tauri-apps/plugin-store';
 
 	import { createAutosave } from './autosave';
+	import { createManuscriptSession } from '$lib/manuscript/io';
 	import { countDocument } from './wordCount';
 	import { documentStatus } from '$lib/statusFooter/documentStatus';
 	import { parseCitationIds } from '$lib/citations/document';
@@ -77,8 +78,11 @@
 	 * there. The logic now lives in ./autosave with tests for that race.
 	 */
 	let unlistenClose: (() => void) | undefined;
-	/** Set when the open file could not be parsed, so autosave must not overwrite it. */
-	let readFailed = $state(false);
+	/**
+	 * Loads and saves manuscripts, and refuses to save over one it couldn't read
+	 * (`$lib/manuscript/io`).
+	 */
+	const manuscript = createManuscriptSession();
 	/** Bumped on each document switch, so a superseded one abandons itself. */
 	let transition = 0;
 
@@ -98,7 +102,7 @@
 			const target = get(documentsStore).current;
 			if (!target) return;
 
-			await writeTextFile(target.path, JSON.stringify(content));
+			await manuscript.save(target.path, content);
 		},
 		onStateChange: (next) => documentStatus.report({ save: next }),
 		onError: (error) => {
@@ -159,7 +163,7 @@
 				// A file that could not be parsed is left alone. Saving over it would
 				// replace whatever was recoverable with an empty document, which is
 				// the opposite of what someone whose file just failed to open needs.
-				if (readFailed) return;
+				if (!manuscript.mayWrite(get(documentsStore).current?.path)) return;
 
 				// The getter is passed rather than the content: it is read when the
 				// save actually runs, so a burst of typing costs one write and always
@@ -410,29 +414,19 @@
 
 	async function getDocumentData(path?: string) {
 		const target = path ?? get(documentsStore).current?.path;
-		if (!target || !(await exists(target))) {
-			return {};
-		}
+		if (!target) return {};
 
-		const fileData = await readTextFile(target);
-
-		if (!fileData.trim() || fileData === 'undefined') {
+		const loaded = await manuscript.open(target);
+		if (loaded.status === 'empty') {
 			console.warn(`${target} is empty; starting from a blank document.`);
-			return {};
 		}
-
-		try {
-			return JSON.parse(fileData);
-		} catch (parseError) {
-			// Refuse rather than silently replacing the file with a blank document
-			// on the next save, which would destroy whatever was recoverable.
-			console.error(`Could not read ${target}:`, parseError);
+		if (loaded.status === 'unreadable') {
+			console.error(`Could not read ${target}:`, loaded.error);
 			errorToast(
 				`${target.split('/').pop()} could not be read. It has been left untouched — open it in a text editor to check.`
 			);
-			readFailed = true;
-			return {};
 		}
+		return loaded.content;
 	}
 
 	/**
@@ -459,10 +453,11 @@
 		}
 		if (token !== transition) return;
 
+		// Not followed by lifting the guard: an unreadable chapter opened this way
+		// used to be saved over, blank, on the next keystroke.
 		const content = await getDocumentData(next.path);
 		if (token !== transition) return;
 
-		readFailed = false;
 		documentsStore.open(next);
 		$editor.commands.setContent(content);
 		$editor.commands.updateAllCitation();
@@ -474,20 +469,9 @@
 
 	/** An empty manuscript, written only if that name is genuinely free. */
 	async function createOnDisk(path: string): Promise<boolean> {
-		try {
-			// createNew rather than a prior exists() check: the gap between looking
-			// and writing is enough to overwrite a file that appeared in between,
-			// and the name check runs against a directory listing that may already
-			// be stale. Losing a co-author's chapter to a race is not recoverable,
-			// so the filesystem decides rather than a cached list.
-			await writeTextFile(path, JSON.stringify({ type: 'doc', content: [] }), {
-				createNew: true
-			});
-			return true;
-		} catch (error) {
-			console.error(`Could not create ${path}:`, error);
-			return false;
-		}
+		const result = await manuscript.create(path);
+		if (!result.created) console.error(`Could not create ${path}:`, result.error);
+		return result.created;
 	}
 
 	/** The manuscript a brand-new project starts with. */
@@ -496,7 +480,7 @@
 		const path = await pathJoin(currentDir, fileName);
 
 		// An existing file here is not a failure: it is the manuscript to open.
-		if (!(await exists(path))) await createOnDisk(path);
+		if (!(await manuscript.exists(path))) await createOnDisk(path);
 
 		documentsStore.add({ fileName, path, title: 'Untitled', legacy: false });
 	}
@@ -534,7 +518,7 @@
 		}
 		if (token !== transition) return;
 
-		readFailed = false;
+		manuscript.reset();
 		documentsStore.add({
 			fileName: result.fileName!,
 			path,
