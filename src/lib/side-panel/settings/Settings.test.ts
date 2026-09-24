@@ -276,6 +276,8 @@ describe('Settings.svelte', () => {
 			expect(screen.queryByRole('option', { name: 'Chicago' })).not.toBeInTheDocument();
 			// APA does not match the query but is the saved selection, so it stays.
 			expect(screen.getByRole('option', { name: 'APA' })).toBeInTheDocument();
+			// ...but it is not counted as a match: only MLA matches "ml".
+			expect(screen.getByText(/1 of 3 styles match/)).toBeInTheDocument();
 		});
 	});
 });
