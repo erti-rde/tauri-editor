@@ -8,7 +8,10 @@ Erti has half a design system. Measured on `main`, 2026-09-24:
 
 **The token layer is strong.** Semantic colour tokens across seven palettes, a contrast test
 (189 assertions), density (`--row-height`, `--gap`), `--ui-size`, `--page-font`, `--radius`,
-and one global focus ring. **Not one raw colour class** anywhere in `src`.
+and one global focus ring. Raw colour classes are rare: **four**, one of which made explorer file
+names invisible in every dark palette (about 1.1:1). _Corrected 2026-09-24: this first said
+none, because the audit's search pattern left out `neutral`. All four are replaced, and
+`rawColours.test.ts` now fails on any raw colour class._
 
 **The component layer is missing.**
 

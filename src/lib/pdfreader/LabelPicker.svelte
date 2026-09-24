@@ -49,7 +49,7 @@
 				title={active ? `Highlight colour: ${active.name}` : 'Highlight colour'}
 			>
 				<span
-					class="inline-block h-4 w-4 rounded-full ring-1 ring-black/15 ring-inset"
+					class="ring-line-strong inline-block h-4 w-4 rounded-full ring-1 ring-inset"
 					style:background="hsl({active?.colour ?? '45 90% 60%'})"
 				></span>
 				<ChevronDown class="icon" width="10" height="10" />
@@ -114,7 +114,7 @@
 							</span>
 
 							<span
-								class="inline-block h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-black/15 ring-inset"
+								class="ring-line-strong inline-block h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-inset"
 								style:background="hsl({label.colour})"
 							></span>
 
