@@ -4,31 +4,32 @@ The route from here to a releasable 1.0, kept current as work lands. **A box is 
 _Verify_ passes, not when its code merges.** [plan.md](plan.md) is the record of how the
 foundations were hardened; this file is what happens next.
 
-| Document                             | Holds                                                                                     |
-| ------------------------------------ | ----------------------------------------------------------------------------------------- |
-| **plan-v1.md** (this)                | Release criteria, milestones, sequencing, risks, decisions                                |
-| [docs/adr/](docs/adr/README.md)      | The nine architecture decisions 1.0 rests on                                              |
-| [docs/security.md](docs/security.md) | Threat model and the eleven 1.0 security tasks (`SEC-n`)                                  |
-| [docs/testing.md](docs/testing.md)   | Test layers, per-milestone test plans, the release test matrix                            |
-| [docs/release.md](docs/release.md)   | Release pipeline, free distribution, updater, versioning                                  |
-| [docs/ux.md](docs/ux.md)             | Where each new surface lives and how it behaves (`UX-n`); [mockups](docs/ux/mockups.html) |
-| [docs/specs/](docs/specs/README.md)  | Acceptance criteria for every item below, by ID                                           |
-| [CLAUDE.md](CLAUDE.md)               | The working agreement for handing work off                                                |
+| Document                                       | Holds                                                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **plan-v1.md** (this)                          | Release criteria, milestones, sequencing, risks, decisions                                |
+| [docs/adr/](docs/adr/README.md)                | The nine architecture decisions 1.0 rests on                                              |
+| [docs/security.md](docs/security.md)           | Threat model and the eleven 1.0 security tasks (`SEC-n`)                                  |
+| [docs/testing.md](docs/testing.md)             | Test layers, per-milestone test plans, the release test matrix                            |
+| [docs/release.md](docs/release.md)             | Release pipeline, free distribution, updater, versioning                                  |
+| [docs/ux.md](docs/ux.md)                       | Where each new surface lives and how it behaves (`UX-n`); [mockups](docs/ux/mockups.html) |
+| [docs/design-system.md](docs/design-system.md) | Tokens, primitives and rules; ADR 010                                                     |
+| [docs/specs/](docs/specs/README.md)            | Acceptance criteria for every item below, by ID                                           |
+| [CLAUDE.md](CLAUDE.md)                         | The working agreement for handing work off                                                |
 
 ---
 
 ## 0. Where we are (2026-09-24)
 
-|                  |                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| Version          | 0.2.5                                                                                    |
-| `main`           | Document structure, reading & annotation, notes panel, CSL index refresh — all merged    |
-| Tests            | 1,010 vitest on `main` (1,014 with #109), 47 cargo; `svelte-check` and lint clean        |
-| Coverage         | 71% lines. The orchestration layer is dark: `Editor.svelte` 4.7%, `pdf_handlers.ts` 7.9% |
-| End-to-end       | **Nothing runs the real app** (docs/testing.md)                                          |
-| Open PRs         | #108 (CodeRabbit follow-up for #107), #109 (CSP `connect-src` allowlist)                 |
-| Open issues      | 11: #104 #103 #102 #101 #100 #99 #48 #39 #23 #17 #11                                     |
-| Release pipeline | Ten defects; can't ship 1.0 as-is (docs/release.md)                                      |
+|                  |                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Version          | 0.2.5                                                                                                              |
+| `main`           | Document structure, reading & annotation, notes panel, CSL index refresh — all merged                              |
+| Tests            | 1,014 vitest, 47 cargo on `main`; `svelte-check` and lint clean                                                    |
+| Coverage         | 71% lines. The orchestration layer is dark: `Editor.svelte` 4.7%, `pdf_handlers.ts` 7.9%                           |
+| End-to-end       | **Nothing runs the real app** (docs/testing.md)                                                                    |
+| Open PRs         | This one: the rest of the planning set, plus the design system (M1c). #108, #109 and the first part of #110 merged |
+| Open issues      | 11: #104 #103 #102 #101 #100 #99 #48 #39 #23 #17 #11                                                               |
+| Release pipeline | Ten defects; can't ship 1.0 as-is (docs/release.md)                                                                |
 
 **What the planning pass found**, beyond the first draft of this plan:
 
@@ -88,14 +89,18 @@ foundations were hardened; this file is what happens next.
 ## 2. Sequencing
 
 ```
-M0 land what exists ──▶ M1a safety net + format ──▶ M1b sources, notes, import ──┬──▶ M2 index ──▶ M3 companion ──┐
-                                 │                                                ├──▶ M4 attribution check ───────┤
-                                 └──────────────────────────────────────────────▶ M5 writing essentials ─────────┤
+M0 land what exists ──▶ M1a safety net + format ──┬──▶ M1b sources, notes, import ──┬──▶ M2 index ──▶ M3 companion ──┐
+                                                   └──▶ M1c design system ──────────┤ (all UI from here on uses it)   │
+                                                                                     ├──▶ M4 attribution check ───────┤
+                                                                                     └──▶ M5 writing essentials ─────┤
 M7a release pipeline (independent — start alongside M1a) ─────────────────────────────────────────────────────────┤
                                                                                                         ▼
                                                                       M6 scale & quality gates ──▶ M7b 0.9 beta ──▶ 1.0
 ```
 
+- **M1c (design system) runs beside M1b's backend** and must land before any new UI: every UI
+  item depends on its primitives. The existing token layer is strong; what's missing is the
+  component layer (101 hand-styled buttons, no type scale). ADR 010.
 - **M1a → M1b is the critical path.** Everything after it reads the manuscript format,
   resolves canonical ids, or needs the E2E harness. It was one milestone of 17 items; it's split
   so that the part everything depends on (harnesses, security boundary, backups, file format)
@@ -110,6 +115,7 @@ M7a release pipeline (independent — start alongside M1a) ───────
 | M0 Land what exists          | S    | —          |
 | M1a Safety net + file format | M    | M0         |
 | M1b Sources, notes, import   | L    | M1a        |
+| M1c Design system            | M    | M1a-1      |
 | M2 Retrieval index           | M    | M1b        |
 | M3 Writing companion         | M    | M2         |
 | M4 Attribution check         | L    | M1b        |
@@ -137,8 +143,9 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 
 - [x] Reading and notes work committed and merged (#106) · CSL index recovered (#107) · SQL
       plugin config dropped · #8, #4, #49, #58, #37 closed
-- [ ] **M0-1** Merge the CodeRabbit follow-up (#108)
-- [ ] **M0-2** Merge the CSP allowlist (#109). Verified in the real app
+- [x] **M0-1** Merge the CodeRabbit follow-up (#108)
+- [ ] **M0-2** Merge the CSP allowlist (#109). Merged, and verified in the real app; AC-4 (one by-hand
+      resolve) still open
 - [ ] **M0-3** A fresh install can write before any network call: bundled styles; editor
       mounts without one **(P0)**
 - [ ] **M0-4** Remove `tauri-plugin-shell` (SEC-6)
@@ -171,6 +178,17 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M1b-8** Notes on a source (ADR-4, UX-3)
 - [ ] **M1b-9** Import a bibliography, with preview (ADR-9, UX-6)
 - [ ] **M1b-10** Shape guards and size limits (SEC-3, SEC-4)
+
+### M1c — Design system _(M, before any new UI)_ · [spec](docs/specs/M1c.md)
+
+- [ ] **M1c-1** One token source: remove the starter-template tokens; type, elevation and motion
+      tokens (ADR-10)
+- [ ] **M1c-2** Primitives: actions and inputs
+- [ ] **M1c-3** Primitives: containers and feedback
+- [ ] **M1c-4** Primitives: content (`Item`, `LabelChip`)
+- [ ] **M1c-5** Catalogue, and contrast measured on rendered components in 7 palettes × 2
+      densities
+- [ ] **M1c-6** Ratchet guard and [design-system.md](docs/design-system.md)
 
 ### M2 — Retrieval index _(M)_ · [spec](docs/specs/M2.md)
 
@@ -220,6 +238,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M6-5** Accessibility and palettes on every new surface
 - [ ] **M6-6** Local error log
 - [ ] **M6-7** Threat model re-run (SEC-10)
+- [ ] **M6-8** Design-system sweep: every remaining surface on primitives; ratchet at zero
 
 ### M7a — Release pipeline _(M, alongside M1a)_ · [spec](docs/specs/M7.md)
 
@@ -299,32 +318,33 @@ images · collaboration · macOS E2E once a WKWebView driver exists.
 
 ## 6. Decisions
 
-| Decision                       | Choice                                                                                                                                                                 | Why                                                                                              |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Uncommitted reading/notes work | Committed in logical pieces and merged (#106)                                                                                                                          | A finished, tested feature that existed only in a working tree                                   |
-| Platforms                      | macOS (arm64 + Intel), Windows, Linux                                                                                                                                  | Signing no longer gates platforms                                                                |
-| Code signing                   | **None paid.** macOS self-signed stable identity (ad-hoc as fallback); Windows unsigned + SignPath Foundation application; Linux unsigned. Guide + checksums           | No budget; "always free". Self-signed over ad-hoc to keep macOS permissions across updates       |
-| Attribution check in 1.0       | Review mode; verbatim and near-verbatim, drifted quotes, wrong-source; no paraphrase, no inline                                                                        | Highest precision for the effort; FP rate measured before anything speaks while writing          |
-| Formats in 1.0                 | PDF (verified per platform), DOCX, BibTeX/RIS/CSL-JSON import, version history                                                                                         | User requirement, 2026-09-24                                                                     |
-| Architecture                   | ADR 001–009                                                                                                                                                            | docs/adr/                                                                                        |
-| BibTeX parser                  | `@retorquere/bibtex-parser`, not citation-js                                                                                                                           | citation-js's core depends on a network client (ADR 009)                                         |
-| Network allowlist              | CSP `connect-src` = the README's list, pinned by a test                                                                                                                | The privacy promise enforced rather than stated (#109)                                           |
-| Updater                        | Behind consent, like lookups                                                                                                                                           | It's a network call; the README promise covers it                                                |
-| Library backups                | In M1a, not M5                                                                                                                                                         | M1b adds a library migration, and ADR 008 requires a backup before every migration               |
-| Manuscript format shape        | Doc at the root + namespaced `erti` key (ADR 002 amendment)                                                                                                            | The first design made older versions overwrite the file with nothing                             |
-| M1 split                       | M1a (safety net + format) / M1b (sources, notes, import)                                                                                                               | 17 items on one critical-path milestone; the part everything needs now finishes first            |
-| ISBN lookup                    | Deferred to 1.x                                                                                                                                                        | It needs a new external service, and picking one is a privacy decision                           |
-| Cut line                       | **Agreed:** M4 moves to 1.1 if M1b overruns by half                                                                                                                    | A single maintainer; better a decided cut than a drifting date (2026-09-24)                      |
-| Who merges                     | **The maintainer merges every PR.** Claude opens PRs ready to merge, with each AC's evidence                                                                           | Maintainer's call, 2026-09-24                                                                    |
-| Timeline                       | No date; work in plan order                                                                                                                                            | Maintainer's call, 2026-09-24                                                                    |
-| Languages                      | English-only UI and English-only search model for 1.0, said in the README; UI strings kept per surface for later translation                                           | Maintainer's call, 2026-09-24; multilingual waits for the model bake-off                         |
-| Tracking                       | GitHub milestone per plan milestone, one issue per spec ID; this plan stays the source of truth                                                                        | Maintainer's call, 2026-09-24                                                                    |
-| Beta feedback                  | GitHub Issues, plus an email address in the beta notes                                                                                                                 | Default; the maintainer didn't pick one. Change anytime                                          |
-| Bundled citation styles        | APA 7, Chicago (author-date, notes), Harvard CTR, IEEE, MLA 9, Vancouver; locales en-US, en-GB                                                                         | Offline-first; a fresh install couldn't write without them (M0-3)                                |
-| Dependency upgrades            | Only what 1.0 needs: pdf.js decided in M6-3 (security, extraction). Other majors after 1.0 unless one blocks                                                           | Upgrades are churn with no user-facing gain before 1.0                                           |
-| Compatibility promise          | 1.x reads every manuscript and library written by 0.2+ and 1.x. Library migrations forward-only, with a backup. A newer-format file opens read-only, never overwritten | What a co-author one version behind needs                                                        |
-| Placement of new surfaces      | As docs/ux.md: Check as a rail panel; companion inside Notes; source notes in the Sources sidebar; Export as one menu; history takes over the workspace                | One place per job; the writing stays visible for reviews                                         |
-| Import undo                    | No undo; the preview (UX-6) comes before anything is written                                                                                                           | A batch-undo needs import tracking in the schema; the preview prevents the mistakes it would fix |
+| Decision                       | Choice                                                                                                                                                                 | Why                                                                                                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Uncommitted reading/notes work | Committed in logical pieces and merged (#106)                                                                                                                          | A finished, tested feature that existed only in a working tree                                                                                                        |
+| Platforms                      | macOS (arm64 + Intel), Windows, Linux                                                                                                                                  | Signing no longer gates platforms                                                                                                                                     |
+| Code signing                   | **None paid.** macOS self-signed stable identity (ad-hoc as fallback); Windows unsigned + SignPath Foundation application; Linux unsigned. Guide + checksums           | No budget; "always free". Self-signed over ad-hoc to keep macOS permissions across updates                                                                            |
+| Attribution check in 1.0       | Review mode; verbatim and near-verbatim, drifted quotes, wrong-source; no paraphrase, no inline                                                                        | Highest precision for the effort; FP rate measured before anything speaks while writing                                                                               |
+| Formats in 1.0                 | PDF (verified per platform), DOCX, BibTeX/RIS/CSL-JSON import, version history                                                                                         | User requirement, 2026-09-24                                                                                                                                          |
+| Architecture                   | ADR 001–009                                                                                                                                                            | docs/adr/                                                                                                                                                             |
+| BibTeX parser                  | `@retorquere/bibtex-parser`, not citation-js                                                                                                                           | citation-js's core depends on a network client (ADR 009)                                                                                                              |
+| Network allowlist              | CSP `connect-src` = the README's list, pinned by a test                                                                                                                | The privacy promise enforced rather than stated (#109)                                                                                                                |
+| Updater                        | Behind consent, like lookups                                                                                                                                           | It's a network call; the README promise covers it                                                                                                                     |
+| Library backups                | In M1a, not M5                                                                                                                                                         | M1b adds a library migration, and ADR 008 requires a backup before every migration                                                                                    |
+| Manuscript format shape        | Doc at the root + namespaced `erti` key (ADR 002 amendment)                                                                                                            | The first design made older versions overwrite the file with nothing                                                                                                  |
+| M1 split                       | M1a (safety net + format) / M1b (sources, notes, import)                                                                                                               | 17 items on one critical-path milestone; the part everything needs now finishes first                                                                                 |
+| ISBN lookup                    | Deferred to 1.x                                                                                                                                                        | It needs a new external service, and picking one is a privacy decision                                                                                                |
+| Cut line                       | **Agreed:** M4 moves to 1.1 if M1b overruns by half                                                                                                                    | A single maintainer; better a decided cut than a drifting date (2026-09-24)                                                                                           |
+| Who merges                     | **The maintainer merges every PR.** Claude opens PRs ready to merge, with each AC's evidence                                                                           | Maintainer's call, 2026-09-24                                                                                                                                         |
+| Timeline                       | No date; work in plan order                                                                                                                                            | Maintainer's call, 2026-09-24                                                                                                                                         |
+| Languages                      | English-only UI and English-only search model for 1.0, said in the README; UI strings kept per surface for later translation                                           | Maintainer's call, 2026-09-24; multilingual waits for the model bake-off                                                                                              |
+| Tracking                       | GitHub milestone per plan milestone, one issue per spec ID; this plan stays the source of truth                                                                        | Maintainer's call, 2026-09-24                                                                                                                                         |
+| Beta feedback                  | GitHub Issues, plus an email address in the beta notes                                                                                                                 | Default; the maintainer didn't pick one. Change anytime                                                                                                               |
+| Bundled citation styles        | APA 7, Chicago (author-date, notes), Harvard CTR, IEEE, MLA 9, Vancouver; locales en-US, en-GB                                                                         | Offline-first; a fresh install couldn't write without them (M0-3)                                                                                                     |
+| Dependency upgrades            | Only what 1.0 needs: pdf.js decided in M6-3 (security, extraction). Other majors after 1.0 unless one blocks                                                           | Upgrades are churn with no user-facing gain before 1.0                                                                                                                |
+| Compatibility promise          | 1.x reads every manuscript and library written by 0.2+ and 1.x. Library migrations forward-only, with a backup. A newer-format file opens read-only, never overwritten | What a co-author one version behind needs                                                                                                                             |
+| Placement of new surfaces      | As docs/ux.md: Check as a rail panel; companion inside Notes; source notes in the Sources sidebar; Export as one menu; history takes over the workspace                | One place per job; the writing stays visible for reviews                                                                                                              |
+| Import undo                    | No undo; the preview (UX-6) comes before anything is written                                                                                                           | A batch-undo needs import tracking in the schema; the preview prevents the mistakes it would fix                                                                      |
+| Design system                  | Erti's own primitives on bits-ui, styled by the existing tokens; not the shadcn-svelte CLI. Migrate by ratchet, not a big bang (ADR 010)                               | Tokens were already strong; shadcn's defaults (big radii, card shadows) are the look Erti rejects. The ratchet rides along with work that touches each surface anyway |
 
 ---
 

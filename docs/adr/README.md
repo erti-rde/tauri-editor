@@ -18,3 +18,4 @@ Format: **Context** (what forces the decision) · **Decision** · **Alternatives
 | [007](007-version-history.md)                     | Snapshots as plain manuscript files under `.erti/history/` | Accepted | M5        |
 | [008](008-library-backups.md)                     | Rotating library backups with `VACUUM INTO`                | Accepted | M1a       |
 | [009](009-docx-export-and-bibliography-import.md) | DOCX export and bibliography import as pure TS modules     | Accepted | M1b, M5   |
+| [010](010-design-system.md)                       | One token source, a primitive layer, a catalogue           | Accepted | M1c       |

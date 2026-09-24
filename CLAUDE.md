@@ -34,7 +34,11 @@ to watch it happen.
      screenshot);
    - anything left unverified, stated plainly;
    - `Closes #<issue>`.
-8. **The maintainer merges.** Never merge, force-push to `main`, or enable auto-merge. When a
+8. **Open the PR only when the branch is complete.** The maintainer may merge the moment it
+   appears, and twice a PR merged with only its first commit while follow-ups were still being
+   pushed (#107, #110). If something must change after opening, push it and say so in a PR
+   comment, then check the merged result with `git cherry origin/main <branch>`.
+9. **The maintainer merges.** Never merge, force-push to `main`, or enable auto-merge. When a
    PR merges, tick the item in plan-v1.md in the next PR (not in its own PR). PRs are
    rebase-merged, so hashes change: refer to PR numbers, never commit hashes.
 
@@ -74,8 +78,11 @@ Everything else: decide, follow the docs above, and record non-obvious choices i
 - Conventional commits (commitlint enforces them). Prose bodies explain why. End with the
   `Co-Authored-By` line from the session.
 - Comments explain why, in the voice of the surrounding code. British spelling in UI strings.
-- UI: semantic tokens only, never colours. Colour is never the only channel. Nothing new speaks
-  unasked (docs/ux.md principles).
+- UI is built from the primitives in `src/lib/ui` ([docs/design-system.md](docs/design-system.md)).
+  A missing primitive is added there, with a catalogue entry, first. No numbers in class names,
+  no colours, no shadows outside overlays: the ratchet test fails otherwise. Touching a
+  surface means migrating it and lowering its baseline. Colour is never the only channel.
+  Nothing new speaks unasked (docs/ux.md principles).
 - Privacy: every network host is in the README list **and** the CSP `connect-src`
   (`networkAllowlist.test.ts` enforces this). Rust-side traffic is listed too.
 - Shipped migrations are frozen. Every migration is idempotent, and a library backup is taken
