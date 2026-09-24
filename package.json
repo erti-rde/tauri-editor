@@ -15,6 +15,7 @@
 		"csl:generate": "node scripts/generate-csl-styles.js",
 		"csl:check": "node scripts/check-csl-styles.js",
 		"test": "vitest run",
+		"ipc:bindings": "cd src-tauri && UPDATE_BINDINGS=1 cargo test --test ipc_bindings",
 		"verify": "pnpm lint && pnpm check && pnpm test && cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
 		"prepare": "husky",
 		"test:watch": "vitest",

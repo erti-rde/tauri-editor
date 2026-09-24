@@ -182,31 +182,38 @@ impl DbState {
         Ok(())
     }
 
-    pub async fn library(&self) -> Result<SqlitePool, String> {
-        self.library
-            .read()
-            .await
-            .clone()
-            .ok_or_else(|| "library is not open".to_string())
+    /// The open library. Not being open yet is a state, not a failure of the
+    /// database, so it is a `Conflict` (ADR 011).
+    pub async fn library(&self) -> Result<SqlitePool, crate::ipc::AppError> {
+        self.library.read().await.clone().ok_or_else(|| {
+            crate::ipc::AppError::new(
+                crate::ipc::ErrorKind::Conflict,
+                "The library isn't open yet.",
+            )
+        })
     }
 
-    pub async fn project(&self) -> Result<SqlitePool, String> {
+    pub async fn project(&self) -> Result<SqlitePool, crate::ipc::AppError> {
         self.project
             .read()
             .await
             .as_ref()
             .map(|p| p.pool.clone())
-            .ok_or_else(|| "no project is open".to_string())
+            .ok_or_else(no_project)
     }
 
-    pub async fn project_root(&self) -> Result<PathBuf, String> {
+    pub async fn project_root(&self) -> Result<PathBuf, crate::ipc::AppError> {
         self.project
             .read()
             .await
             .as_ref()
             .map(|p| p.root.clone())
-            .ok_or_else(|| "no project is open".to_string())
+            .ok_or_else(no_project)
     }
+}
+
+fn no_project() -> crate::ipc::AppError {
+    crate::ipc::AppError::new(crate::ipc::ErrorKind::Conflict, "No project is open.")
 }
 
 /// SHA-256 of a file's contents, streamed so large PDFs never land in memory whole.
@@ -214,18 +221,21 @@ impl DbState {
 /// This is a source's identity. Hashing contents rather than trusting a filename
 /// is what lets the same paper live in two project folders as one entry, and
 /// what stops two different papers sharing a name from colliding.
-pub async fn hash_file(path: &Path) -> Result<String, String> {
+pub async fn hash_file(path: &Path) -> Result<String, crate::ipc::AppError> {
     use sha2::{Digest, Sha256};
     use tokio::io::AsyncReadExt;
 
     let mut file = tokio::fs::File::open(path)
         .await
-        .map_err(|e| crate::fs_errors::describe(&e, path))?;
+        .map_err(|e| crate::ipc::AppError::from_io(&e, path))?;
 
     let mut hasher = Sha256::new();
     let mut buf = vec![0u8; 64 * 1024];
     loop {
-        let read = file.read(&mut buf).await.map_err(|e| e.to_string())?;
+        let read = file
+            .read(&mut buf)
+            .await
+            .map_err(|e| crate::ipc::AppError::from_io(&e, path))?;
         if read == 0 {
             break;
         }

@@ -18,7 +18,7 @@ planned item lands, it says so.
 │ lib/export            PURE: LaTeX, BibTeX              lib/theme      tokens, palettes, contrast│
 │ lib/ui                primitives (M1c grows these)     lib/stores     app state + IPC wrappers  │
 └───────────────────────────────────────┬───────────────────────────────────────────────────────┘
-                                        │ invoke() — 42 commands; only results cross, never vectors
+                                        │ lib/ipc: 42 typed commands (ADR 011); only results cross, never vectors
 ┌─────────────────────────────── Rust core (src-tauri/src) ─────────────────────────────────────┐
 │ lib.rs            plugins, managed state, the command list (generate_handler!)                │
 │ db_commands.rs    commands over the two databases        commands.rs   fs listing, embedding   │
@@ -87,16 +87,24 @@ Each recipe ends with what to test. Run `pnpm verify` before opening the PR (CLA
 ### Add a backend command
 
 1. Write the SQL in `db/queries.rs` as a named function (no SQL in commands).
-2. Add the `#[tauri::command]` in `db_commands.rs`, or `commands.rs` for non-database work.
-   Run CPU work in `spawn_blocking`.
-3. Register it in `lib.rs` → `generate_handler![…]`.
-4. Add the typed wrapper in `stores/db.ts`, mirroring the Rust struct field for field. **After
-   M1a-10 this step goes away:** bindings are generated, and the wrapper is imported from
-   `lib/ipc`.
-5. Add it to the fake backend (M1a-1) so harness journeys can use it.
+2. Add the command in `db_commands.rs` (or `commands.rs` for non-database work) with both
+   `#[tauri::command]` and `#[specta::specta]`, returning `Result<T, AppError>`. Run CPU work in
+   `spawn_blocking`.
+3. Give the error its kind where it's known: `?` on `state.library()` and friends (already a
+   `Conflict` when nothing is open), `.or_database()` on the query layer's string errors,
+   `.or_model()` on inference, and `AppError::from_io` for files. `Classify` won't compile on an
+   error that already has a kind, so a kind can't be overwritten by accident.
+4. Any type crossing IPC derives `specta::Type`. A 64-bit field needs
+   `#[specta(type = specta_typescript::Number)]`, which says it fits in a JS number; prefer
+   `u32` for parameters. `Option` fields in inputs get `#[specta(optional)]`.
+5. Register it in `ipc_builder()` in `lib.rs`, then run `pnpm ipc:bindings`. The typed
+   `commands.yourCommand(…)` appears in `src/lib/ipc/bindings.ts`.
+6. Call it from TS as `call(commands.yourCommand(…))`, or `run(…)` when it returns nothing, and
+   show failures with `describeError`. Importing `invoke` directly is an ESLint error.
+7. Add it to the fake backend (M1a-1) so harness journeys can use it.
 
-Test: a Rust integration test in `src-tauri/tests/` against a scratch database; a vitest for
-any TS logic around it.
+Test: a Rust integration test in `src-tauri/tests/` that goes **through the command**, not just
+the query (see `tests/ipc_errors.rs` for why). CI fails if `bindings.ts` is stale.
 
 ### Change the database schema
 
@@ -158,6 +166,5 @@ Tracked in the plan, and listed here so nobody trips over them:
   `lib/ingest` when M1b-7 touches it.
 - `Editor.svelte` (750 lines) and `PdfReader.svelte` (1,869) mix decisions with orchestration.
   Extract when touched (M1a-7 does the manuscript part).
-- 42 commands and 7 types are mirrored by hand across Rust and TS until M1a-10.
 - Settings keys are scattered over 11 files until M1a-11.
 - There's no log file or global error handler until M1a-12. Errors reach `console.*` (76 calls).

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
 
-	import { invoke } from '@tauri-apps/api/core';
+	import { call, commands } from '$lib/ipc';
 
 	import ReaderSidebar, { type SidebarTab } from './ReaderSidebar.svelte';
 	import HighlightLayer from './HighlightLayer.svelte';
@@ -411,7 +411,7 @@
 		try {
 			// Awaited, so a failure lands in the catch below rather than surfacing
 			// as an unhandled rejection while the pane sits on an empty viewer.
-			const encoded = await invoke<string>('read_pdf_file', { path: pdfPath });
+			const encoded = await call(commands.readPdfFile(pdfPath));
 			if (mine !== generation) return;
 
 			await created.load(base64ToUint8Array(encoded));

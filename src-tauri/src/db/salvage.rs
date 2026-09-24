@@ -14,16 +14,20 @@ use sqlx::Row;
 use std::path::Path;
 use std::str::FromStr;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, specta::Type)]
 pub struct SalvageReport {
     /// Rows carried forward.
+    #[specta(type = specta_typescript::Number)]
     pub imported: usize,
     /// Rows a previous run already carried forward. Reported separately so a
     /// repeat launch does not claim new work.
+    #[specta(type = specta_typescript::Number)]
     pub already_present: usize,
     /// Rows skipped because their metadata was a `'{}'` placeholder or absent.
+    #[specta(type = specta_typescript::Number)]
     pub skipped_empty: usize,
     /// Files in the old database that were registered but never processed.
+    #[specta(type = specta_typescript::Number)]
     pub skipped_unprocessed: usize,
 }
 

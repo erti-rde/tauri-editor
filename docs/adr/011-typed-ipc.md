@@ -46,6 +46,25 @@ hitting the bug.
 - **`ts-rs`.** It generates the types but not the commands, so names and arguments stay strings.
 - **Leave it.** Every feature in the plan adds commands; the cost grows with each one.
 
+## Spike and implementation result (2026-09-24)
+
+The spike worked on Tauri 2.11.5 with tauri-specta, specta 2.0.0-rc.25 and specta-typescript
+0.0.12, exact-pinned. `collect_commands!` expands to Tauri's own `generate_handler!`, so runtime
+dispatch is unchanged. What the implementation learned:
+
+- **64-bit integers.** specta-typescript 0.0.12 refuses `i64`/`u64`/`usize` (precision) and has
+  no global switch. Each such field says `#[specta(type = Number)]`: an explicit, reviewable
+  claim that it fits. Command parameters and counts became `u32`.
+- **Floats** are `number | null`, because JSON writes NaN as null. `db.ts` narrows `similarity`
+  with the reason stated.
+- **Results.** Generated commands resolve to `{ status, data | error }`. `call()` and `run()` in
+  `lib/ipc` turn that back into a value or an `IpcError` with its `kind`.
+- **A bug only the running app showed.** The first version relabelled a missing file as
+  `Database` on its way out of a command. Each piece was correct, but the path through the
+  command wasn't. `Classify` now applies only to errors that have no kind yet (strings, task
+  panics), so relabelling is a compile error. `tests/ipc_errors.rs` goes through the commands,
+  and a probe in the built app confirmed `NotFound`, `Conflict` and `InvalidInput` arrive intact.
+
 ## Consequences
 
 - New dependencies: `specta`, `tauri-specta`, `specta-typescript` (build and dev time, MIT),

@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tokio::fs as tokio_fs;
 
-#[derive(Debug, Serialize, Deserialize)]
+use crate::ipc::AppError;
+
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FileItem {
     name: String,
     path: String,
@@ -15,7 +17,7 @@ pub struct FileItem {
     children: Option<Vec<FileItem>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct EmbeddingResult {
     chunk_text: String,
     embedding: Vec<f32>,
@@ -24,7 +26,7 @@ pub struct EmbeddingResult {
 // Helper function to handle the recursive part
 fn read_directory_impl(
     path: String,
-) -> Pin<Box<dyn Future<Output = Result<Vec<FileItem>, String>> + Send>> {
+) -> Pin<Box<dyn Future<Output = Result<Vec<FileItem>, AppError>> + Send>> {
     Box::pin(async move {
         let path = Path::new(&path);
 
@@ -37,12 +39,15 @@ fn read_directory_impl(
 
         let read_dir = tokio_fs::read_dir(path)
             .await
-            .map_err(|e| crate::fs_errors::describe(&e, path))?;
+            .map_err(|e| AppError::from_io(&e, path))?;
         let mut read_dir = read_dir;
 
         while let Ok(Some(entry)) = read_dir.next_entry().await {
             let path_buf = entry.path();
-            let file_type = entry.file_type().await.map_err(|e| e.to_string())?;
+            let file_type = entry
+                .file_type()
+                .await
+                .map_err(|e| AppError::from_io(&e, &path_buf))?;
             let is_dir = file_type.is_dir();
             let name = entry.file_name().to_string_lossy().to_string();
 
@@ -82,14 +87,15 @@ fn read_directory_impl(
 
 // The actual command that will be exposed to Tauri
 #[tauri::command]
-pub async fn read_directory(path: String) -> Result<Vec<FileItem>, String> {
+#[specta::specta]
+pub async fn read_directory(path: String) -> Result<Vec<FileItem>, AppError> {
     read_directory_impl(path).await
 }
 
 #[tauri::command]
-pub async fn read_pdf_file(path: String) -> Result<String, String> {
-    let data =
-        std::fs::read(&path).map_err(|e| crate::fs_errors::describe(&e, Path::new(&path)))?;
+#[specta::specta]
+pub async fn read_pdf_file(path: String) -> Result<String, AppError> {
+    let data = std::fs::read(&path).map_err(|e| AppError::from_io(&e, Path::new(&path)))?;
     Ok(STANDARD.encode(data))
 }
 
@@ -172,12 +178,14 @@ pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 }
 
 #[tauri::command]
-pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {
+#[specta::specta]
+pub async fn embed_chunks(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, AppError> {
     // Ingest embeds hundreds of chunks per document. Off the async workers, as
     // above: this is CPU-bound inference with no await points.
     tokio::task::spawn_blocking(move || embed_chunks_blocking(chunks))
         .await
-        .map_err(|e| format!("embedding task failed: {e}"))?
+        .map_err(AppError::internal)?
+        .map_err(AppError::model)
 }
 
 fn embed_chunks_blocking(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, String> {

@@ -20,7 +20,7 @@ use std::process::Command;
 /// fetching what a document needs on first use.
 const ENGINES: [&str; 3] = ["latexmk", "pdflatex", "tectonic"];
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, specta::Type)]
 pub struct TexToolchain {
     /// The engine found, if any.
     pub engine: Option<String>,
@@ -42,6 +42,7 @@ fn on_path(program: &str) -> bool {
 
 /// What this machine can do with a `.tex`.
 #[tauri::command]
+#[specta::specta]
 pub async fn detect_tex_toolchain() -> TexToolchain {
     tokio::task::spawn_blocking(|| TexToolchain {
         engine: ENGINES.iter().find(|e| on_path(e)).map(|e| e.to_string()),
@@ -57,7 +58,7 @@ pub async fn detect_tex_toolchain() -> TexToolchain {
     })
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, specta::Type)]
 pub struct CompileResult {
     pub ok: bool,
     /// Path to the PDF, when one was produced.
@@ -72,16 +73,26 @@ pub struct CompileResult {
 /// is the only thing that says what went wrong, and hiding it would leave the
 /// user with "compilation failed" and nowhere to go.
 #[tauri::command]
-pub async fn compile_latex(directory: String, engine: String) -> Result<CompileResult, String> {
+#[specta::specta]
+pub async fn compile_latex(
+    directory: String,
+    engine: String,
+) -> Result<CompileResult, crate::ipc::AppError> {
     if !ENGINES.contains(&engine.as_str()) {
         // The engine name reaches a shell command, so it is checked against the
         // known set rather than trusted from the frontend.
-        return Err(format!("{engine} is not a TeX engine Erti runs."));
+        return Err(crate::ipc::AppError::new(
+            crate::ipc::ErrorKind::InvalidInput,
+            format!("{engine} is not a TeX engine Erti runs."),
+        ));
     }
 
     let dir = Path::new(&directory).to_path_buf();
     if !dir.join("main.tex").exists() {
-        return Err(format!("No main.tex in {}.", dir.display()));
+        return Err(crate::ipc::AppError::new(
+            crate::ipc::ErrorKind::NotFound,
+            format!("No main.tex in {}.", dir.display()),
+        ));
     }
 
     tokio::task::spawn_blocking(move || {
@@ -109,7 +120,7 @@ pub async fn compile_latex(directory: String, engine: String) -> Result<CompileR
         let output = command
             .current_dir(&dir)
             .output()
-            .map_err(|e| format!("Could not run {engine}: {e}"))?;
+            .map_err(|e| crate::ipc::AppError::io(format!("Could not run {engine}: {e}")))?;
 
         let log = format!(
             "{}{}",
@@ -129,7 +140,7 @@ pub async fn compile_latex(directory: String, engine: String) -> Result<CompileR
         })
     })
     .await
-    .map_err(|e| format!("compile task failed: {e}"))?
+    .map_err(|e| crate::ipc::AppError::internal(format!("compile task failed: {e}")))?
 }
 
 #[cfg(test)]
@@ -143,14 +154,18 @@ mod tests {
         let result = compile_latex("/tmp".into(), "rm -rf /".into()).await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not a TeX engine"));
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, crate::ipc::ErrorKind::InvalidInput);
+        assert!(err.message.contains("not a TeX engine"));
     }
 
     #[tokio::test]
     async fn a_directory_without_a_manuscript_is_reported() {
         let result = compile_latex("/tmp".into(), "pdflatex".into()).await;
 
-        assert!(result.unwrap_err().contains("No main.tex"));
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, crate::ipc::ErrorKind::NotFound);
+        assert!(err.message.contains("No main.tex"));
     }
 
     #[tokio::test]

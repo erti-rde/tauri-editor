@@ -8,7 +8,7 @@
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
-	import { invoke } from '@tauri-apps/api/core';
+	import { call, commands } from '$lib/ipc';
 
 	import { get } from 'svelte/store';
 
@@ -366,7 +366,7 @@
 			);
 			await writeTextFile(await pathJoin(dir, 'references.bib'), bibtex);
 
-			const tex = await invoke<{ engine: string | null }>('detect_tex_toolchain');
+			const tex = await commands.detectTexToolchain();
 
 			if (!tex.engine) {
 				// Said rather than hidden: the bundle is the useful artefact, and
@@ -377,10 +377,7 @@
 				return;
 			}
 
-			const result = await invoke<{ ok: boolean; log: string }>('compile_latex', {
-				directory: dir,
-				engine: tex.engine
-			});
+			const result = await call(commands.compileLatex(dir, tex.engine));
 
 			if (result.ok) {
 				successToast(`Compiled export/main.pdf with ${tex.engine}.`);
