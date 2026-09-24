@@ -1,0 +1,14 @@
+# Only the workflow actions are updated automatically. npm and cargo upgrades are decisions
+# (plan-v1.md §6: only what 1.0 needs), and security advisories arrive through `pnpm audit`
+# and `cargo audit` in CI (M7a-4) instead of a stream of PRs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

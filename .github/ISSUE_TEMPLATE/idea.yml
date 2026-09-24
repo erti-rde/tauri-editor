@@ -1,0 +1,25 @@
+name: An idea
+description: Something Erti could do for your research.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are read against the [1.0 plan](https://github.com/erti-rde/tauri-editor/blob/main/plan-v1.md). Anything not already in it is weighed for after 1.0 (plan §5), so a good idea is never lost, but it may wait.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today? Start from the research task, not a feature.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+  - type: dropdown
+    id: network
+    attributes:
+      label: Would it need the internet?
+      description: Erti works offline and sends nothing without consent, so anything online is a bigger decision.
+      options: ['No', 'Yes', 'Not sure']

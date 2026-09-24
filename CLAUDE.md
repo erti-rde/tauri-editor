@@ -16,6 +16,7 @@ to watch it happen.
   https://claude.ai/artifact/5zy4rbSw5DZ7fEmYAiUKAN).
 - **Security, testing and release:** [docs/security.md](docs/security.md),
   [docs/testing.md](docs/testing.md), [docs/release.md](docs/release.md).
+- **How the code fits together, and recipes for common changes:** [docs/architecture.md](docs/architecture.md). Read the recipe before adding a command, migration, setting, panel or network host.
 - **History:** [plan.md](plan.md), the hardening record from before 1.0 planning.
 
 ## Picking up work
@@ -26,8 +27,7 @@ to watch it happen.
    merged. Its GitHub issue carries the same ID.
 3. Branch from `main`: `<type>/<ID>-<slug>`, e.g. `feat/M1a-8-manuscript-format`.
 4. Write the tests for the acceptance criteria first. They name the criterion: `// M1a-8 AC-5`.
-5. Build, then run everything CI runs: `pnpm lint && pnpm check && pnpm test`, and in
-   `src-tauri`: `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test`.
+5. Build, then run everything CI runs: `pnpm verify`.
 6. Produce the item's **Verify** evidence (see "Seeing the app" below).
 7. Open a PR titled `<ID>: <what it does>`, whose body has:
    - a checklist of every AC, ticked, each with where it's proven (test name, run link, or

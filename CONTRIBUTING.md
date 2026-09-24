@@ -29,15 +29,19 @@ We welcome contributions from developers, researchers, and anyone passionate abo
 
 ### Before You Start
 
-1. Check existing issues to avoid duplication
-2. Create an issue to discuss major changes
-3. Look for issues labeled "good first issue" if you're new
+1. Read [docs/architecture.md](docs/architecture.md): where things live, the rules that must
+   not break, and recipes for common changes (a command, a migration, a setting, a panel).
+2. Work toward 1.0 is planned in [plan-v1.md](plan-v1.md). Every item has an issue whose title
+   starts with its ID (`M1a-8: …`) and acceptance criteria in [docs/specs/](docs/specs/README.md).
+   Picking one up is the easiest way to help.
+3. For anything else, open an issue first. Ideas outside the plan are weighed for after 1.0.
+4. UI is built from the primitives in `src/lib/ui` ([docs/design-system.md](docs/design-system.md)).
 
 ### Development Workflow
 
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
-3. Test your changes thoroughly
+3. Run `pnpm verify` (everything CI runs: lint, types, frontend and Rust tests)
 4. Commit with clear, descriptive messages using Conventional Commits
 5. Push your branch: `git push origin feature/your-feature-name`
 6. Open a Pull Request
@@ -93,12 +97,8 @@ chore: format code according to style guide
 
 ### PR Checklist
 
-- [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code where necessary
-- [ ] I have updated documentation as needed
-- [ ] My changes don't break existing functionality
-- [ ] I have tested on multiple platforms (when applicable)
+The pull request template carries the checklist. For a plan item, tick each acceptance
+criterion with where it's proven.
 
 ## Reporting Issues
 

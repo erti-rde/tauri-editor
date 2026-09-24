@@ -5,7 +5,7 @@ after 1.0.
 
 ### M1a-1 App-in-browser test harness
 
-Refs: TEST · Depends on: —
+Refs: TEST · Depends on: M1a-10
 
 Spiked 2026-09-24: a route that installs `mockIPC` before dynamically importing `+page.svelte`
 boots the real app on a fake backend. Seven commands reach the consent screen, about 25 reach a
@@ -19,6 +19,11 @@ project with the editor open. The spike's fake backend is the starting point.
   panel, open Settings, with no console errors.
 - AC-4 The first journey asserts M0-3: with no stored style, the editor mounts.
 - AC-5 Screenshots from the harness can be attached to PRs (`pnpm e2e:shots`).
+- AC-6 The fake backend implements the generated command types (ADR 011), so a fake that
+  disagrees with Rust fails to type-check.
+- AC-7 The same fake backend works in vitest (via `mockIPC` in jsdom) through one helper,
+  replacing per-file mocks of `@tauri-apps/api/core` and `plugin-store` as tests are touched
+  (11 files mock the store by hand today).
 
 Verify: the CI job, and a screenshot of the editor from the harness.
 
@@ -133,6 +138,57 @@ Refs: SEC-11 · Depends on: —
 - AC-1 `latexmk` and `pdflatex` are invoked with `-no-shell-escape`. Tectonic needs no flag;
   the reason is recorded in a comment.
 - AC-2 A Rust test asserts the argument lists.
+
+### M1a-10 One typed contract with Rust
+
+Refs: ADR-11 · Depends on: —
+
+- AC-1 **Spike first:** three commands (one query, one write, one with a file path) generated
+  through tauri-specta, exact-pinned. If it doesn't work cleanly with Tauri 2.11, stop and raise
+  it (CLAUDE.md).
+- AC-2 All commands annotated; all IPC types derive `specta::Type`; `src/lib/ipc/bindings.ts`
+  is generated.
+- AC-3 CI regenerates the bindings and fails on any diff.
+- AC-4 ESLint forbids `invoke` from `@tauri-apps/api/core` outside `src/lib/ipc`. All five
+  files that call it directly are migrated.
+- AC-5 Commands return `Result<T, AppError>` with a `kind`. At least the file, database and
+  model paths map to specific kinds, with a Rust test per mapping.
+- AC-6 One UI place (a helper used by toasts and banners) turns `AppError` into words by
+  `kind`. Nothing parses error strings.
+- AC-7 docs/architecture.md's "Add a backend command" recipe is updated.
+
+Verify: the generated diff check in CI; a deliberately renamed Rust field fails `pnpm check`
+(shown once in the PR).
+
+### M1a-11 Typed settings
+
+Depends on: —
+
+- AC-1 One module (`src/lib/settings/`) declares every setting: key, type, default, and where
+  it lives (the global store or the project database). The current keys include `cslXml`,
+  `selectedStyle`, `selectedLocale`, `localeXml`, `wordCount`, `allowNetworkLookups`,
+  `recentProjects`, appearance, page setup, the nudge and `libraryPath`.
+- AC-2 Reads return the typed value or its default. Writes are type-checked. A renamed key has a
+  migration entry.
+- AC-3 ESLint forbids loading `settings-store.json` outside the module. All 11 files are
+  migrated.
+- AC-4 Tests: defaults on an empty store; persistence across a reload; a migration of one
+  renamed key.
+- AC-5 docs/architecture.md's "Add a setting" recipe is updated.
+
+### M1a-12 Logging and global error handling
+
+Refs: UX-10 · Depends on: M1a-11 · Replaces M6-6
+
+- AC-1 `tauri-plugin-log` writes one rotating log file (Rust and webview) in the app's log
+  directory. Nothing is sent anywhere.
+- AC-2 `src/lib/log.ts` is the only logger. ESLint `no-console` is an error outside it, and all
+  76 `console.*` calls are migrated.
+- AC-3 Global `unhandledrejection` and `error` handlers log the error and show one toast: "Something
+  went wrong: {message}. Details are in the log." Repeats are collapsed.
+- AC-4 The log never contains manuscript text, note bodies or quotes: a test logs through each
+  helper with such content and asserts it's absent.
+- AC-5 Settings has **Open log folder**, which moves into About when M7a-10 lands.
 
 **M1a Verify:** E2E journeys 1, 2 and 5 green in CI; a migration takes a backup first; the
 path-escape tests pass; a format-1 file survives the 0.2.5 loader.
