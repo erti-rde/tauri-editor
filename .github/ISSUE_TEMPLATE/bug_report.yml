@@ -1,0 +1,43 @@
+name: Something isn't working
+description: Erti did something wrong, or didn't do something it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Please don't paste your manuscript, notes or PDFs.** Describe what happened instead; Erti exists so your writing stays yours.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      placeholder: |
+        1. Open a project with …
+        2. Click …
+        3. …
+  - type: input
+    id: version
+    attributes:
+      label: Erti version
+      description: Settings › About (or the file name you downloaded).
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS (Apple Silicon), macOS (Intel), Windows, Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log excerpt (optional)
+      description: Settings › About › Open log folder. Paste only the lines around the problem, and check them first.
+      render: text
