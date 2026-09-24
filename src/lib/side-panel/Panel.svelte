@@ -38,6 +38,9 @@
 		>
 			<Icon icon="ListTree" />
 		</button>
+		<button class="p-1" onclick={() => toggleSidePanel('notes')} aria-label="Notes" title="Notes">
+			<Icon icon="Pencil" />
+		</button>
 		<button
 			class="p-1"
 			onclick={() => toggleSidePanel('metadataExplorer')}

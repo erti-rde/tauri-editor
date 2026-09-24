@@ -4,6 +4,7 @@
 	import { load as loadStore } from '@tauri-apps/plugin-store';
 	import { Explorer, Landing, SidePanel, StatusFooter, MetadataEditor } from '$lib';
 	import Workspace from '$lib/workspace/Workspace.svelte';
+	import Notes from '$lib/notes/Notes.svelte';
 	import Outline from '$lib/outline/Outline.svelte';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
@@ -123,6 +124,12 @@
 					     you are looking at, so it has to be beside it. -->
 					<div class="border-line h-full w-64 border-r">
 						<Outline />
+					</div>
+				{:else if panelName === 'notes'}
+					<!-- Beside the writing for the same reason: what you noticed while
+					     reading is only useful where the drafting happens. -->
+					<div class="border-line h-full w-72 border-r">
+						<Notes />
 					</div>
 				{:else}
 					<Explorer {isExplorerOpen} />

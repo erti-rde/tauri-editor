@@ -1,1 +1,1 @@
-export type PanelNames = 'fileExplorer' | 'outline' | 'metadataExplorer';
+export type PanelNames = 'fileExplorer' | 'outline' | 'notes' | 'metadataExplorer';

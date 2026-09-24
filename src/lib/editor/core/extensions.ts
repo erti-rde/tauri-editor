@@ -9,6 +9,7 @@ import StarterKit from '@tiptap/starter-kit';
 
 import { Bibliography } from '../extensions/citation/Bibliography';
 import { Citation } from '../extensions/citation/Citation';
+import { NoteNudge } from '../extensions/NoteNudge';
 import { PageBreak } from '../extensions/PageBreak';
 import { Notes } from '../extensions/citation/Notes';
 import { DEFAULT_PAGE_SETUP, pagination, type PageSetup } from '../pagination';
@@ -48,7 +49,8 @@ export const editorExtensions = [
 	Citation,
 	Notes,
 	Bibliography,
-	PageBreak
+	PageBreak,
+	NoteNudge
 ];
 
 /**

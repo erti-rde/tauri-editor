@@ -931,3 +931,46 @@ body {
 [data-density='comfortable'] .document-tab {
 	padding-block: 0.5rem;
 }
+
+/*
+ * The mark beside a paragraph you have written a note about and not used.
+ *
+ * Rendered by a ProseMirror decoration rather than by a component, so it is
+ * styled here. Deliberately dull: a small hollow ring in the muted ink colour,
+ * no accent, no motion, sitting outside the text column so it never reflows a
+ * line. It is the one thing in the reading feature that speaks unasked, and it
+ * should be possible to write for an hour without noticing it.
+ */
+.erti-nudge {
+	position: absolute;
+	/* Outside the measure, in the margin the page already has. */
+	margin-left: -1.25rem;
+	width: 7px;
+	height: 7px;
+	margin-top: 0.55em;
+	padding: 0;
+	border: 1px solid hsl(var(--ink-faint));
+	border-radius: 50%;
+	background: transparent;
+	cursor: pointer;
+	transition:
+		background 120ms ease,
+		border-color 120ms ease;
+}
+
+.erti-nudge:hover {
+	background: hsl(var(--ink-muted));
+	border-color: hsl(var(--ink-muted));
+}
+
+.erti-nudge:focus-visible {
+	outline: 2px solid hsl(var(--accent));
+	outline-offset: 2px;
+}
+
+@media print {
+	/* Never part of the manuscript. */
+	.erti-nudge {
+		display: none;
+	}
+}
