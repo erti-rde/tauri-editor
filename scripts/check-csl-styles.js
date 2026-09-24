@@ -35,7 +35,15 @@ async function httpCheck(styles) {
 		styles,
 		CONCURRENCY,
 		async (style) => {
-			const response = await fetchWithRetry(style.download_url, { attempts: 2 });
+			let response;
+			try {
+				response = await fetchWithRetry(style.download_url, { attempts: 2 });
+			} catch (error) {
+				// A connection that keeps failing is a finding about this one style,
+				// not a reason to abandon the other 2,800 checks.
+				failed++;
+				return { style, status: error instanceof Error ? error.message : String(error) };
+			}
 			if (!response.ok) {
 				failed++;
 				return { style, status: response.status };

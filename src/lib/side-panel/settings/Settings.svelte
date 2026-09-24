@@ -32,15 +32,20 @@
 
 	// The bundled index lists every independent CSL style, close to three
 	// thousand, which is far too many to scroll through.
-	const visibleStyles = $derived.by(() => {
+	const matchingStyles = $derived.by(() => {
 		const query = styleFilter.trim().toLowerCase();
 		if (!query) return citationStyles;
+		return citationStyles.filter((style) => style.name.toLowerCase().includes(query));
+	});
 
-		const matches = citationStyles.filter((style) => style.name.toLowerCase().includes(query));
-		// Keep the current selection rendered, otherwise narrowing the list would
-		// drop the <select> binding to the first remaining option.
+	// Keep the current selection rendered, otherwise narrowing the list would
+	// drop the <select> binding to the first remaining option. It is shown, but
+	// not counted as a match: the count answers the question that was typed.
+	const visibleStyles = $derived.by(() => {
 		const selected = citationStyles.find((style) => style.name === selectedStyle);
-		return selected && !matches.includes(selected) ? [selected, ...matches] : matches;
+		return selected && !matchingStyles.includes(selected)
+			? [selected, ...matchingStyles]
+			: matchingStyles;
 	});
 
 	// Governs every outbound request: metadata lookups and citation-style
@@ -380,7 +385,7 @@
 								</div>
 								<p class="text-ink-muted mt-1 text-sm">
 									{#if styleFilter.trim()}
-										{visibleStyles.length} of {citationStyles.length} styles match "{styleFilter.trim()}"
+										{matchingStyles.length} of {citationStyles.length} styles match "{styleFilter.trim()}"
 									{:else}
 										Choose your preferred citation style for references ({citationStyles.length}
 										available)
