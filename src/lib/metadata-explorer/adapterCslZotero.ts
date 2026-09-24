@@ -16,7 +16,7 @@ interface OriginalZoteroItemType {
 	creatorTypes: OriginalZoteroCreatorType[];
 }
 
-interface OriginalZoteroSchema {
+export interface OriginalZoteroSchema {
 	version: number;
 	itemTypes: OriginalZoteroItemType[];
 	meta?: object;
@@ -250,14 +250,22 @@ function getInputType(fieldName: string): string {
 	}
 }
 
+/** The bundled Zotero schema, augmented for the edit form. */
 export async function augmentSchema(): Promise<AugmentedZoteroSchema> {
 	// Schema was fetched from https://api.zotero.org/schema
 	// current version 33
 	const schemaJson = await readTextFile('resources/csl/schema.json', {
 		baseDir: BaseDirectory.Resource
 	});
-	const schema: OriginalZoteroSchema = JSON.parse(schemaJson);
+	return augment(JSON.parse(schemaJson));
+}
 
+/**
+ * Zotero's schema, with each field's CSL variable and label worked out.
+ *
+ * Pure, so it's tested against the real `schema.json` without Tauri (M1a-6).
+ */
+export function augment(schema: OriginalZoteroSchema): AugmentedZoteroSchema {
 	const reverseFieldMap = buildReverseFieldMap(schema);
 	const reverseCreatorMap = new Map<string, string>(Object.entries(schema.csl.names)); // Zotero Creator -> CSL Variable
 	const zoteroToCslTypeMap = buildZoteroToCslTypeMap(schema);
