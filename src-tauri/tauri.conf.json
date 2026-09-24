@@ -24,11 +24,6 @@
 			}
 		}
 	},
-	"plugins": {
-		"sql": {
-			"preload": ["sqlite:magnum_opus_test.db"]
-		}
-	},
 	"bundle": {
 		"active": true,
 		"targets": "all",
