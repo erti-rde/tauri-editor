@@ -18,6 +18,9 @@ use tokio::sync::RwLock;
 pub struct DbState {
     library: RwLock<Option<SqlitePool>>,
     project: RwLock<Option<ProjectHandle>>,
+    /// Folders and files the user picked in a dialog this session (M1a-3).
+    /// Shared with the fs scope listener registered in `lib.rs`.
+    pub grants: std::sync::Arc<crate::scope::Grants>,
 }
 
 pub struct ProjectHandle {

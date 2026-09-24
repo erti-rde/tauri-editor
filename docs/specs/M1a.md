@@ -61,7 +61,9 @@ Verify: `cargo test` names; an in-app probe reading `~/.ssh/config` is refused.
 Refs: SEC-2 · Depends on: —
 
 - AC-1 `fs:write-all` is replaced by the specific write commands the app uses. `remove` is not
-  granted to the webview.
+  granted to the webview. `fs:allow-home-read-recursive` is replaced by a runtime scope: the open
+  project and dialog picks, the roots M1a-3 already tracks (SEC-2). Until then a script in the
+  webview can read all of `$HOME` through the fs plugin, whatever the Rust commands refuse.
 - AC-2 Deleting anything (manuscripts in M5, snapshots) goes through a Rust command that moves
   the file to the OS trash, and only within the project root.
 - AC-3 An in-app probe records that writes and removes outside the project are refused, and

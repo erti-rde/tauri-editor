@@ -89,7 +89,8 @@ Each recipe ends with what to test. Run `pnpm verify` before opening the PR (CLA
 1. Write the SQL in `db/queries.rs` as a named function (no SQL in commands).
 2. Add the command in `db_commands.rs` (or `commands.rs` for non-database work) with both
    `#[tauri::command]` and `#[specta::specta]`, returning `Result<T, AppError>`. Run CPU work in
-   `spawn_blocking`.
+   `spawn_blocking`. **A path from the webview goes through `scope::authorise` first** (M1a-3):
+   put the body in a `*_in(&DbState, …)` function the command calls, so tests can reach it.
 3. Give the error its kind where it's known: `?` on `state.library()` and friends (already a
    `Conflict` when nothing is open), `.or_database()` on the query layer's string errors,
    `.or_model()` on inference, and `AppError::from_io` for files. `Classify` won't compile on an
