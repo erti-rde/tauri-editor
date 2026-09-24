@@ -67,6 +67,31 @@ describe('choosing what to ingest', () => {
 		expect(selected).toEqual([]);
 	});
 
+	// #48 (M0-5): "adding a new PDF, Erti adds new values for existing PDFs".
+	// A re-scan after a new file arrives must select only that file; the finished
+	// ones are not reprocessed, so nothing can be written over them.
+	it('selects only the new paper when one is added to a folder that was already ingested', async () => {
+		const files = [
+			{ path: '/p/one.pdf', name: 'one.pdf' },
+			{ path: '/p/two.pdf', name: 'two.pdf' },
+			{ path: '/p/three.pdf', name: 'three.pdf' }
+		];
+		const hashes: Record<string, string> = {
+			'/p/one.pdf': 'sha-one',
+			'/p/two.pdf': 'sha-two',
+			'/p/three.pdf': 'sha-three'
+		};
+
+		const selected = await selectSourcesToIngest(files, {
+			hashFile: async (path) => hashes[path],
+			// Only the third file creates a new source row.
+			registerSource: async (sha256) => sha256 === 'sha-three',
+			unfinished: new Set()
+		});
+
+		expect(selected.map((f) => f.sha256)).toEqual(['sha-three']);
+	});
+
 	it('takes a source the library has never seen', async () => {
 		const files = [{ path: '/a/new.pdf', name: 'new.pdf' }];
 
