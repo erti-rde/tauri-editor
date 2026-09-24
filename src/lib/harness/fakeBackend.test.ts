@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
 import { homeDir, join } from '@tauri-apps/api/path';
-import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import {
+	BaseDirectory,
+	exists,
+	mkdir,
+	readFile,
+	readTextFile,
+	writeFile,
+	writeTextFile
+} from '@tauri-apps/plugin-fs';
 import { load as loadStore } from '@tauri-apps/plugin-store';
 
 import { call, commands, IpcError } from '$lib/ipc';
@@ -156,6 +164,14 @@ describe('the plugins', () => {
 			'File exists'
 		);
 		expect(await readTextFile(path)).toBe('{"type":"doc","content":[]}');
+	});
+
+	it('keeps a binary file byte for byte', async () => {
+		// Not valid UTF-8: decoding it as text would replace these with U+FFFD.
+		const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe, 0x00, 0x80]);
+		await writeFile(`${ROOT}/figure.png`, png);
+		await writeFile(`${ROOT}/figure.png`, new Uint8Array([0xc3]), { append: true });
+		expect(Array.from(await readFile(`${ROOT}/figure.png`))).toEqual([...png, 0xc3]);
 	});
 
 	it('refuses to write into a folder that is not there', async () => {
