@@ -20,8 +20,22 @@ fn count(n: u64) -> u32 {
 /// Open the source library, creating it if this is the first run.
 #[tauri::command]
 #[specta::specta]
-pub async fn open_library(state: State<'_, DbState>, path: String) -> Result<(), AppError> {
-    state.open_library(&PathBuf::from(path)).await.or_database()
+pub async fn open_library(
+    app: tauri::AppHandle,
+    state: State<'_, DbState>,
+    path: String,
+) -> Result<(), AppError> {
+    // A failed backup is said once, as a toast, and never stops the library
+    // opening (M1a-5 AC-5). An event rather than a result: the daily backup
+    // finishes after this command has returned.
+    let report: crate::db::BackupReport = std::sync::Arc::new(move |message: String| {
+        eprintln!("Library backup failed: {message}");
+        let _ = tauri::Emitter::emit(&app, "library-backup-failed", message);
+    });
+    state
+        .open_library_reporting(&PathBuf::from(path), report)
+        .await
+        .or_database()
 }
 
 /// Open a project folder, creating `<root>/.erti/project.db` if needed.

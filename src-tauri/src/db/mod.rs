@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod queries;
 pub mod salvage;
 pub mod schema;
@@ -5,6 +6,7 @@ pub mod schema;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::time::SystemTime;
 use tokio::sync::RwLock;
 
 /// Open connections: one shared library, plus the project currently open.
@@ -21,7 +23,12 @@ pub struct DbState {
     /// Folders and files the user picked in a dialog this session (M1a-3).
     /// Shared with the fs scope listener registered in `lib.rs`.
     pub grants: std::sync::Arc<crate::scope::Grants>,
+    /// The daily backup running in the background, if one was started.
+    backup: std::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
+
+/// Where a failed backup is reported. It never stops the library opening.
+pub type BackupReport = std::sync::Arc<dyn Fn(String) + Send + Sync>;
 
 pub struct ProjectHandle {
     pub pool: SqlitePool,
@@ -47,6 +54,23 @@ async fn connect(path: &Path) -> Result<SqlitePool, String> {
         .connect_with(options)
         .await
         .map_err(|e| format!("could not open {}: {e}", path.display()))
+}
+
+/// The schema version a database records, or `None` for a new one.
+async fn current_version(pool: &SqlitePool) -> Result<Option<i64>, String> {
+    let has_table: Option<i64> = sqlx::query_scalar(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_version'",
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    if has_table.is_none() {
+        return Ok(None);
+    }
+    sqlx::query_scalar("SELECT MAX(version) FROM schema_version")
+        .fetch_one(pool)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Bring a database up to `version`, creating it if it is not there yet.
@@ -156,7 +180,32 @@ async fn migration_is_applied(
 
 impl DbState {
     pub async fn open_library(&self, path: &Path) -> Result<(), String> {
+        let report: BackupReport = std::sync::Arc::new(|e| eprintln!("Library backup failed: {e}"));
+        self.open_library_reporting(path, report).await
+    }
+
+    /// Open the library, backing it up first if it is about to be migrated,
+    /// and starting a daily backup if one is due (ADR 008).
+    ///
+    /// A failed backup goes to `report` and the library opens anyway: losing
+    /// the app to a full backup disk would be worse than a missed copy.
+    pub async fn open_library_reporting(
+        &self,
+        path: &Path,
+        report: BackupReport,
+    ) -> Result<(), String> {
         let pool = connect(path).await?;
+        let backups = backup::dir_for(path);
+
+        // Unconditionally before an upgrade, and awaited: this copy is the way
+        // back if the migration goes wrong. A new library has nothing to keep.
+        let existing = current_version(&pool).await?;
+        if let Some(from) = existing.filter(|&v| v < schema::LIBRARY_VERSION) {
+            if let Err(e) = backup::write(&pool, &backups, SystemTime::now(), Some(from)).await {
+                report(e);
+            }
+        }
+
         apply_schema(
             pool.clone(),
             schema::LIBRARY_MIGRATIONS,
@@ -164,8 +213,28 @@ impl DbState {
         )
         .await?;
 
+        // Off the command's path: `VACUUM INTO` on a large library takes
+        // seconds, and opening shouldn't wait for it.
+        if existing.is_some() && backup::daily_due(&backups, SystemTime::now()) {
+            let pool = pool.clone();
+            let task = tokio::spawn(async move {
+                if let Err(e) = backup::write(&pool, &backups, SystemTime::now(), None).await {
+                    report(e);
+                }
+            });
+            *self.backup.lock().unwrap_or_else(|e| e.into_inner()) = Some(task);
+        }
+
         *self.library.write().await = Some(pool);
         Ok(())
+    }
+
+    /// Wait for a background backup to finish. For tests, and for closing.
+    pub async fn backups_settled(&self) {
+        let task = self.backup.lock().unwrap_or_else(|e| e.into_inner()).take();
+        if let Some(task) = task {
+            let _ = task.await;
+        }
     }
 
     /// Open `<root>/.erti/project.db`, creating it on first use.

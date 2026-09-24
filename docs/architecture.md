@@ -118,8 +118,9 @@ the query (see `tests/ipc_errors.rs` for why). CI fails if `bindings.ts` is stal
 3. Add its fingerprint to `expected` in `tests/schema_migrations.rs`
    (`shipped_migrations_are_frozen`).
 
-Test: upgrade from the previous version built by the real migrations; run twice (idempotent);
-backup taken first (after M1a-5).
+Test: upgrade from the previous version built by the real migrations; run twice (idempotent).
+The library backup before the upgrade is automatic (`db/backup.rs`,
+`tests/library_backups.rs`); nothing to add for it.
 
 ### Add a setting
 

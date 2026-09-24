@@ -8,6 +8,7 @@
 	import Outline from '$lib/outline/Outline.svelte';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
+	import { watchBackups } from '$lib/stores/backups';
 	import { errorToast } from '$lib/toast/Toast.svelte';
 	import ConsentPrompt from '$lib/consent/ConsentPrompt.svelte';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
@@ -75,6 +76,9 @@
 		// The app has always sent titles and page text to Crossref during ingest
 		// while promising it would not without consent. Ask before the first scan.
 		askForConsent = (await getConsent()) === 'unasked';
+
+		// Before opening: a backup taken ahead of an upgrade fails during the call.
+		await watchBackups();
 
 		try {
 			await openLibrary(await libraryPath());
