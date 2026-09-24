@@ -28,6 +28,25 @@
 	import Folder from '~icons/lucide/folder';
 	import FolderOpen from '~icons/lucide/folder-open';
 
+	// The reader's chrome, on Zotero's model: a tool cluster, a page-layout
+	// popup, and a way back to where a jump came from.
+	import Highlighter from '~icons/lucide/highlighter';
+	import Underline from '~icons/lucide/underline';
+	import StickyNote from '~icons/lucide/sticky-note';
+	import Crop from '~icons/lucide/crop';
+	import PanelLeft from '~icons/lucide/panel-left';
+	import GoBack from '~icons/lucide/corner-up-left';
+	import FitWidth from '~icons/lucide/scan';
+	import PageSetup from '~icons/lucide/type';
+	import RotateLeft from '~icons/lucide/rotate-ccw';
+	import RotateRight from '~icons/lucide/rotate-cw';
+	import ScrollVertical from '~icons/lucide/gallery-vertical';
+	import ScrollHorizontal from '~icons/lucide/gallery-horizontal';
+	import ScrollWrapped from '~icons/lucide/grid-2x2';
+	import SpreadNone from '~icons/lucide/square';
+	import SpreadOdd from '~icons/lucide/book-open';
+	import SpreadEven from '~icons/lucide/book';
+
 	import ExternalLink from '~icons/lucide/external-link';
 	import Settings from '~icons/lucide/settings';
 	import Books from '~icons/mdi/bookshelf';
@@ -84,7 +103,23 @@
 		Globe,
 		GraduationCap,
 		Presentation,
-		Video
+		Video,
+		Highlighter,
+		Underline,
+		StickyNote,
+		Crop,
+		PanelLeft,
+		GoBack,
+		FitWidth,
+		PageSetup,
+		RotateLeft,
+		RotateRight,
+		ScrollVertical,
+		ScrollHorizontal,
+		ScrollWrapped,
+		SpreadNone,
+		SpreadOdd,
+		SpreadEven
 	};
 
 	type Size = 's' | 'm' | 'l';

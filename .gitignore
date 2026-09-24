@@ -21,3 +21,6 @@ tests/fixtures/retrieval/chunks.json
 
 # Written by the retrieval benchmark on each run, for comparing two runs pairwise.
 tests/fixtures/retrieval/last-run.json
+
+# Copied from pdfjs-dist by scripts/sync-pdf-assets.mjs
+static/pdf-assets/

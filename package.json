@@ -4,8 +4,8 @@
 	"private": true,
 	"scripts": {
 		"tauri": "tauri",
-		"dev": "vite dev",
-		"build": "vite build",
+		"dev": "pnpm sync:pdf-assets && vite dev",
+		"build": "pnpm sync:pdf-assets && vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -15,7 +15,8 @@
 		"test": "vitest run",
 		"prepare": "husky",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"sync:pdf-assets": "node scripts/sync-pdf-assets.mjs"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^19.8.1",

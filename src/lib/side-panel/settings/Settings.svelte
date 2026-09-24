@@ -3,6 +3,7 @@
 
 	import AppearanceSettings from './AppearanceSettings.svelte';
 	import PageSetupSettings from './PageSetupSettings.svelte';
+	import ReadingSettings from './ReadingSettings.svelte';
 	import { autoReferences } from '$lib/editor/references/referencesStore';
 	import { onMount } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
@@ -209,7 +210,7 @@
 
 			<Tabs.Root bind:value={activeTab} orientation="vertical" class="flex flex-1 overflow-hidden">
 				<Tabs.List class="border-line bg-surface-sunken w-48 shrink-0 border-r">
-					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'page', label: 'Page setup' }, { id: 'appearance', label: 'Appearance' }] as tab (tab.id)}
+					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'reading', label: 'Reading' }, { id: 'page', label: 'Page setup' }, { id: 'appearance', label: 'Appearance' }] as tab (tab.id)}
 						<Tabs.Trigger
 							value={tab.id}
 							class="hover:bg-surface-hover data-[state=active]:border-accent data-[state=active]:bg-surface-raised w-full border-l-2 border-transparent px-4 py-3 text-left transition-colors data-[state=active]:font-medium"
@@ -382,6 +383,16 @@
 					</Tabs.Content>
 
 					<!-- Appearance Settings -->
+					<Tabs.Content value="reading" class="absolute inset-0 overflow-y-auto p-5">
+						<div class="mb-8">
+							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
+								Highlight labels
+							</h3>
+
+							<ReadingSettings />
+						</div>
+					</Tabs.Content>
+
 					<Tabs.Content value="page" class="absolute inset-0 overflow-y-auto p-5">
 						<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Page setup</h3>
 						<PageSetupSettings />
