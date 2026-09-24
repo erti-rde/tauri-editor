@@ -10,6 +10,10 @@ One file per milestone. Every item in [plan-v1.md](../../plan-v1.md) §3 has an 
 - **Verify**: the evidence the PR must show: test names, a harness result, a screenshot from the
   app-in-browser harness, or an in-app probe.
 
+**Every item that adds or changes UI also depends on M1c-2, M1c-3 and M1c-4** (the
+primitives) and follows [design-system.md](../design-system.md), whether or not its entry
+repeats it. It migrates the surfaces it touches and lowers the ratchet baseline.
+
 An item is done when every AC holds on `main` and its Verify evidence is in the merged PR.
 Changing an AC is a plan change: note it in the PR and in plan-v1.md §6.
 
@@ -18,6 +22,7 @@ Changing an AC is a plan change: note it in the PR and in plan-v1.md §6.
 | [M0](M0.md)   | Land what exists, fix first-run |
 | [M1a](M1a.md) | Safety net and file format      |
 | [M1b](M1b.md) | Sources, notes and import       |
+| [M1c](M1c.md) | Design system                   |
 | [M2](M2.md)   | Retrieval index                 |
 | [M3](M3.md)   | Writing companion               |
 | [M4](M4.md)   | Attribution check               |

@@ -32,7 +32,7 @@ Refs: ADR-3 · Depends on: M1b-2
 
 ### M1b-4 Remove a source
 
-Refs: ADR-3, UX-4 · Depends on: M1b-3
+Refs: ADR-3, UX-4 · Depends on: M1b-3, M1c-2, M1c-3, M1c-4
 
 - AC-1 The UX-4 dialog, with counts of citations (across the open project's manuscripts),
   notes and highlights.
@@ -44,7 +44,7 @@ Refs: ADR-3, UX-4 · Depends on: M1b-3
 
 ### M1b-5 Add a source by hand
 
-Refs: ADR-3, UX-2 · Depends on: M1b-2, M1a-6
+Refs: ADR-3, UX-2 · Depends on: M1b-2, M1a-6, M1c-2, M1c-3, M1c-4
 
 - AC-1 Sources › **Add ▾ › Enter details…** opens the sidebar in create mode: type first, then
   that type's fields, with required ones marked.
@@ -67,7 +67,7 @@ Refs: UX-2 · Depends on: M1b-5
 
 ### M1b-7 Attach a PDF to a source
 
-Refs: ADR-3, UX-3 (File tab) · Depends on: M1b-3
+Refs: ADR-3, UX-3 (File tab) · Depends on: M1b-3, M1c-2, M1c-3, M1c-4
 
 - AC-1 **Attach PDF…** (table row and File tab) picks a file, ingests it, and records the alias.
   The row's state follows pending → ready.
@@ -77,7 +77,7 @@ Refs: ADR-3, UX-3 (File tab) · Depends on: M1b-3
 
 ### M1b-8 Notes on a source
 
-Refs: ADR-4, UX-3, UX-5 · Depends on: M1b-2
+Refs: ADR-4, UX-3, UX-5 · Depends on: M1b-2, M1c-2, M1c-3, M1c-4
 
 - AC-1 The sidebar has **Details · Notes (n) · File** tabs. Notes lists source notes, then marks
   by page.
@@ -91,7 +91,7 @@ Refs: ADR-4, UX-3, UX-5 · Depends on: M1b-2
 
 ### M1b-9 Import a bibliography
 
-Refs: ADR-9, UX-6 · Depends on: M1b-5, M1b-7
+Refs: ADR-9, UX-6 · Depends on: M1b-5, M1b-7, M1c-2, M1c-3, M1c-4
 
 - AC-1 **Add ▾ › Import a bibliography…** accepts `.bib`, `.ris` and CSL-JSON `.json`.
 - AC-2 BibTeX goes through `@retorquere/bibtex-parser` **with sentence-casing off**. Checked
