@@ -67,7 +67,7 @@
 						<!-- Keyed by path: a new PDF is a new reader rather than the same
 						     one asked to forget everything it had loaded. -->
 						{#key tab.id}
-							<PdfReader path={tab.id} />
+							<PdfReader path={tab.id} paneId={pane.id} />
 						{/key}
 					{:else if tab}
 						<Editor />

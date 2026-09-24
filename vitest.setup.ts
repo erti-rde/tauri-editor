@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { afterAll } from 'vitest';
+import { afterAll, afterEach } from 'vitest';
 
 /**
  * Outlive the timers an unmounted overlay leaves behind.
@@ -20,6 +20,33 @@ import { afterAll } from 'vitest';
 afterAll(async () => {
 	await new Promise((resolve) => setTimeout(resolve, 30));
 });
+
+/**
+ * Clear that same lock between tests, rather than waiting it out.
+ *
+ * The 24ms restore above is late enough that the *next* test starts with
+ * `pointer-events: none` still on the body, and every click it makes is
+ * swallowed — a test that passes alone and fails in the file, which is the
+ * worst kind. Waiting the window out per test would cost ~20 seconds a run;
+ * clearing it costs nothing, and the timer restoring it to the same value
+ * afterwards is harmless.
+ */
+afterEach(() => {
+	if (typeof document !== 'undefined') document.body.style.pointerEvents = '';
+});
+
+/**
+ * jsdom does not implement scrollIntoView, and several components call it to
+ * bring something they have just changed into view — the marks panel revealing
+ * a highlight the reader has only now made, for one.
+ *
+ * A no-op rather than a guard in the components: the method exists in every
+ * browser, and `?.()` at each call site would be test-shaped code in production
+ * that also hides a genuine typo.
+ */
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+	Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
 
 /**
  * jsdom does not implement matchMedia, and the appearance layer asks it which
