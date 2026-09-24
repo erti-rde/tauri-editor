@@ -147,11 +147,11 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M0-1** Merge the CodeRabbit follow-up (#108)
 - [ ] **M0-2** Merge the CSP allowlist (#109). Merged, and verified in the real app; AC-4 (one by-hand
       resolve) still open
-- [ ] **M0-3** A fresh install can write before any network call: bundled styles; editor
-      mounts without one **(P0)**
-- [ ] **M0-4** Remove `tauri-plugin-shell` (SEC-6)
-- [ ] **M0-5** Re-test #48
-- [ ] **M0-6** Clean up the stale worktree
+- [x] **M0-3** A fresh install can write before any network call: bundled styles; editor
+      mounts without one **(P0)** (#191)
+- [x] **M0-4** Remove `tauri-plugin-shell` (SEC-6) (#193)
+- [x] **M0-5** Re-test #48 (#194)
+- [x] **M0-6** Clean up the stale worktree (its styles were kept, as M0-3's bundle)
 - [x] **M0-7** Merge the planning set (#110, completed by #189) and mirror it to GitHub
 
 ### M1a — Safety net and file format _(M, critical path)_ · [spec](docs/specs/M1a.md)
@@ -166,8 +166,8 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M1a-8** Manuscript format 1, cross-version safe; citations from outside the library
       (ADR-2, UX-12)
 - [ ] **M1a-9** `-no-shell-escape` (SEC-11)
-- [ ] **M1a-10** One typed contract with Rust: generated bindings, typed errors (ADR-11). The
-      harness builds on it
+- [x] **M1a-10** One typed contract with Rust: generated bindings, typed errors (ADR-11). The
+      harness builds on it (#195)
 - [ ] **M1a-11** Typed settings: one module; nothing opens the settings file directly
 - [ ] **M1a-12** Logging and global error handling (was M6-6)
 

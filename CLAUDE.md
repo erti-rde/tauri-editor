@@ -29,18 +29,21 @@ to watch it happen.
 4. Write the tests for the acceptance criteria first. They name the criterion: `// M1a-8 AC-5`.
 5. Build, then run everything CI runs: `pnpm verify`.
 6. Produce the item's **Verify** evidence (see "Seeing the app" below).
-7. Open a PR titled `<ID>: <what it does>`, whose body has:
+7. Check `git diff --stat origin/main...HEAD` lists only files the item meant to touch. A
+   squash built on a stale tree once reverted a merged Dependabot bump without a trace in the
+   PR's description (#195, restored by the next PR).
+8. Open a PR titled `<ID>: <what it does>`, whose body has:
    - a checklist of every AC, ticked, each with where it's proven (test name, run link, or
      screenshot);
    - anything left unverified, stated plainly;
    - `Closes #<issue>`.
-8. **Open the PR only when the branch is complete.** The maintainer may merge the moment it
+9. **Open the PR only when the branch is complete.** The maintainer may merge the moment it
    appears, and twice a PR merged with only its first commit while follow-ups were still being
    pushed (#107, #110). If something must change after opening, push it and say so in a PR
    comment, then check the merged result with `git cherry origin/main <branch>`.
-9. **The maintainer merges.** Never merge, force-push to `main`, or enable auto-merge. When a
-   PR merges, tick the item in plan-v1.md in the next PR (not in its own PR). PRs are
-   rebase-merged, so hashes change: refer to PR numbers, never commit hashes.
+10. **The maintainer merges.** Never merge, force-push to `main`, or enable auto-merge. When a
+    PR merges, tick the item in plan-v1.md in the next PR (not in its own PR). PRs are
+    rebase-merged, so hashes change: refer to PR numbers, never commit hashes.
 
 One item per PR, unless two items can't be separated. Small, reviewable, self-verifying.
 
