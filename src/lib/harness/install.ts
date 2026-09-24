@@ -206,7 +206,12 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 		return Array.from(new Uint8Array(await (await fetch(entry.pdf)).arrayBuffer()));
 	}
 
-	function write(body: unknown, headers: Record<string, string>) {
+	/**
+	 * `write_text_file` and `write_file`. Text is kept as text; bytes are kept as
+	 * bytes, since decoding a PNG or a PDF as UTF-8 would corrupt it on the way
+	 * back out.
+	 */
+	function write(body: unknown, headers: Record<string, string>, binary: boolean) {
 		const path = decodeURIComponent(headers.path);
 		const options = JSON.parse(headers.options ?? 'null') ?? {};
 		const target = resolvePath(path, options);
@@ -215,12 +220,21 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 		if (!isDir(parent(target))) throw fsError(parent(target), 'open file at path');
 		const data = body instanceof Uint8Array ? body : new Uint8Array(body as ArrayBuffer);
 		const previous = files.get(target);
-		files.set(
-			target,
-			options.append && typeof previous === 'string'
-				? previous + decoder.decode(data)
-				: decoder.decode(data)
-		);
+
+		if (binary) {
+			const before = options.append && previous instanceof Uint8Array ? previous : new Uint8Array();
+			const joined = new Uint8Array(before.length + data.length);
+			joined.set(before);
+			joined.set(data, before.length);
+			files.set(target, joined);
+		} else {
+			files.set(
+				target,
+				options.append && typeof previous === 'string'
+					? previous + decoder.decode(data)
+					: decoder.decode(data)
+			);
+		}
 		return null;
 	}
 
@@ -269,8 +283,8 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 			readBytes(String(path), options as { baseDir?: number }),
 		'plugin:fs|read_file': ({ path, options }) =>
 			readBytes(String(path), options as { baseDir?: number }),
-		'plugin:fs|write_text_file': (body, options) => write(body, options?.headers ?? {}),
-		'plugin:fs|write_file': (body, options) => write(body, options?.headers ?? {}),
+		'plugin:fs|write_text_file': (body, options) => write(body, options?.headers ?? {}, false),
+		'plugin:fs|write_file': (body, options) => write(body, options?.headers ?? {}, true),
 		'plugin:fs|exists': ({ path, options }) => {
 			const opts = options as { baseDir?: number } | undefined;
 			if (opts?.baseDir === RESOURCE) return `/src-tauri/${normalise(String(path))}` in resources;
