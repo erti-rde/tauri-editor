@@ -11,10 +11,10 @@ use crate::ipc::AppError;
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct FileItem {
-    name: String,
-    path: String,
-    is_dir: bool,
-    children: Option<Vec<FileItem>>,
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub children: Option<Vec<FileItem>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
@@ -88,14 +88,39 @@ fn read_directory_impl(
 // The actual command that will be exposed to Tauri
 #[tauri::command]
 #[specta::specta]
-pub async fn read_directory(path: String) -> Result<Vec<FileItem>, AppError> {
+pub async fn read_directory(
+    state: tauri::State<'_, crate::db::DbState>,
+    path: String,
+) -> Result<Vec<FileItem>, AppError> {
+    read_directory_in(&state, path).await
+}
+
+/// `read_directory`, scoped (M1a-3): the project, a picked folder, or a
+/// project about to be reopened from the recent list.
+pub async fn read_directory_in(
+    state: &crate::db::DbState,
+    path: String,
+) -> Result<Vec<FileItem>, AppError> {
+    crate::scope::authorise_directory(state, &path).await?;
     read_directory_impl(path).await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn read_pdf_file(path: String) -> Result<String, AppError> {
-    let data = std::fs::read(&path).map_err(|e| AppError::from_io(&e, Path::new(&path)))?;
+pub async fn read_pdf_file(
+    state: tauri::State<'_, crate::db::DbState>,
+    path: String,
+) -> Result<String, AppError> {
+    read_pdf_file_in(&state, path).await
+}
+
+/// `read_pdf_file`, scoped (M1a-3).
+pub async fn read_pdf_file_in(
+    state: &crate::db::DbState,
+    path: String,
+) -> Result<String, AppError> {
+    let allowed = crate::scope::authorise(state, &path).await?;
+    let data = std::fs::read(&allowed).map_err(|e| AppError::from_io(&e, Path::new(&path)))?;
     Ok(STANDARD.encode(data))
 }
 

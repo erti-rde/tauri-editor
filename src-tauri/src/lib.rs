@@ -5,11 +5,13 @@ pub mod fs_errors;
 pub mod ipc;
 pub mod latex;
 pub mod ml;
+pub mod scope;
 
 use commands::*;
 use db_commands::*;
 use tauri::path::BaseDirectory;
 use tauri::Manager;
+use tauri_plugin_fs::FsExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -33,6 +35,16 @@ pub fn run() {
         // string cannot express.
         .manage(db::DbState::default())
         .setup(|app| {
+            // A folder or file the user picks in a dialog is theirs to hand to
+            // Erti. The dialog plugin announces each pick through the fs scope;
+            // the path commands accept it for the rest of the session (M1a-3).
+            let grants = app.state::<db::DbState>().grants.clone();
+            app.fs_scope().listen(move |event| {
+                if let tauri::scope::fs::Event::PathAllowed(path) = event {
+                    grants.grant(path);
+                }
+            });
+
             // Get the resource dir from the app context
             let resource_dir = app
                 .path()

@@ -6,14 +6,20 @@
 //! the commands themselves.
 
 use erti_lib::db::DbState;
-use erti_lib::db_commands::hash_file;
+use erti_lib::db_commands::hash_file_in;
 use erti_lib::ipc::ErrorKind;
 
 #[tokio::test]
 async fn a_missing_file_is_not_found_through_the_command() {
-    let err = hash_file("/definitely/not/here.pdf".into())
-        .await
-        .unwrap_err();
+    // Inside a folder the user picked: outside one, a missing file is refused
+    // like any other (M1a-3), without saying whether it exists.
+    let dir = std::env::temp_dir().join(format!("erti-ipc-errors-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let state = DbState::default();
+    state.grants.grant(&dir);
+
+    let missing = dir.join("not-here.pdf").to_string_lossy().to_string();
+    let err = hash_file_in(&state, missing).await.unwrap_err();
     assert_eq!(err.kind, ErrorKind::NotFound);
     assert!(err.message.contains("no longer exists"));
 }

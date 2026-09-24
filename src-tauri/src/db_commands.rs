@@ -28,6 +28,13 @@ pub async fn open_library(state: State<'_, DbState>, path: String) -> Result<(),
 #[tauri::command]
 #[specta::specta]
 pub async fn open_project(state: State<'_, DbState>, root: String) -> Result<(), AppError> {
+    open_project_in(&state, root).await
+}
+
+/// `open_project`, gated (M1a-3): the open project decides what the other path
+/// commands accept, so opening `/` must not be possible.
+pub async fn open_project_in(state: &DbState, root: String) -> Result<(), AppError> {
+    crate::scope::may_open_project(state, &root).await?;
     state.open_project(&PathBuf::from(root)).await.or_database()
 }
 
@@ -40,7 +47,13 @@ pub async fn project_root(state: State<'_, DbState>) -> Result<String, AppError>
 /// Hash a file's contents. See `db::hash_file`.
 #[tauri::command]
 #[specta::specta]
-pub async fn hash_file(path: String) -> Result<String, AppError> {
+pub async fn hash_file(state: State<'_, DbState>, path: String) -> Result<String, AppError> {
+    hash_file_in(&state, path).await
+}
+
+/// `hash_file`, scoped (M1a-3).
+pub async fn hash_file_in(state: &DbState, path: String) -> Result<String, AppError> {
+    crate::scope::authorise(state, &path).await?;
     // Already classified by what the filesystem said: NotFound, PermissionDenied.
     crate::db::hash_file(&PathBuf::from(path)).await
 }
@@ -58,6 +71,19 @@ pub async fn register_source(
     path: String,
     file_name: String,
 ) -> Result<bool, AppError> {
+    register_source_in(&state, sha256, path, file_name).await
+}
+
+/// `register_source`, scoped (M1a-3).
+pub async fn register_source_in(
+    state: &DbState,
+    sha256: String,
+    path: String,
+    file_name: String,
+) -> Result<bool, AppError> {
+    // The path becomes a recorded location, which `scope::authorise` then
+    // accepts. Unchecked, that would let any path in by registering it first.
+    crate::scope::authorise(state, &path).await?;
     let library = state.library().await?;
     let is_new = queries::register_source(&library, &sha256, &path, &file_name)
         .await
@@ -399,6 +425,12 @@ pub async fn source_for_path(
     state: State<'_, DbState>,
     path: String,
 ) -> Result<Option<String>, AppError> {
+    source_for_path_in(&state, path).await
+}
+
+/// `source_for_path`, scoped (M1a-3).
+pub async fn source_for_path_in(state: &DbState, path: String) -> Result<Option<String>, AppError> {
+    crate::scope::authorise(state, &path).await?;
     queries::source_for_path(&state.library().await?, &path)
         .await
         .or_database()
