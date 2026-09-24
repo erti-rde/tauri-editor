@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
-import { load as loadStore, type Store } from '@tauri-apps/plugin-store';
+
+import { readSetting, writeSetting } from '$lib/settings';
 
 import {
 	DEFAULT_PAGE_SETUP,
@@ -17,16 +18,7 @@ import {
  * someone actually needs a landscape appendix.
  */
 
-const KEY = 'pageSetup';
-const SETTINGS_FILE = 'settings-store.json';
 const STYLE_ID = 'erti-page-rule';
-
-let store: Store | undefined;
-
-async function settings(): Promise<Store> {
-	store ??= await loadStore(SETTINGS_FILE);
-	return store;
-}
 
 /**
  * Put the `@page` rule in the document.
@@ -73,7 +65,7 @@ function createPageSetupStore() {
 		/** Read the stored setup and apply it. A failure here is not worth stopping for. */
 		async initialise() {
 			try {
-				apply(normalisePageSetup((await (await settings()).get(KEY)) as Partial<PageSetup>));
+				apply(normalisePageSetup(await readSetting('pageSetup')));
 			} catch (error) {
 				console.error('Could not read the page setup:', error);
 				apply(DEFAULT_PAGE_SETUP);
@@ -86,9 +78,7 @@ function createPageSetupStore() {
 			apply(next);
 
 			try {
-				const s = await settings();
-				await s.set(KEY, next);
-				await s.save();
+				await writeSetting('pageSetup', next);
 			} catch (error) {
 				// Already on screen; only persistence failed, so it is reported
 				// rather than reverted under the author mid-sentence.

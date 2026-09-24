@@ -7,8 +7,7 @@
 	import { autoReferences } from '$lib/editor/references/referencesStore';
 	import { onMount } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-	import { load as loadStore } from '@tauri-apps/plugin-store';
-	import type { Store } from '@tauri-apps/plugin-store';
+	import { readSetting, writeSetting } from '$lib/settings';
 	import { Icon } from '$lib';
 	import { getConsent, getMailto, setConsent, setMailto } from '$lib/stores/consent';
 	import { errorToast } from '$lib/toast/Toast.svelte';
@@ -25,8 +24,6 @@
 	}
 
 	const { isOpen = false, closeSettings }: Props = $props();
-
-	let store: Store;
 
 	let wordCount = $state(0);
 	let selectedStyle = $state('');
@@ -149,12 +146,12 @@
 			let localeHasChanged = false;
 			let wordCountHasChanged = false;
 			// Save citation style
-			let oldStyle = (await store.get('selectedStyle')) as string;
-			let oldStyleXml = (await store.get('cslXml')) as string;
-			let oldWordCount = (await store.get('wordCount')) as number;
+			let oldStyle = await readSetting('selectedStyle');
+			let oldStyleXml = await readSetting('cslXml');
+			let oldWordCount = await readSetting('wordCount');
 
 			if (oldStyle !== selectedStyle || !oldStyleXml) {
-				await store.set('selectedStyle', selectedStyle);
+				await writeSetting('selectedStyle', selectedStyle);
 				const bundledStyle = bundled ? bundledStyleByName(bundled, selectedStyle) : null;
 				const style = citationStyles.find((style) => style.name === selectedStyle);
 				if (bundledStyle) {
@@ -165,10 +162,10 @@
 								`"${bundledStyle.label}" could not be read. Reinstalling Erti will fix this.`
 							);
 						}
-						await store.set('cslXml', styleXml);
+						await writeSetting('cslXml', styleXml);
 						styleHasChanged = true;
 					} catch (error) {
-						await store.set('selectedStyle', oldStyle);
+						await writeSetting('selectedStyle', oldStyle);
 						selectedStyle = oldStyle ?? '';
 						throw error;
 					}
@@ -195,12 +192,12 @@
 							throw new Error(`"${selectedStyle}" could not be read as a citation style.`);
 						}
 
-						await store.set('cslXml', styleXml);
+						await writeSetting('cslXml', styleXml);
 						styleHasChanged = true;
 					} catch (error) {
 						console.error('Error fetching style:', error);
 						// If fetch fails, keep the old style selected
-						await store.set('selectedStyle', oldStyle);
+						await writeSetting('selectedStyle', oldStyle);
 						selectedStyle = oldStyle ?? '';
 						throw error;
 					}
@@ -208,11 +205,11 @@
 			}
 
 			// Save locale
-			let oldLocale = (await store.get('selectedLocale')) as string;
-			let oldLocaleXml = (await store.get('localeXml')) as string;
+			let oldLocale = await readSetting('selectedLocale');
+			let oldLocaleXml = await readSetting('localeXml');
 
 			if (oldLocale !== selectedLocale || !oldLocaleXml) {
-				await store.set('selectedLocale', selectedLocale);
+				await writeSetting('selectedLocale', selectedLocale);
 				// Construct the URL for the locale XML file
 				const localeUrl = `https://raw.githubusercontent.com/citation-style-language/locales/master/locales-${selectedLocale}.xml`;
 
@@ -222,7 +219,7 @@
 						if (!localeXml.trim().startsWith('<')) {
 							throw new Error(`The ${selectedLocale} citation language could not be read.`);
 						}
-						await store.set('localeXml', localeXml);
+						await writeSetting('localeXml', localeXml);
 						localeHasChanged = true;
 					} else {
 						if (!allowNetwork) {
@@ -242,20 +239,20 @@
 							throw new Error(`The ${selectedLocale} citation language could not be read.`);
 						}
 
-						await store.set('localeXml', localeXml);
+						await writeSetting('localeXml', localeXml);
 						localeHasChanged = true;
 					}
 				} catch (error) {
 					console.error('Error fetching locale:', error);
 					// If fetch fails, keep the old locale selected
-					await store.set('selectedLocale', oldLocale);
+					await writeSetting('selectedLocale', oldLocale);
 					selectedLocale = oldLocale ?? 'en-GB';
 					throw error;
 				}
 			}
 
 			if (oldWordCount !== wordCount) {
-				await store.set('wordCount', wordCount);
+				await writeSetting('wordCount', wordCount);
 				wordCountHasChanged = true;
 			}
 
@@ -279,10 +276,9 @@
 	}
 
 	onMount(async () => {
-		store = await loadStore('settings-store.json');
-		wordCount = ((await store.get('wordCount')) as number) || 0;
-		selectedStyle = ((await store.get('selectedStyle')) as string) || '';
-		selectedLocale = ((await store.get('selectedLocale')) as string) || 'en-GB';
+		wordCount = await readSetting('wordCount');
+		selectedStyle = (await readSetting('selectedStyle')) || '';
+		selectedLocale = (await readSetting('selectedLocale')) || 'en-GB';
 		allowNetwork = (await getConsent()) === 'granted';
 		crossrefMailto = (await getMailto()) ?? '';
 		// The editor initialises this too, but Settings opens from the landing

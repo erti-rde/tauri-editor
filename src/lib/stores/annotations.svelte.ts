@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { load as loadStore } from '@tauri-apps/plugin-store';
+import { readSetting, writeSetting } from '$lib/settings';
 
 import {
 	annotationLabels,
@@ -23,8 +23,6 @@ import {
  * paper, and should already carry everything that was noticed about it the first
  * time. That is the whole reason annotations live in the library.
  */
-
-const LAST_LABEL_KEY = 'lastAnnotationLabel';
 
 export interface AnnotationsState {
 	/** The paper whose marks these are, or null while none is open. */
@@ -124,13 +122,9 @@ function createAnnotationsStore() {
 		};
 	}
 
-	async function settings() {
-		return loadStore('settings-store.json');
-	}
-
 	async function readLastLabel(): Promise<string | null> {
 		try {
-			return ((await (await settings()).get(LAST_LABEL_KEY)) as string | undefined) ?? null;
+			return await readSetting('lastAnnotationLabel');
 		} catch {
 			// A missing or unreadable settings file is not a reason to refuse to
 			// highlight; the first label will do.
@@ -229,9 +223,7 @@ function createAnnotationsStore() {
 			if (annotation.label_id) {
 				update((state) => ({ ...state, lastLabel: annotation.label_id ?? state.lastLabel }));
 				try {
-					const store = await settings();
-					await store.set(LAST_LABEL_KEY, annotation.label_id);
-					await store.save();
+					await writeSetting('lastAnnotationLabel', annotation.label_id);
 				} catch (failure) {
 					// Losing the remembered colour is a small thing; failing the
 					// highlight over it is not.
@@ -285,9 +277,7 @@ function createAnnotationsStore() {
 			update((state) => ({ ...state, lastLabel: labelId }));
 			void (async () => {
 				try {
-					const store = await settings();
-					await store.set(LAST_LABEL_KEY, labelId);
-					await store.save();
+					await writeSetting('lastAnnotationLabel', labelId);
 				} catch (failure) {
 					console.error('Could not remember the last label:', failure);
 				}

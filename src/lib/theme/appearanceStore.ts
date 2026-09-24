@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
-import { load as loadStore, type Store } from '@tauri-apps/plugin-store';
+
+import { readSetting, writeSetting } from '$lib/settings';
 
 import { DEFAULT_APPEARANCE, applyAppearance, normalise, type Appearance } from './theme';
 
@@ -12,16 +13,7 @@ import { DEFAULT_APPEARANCE, applyAppearance, normalise, type Appearance } from 
  * adding a third theme a change to one CSS file.
  */
 
-const KEY = 'appearance';
-const SETTINGS_FILE = 'settings-store.json';
-
-let store: Store | undefined;
 let media: MediaQueryList | undefined;
-
-async function settings(): Promise<Store> {
-	store ??= await loadStore(SETTINGS_FILE);
-	return store;
-}
 
 function prefersDark(): boolean {
 	return media?.matches ?? false;
@@ -67,7 +59,7 @@ function createAppearanceStore() {
 			}
 
 			try {
-				apply(normalise((await (await settings()).get(KEY)) as Partial<Appearance>));
+				apply(normalise(await readSetting('appearance')));
 			} catch (error) {
 				console.error('Could not read the stored appearance:', error);
 				apply(DEFAULT_APPEARANCE);
@@ -80,9 +72,7 @@ function createAppearanceStore() {
 			apply(next);
 
 			try {
-				const s = await settings();
-				await s.set(KEY, next);
-				await s.save();
+				await writeSetting('appearance', next);
 			} catch (error) {
 				// The change is already on screen; only persistence failed, so it is
 				// reported rather than reverted under the user.

@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
-import { load as loadStore } from '@tauri-apps/plugin-store';
+
+import { readSetting, writeSetting } from '$lib/settings';
 
 /**
  * Whether the margin may point out an unused note.
@@ -10,8 +11,6 @@ import { load as loadStore } from '@tauri-apps/plugin-store';
  * a single switch away from silence, and the mark it draws is deliberately dull.
  */
 
-const KEY = 'noteNudges';
-
 function createNudgeSetting() {
 	const { subscribe, set } = writable(true);
 
@@ -20,10 +19,8 @@ function createNudgeSetting() {
 
 		async load() {
 			try {
-				const store = await loadStore('settings-store.json');
-				const value = (await store.get(KEY)) as boolean | undefined;
-				// Absent means never chosen, which is not the same as chosen false.
-				set(value !== false);
+				// Absent means never chosen, which reads as the default: on.
+				set(await readSetting('noteNudges'));
 			} catch {
 				// An unreadable settings file should not decide this either way.
 				set(true);
@@ -33,9 +30,7 @@ function createNudgeSetting() {
 		async setEnabled(enabled: boolean) {
 			set(enabled);
 			try {
-				const store = await loadStore('settings-store.json');
-				await store.set(KEY, enabled);
-				await store.save();
+				await writeSetting('noteNudges', enabled);
 			} catch (failure) {
 				console.error('Could not remember that preference:', failure);
 			}

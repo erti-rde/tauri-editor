@@ -1,6 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { Store } from '@tauri-apps/plugin-store';
-import { load as loadStore } from '@tauri-apps/plugin-store';
+import { readSetting } from '$lib/settings';
 import { BaseDirectory, readTextFile } from '@tauri-apps/plugin-fs';
 import { projectSources } from '$lib/stores/db';
 import { CitationEngine } from '$lib/citations/engine';
@@ -187,13 +186,12 @@ async function getInitialState(): Promise<CitationState> {
 	// while a style citeproc rejects needs a different style.
 	let setup;
 	try {
-		const store: Store = await loadStore('settings-store.json');
 		setup = await resolveCitationSetup(
 			{
-				styleXml: await store.get('cslXml'),
-				localeXml: await store.get('localeXml'),
-				selectedStyle: await store.get('selectedStyle'),
-				selectedLocale: await store.get('selectedLocale')
+				styleXml: await readSetting('cslXml'),
+				localeXml: await readSetting('localeXml'),
+				selectedStyle: await readSetting('selectedStyle'),
+				selectedLocale: await readSetting('selectedLocale')
 			},
 			bundledManifest,
 			readResource
