@@ -1,4 +1,4 @@
-import { load as loadStore, type Store } from '@tauri-apps/plugin-store';
+import { readSetting, writeSetting } from '$lib/settings';
 
 /**
  * The projects this person has open recently.
@@ -20,18 +20,8 @@ export interface RecentProject {
 	openedAt: string;
 }
 
-const KEY = 'recentProjects';
-const SETTINGS_FILE = 'settings-store.json';
-
 /** Enough to cover what someone is actually working on, without becoming a list. */
 export const MAX_RECENT = 8;
-
-let store: Store | undefined;
-
-async function settings(): Promise<Store> {
-	store ??= await loadStore(SETTINGS_FILE);
-	return store;
-}
 
 /** The folder's own name, which is what the user named the project. */
 export function projectName(path: string): string {
@@ -85,7 +75,7 @@ export function normaliseRecents(input: unknown): RecentProject[] {
 
 export async function readRecents(): Promise<RecentProject[]> {
 	try {
-		return normaliseRecents(await (await settings()).get(KEY));
+		return normaliseRecents(await readSetting('recentProjects'));
 	} catch (error) {
 		// A launch screen is not worth failing over.
 		console.error('Could not read recent projects:', error);
@@ -95,9 +85,8 @@ export async function readRecents(): Promise<RecentProject[]> {
 
 export async function rememberProject(path: string): Promise<void> {
 	try {
-		const s = await settings();
-		await s.set(KEY, withProject(normaliseRecents(await s.get(KEY)), path));
-		await s.save();
+		const recents = normaliseRecents(await readSetting('recentProjects'));
+		await writeSetting('recentProjects', withProject(recents, path));
 	} catch (error) {
 		console.error('Could not record the recent project:', error);
 	}
@@ -105,10 +94,10 @@ export async function rememberProject(path: string): Promise<void> {
 
 export async function forgetProject(path: string): Promise<RecentProject[]> {
 	try {
-		const s = await settings();
-		const next = normaliseRecents(await s.get(KEY)).filter((p) => p.path !== path);
-		await s.set(KEY, next);
-		await s.save();
+		const next = normaliseRecents(await readSetting('recentProjects')).filter(
+			(p) => p.path !== path
+		);
+		await writeSetting('recentProjects', next);
 		return next;
 	} catch (error) {
 		console.error('Could not remove the recent project:', error);

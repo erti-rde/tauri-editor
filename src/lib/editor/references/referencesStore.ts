@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
-import { load as loadStore, type Store } from '@tauri-apps/plugin-store';
+
+import { readSetting, writeSetting } from '$lib/settings';
 
 /**
  * Whether a reference list appears on its own.
@@ -8,16 +9,6 @@ import { load as loadStore, type Store } from '@tauri-apps/plugin-store';
  * the document contains rather than how the page is laid out — and because the
  * editor has to read it the moment a citation lands, not on the next reload.
  */
-
-const KEY = 'autoReferences';
-const SETTINGS_FILE = 'settings-store.json';
-
-let store: Store | undefined;
-
-async function settings(): Promise<Store> {
-	store ??= await loadStore(SETTINGS_FILE);
-	return store;
-}
 
 function createReferencesSettings() {
 	// On by default: a paper with citations needs a works-cited list, and the
@@ -29,10 +20,9 @@ function createReferencesSettings() {
 
 		async initialise() {
 			try {
-				const stored = await (await settings()).get(KEY);
 				// Only an explicit false turns it off, so a settings file written
 				// before this existed still gets the list.
-				set(stored !== false);
+				set(await readSetting('autoReferences'));
 			} catch (error) {
 				console.error('Could not read the references setting:', error);
 				set(true);
@@ -43,9 +33,7 @@ function createReferencesSettings() {
 			set(enabled);
 
 			try {
-				const s = await settings();
-				await s.set(KEY, enabled);
-				await s.save();
+				await writeSetting('autoReferences', enabled);
 			} catch (error) {
 				console.error('Could not save the references setting:', error);
 			}

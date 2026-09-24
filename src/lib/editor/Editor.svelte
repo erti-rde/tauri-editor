@@ -12,10 +12,9 @@
 
 	import { get } from 'svelte/store';
 
-	import { load as loadStore } from '@tauri-apps/plugin-store';
-
 	import { createAutosave } from './autosave';
 	import { createManuscriptSession } from '$lib/manuscript/io';
+	import { readSetting } from '$lib/settings';
 	import { countDocument } from './wordCount';
 	import { documentStatus } from '$lib/statusFooter/documentStatus';
 	import { parseCitationIds } from '$lib/citations/document';
@@ -127,7 +126,7 @@
 		if (!$documentsStore.current) await createFirstDocument();
 
 		documentStatus.report({
-			target: Number((await (await loadStore('settings-store.json')).get('wordCount')) ?? 0)
+			target: await readSetting('wordCount')
 		});
 
 		// Before the editor is built: pagination has to be configured with the

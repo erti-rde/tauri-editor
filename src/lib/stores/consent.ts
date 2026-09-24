@@ -1,4 +1,4 @@
-import { load as loadStore } from '@tauri-apps/plugin-store';
+import { readSetting, writeSetting } from '$lib/settings';
 
 /**
  * Consent for outbound network requests.
@@ -12,25 +12,16 @@ import { load as loadStore } from '@tauri-apps/plugin-store';
  * asked is different from declined, and only the first should raise a prompt.
  */
 
-const KEY = 'allowNetworkLookups';
-const MAILTO_KEY = 'crossrefMailto';
-
 export type ConsentState = 'unasked' | 'granted' | 'declined';
 
-async function settings() {
-	return loadStore('settings-store.json');
-}
-
 export async function getConsent(): Promise<ConsentState> {
-	const value = (await (await settings()).get(KEY)) as boolean | undefined;
-	if (value === undefined) return 'unasked';
+	const value = await readSetting('allowNetworkLookups');
+	if (value === null) return 'unasked';
 	return value ? 'granted' : 'declined';
 }
 
 export async function setConsent(granted: boolean): Promise<void> {
-	const store = await settings();
-	await store.set(KEY, granted);
-	await store.save();
+	await writeSetting('allowNetworkLookups', granted);
 }
 
 /** Convenience for call sites that only care whether a request may be made. */
@@ -45,12 +36,10 @@ export async function networkAllowed(): Promise<boolean> {
  * service. It is the user's address, so it is theirs to provide or withhold.
  */
 export async function getMailto(): Promise<string | undefined> {
-	const value = (await (await settings()).get(MAILTO_KEY)) as string | undefined;
-	return value?.trim() ? value.trim() : undefined;
+	const value = await readSetting('crossrefMailto');
+	return value.trim() ? value.trim() : undefined;
 }
 
 export async function setMailto(address: string): Promise<void> {
-	const store = await settings();
-	await store.set(MAILTO_KEY, address.trim());
-	await store.save();
+	await writeSetting('crossrefMailto', address.trim());
 }

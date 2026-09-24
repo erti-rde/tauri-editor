@@ -124,12 +124,17 @@ The library backup before the upgrade is automatic (`db/backup.rs`,
 
 ### Add a setting
 
-**Until M1a-11:** read and write through `load('settings-store.json')` with a string key, give
-it a default at the read site, and add the control to the right Settings tab. **After M1a-11:**
-add the key, type and default to the settings schema in one place, and read it through the
-typed settings module.
+1. Declare it in `SETTINGS` in `src/lib/settings/index.ts`: key, type, default, where it lives,
+   and an `accepts` check. A value of the wrong type reads as the default, so an older build's
+   leftovers can't crash a newer one.
+2. Read with `readSetting('name')` and write with `writeSetting('name', value)`, which saves the
+   file. Importing `@tauri-apps/plugin-store` anywhere else is an ESLint error.
+3. Renaming a key: change `key` and list the old one in `renamedFrom`. It's moved on first read.
+   Never reuse an old key for a different meaning.
+4. Add the control to the right Settings tab.
 
-Test: the default applies on a fresh store; the value persists across a reload of the store.
+Test: `settings.test.ts` already checks every declared setting's default on an empty file, and
+that its default passes its own `accepts`. Test what the setting changes where it's used.
 
 ### Add a rail panel
 
@@ -179,5 +184,4 @@ Tracked in the plan, and listed here so nobody trips over them:
   `lib/ingest` when M1b-7 touches it.
 - `Editor.svelte` (750 lines) and `PdfReader.svelte` (1,869) mix decisions with orchestration.
   Extract when touched (M1a-7 does the manuscript part).
-- Settings keys are scattered over 11 files until M1a-11.
 - There's no log file or global error handler until M1a-12. Errors reach `console.*` (76 calls).

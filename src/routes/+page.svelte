@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { appDataDir, homeDir, join } from '@tauri-apps/api/path';
-	import { load as loadStore } from '@tauri-apps/plugin-store';
+	import { readSetting } from '$lib/settings';
 	import { Explorer, Landing, SidePanel, StatusFooter, MetadataEditor } from '$lib';
 	import Workspace from '$lib/workspace/Workspace.svelte';
 	import Notes from '$lib/notes/Notes.svelte';
@@ -65,8 +65,7 @@
 	 * rather than burying it in an application-support folder.
 	 */
 	async function libraryPath(): Promise<string> {
-		const settings = await loadStore('settings-store.json');
-		const configured = (await settings.get('libraryPath')) as string | undefined;
+		const configured = await readSetting('libraryPath');
 		if (configured) return configured;
 
 		return join(await homeDir(), 'Erti', 'library.db');

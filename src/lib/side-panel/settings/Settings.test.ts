@@ -32,7 +32,10 @@ const { mockStore, mockErrorToast } = vi.hoisted(() => {
 						return Promise.resolve(null);
 				}
 			}),
-			set: vi.fn().mockResolvedValue(undefined)
+			set: vi.fn().mockResolvedValue(undefined),
+			// Every write is saved now (M1a-11), where the panel used to leave that
+			// to whichever write happened to save last.
+			save: vi.fn().mockResolvedValue(undefined)
 		}
 	};
 });
