@@ -72,9 +72,21 @@ jobs:
         run: pnpm build && node scripts/check-harness-excluded.mjs
 
       # The real app on the fake backend (M1a-1). A console error or a command
-      # the fake doesn't know fails a journey.
+      # the fake doesn't know fails a journey. The screenshots are taken in the
+      # same run and kept, so every PR has pictures of the main screens.
       - name: Journeys
+        env:
+          ERTI_SHOTS: '1'
         run: pnpm e2e
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-screenshots
+          path: e2e/shots
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Keep what failed
         if: failure()
