@@ -1,0 +1,1518 @@
+<title>Erti 1.0 Screens</title>
+<style>
+	:root {
+		--surface: hsl(210 20% 98%);
+		--raised: hsl(0 0% 100%);
+		--sunken: hsl(210 16% 95%);
+		--hover: hsl(214 18% 92%);
+		--ink: hsl(215 25% 15%);
+		--muted: hsl(215 12% 42%);
+		--faint: hsl(215 10% 56.5%);
+		--line: hsl(214 15% 88%);
+		--line-strong: hsl(214 12% 76%);
+		--accent: hsl(24 88% 40%);
+		--accent-ink: hsl(0 0% 100%);
+		--accent-quiet: hsl(24 90% 96%);
+		--danger: hsl(0 65% 48%);
+		--warning: hsl(32 85% 32.5%);
+		--success: hsl(150 45% 33%);
+		--page: hsl(0 0% 100%);
+		--page-ink: hsl(215 25% 15%);
+		--doc-ground: hsl(214 20% 96%);
+		--scrim: hsl(215 25% 15% / 0.28);
+		--ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+		--serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+		--r: 4px;
+		/* the eight reading labels */
+		--l-claim: hsl(45 95% 62%);
+		--l-evidence: hsl(145 50% 55%);
+		--l-method: hsl(210 80% 65%);
+		--l-limitation: hsl(5 80% 66%);
+	}
+	@media (prefers-color-scheme: dark) {
+		:root:not([data-theme='light']) {
+			color-scheme: dark;
+			--surface: hsl(220 14% 13%);
+			--raised: hsl(220 13% 16%);
+			--sunken: hsl(220 15% 10%);
+			--hover: hsl(220 12% 21%);
+			--ink: hsl(210 16% 88%);
+			--muted: hsl(214 10% 62.5%);
+			--faint: hsl(214 8% 45%);
+			--line: hsl(220 10% 24%);
+			--line-strong: hsl(220 9% 34%);
+			--accent: hsl(24 90% 58%);
+			--accent-ink: hsl(24 40% 10%);
+			--accent-quiet: hsl(24 30% 20%);
+			--danger: hsl(0 70% 62%);
+			--warning: hsl(36 85% 60%);
+			--success: hsl(150 40% 55%);
+			--page: hsl(0 0% 100%);
+			--page-ink: hsl(215 25% 15%);
+			--doc-ground: hsl(220 15% 9%);
+			--scrim: hsl(220 30% 3% / 0.55);
+		}
+	}
+	:root[data-theme='dark'] {
+		color-scheme: dark;
+		--surface: hsl(220 14% 13%);
+		--raised: hsl(220 13% 16%);
+		--sunken: hsl(220 15% 10%);
+		--hover: hsl(220 12% 21%);
+		--ink: hsl(210 16% 88%);
+		--muted: hsl(214 10% 62.5%);
+		--faint: hsl(214 8% 45%);
+		--line: hsl(220 10% 24%);
+		--line-strong: hsl(220 9% 34%);
+		--accent: hsl(24 90% 58%);
+		--accent-ink: hsl(24 40% 10%);
+		--accent-quiet: hsl(24 30% 20%);
+		--danger: hsl(0 70% 62%);
+		--warning: hsl(36 85% 60%);
+		--success: hsl(150 40% 55%);
+		--page: hsl(0 0% 100%);
+		--page-ink: hsl(215 25% 15%);
+		--doc-ground: hsl(220 15% 9%);
+		--scrim: hsl(220 30% 3% / 0.55);
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+	body {
+		background: var(--doc-ground);
+		color: var(--ink);
+		font: 15px/1.55 var(--ui);
+		padding-inline: 16px;
+		padding-block: 40px 80px;
+	}
+	.doc {
+		max-width: 1120px;
+		margin: 0 auto;
+		display: grid;
+		gap: 56px;
+	}
+	header.intro {
+		max-width: 68ch;
+		display: grid;
+		gap: 12px;
+	}
+	header.intro .eyebrow {
+		font: 600 12px/1 var(--ui);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--accent);
+	}
+	h1 {
+		font: 600 34px/1.15 var(--serif);
+		margin: 0;
+		text-wrap: balance;
+	}
+	h2 {
+		font: 600 22px/1.25 var(--serif);
+		margin: 0;
+		text-wrap: balance;
+	}
+	p {
+		margin: 0;
+	}
+	.lede {
+		color: var(--muted);
+	}
+	.legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 20px;
+		font-size: 13px;
+		color: var(--muted);
+	}
+	.legend b {
+		color: var(--ink);
+		font-weight: 600;
+	}
+
+	section.screen {
+		display: grid;
+		gap: 16px;
+	}
+	.screen-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 6px 14px;
+	}
+	.ref {
+		font: 600 12px/1 var(--mono);
+		color: var(--accent);
+		border: 1px solid var(--accent);
+		border-radius: var(--r);
+		padding: 4px 6px;
+	}
+	.notes {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 10px 32px;
+		font-size: 14px;
+		color: var(--muted);
+		max-width: 100%;
+	}
+	.notes li {
+		margin-bottom: 6px;
+	}
+	.notes ul {
+		margin: 0;
+		padding-left: 18px;
+	}
+	.notes strong {
+		color: var(--ink);
+		font-weight: 600;
+	}
+
+	/* ---------- the app frame ---------- */
+	.scroll {
+		overflow-x: auto;
+		padding-bottom: 6px;
+	}
+	.win {
+		width: 1040px;
+		height: 560px;
+		display: grid;
+		grid-template-columns: 40px auto 1fr;
+		background: var(--surface);
+		border: 1px solid var(--line-strong);
+		border-radius: 8px;
+		overflow: hidden;
+		position: relative;
+		font-size: 12.5px;
+		line-height: 1.45;
+	}
+	.win.no-panel {
+		grid-template-columns: 40px 1fr;
+	}
+	.rail {
+		border-right: 1px solid var(--line);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		padding: 8px 0;
+	}
+	.rail i {
+		width: 26px;
+		height: 26px;
+		border-radius: var(--r);
+		display: grid;
+		place-items: center;
+		color: var(--muted);
+		font-style: normal;
+		font-size: 13px;
+	}
+	.rail i.on {
+		background: var(--hover);
+		color: var(--ink);
+	}
+	.rail i.new {
+		color: var(--accent);
+		box-shadow: inset 0 0 0 1px var(--accent);
+	}
+	.rail .spacer {
+		flex: 1;
+	}
+	.panel {
+		width: 288px;
+		border-right: 1px solid var(--line);
+		background: var(--surface);
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+	.panel.wide {
+		width: 320px;
+	}
+	.ws {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		min-height: 0;
+	}
+	.tabbar {
+		height: 30px;
+		display: flex;
+		align-items: stretch;
+		border-bottom: 1px solid var(--line);
+		background: var(--sunken);
+		font-size: 11.5px;
+	}
+	.tabbar span {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 0 12px;
+		border-right: 1px solid var(--line);
+		color: var(--muted);
+	}
+	.tabbar span.on {
+		background: var(--surface);
+		color: var(--ink);
+	}
+	.docbar {
+		height: 28px;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 0 12px;
+		border-bottom: 1px solid var(--line);
+		font-size: 11.5px;
+		color: var(--muted);
+	}
+	.docbar .on {
+		color: var(--ink);
+		border-bottom: 2px solid var(--accent);
+		padding: 6px 0 5px;
+	}
+	.toolbar {
+		height: 34px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 0 12px;
+		border-bottom: 1px solid var(--line);
+		color: var(--muted);
+		font-size: 12px;
+	}
+	.toolbar .grow {
+		flex: 1;
+	}
+	.canvas {
+		flex: 1;
+		background: var(--sunken);
+		overflow: hidden;
+		display: flex;
+		justify-content: center;
+		padding-top: 18px;
+		min-height: 0;
+	}
+	.pg {
+		width: 520px;
+		background: var(--page);
+		color: var(--page-ink);
+		border: 1px solid var(--line);
+		padding: 36px 48px;
+		font: 13.5px/1.7 var(--serif);
+		position: relative;
+	}
+	.pg h3 {
+		font: 600 22px/1.2 var(--serif);
+		margin: 0 0 10px;
+	}
+	.pg h4 {
+		font: 600 16px/1.3 var(--serif);
+		margin: 12px 0 6px;
+	}
+	.pg p {
+		margin: 0 0 8px;
+	}
+	.cite {
+		color: var(--page-ink);
+	}
+	.cite.away {
+		text-decoration: underline dotted 1.5px;
+		text-underline-offset: 3px;
+	}
+	.focus-sent {
+		text-decoration: underline 1.5px hsl(24 88% 40%);
+		text-underline-offset: 3px;
+		background: hsl(24 90% 96%);
+	}
+	.nudge {
+		position: absolute;
+		left: 26px;
+		width: 7px;
+		height: 7px;
+		border: 1px solid hsl(215 10% 56.5%);
+		border-radius: 50%;
+	}
+
+	.ph {
+		padding: 10px 12px;
+		border-bottom: 1px solid var(--line);
+		display: grid;
+		gap: 8px;
+	}
+	.ph .row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.ph .title {
+		font-weight: 600;
+		font-size: 13px;
+	}
+	.muted {
+		color: var(--muted);
+	}
+	.faint {
+		color: var(--faint);
+	}
+	.small {
+		font-size: 11px;
+	}
+	.field {
+		height: 26px;
+		border: 1px solid var(--line-strong);
+		border-radius: var(--r);
+		background: var(--raised);
+		padding: 0 8px;
+		display: flex;
+		align-items: center;
+		color: var(--faint);
+	}
+	.field.tall {
+		height: auto;
+		min-height: 52px;
+		align-items: flex-start;
+		padding: 6px 8px;
+		color: var(--ink);
+	}
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 26px;
+		padding: 0 10px;
+		border-radius: var(--r);
+		border: 1px solid var(--line-strong);
+		background: var(--raised);
+		color: var(--ink);
+		font-size: 12px;
+		white-space: nowrap;
+	}
+	.btn.accent {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: var(--accent-ink);
+	}
+	.btn.danger {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: #fff;
+	}
+	.btn.ghost {
+		border-color: transparent;
+		background: transparent;
+		color: var(--muted);
+		padding: 0 4px;
+	}
+	.switch {
+		width: 28px;
+		height: 16px;
+		border-radius: 8px;
+		background: var(--line-strong);
+		position: relative;
+		flex: none;
+	}
+	.switch::after {
+		content: '';
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		background: var(--raised);
+	}
+	.switch.on {
+		background: var(--accent);
+	}
+	.switch.on::after {
+		left: 14px;
+	}
+	.group {
+		padding: 8px 12px 4px;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--muted);
+		display: flex;
+		justify-content: space-between;
+	}
+	.list {
+		overflow: hidden;
+	}
+	.item {
+		padding: 8px 12px;
+		border-bottom: 1px solid var(--line);
+		display: grid;
+		gap: 4px;
+	}
+	.item.sel {
+		background: var(--accent-quiet);
+	}
+	.meta {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 11px;
+		color: var(--muted);
+	}
+	.dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		flex: none;
+	}
+	.quote {
+		font: italic 12.5px/1.5 var(--serif);
+		color: var(--muted);
+	}
+	.actions {
+		display: flex;
+		gap: 12px;
+		font-size: 11px;
+		color: var(--muted);
+	}
+	.actions b {
+		color: var(--accent);
+		font-weight: 600;
+	}
+	.chip {
+		font-size: 10.5px;
+		border: 1px solid var(--line-strong);
+		border-radius: 9px;
+		padding: 0 7px;
+		color: var(--muted);
+		white-space: nowrap;
+	}
+
+	/* sources table */
+	.pane {
+		flex: 1;
+		padding: 14px 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		min-height: 0;
+		overflow: hidden;
+	}
+	.table {
+		border: 1px solid var(--line);
+		border-radius: var(--r);
+		background: var(--raised);
+	}
+	.tr {
+		display: grid;
+		grid-template-columns: 70px 1fr 110px 130px;
+		gap: 10px;
+		padding: 7px 10px;
+		border-bottom: 1px solid var(--line);
+		align-items: center;
+	}
+	.tr.head {
+		font-size: 10.5px;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+	.tr.sel {
+		background: var(--accent-quiet);
+	}
+	.tr:last-child {
+		border-bottom: 0;
+	}
+	.side {
+		width: 330px;
+		border-left: 1px solid var(--line);
+		background: var(--surface);
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+	.stabs {
+		display: flex;
+		gap: 16px;
+		padding: 0 12px;
+		border-bottom: 1px solid var(--line);
+		font-size: 12px;
+		color: var(--muted);
+	}
+	.stabs span {
+		padding: 8px 0 7px;
+	}
+	.stabs .on {
+		color: var(--ink);
+		border-bottom: 2px solid var(--accent);
+	}
+	.menu {
+		position: absolute;
+		background: var(--raised);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--r);
+		box-shadow: 0 6px 18px hsl(215 25% 15% / 0.14);
+		padding: 4px;
+		display: grid;
+		min-width: 220px;
+		z-index: 3;
+	}
+	.menu span {
+		padding: 6px 10px;
+		border-radius: 3px;
+		display: grid;
+	}
+	.menu span.hi {
+		background: var(--hover);
+	}
+	.menu hr {
+		border: 0;
+		border-top: 1px solid var(--line);
+		margin: 4px 0;
+	}
+	.menu small {
+		color: var(--muted);
+		font-size: 10.5px;
+	}
+	.scrim {
+		position: absolute;
+		inset: 0;
+		background: var(--scrim);
+		display: grid;
+		place-items: center;
+		z-index: 4;
+	}
+	.dialog {
+		width: 460px;
+		background: var(--raised);
+		border: 1px solid var(--line-strong);
+		border-radius: 6px;
+		padding: 18px 20px;
+		display: grid;
+		gap: 12px;
+		box-shadow: 0 10px 30px hsl(215 25% 15% / 0.2);
+	}
+	.dialog h5 {
+		font: 600 15px/1.3 var(--ui);
+		margin: 0;
+	}
+	.dialog .foot {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+	}
+	.stat {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px 14px;
+	}
+	.stat b {
+		font-variant-numeric: tabular-nums;
+	}
+	.split {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		flex: 1;
+		min-height: 0;
+	}
+	.pdf {
+		background: hsl(220 8% 40%);
+		display: flex;
+		justify-content: center;
+		padding-top: 14px;
+		overflow: hidden;
+	}
+	.pdfpage {
+		width: 300px;
+		background: #fff;
+		color: #222;
+		padding: 22px 24px;
+		font:
+			9.5px/1.55 Georgia,
+			serif;
+	}
+	.pdfpage .hl {
+		background: hsl(24 90% 88%);
+	}
+	.pdfpage h6 {
+		font:
+			700 10px/1 Georgia,
+			serif;
+		margin: 0 0 6px;
+	}
+	.toast {
+		position: absolute;
+		right: 14px;
+		bottom: 14px;
+		background: var(--raised);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--r);
+		padding: 8px 12px;
+		display: flex;
+		gap: 12px;
+		align-items: center;
+		box-shadow: 0 4px 12px hsl(215 25% 15% / 0.12);
+	}
+	.findbar .small {
+		white-space: nowrap;
+	}
+	.findbar {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		gap: 6px;
+		align-items: center;
+		background: var(--raised);
+		border: 1px solid var(--line-strong);
+		border-top: 0;
+		border-radius: 0 0 var(--r) var(--r);
+		padding: 6px 8px;
+		z-index: 2;
+	}
+	.hist {
+		width: 300px;
+		border-right: 1px solid var(--line);
+		overflow: hidden;
+	}
+	.hist .day {
+		padding: 10px 12px 4px;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--muted);
+	}
+	.hist .snap {
+		padding: 7px 12px;
+		display: grid;
+		grid-template-columns: 52px 1fr auto;
+		gap: 8px;
+		align-items: baseline;
+		border-bottom: 1px solid var(--line);
+	}
+	.hist .snap.sel {
+		background: var(--accent-quiet);
+	}
+	.delta {
+		font: 11px var(--mono);
+		font-variant-numeric: tabular-nums;
+	}
+	.plus {
+		color: var(--success);
+	}
+	.minus {
+		color: var(--danger);
+	}
+	.center-card {
+		width: 470px;
+		background: var(--raised);
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		padding: 22px 24px;
+		display: grid;
+		gap: 14px;
+	}
+	.opt {
+		display: flex;
+		gap: 12px;
+		align-items: flex-start;
+		padding: 10px 0;
+		border-top: 1px solid var(--line);
+	}
+	.styles {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 6px;
+	}
+	.styles span {
+		border: 1px solid var(--line-strong);
+		border-radius: var(--r);
+		padding: 6px 8px;
+	}
+	.styles span.on {
+		border-color: var(--accent);
+		background: var(--accent-quiet);
+	}
+	.kv {
+		display: grid;
+		grid-template-columns: 150px 1fr;
+		gap: 8px 12px;
+		align-items: center;
+	}
+	:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+	@media (max-width: 640px) {
+		h1 {
+			font-size: 27px;
+		}
+	}
+</style>
+
+<div class="doc">
+	<header class="intro">
+		<span class="eyebrow">Erti 1.0 · interaction design</span>
+		<h1>The new surfaces, drawn in Erti's own palette</h1>
+		<p class="lede">
+			One frame per surface that 1.0 adds, built from the app's real tokens (surfaces, the
+			burnt-orange accent, the Iowan Old Style manuscript), so these read as Erti, not as a proposal
+			for a new look. Every frame cites the section of <code>docs/ux.md</code> it draws; acceptance
+			criteria cite the same numbers. Sample content throughout.
+		</p>
+		<div class="legend">
+			<span
+				><b>Rail</b> Files · Outline · Notes · <b style="color: var(--accent)">Check</b> (new) ·
+				Sources</span
+			>
+			<span><b>Nothing speaks unasked</b> except the existing note nudge</span>
+			<span><b>No scores</b>, no "no problems found"</span>
+		</div>
+	</header>
+
+	<!-- UX-1 -->
+	<section class="screen" id="first-run">
+		<div class="screen-head">
+			<span class="ref">UX-1</span>
+			<h2>First run: two consents, then a style that ships with Erti</h2>
+		</div>
+		<div class="scroll">
+			<div class="win no-panel">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i>◆</i><i>▥</i><span class="spacer"></span><i>⚙</i>
+				</div>
+				<div style="display: grid; place-items: center; background: var(--sunken)">
+					<div class="center-card">
+						<div style="display: grid; gap: 4px">
+							<strong style="font-size: 15px">Before you start</strong
+							><span class="muted"
+								>Both are off until you turn them on. You can change them in Settings.</span
+							>
+						</div>
+						<div class="opt">
+							<span class="switch"></span>
+							<div style="display: grid; gap: 3px">
+								<strong>Look up citation details online</strong
+								><span class="muted"
+									>Sends a paper's identifier, or failing that its title and first lines, to
+									<code>doi.org</code> and <code>crossref.org</code>. Your PDFs, notes and writing
+									never leave this machine.</span
+								>
+							</div>
+						</div>
+						<div class="opt">
+							<span class="switch"></span>
+							<div style="display: grid; gap: 3px">
+								<strong>Check for new versions of Erti</strong
+								><span class="muted"
+									>Sends the version you have to <code>github.com</code>, once a day.</span
+								>
+							</div>
+						</div>
+						<div
+							style="display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px"
+						>
+							<strong>Citation style</strong>
+							<div class="styles">
+								<span class="on">APA 7th edition</span><span>Chicago (author-date)</span
+								><span>Chicago (notes and bibliography)</span><span>Harvard (Cite Them Right)</span
+								><span>IEEE</span><span>MLA 9th edition</span><span>Vancouver</span>
+							</div>
+							<span class="small faint"
+								>These come with Erti and work offline. More styles are available in Settings once
+								lookups are on.</span
+							>
+						</div>
+						<div style="display: flex; justify-content: flex-end">
+							<span class="btn accent">Continue</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="notes">
+			<ul>
+				<li>
+					<strong>Nothing depends on the network to start writing.</strong> Today the editor can't
+					open until a style has been downloaded (M0 fix).
+				</li>
+				<li>Hosts are named in the card, as the README does.</li>
+			</ul>
+			<ul>
+				<li>
+					Update checks get their own switch. It's a separate network call, and a separate decision.
+				</li>
+				<li>Continue works with both switches off.</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- UX-2 + UX-3 -->
+	<section class="screen" id="sources">
+		<div class="screen-head">
+			<span class="ref">UX-2</span><span class="ref">UX-3</span>
+			<h2>Sources: add a book you read on paper, and keep its notes with it</h2>
+		</div>
+		<div class="scroll">
+			<div class="win no-panel">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i>◆</i><i class="on">▥</i><span class="spacer"></span><i>⚙</i>
+				</div>
+				<div style="display: flex; min-width: 0">
+					<div class="pane">
+						<div style="display: flex; align-items: center; gap: 10px">
+							<strong style="font-size: 14px">Sources (4)</strong
+							><span class="grow" style="flex: 1"></span
+							><span class="field" style="width: 170px">Search sources…</span
+							><span class="btn accent">Add ▾</span>
+						</div>
+						<div class="table">
+							<div class="tr head">
+								<span>Type</span><span>Title</span><span>Author</span><span>File</span>
+							</div>
+							<div class="tr">
+								<span class="muted">Paper</span><span>Attention Is All You Need</span
+								><span class="muted">Vaswani, A.</span
+								><span class="muted small">vaswani-2017.pdf</span>
+							</div>
+							<div class="tr">
+								<span class="muted">Paper</span
+								><span>BERT: Pre-training of Deep Bidirectional…</span
+								><span class="muted">Devlin, J.</span
+								><span class="muted small">devlin-2019.pdf</span>
+							</div>
+							<div class="tr sel">
+								<span class="muted">Book</span><span>Orality and Literacy</span
+								><span class="muted">Ong, W. J.</span
+								><span class="small"
+									><span class="faint">No file</span> ·
+									<b style="color: var(--accent); font-weight: 600">Attach PDF…</b></span
+								>
+							</div>
+							<div class="tr">
+								<span class="muted">Report</span><span>Low-Resource MT: A Survey</span
+								><span class="muted">Haddow, B.</span
+								><span class="muted small">haddow-2022.pdf</span>
+							</div>
+						</div>
+						<div class="menu" style="right: 348px; top: 44px">
+							<span class="hi"
+								>Enter details…<small
+									>A book, chapter, web page, anything without a PDF</small
+								></span
+							>
+							<span>From a DOI…<small>Looks it up if lookups are on</small></span>
+							<hr />
+							<span>Import a bibliography…<small>.bib, .ris or CSL-JSON</small></span>
+						</div>
+					</div>
+					<div class="side">
+						<div class="ph">
+							<div class="row">
+								<span class="title" style="flex: 1">Orality and Literacy</span
+								><span class="btn ghost">✕</span>
+							</div>
+							<span class="muted small">Book · Ong, W. J. · 1982 · Methuen</span>
+						</div>
+						<div class="stabs">
+							<span>Details</span><span class="on">Notes (3)</span><span>File</span>
+						</div>
+						<div
+							style="
+								padding: 10px 12px;
+								display: grid;
+								gap: 8px;
+								border-bottom: 1px solid var(--line);
+								background: var(--raised);
+							"
+						>
+							<span class="small muted">New note</span>
+							<div class="field tall">
+								Orality's "additive rather than subordinative" style is the contrast I need for §3.
+							</div>
+							<div class="field tall quote" style="min-height: 40px">
+								Oral structures often look to pragmatics (the convenience of the speaker)…
+							</div>
+							<div style="display: flex; gap: 8px; align-items: center">
+								<span class="field" style="width: 70px; color: var(--ink)">37</span
+								><span class="chip"
+									><span
+										class="dot"
+										style="background: var(--l-claim); display: inline-block; margin-right: 4px"
+									></span
+									>Claim</span
+								><span style="flex: 1"></span><span class="btn accent">Save ⌘↩</span>
+							</div>
+						</div>
+						<div class="list">
+							<div class="item">
+								<div class="meta">
+									<span class="dot" style="background: var(--l-evidence)"></span>Evidence · p. 12
+								</div>
+								<span>Primary orality: no knowledge of writing at all.</span>
+								<div class="actions"><b>Cite with p. 12</b><span>Edit</span></div>
+							</div>
+							<div class="item">
+								<div class="meta">
+									<span class="dot" style="background: var(--l-limitation)"></span>Limitation · p.
+									78
+								</div>
+								<span class="quote">"Writing restructures consciousness."</span>
+								<div class="actions"><b>Cite with p. 78</b><span>Edit</span></div>
+							</div>
+						</div>
+						<div style="margin-top: auto; padding: 10px 12px; border-top: 1px solid var(--line)">
+							<span class="small" style="color: var(--danger)">Remove from library…</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="notes">
+			<ul>
+				<li>
+					<strong>No file is a normal state</strong>, shown in muted ink rather than as an error,
+					with <em>Attach PDF…</em> right there.
+				</li>
+				<li>Notes live on the source and follow it across projects (ADR 004).</li>
+			</ul>
+			<ul>
+				<li>
+					<strong>Quote</strong> and <strong>Page as printed</strong> are optional. Together they
+					make "Cite with p. 37" possible and feed the attribution check.
+				</li>
+				<li>Notes and PDF highlights for the same source share one list, in page order.</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- UX-4 -->
+	<section class="screen" id="remove">
+		<div class="screen-head">
+			<span class="ref">UX-4</span>
+			<h2>Removing a source says exactly what it touches</h2>
+		</div>
+		<div class="scroll">
+			<div class="win no-panel" style="height: 360px">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i>◆</i><i class="on">▥</i><span class="spacer"></span><i>⚙</i>
+				</div>
+				<div style="background: var(--surface)"></div>
+				<div class="scrim">
+					<div class="dialog">
+						<h5>Remove "Attention Is All You Need" from your library?</h5>
+						<p class="muted">
+							Cited 4 times in <em>Chapter 1</em> and <em>Chapter 3</em> in this project. Those
+							citations will show "not in your library" until you add it again.
+						</p>
+						<p class="muted">
+							2 notes and 11 highlights will be deleted. The PDF itself stays where it is.
+						</p>
+						<div class="foot">
+							<span class="btn">Cancel</span><span class="btn danger">Remove</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- UX-5 -->
+	<section class="screen" id="companion">
+		<div class="screen-head">
+			<span class="ref">UX-5</span>
+			<h2>The writing companion is the Notes panel, following your paragraph</h2>
+		</div>
+		<div class="scroll">
+			<div class="win">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i class="on">✎</i><i>◆</i><i>▥</i><span class="spacer"></span><i>⚙</i>
+				</div>
+				<div class="panel">
+					<div class="ph">
+						<div class="row"><span class="field" style="flex: 1">Search your notes…</span></div>
+						<div class="row"><span class="switch on"></span><strong>Follow my writing</strong></div>
+						<span class="small muted"
+							>Related to: <em>Sequence models built on recurrence…</em></span
+						>
+					</div>
+					<div class="group"><span>Your notes</span><span>2</span></div>
+					<div class="item">
+						<div class="meta">
+							<span class="dot" style="background: var(--l-claim)"></span>Claim · vaswani-2017.pdf ·
+							p. 2
+						</div>
+						<span>Core claim; contrast with RNN section</span
+						><span class="quote"
+							>The Transformer is the first transduction model relying entirely on
+							self-attention.</span
+						>
+						<div class="actions"><span>Show in PDF</span><b>Cite</b></div>
+					</div>
+					<div class="item">
+						<div class="meta">
+							<span class="dot" style="background: var(--l-evidence)"></span>Evidence · Orality and
+							Literacy · p. 12
+						</div>
+						<span>Primary orality: no knowledge of writing at all.</span>
+						<div class="actions"><b>Cite with p. 12</b></div>
+					</div>
+					<div class="group"><span>From your papers</span><span>3</span></div>
+					<div class="item">
+						<div class="meta">Haddow 2022 · p. 4 · Introduction</div>
+						<span class="quote"
+							>Recurrent encoders dominated MT until 2017, when attention-only models…</span
+						>
+						<div class="actions"><span>Show in PDF</span><b>Cite</b></div>
+					</div>
+					<div class="item">
+						<div class="meta">Devlin 2019 · p. 1 <span class="chip">cited here</span></div>
+						<span class="quote">…obtains new state-of-the-art results on eleven tasks.</span>
+					</div>
+				</div>
+				<div class="ws">
+					<div class="tabbar"><span class="on">Chapter 1.erti.json</span></div>
+					<div class="docbar">
+						<span class="on">Chapter 1</span><span>Chapter 3</span><span>+ New</span>
+					</div>
+					<div class="toolbar">
+						<span>↶ ↷</span><span>H ▾</span><span>B I U</span><span class="grow"></span
+						><span class="btn">Export ▾</span>
+					</div>
+					<div class="canvas">
+						<div class="pg">
+							<h3>Attention in Low-Resource Translation</h3>
+							<h4>1. Introduction</h4>
+							<span class="nudge" style="top: 128px"></span>
+							<p>
+								Sequence models built on recurrence dominated machine translation until
+								attention-only architectures showed that parallel training could reach better
+								quality at lower cost <span class="cite">(Vaswani et al., 2017)</span>.
+							</p>
+							<p>
+								Pre-trained bidirectional encoders later extended this to a wide range of tasks
+								<span class="cite">(Devlin et al., 2019)</span>.
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="notes">
+			<ul>
+				<li>
+					<strong>Two groups, counted.</strong> Your own notes come first, because they're what you
+					meant to use.
+				</li>
+				<li>Updates when the cursor leaves the paragraph or after a pause, never while typing.</li>
+			</ul>
+			<ul>
+				<li>The checkbox label that used to wrap becomes a header switch.</li>
+				<li>"Cited here" results sink, so the list stays about what you haven't used yet.</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- UX-6 -->
+	<section class="screen" id="import">
+		<div class="screen-head">
+			<span class="ref">UX-6</span>
+			<h2>Import shows what will happen before anything is written</h2>
+		</div>
+		<div class="scroll">
+			<div class="win no-panel" style="height: 380px">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i>◆</i><i class="on">▥</i><span class="spacer"></span><i>⚙</i>
+				</div>
+				<div style="background: var(--surface)"></div>
+				<div class="scrim">
+					<div class="dialog" style="width: 520px">
+						<h5>Import <code>library.bib</code></h5>
+						<div class="stat">
+							<span><b>412</b> entries</span><span><b>380</b> new</span
+							><span
+								><b>32</b> already in your library
+								<span class="muted">(matched by DOI or title)</span></span
+							><span><b>12</b> with a PDF to attach</span
+							><span style="color: var(--warning)"><b>3</b> PDFs not found ▸</span>
+						</div>
+						<div
+							class="muted small"
+							style="
+								border: 1px solid var(--line);
+								border-radius: var(--r);
+								padding: 8px 10px;
+								background: var(--sunken);
+							"
+						>
+							1 entry couldn't be read: <code>smith2020</code>, line 214 isn't a BibTeX entry. The
+							other 411 can still be imported.
+						</div>
+						<label style="display: flex; gap: 8px; align-items: center"
+							><span
+								style="
+									width: 14px;
+									height: 14px;
+									border: 1px solid var(--line-strong);
+									border-radius: 3px;
+									display: inline-block;
+								"
+							></span
+							>Also add them to this project</label
+						>
+						<div class="foot">
+							<span class="btn">Cancel</span><span class="btn accent">Import 380</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- UX-7 -->
+	<section class="screen" id="check">
+		<div class="screen-head">
+			<span class="ref">UX-7</span><span class="ref">UX-11</span>
+			<h2>Check attribution: a review you run, with the source open beside the sentence</h2>
+		</div>
+		<div class="scroll">
+			<div class="win">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i class="on new">◆</i><i>▥</i><span class="spacer"></span
+					><i>⚙</i>
+				</div>
+				<div class="panel wide">
+					<div class="ph">
+						<div class="row">
+							<span class="title" style="flex: 1">Check attribution</span
+							><span class="btn accent">Run check</span>
+						</div>
+						<span class="small muted"
+							>142 sentences checked against 23 sources in your library and 2 other documents in
+							this project.</span
+						>
+					</div>
+					<div class="group"><span>Matches a source, no citation nearby</span><span>1</span></div>
+					<div class="item sel">
+						<span
+							>"…relying entirely on self-attention to compute representations of its input and
+							output."</span
+						>
+						<div class="meta">Vaswani et al. 2017 · p. 2 · same words</div>
+						<div class="actions">
+							<b>Quote and cite</b><span>Cite</span><span>Show source</span><span>Dismiss</span>
+						</div>
+					</div>
+					<div class="group"><span>Quoted, but the words differ</span><span>1</span></div>
+					<div class="item">
+						<span>"…eleven natural language tasks"</span>
+						<div class="meta">Devlin et al. 2019 · p. 1 · source says "processing tasks"</div>
+						<div class="actions">
+							<b>Use the source's words</b><span>Show source</span><span>Dismiss</span>
+						</div>
+					</div>
+					<div class="group"><span>Reused from another document</span><span>1</span></div>
+					<div class="item">
+						<span>"Low-resource settings magnify every design choice…"</span>
+						<div class="meta">Chapter 3 · paragraph 4</div>
+						<div class="actions"><span>Show</span><span>Dismiss</span></div>
+					</div>
+					<div class="group"><span>Dismissed</span><span>0 ▸</span></div>
+				</div>
+				<div class="ws">
+					<div class="tabbar">
+						<span class="on">Chapter 1.erti.json</span><span>vaswani-2017.pdf</span>
+					</div>
+					<div class="split">
+						<div class="canvas" style="padding-top: 0; position: relative">
+							<div class="findbar">
+								<span class="field" style="width: 130px; color: var(--ink)">self-attention</span
+								><span class="small muted">2 of 5</span><span class="btn ghost">↑</span
+								><span class="btn ghost">↓</span><span class="btn ghost">✕</span>
+							</div>
+							<div class="pg" style="width: 100%; margin-top: 40px; padding: 28px 30px">
+								<h4>1. Introduction</h4>
+								<p>
+									Sequence models built on recurrence dominated translation. The Transformer is the
+									first model
+									<span class="focus-sent"
+										>relying entirely on self-attention to compute representations of its input and
+										output.</span
+									>
+								</p>
+								<p>
+									Pre-trained encoders reported results on "eleven natural language tasks"
+									<span class="cite">(Devlin et al., 2019, p. 1)</span>.
+								</p>
+							</div>
+						</div>
+						<div class="pdf">
+							<div class="pdfpage">
+								<h6>1 Introduction</h6>
+								<p>
+									Recurrent neural networks, long short-term memory and gated recurrent neural
+									networks in particular, have been firmly established as state of the art
+									approaches…
+								</p>
+								<p style="margin-top: 8px">
+									To the best of our knowledge, however, the Transformer is the first transduction
+									model
+									<span class="hl"
+										>relying entirely on self-attention to compute representations of its input and
+										output</span
+									>
+									without using sequence-aligned RNNs or convolution.
+								</p>
+								<p style="margin-top: 8px; color: #888">— p. 2</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="notes">
+			<ul>
+				<li>
+					<strong>Findings are grouped by what they are, in words.</strong> There's no severity
+					colour and no score.
+				</li>
+				<li>
+					Only the selected finding is marked in the manuscript. There are no squiggles across the
+					page.
+				</li>
+			</ul>
+			<ul>
+				<li>
+					The split view opens the source at the matched page with the passage marked, using the
+					reader that already exists.
+				</li>
+				<li>
+					With nothing to report, it says "Nothing to review in the sentences checked. This only
+					covers sources in your library."
+				</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- UX-8 -->
+	<section class="screen" id="export">
+		<div class="screen-head">
+			<span class="ref">UX-8</span>
+			<h2>One Export menu, with the check offered first</h2>
+		</div>
+		<div class="scroll">
+			<div class="win no-panel" style="height: 300px">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i>◆</i><i>▥</i><span class="spacer"></span><i>⚙</i>
+				</div>
+				<div class="ws">
+					<div class="tabbar"><span class="on">Chapter 1.erti.json</span></div>
+					<div class="toolbar">
+						<span>↶ ↷</span><span>H ▾</span><span>B I U</span><span class="grow"></span
+						><span class="btn" style="border-color: var(--accent)">Export ▾</span>
+					</div>
+					<div class="canvas"></div>
+					<div class="menu" style="right: 14px; top: 66px; min-width: 250px">
+						<span
+							>Check attribution first…
+							<small>● The document changed since the last check</small></span
+						>
+						<hr />
+						<span class="hi">PDF…</span
+						><span>Word document (.docx)…<small>Note styles become real footnotes</small></span
+						><span>LaTeX bundle…<small>.tex + .bib; compiles if TeX is installed</small></span>
+					</div>
+					<div class="toast">
+						<span>Saved <code>Chapter 1.docx</code></span
+						><b style="color: var(--accent)">Show in folder</b>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- UX-9 -->
+	<section class="screen" id="history">
+		<div class="screen-head">
+			<span class="ref">UX-9</span>
+			<h2>History: plain snapshots, previewed before anything is restored</h2>
+		</div>
+		<div class="scroll">
+			<div class="win no-panel">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i>◆</i><i>▥</i><span class="spacer"></span><i>⚙</i>
+				</div>
+				<div style="display: flex; min-width: 0">
+					<div class="hist" style="display: flex; flex-direction: column">
+						<div class="ph"><span class="title">History of Chapter 1</span></div>
+						<div class="day">Today</div>
+						<div class="snap">
+							<span>14:20</span><span class="muted small">while writing</span
+							><span class="delta plus">+312</span>
+						</div>
+						<div class="snap sel">
+							<span>11:05</span><span class="muted small">while writing</span
+							><span class="delta minus">−1,204</span>
+						</div>
+						<div class="snap">
+							<span>10:52</span><span class="muted small">on open</span
+							><span class="delta">±0</span>
+						</div>
+						<div class="day">Yesterday</div>
+						<div class="snap">
+							<span>18:40</span><span class="muted small">on close</span
+							><span class="delta plus">+2,018</span>
+						</div>
+						<div class="snap">
+							<span>16:00</span><span class="muted small">hourly</span
+							><span class="delta plus">+407</span>
+						</div>
+						<div
+							style="margin-top: auto; padding: 10px 12px; border-top: 1px solid var(--line)"
+							class="small muted"
+						>
+							History uses 4.2 MB ·
+							<span style="color: var(--accent)">Clear snapshots older than 3 months</span>
+						</div>
+					</div>
+					<div class="ws" style="flex: 1">
+						<div class="toolbar">
+							<span>Today, 11:05 · 8,412 words · read-only</span><span class="grow"></span
+							><span class="btn">Compare with current</span
+							><span class="btn accent">Restore this version</span>
+						</div>
+						<div class="canvas">
+							<div class="pg">
+								<h4>2. Related work</h4>
+								<p>
+									Before attention-only models, low-resource translation relied on transfer from
+									high-resource pairs and on back-translation to manufacture parallel data…
+								</p>
+								<p>This section was cut at 11:07. The snapshot keeps it.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="notes">
+			<ul>
+				<li>
+					Each snapshot is an ordinary manuscript file under <code>.erti/history/</code>, so it can
+					be opened without Erti (ADR 007).
+				</li>
+			</ul>
+			<ul>
+				<li>
+					<strong>Restore snapshots the current state first</strong>, so restoring can itself be
+					undone.
+				</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- UX-10, UX-12 -->
+	<section class="screen" id="settings">
+		<div class="screen-head">
+			<span class="ref">UX-10</span><span class="ref">UX-12</span>
+			<h2>Settings gains Library and About; citations from outside your library stay readable</h2>
+		</div>
+		<div class="scroll">
+			<div class="win no-panel" style="height: 420px">
+				<div class="rail">
+					<i>▤</i><i>☰</i><i>✎</i><i>◆</i><i>▥</i><span class="spacer"></span><i class="on">⚙</i>
+				</div>
+				<div style="display: grid; grid-template-columns: 170px 1fr 1fr; min-width: 0">
+					<div
+						style="
+							border-right: 1px solid var(--line);
+							background: var(--sunken);
+							display: grid;
+							align-content: start;
+						"
+					>
+						<span style="padding: 9px 14px" class="muted">General</span
+						><span style="padding: 9px 14px" class="muted">Citations</span
+						><span style="padding: 9px 14px" class="muted">Reading</span
+						><span style="padding: 9px 14px" class="muted">Page setup</span
+						><span style="padding: 9px 14px" class="muted">Appearance</span>
+						<span
+							style="
+								padding: 9px 14px;
+								border-left: 2px solid var(--accent);
+								background: var(--raised);
+								font-weight: 600;
+							"
+							>Library</span
+						><span style="padding: 9px 14px" class="muted">About</span>
+					</div>
+					<div
+						style="
+							padding: 16px 18px;
+							display: grid;
+							gap: 14px;
+							align-content: start;
+							border-right: 1px solid var(--line);
+						"
+					>
+						<strong style="font-size: 14px">Library</strong>
+						<div class="kv">
+							<span class="muted">Location</span
+							><span
+								><code>~/Erti/library.db</code> ·
+								<span style="color: var(--accent)">Move…</span></span
+							>
+							<span class="muted">Last backup</span
+							><span>Today 09:12 · 7 daily, 4 weekly kept</span> <span class="muted">Backups</span
+							><span style="display: flex; gap: 8px; flex-wrap: wrap"
+								><span class="btn">Back up now</span
+								><span class="btn">Restore from a backup…</span></span
+							>
+						</div>
+						<span class="small muted">A backup is also taken before every library upgrade.</span>
+					</div>
+					<div
+						style="
+							padding: 16px 18px;
+							display: grid;
+							gap: 10px;
+							align-content: start;
+							background: var(--sunken);
+						"
+					>
+						<strong style="font-size: 14px">In the manuscript</strong>
+						<div class="pg" style="width: 100%; padding: 18px 20px; font-size: 13px">
+							<p>
+								Orality shapes how arguments are built <span class="cite">(Ong, 1982, p. 37)</span>,
+								a point later applied to scientific prose
+								<span class="cite away">(Latour &amp; Woolgar, 1986)</span>.
+							</p>
+						</div>
+						<div class="menu" style="position: static; min-width: 0">
+							<span style="display: grid; gap: 4px"
+								><span>From the manuscript: not in your library</span
+								><b style="color: var(--accent); font-weight: 600">Add to library</b></span
+							>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="notes">
+			<ul>
+				<li>
+					<strong>Library</strong> gives backups (ADR 008) a place: when the last one ran, and how
+					to restore.
+				</li>
+				<li>
+					<strong>About</strong> (not drawn) holds the version, AGPL licence, source link,
+					third-party notices, model licence, update check and log folder.
+				</li>
+			</ul>
+			<ul>
+				<li>
+					A co-author's citation renders from the manuscript's embedded sources (ADR 002), marked
+					with a dotted underline. It's never an error, and never "[source removed]".
+				</li>
+			</ul>
+		</div>
+	</section>
+</div>
