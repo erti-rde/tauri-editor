@@ -19,7 +19,7 @@ If you allow lookups, this is what leaves the machine and nothing else:
 - **The identifier printed in a paper** — its DOI or arXiv ID — sent to `doi.org` to fetch authors, title and journal. `doi.org` passes the request on to the registry that issued the identifier: `api.crossref.org` for most journal articles, `data.crosscite.org` for arXiv and DataCite. This is the usual case: it resolved every paper in our benchmark corpus.
 - **Only when no identifier can be found**, a search query to `crossref.org` containing the paper's **title and authors** — or, if the PDF's embedded title is unusable, **the first 400 characters of its opening page**.
 - **An email address, if you enter one** in Settings, which Crossref asks for so it can contact you about heavy use. Optional and blank by default.
-- **A citation style file** from GitHub (`raw.githubusercontent.com`), when you choose one, and the citation language file that goes with it.
+- **A citation style file** from GitHub (`raw.githubusercontent.com`), only when you choose one that doesn't come with Erti, and the citation language file that goes with it. Seven common styles (APA, Chicago, Harvard, IEEE, MLA, Vancouver) and English citation text ship with the app and work offline.
 
 That list is enforced, not only promised: the app's content security policy allows connections to those four hosts and refuses every other.
 

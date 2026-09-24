@@ -728,6 +728,19 @@
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} {exportToLatex} />
 		</div>
 
+		<!-- The editor used to refuse to open when citations couldn't be set up,
+		     so a fresh install couldn't write at all (M0-3). Now it opens, and
+		     says plainly what's wrong. Moves onto the Banner primitive in M1c. -->
+		{#if $citationStore.error}
+			<p
+				role="status"
+				class="border-line bg-surface-raised text-ink-muted shrink-0 border-b px-4 py-1.5 text-xs"
+			>
+				<span class="text-warning font-medium">Citations can't be formatted.</span>
+				{$citationStore.error}
+			</p>
+		{/if}
+
 		<!-- The zoom is set here rather than on the manuscript itself, so the
 		     scrollable area shrinks with the page instead of leaving the reader
 		     scrolling past the end of a document that visibly stopped. -->

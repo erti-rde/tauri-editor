@@ -1,0 +1,13 @@
+{
+	"default": { "style": "apa", "locale": "en-GB" },
+	"styles": [
+		{ "id": "apa", "name": "APA Style 7th edition", "label": "APA 7th edition", "file": "styles/apa.csl" },
+		{ "id": "chicago-author-date", "name": "Chicago Manual of Style 18th edition (author-date)", "label": "Chicago (author-date)", "file": "styles/chicago-author-date.csl" },
+		{ "id": "chicago-notes-bibliography", "name": "Chicago Manual of Style 18th edition (notes and bibliography)", "label": "Chicago (notes and bibliography)", "file": "styles/chicago-notes-bibliography.csl" },
+		{ "id": "harvard-cite-them-right", "name": "Cite Them Right 12th edition (author-date/Harvard)", "label": "Harvard (Cite Them Right)", "file": "styles/harvard-cite-them-right.csl" },
+		{ "id": "ieee", "name": "IEEE Reference Guide version 11.29.2023", "label": "IEEE", "file": "styles/ieee.csl" },
+		{ "id": "modern-language-association", "name": "MLA Handbook 9th edition (in-text citations)", "label": "MLA 9th edition", "file": "styles/modern-language-association.csl" },
+		{ "id": "elsevier-vancouver", "name": "Elsevier - NLM/Vancouver (citation-sequence)", "label": "Vancouver (NLM)", "file": "styles/elsevier-vancouver.csl" }
+	],
+	"locales": { "en-GB": "locales/locales-en-GB.xml", "en-US": "locales/locales-en-US.xml" }
+}

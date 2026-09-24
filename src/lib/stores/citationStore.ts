@@ -1,9 +1,16 @@
 import { writable, get } from 'svelte/store';
 import type { Store } from '@tauri-apps/plugin-store';
 import { load as loadStore } from '@tauri-apps/plugin-store';
+import { BaseDirectory, readTextFile } from '@tauri-apps/plugin-fs';
 import { projectSources } from '$lib/stores/db';
 import { CitationEngine } from '$lib/citations/engine';
 import { renderDocumentCitations, type CitationSite } from '$lib/citations/document';
+import {
+	fallbackLabel,
+	parseManifest,
+	resolveCitationSetup,
+	type BundledManifest
+} from '$lib/citations/bundled';
 
 // Define types for our citation data
 export interface CitationItem {
@@ -44,6 +51,11 @@ interface CitationState {
 	bibliography: string[];
 	/** Cited ids with no source behind them, from the most recent render. */
 	missingIds: string[];
+	/**
+	 * Why citations can't be formatted, when they can't. The editor shows it
+	 * instead of refusing to open (M0-3). Null when all is well.
+	 */
+	error: string | null;
 }
 
 export const citationStore = createCitationStore();
@@ -54,17 +66,24 @@ function createCitationStore() {
 		engine: null,
 		citationSources: {},
 		bibliography: [],
-		missingIds: []
+		missingIds: [],
+		error: null
 	});
 
-	async function initializeCitationStore() {
-		try {
-			const state = await getInitialState();
-			set(state);
-		} catch (error) {
-			console.error('Failed to initialize citation store:', error);
-			throw error;
-		}
+	/**
+	 * Load the sources and build the citation engine.
+	 *
+	 * Never throws. A missing or broken style used to reject here, and the editor
+	 * awaited this before building itself, so nothing could be written at all.
+	 * Now a failure is recorded in `error`, the sources stay loaded so citations
+	 * still get readable author-year labels, and the caller carries on. Returns
+	 * whether the engine is ready.
+	 */
+	async function initializeCitationStore(): Promise<boolean> {
+		const state = await getInitialState();
+		set(state);
+		if (state.error) console.error('Citations cannot be formatted:', state.error);
+		return state.engine !== null;
 	}
 
 	function getAllSourcesAsJson() {
@@ -82,10 +101,10 @@ function createCitationStore() {
 	 */
 	function previewCitation(ids: string[]): string {
 		const { engine, citationSources } = get(citationStore);
-		if (!engine) return '';
 
 		const known = ids.filter((id) => citationSources[id]);
 		if (known.length === 0) return '';
+		if (!engine) return fallbackLabel(known.map((id) => citationSources[id]));
 
 		try {
 			return engine.render([{ id: 'preview', itemIds: known }])[0]?.text ?? '';
@@ -139,45 +158,92 @@ function createCitationStore() {
 	};
 }
 
-async function getInitialState() {
+/** The styles and locales that ship with the app, read once. */
+let manifest: Promise<BundledManifest> | null = null;
+
+const readResource = (path: string) =>
+	readTextFile(`resources/csl/${path}`, { baseDir: BaseDirectory.Resource });
+
+function bundledManifest(): Promise<BundledManifest> {
+	manifest ??= readResource('bundled.json').then((text) => parseManifest(JSON.parse(text)));
+	// A failed read must not be cached: the next attempt should try again.
+	manifest.catch(() => (manifest = null));
+	return manifest;
+}
+
+async function getInitialState(): Promise<CitationState> {
+	const empty = { bibliography: [], missingIds: [] };
+
+	// Sources first, and independently of the style: if the style can't load,
+	// citations can still be labelled from the sources' own metadata.
+	let citationSources: Record<string, CitationItem> = {};
+	try {
+		citationSources = await loadCitationSources();
+	} catch (error) {
+		return { ...empty, engine: null, citationSources, error: messageOf(error) };
+	}
+
+	// Each failure carries its own remedy: a damaged install needs reinstalling,
+	// while a style citeproc rejects needs a different style.
+	let setup;
 	try {
 		const store: Store = await loadStore('settings-store.json');
+		setup = await resolveCitationSetup(
+			{
+				styleXml: await store.get('cslXml'),
+				localeXml: await store.get('localeXml'),
+				selectedStyle: await store.get('selectedStyle'),
+				selectedLocale: await store.get('selectedLocale')
+			},
+			bundledManifest,
+			readResource
+		);
+	} catch (error) {
+		return { ...empty, engine: null, citationSources, error: messageOf(error) };
+	}
 
-		const styleXml = (await store.get('cslXml')) as string;
-		const localeXml = (await store.get('localeXml')) as string;
-
-		if (!styleXml || !localeXml) {
-			throw new Error(
-				'No citation style is configured. Choose one in Settings before citing sources.'
-			);
-		}
-
-		// Sources are keyed by content hash and scoped to the open project, with
-		// any project-local metadata corrections already applied by the backend.
-		const sources = await projectSources();
-
-		const citationSources: Record<string, CitationItem> = {};
-
-		for (const source of sources) {
-			// Only sources that actually resolved can be cited. Including pending or
-			// failed ones offered the user a source citeproc has nothing to format.
-			if (source.state !== 'ready' || !source.csl_json) continue;
-
-			citationSources[source.sha256] = {
-				...JSON.parse(source.csl_json),
-				id: source.sha256,
-				file_name: source.file_name
-			};
-		}
-
+	try {
 		return {
-			engine: new CitationEngine({ styleXml, localeXml, sources: citationSources }),
+			...empty,
+			engine: new CitationEngine({
+				styleXml: setup.styleXml,
+				localeXml: setup.localeXml,
+				sources: citationSources
+			}),
 			citationSources,
-			bibliography: [],
-			missingIds: []
+			error: null
 		};
 	} catch (error) {
-		console.error('Error in getInitialState:', error);
-		throw error;
+		const style = setup.styleName ? `"${setup.styleName}"` : 'The chosen style';
+		return {
+			...empty,
+			engine: null,
+			citationSources,
+			error: `${style} could not be used (${messageOf(error)}). Choose another style in Settings.`
+		};
 	}
+}
+
+const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+async function loadCitationSources(): Promise<Record<string, CitationItem>> {
+	// Sources are keyed by content hash and scoped to the open project, with
+	// any project-local metadata corrections already applied by the backend.
+	const sources = await projectSources();
+
+	const citationSources: Record<string, CitationItem> = {};
+
+	for (const source of sources) {
+		// Only sources that actually resolved can be cited. Including pending or
+		// failed ones offered the user a source citeproc has nothing to format.
+		if (source.state !== 'ready' || !source.csl_json) continue;
+
+		citationSources[source.sha256] = {
+			...JSON.parse(source.csl_json),
+			id: source.sha256,
+			file_name: source.file_name
+		};
+	}
+
+	return citationSources;
 }
