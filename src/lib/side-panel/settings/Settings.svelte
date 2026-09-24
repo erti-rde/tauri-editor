@@ -12,6 +12,12 @@
 	import { Icon } from '$lib';
 	import { getConsent, getMailto, setConsent, setMailto } from '$lib/stores/consent';
 	import { errorToast } from '$lib/toast/Toast.svelte';
+	import {
+		bundledStyleByName,
+		isBundledLocale,
+		parseManifest,
+		type BundledManifest
+	} from '$lib/citations/bundled';
 
 	interface Props {
 		isOpen: boolean;
@@ -30,23 +36,53 @@
 	let activeTab = $state('general');
 	let styleFilter = $state('');
 
-	// The bundled index lists every independent CSL style, close to three
-	// thousand, which is far too many to scroll through.
-	const matchingStyles = $derived.by(() => {
-		const query = styleFilter.trim().toLowerCase();
-		if (!query) return citationStyles;
-		return citationStyles.filter((style) => style.name.toLowerCase().includes(query));
-	});
+	// The styles that ship with Erti (M0-3). They're listed first and apply
+	// without a download, so choosing one works offline and needs no consent.
+	let bundled = $state<BundledManifest | null>(null);
+	const bundledNames = $derived(new Set(bundled?.styles.map((style) => style.name) ?? []));
+
+	// The online index lists every independent CSL style, close to three
+	// thousand, which is far too many to scroll through. Bundled ones are listed
+	// once, in their own group, rather than again here.
+	const onlineStyles = $derived(citationStyles.filter((style) => !bundledNames.has(style.name)));
+
+	const query = $derived(styleFilter.trim().toLowerCase());
+
+	const matchingBundled = $derived(
+		(bundled?.styles ?? []).filter(
+			(style) =>
+				!query ||
+				style.label.toLowerCase().includes(query) ||
+				style.name.toLowerCase().includes(query)
+		)
+	);
+
+	const matchingStyles = $derived(
+		query ? onlineStyles.filter((style) => style.name.toLowerCase().includes(query)) : onlineStyles
+	);
 
 	// Keep the current selection rendered, otherwise narrowing the list would
 	// drop the <select> binding to the first remaining option. It is shown, but
 	// not counted as a match: the count answers the question that was typed.
 	const visibleStyles = $derived.by(() => {
-		const selected = citationStyles.find((style) => style.name === selectedStyle);
+		const selected = onlineStyles.find((style) => style.name === selectedStyle);
 		return selected && !matchingStyles.includes(selected)
 			? [selected, ...matchingStyles]
 			: matchingStyles;
 	});
+	const visibleBundled = $derived.by(() => {
+		const selected = bundled?.styles.find((style) => style.name === selectedStyle);
+		return selected && !matchingBundled.includes(selected)
+			? [selected, ...matchingBundled]
+			: matchingBundled;
+	});
+
+	const readResource = (path: string) =>
+		readTextFile(`resources/csl/${path}`, { baseDir: BaseDirectory.Resource });
+
+	/** Said when something has to be downloaded but lookups are off. */
+	const needsLookups = (what: string) =>
+		`${what} has to be downloaded, and lookups are off. Choose one that's included with Erti, or turn on "Look up citation details online" in General.`;
 
 	// Governs every outbound request: metadata lookups and citation-style
 	// downloads alike.
@@ -81,6 +117,15 @@
 			console.error('Error loading resources:', error);
 			errorToast('Could not load the bundled citation styles.');
 		}
+
+		// Separately, so a damaged index doesn't hide the styles that ship with the
+		// app, and the other way round.
+		try {
+			bundled = parseManifest(JSON.parse(await readResource('bundled.json')));
+		} catch (error) {
+			console.error('Could not read the bundled citation styles:', error);
+			bundled = null;
+		}
 	}
 
 	async function readResourceFiles() {
@@ -110,9 +155,28 @@
 
 			if (oldStyle !== selectedStyle || !oldStyleXml) {
 				await store.set('selectedStyle', selectedStyle);
+				const bundledStyle = bundled ? bundledStyleByName(bundled, selectedStyle) : null;
 				const style = citationStyles.find((style) => style.name === selectedStyle);
-				if (style) {
+				if (bundledStyle) {
 					try {
+						const styleXml = await readResource(bundledStyle.file);
+						if (!styleXml.trim().startsWith('<')) {
+							throw new Error(
+								`"${bundledStyle.label}" could not be read. Reinstalling Erti will fix this.`
+							);
+						}
+						await store.set('cslXml', styleXml);
+						styleHasChanged = true;
+					} catch (error) {
+						await store.set('selectedStyle', oldStyle);
+						selectedStyle = oldStyle ?? '';
+						throw error;
+					}
+				} else if (style) {
+					try {
+						// The README promises nothing leaves the machine without consent,
+						// and a style download is one of the things it lists.
+						if (!allowNetwork) throw new Error(needsLookups(`"${selectedStyle}"`));
 						const response = await fetch(style.download_url);
 						if (!response.ok) {
 							// A 404 means the bundled index has drifted from the upstream
@@ -153,22 +217,34 @@
 				const localeUrl = `https://raw.githubusercontent.com/citation-style-language/locales/master/locales-${selectedLocale}.xml`;
 
 				try {
-					const response = await fetch(localeUrl);
-					if (!response.ok) {
-						throw new Error(
-							`Could not download the ${selectedLocale} citation language (HTTP ${response.status}).`
-						);
-					}
-					const localeXml = await response.text();
+					if (bundled && isBundledLocale(bundled, selectedLocale)) {
+						const localeXml = await readResource(bundled.locales[selectedLocale]);
+						if (!localeXml.trim().startsWith('<')) {
+							throw new Error(`The ${selectedLocale} citation language could not be read.`);
+						}
+						await store.set('localeXml', localeXml);
+						localeHasChanged = true;
+					} else {
+						if (!allowNetwork) {
+							throw new Error(needsLookups(`The ${selectedLocale} citation language`));
+						}
+						const response = await fetch(localeUrl);
+						if (!response.ok) {
+							throw new Error(
+								`Could not download the ${selectedLocale} citation language (HTTP ${response.status}).`
+							);
+						}
+						const localeXml = await response.text();
 
-					// Verify that we received valid XML
-					if (!localeXml || !localeXml.trim().startsWith('<')) {
-						console.error('Invalid locale XML received:', localeXml?.substring(0, 100));
-						throw new Error(`The ${selectedLocale} citation language could not be read.`);
-					}
+						// Verify that we received valid XML
+						if (!localeXml || !localeXml.trim().startsWith('<')) {
+							console.error('Invalid locale XML received:', localeXml?.substring(0, 100));
+							throw new Error(`The ${selectedLocale} citation language could not be read.`);
+						}
 
-					await store.set('localeXml', localeXml);
-					localeHasChanged = true;
+						await store.set('localeXml', localeXml);
+						localeHasChanged = true;
+					}
 				} catch (error) {
 					console.error('Error fetching locale:', error);
 					// If fetch fails, keep the old locale selected
@@ -214,6 +290,12 @@
 		// default rather than the choice someone already made.
 		await autoReferences.initialise();
 		await loadResources();
+		// Nothing chosen yet means the bundled default is in use, so show that
+		// rather than an empty "Select a style".
+		if (!selectedStyle && bundled) {
+			const manifest = bundled;
+			selectedStyle = manifest.styles.find((style) => style.id === manifest.default.style)!.name;
+		}
 	});
 </script>
 
@@ -361,9 +443,18 @@
 										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
 									>
 										<option value="" disabled>Select a style</option>
-										{#each visibleStyles as style (style.download_url)}
-											<option value={style.name}>{style.name}</option>
-										{/each}
+										{#if visibleBundled.length > 0}
+											<optgroup label="Included with Erti">
+												{#each visibleBundled as style (style.id)}
+													<option value={style.name}>{style.label}</option>
+												{/each}
+											</optgroup>
+										{/if}
+										<optgroup label={allowNetwork ? 'Download' : 'Download (needs lookups on)'}>
+											{#each visibleStyles as style (style.download_url)}
+												<option value={style.name}>{style.name}</option>
+											{/each}
+										</optgroup>
 									</select>
 									<div
 										class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
@@ -385,9 +476,11 @@
 								</div>
 								<p class="text-ink-muted mt-1 text-sm">
 									{#if styleFilter.trim()}
-										{matchingStyles.length} of {citationStyles.length} styles match "{styleFilter.trim()}"
+										{matchingBundled.length + matchingStyles.length} of {(bundled?.styles.length ??
+											0) + onlineStyles.length} styles match "{styleFilter.trim()}"
 									{:else}
-										Choose your preferred citation style for references ({citationStyles.length}
+										Choose your preferred citation style for references ({(bundled?.styles.length ??
+											0) + onlineStyles.length}
 										available)
 									{/if}
 								</p>

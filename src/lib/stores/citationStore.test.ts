@@ -50,6 +50,7 @@ type CitationState = {
 	citationSources: Record<string, CitationItem>;
 	bibliography: string[];
 	missingIds: string[];
+	error?: string | null;
 };
 
 const engineWith = (sources: Record<string, CitationItem>) =>
@@ -126,15 +127,63 @@ describe('citationStore', () => {
 		expect(citationStore.previewCitation(['1'])).toBe('(Smith, 2020)');
 	});
 
-	it('previews nothing before the engine exists', () => {
+	// M0-3 AC-3: without a style, a new citation still reads as something, not
+	// as an empty span nobody can see.
+	it('labels a citation by author and year when no style is loaded', () => {
 		setCitationStore({
 			engine: null,
 			citationSources: fakeCitationSources,
 			bibliography: [],
-			missingIds: []
+			missingIds: [],
+			error: 'No style'
 		});
 
-		expect(citationStore.previewCitation(['1'])).toBe('');
+		expect(citationStore.previewCitation(['1'])).toBe('(Smith, n.d.)');
+	});
+
+	// M0-3 AC-3: a stored style citeproc rejects names the style and the remedy.
+	it('says which style failed and to choose another when citeproc rejects it', async () => {
+		const citeproc = (await import('citeproc')).default as unknown as { Engine: MockInstance };
+		citeproc.Engine.mockImplementationOnce(() => {
+			throw new Error('bad style');
+		});
+		const values: Record<string, string> = {
+			cslXml: '<style/>',
+			localeXml: '<locale/>',
+			selectedStyle: 'Journal of Examples'
+		};
+		(pluginStore.load as unknown as MockInstance).mockResolvedValue({
+			get: vi.fn(async (key: string) => values[key])
+		});
+		(projectSources as unknown as MockInstance).mockResolvedValue([]);
+
+		await expect(citationStore.initializeCitationStore()).resolves.toBe(false);
+		expect(get(citationStore).error).toBe(
+			'"Journal of Examples" could not be used (bad style). Choose another style in Settings.'
+		);
+	});
+
+	// M0-3 AC-2/AC-3: a failure is recorded rather than thrown, so the editor
+	// that awaits this still opens.
+	it('records why citations cannot be formatted instead of throwing', async () => {
+		const fakeStore = { get: vi.fn(() => undefined) };
+		(pluginStore.load as unknown as MockInstance).mockResolvedValue(fakeStore);
+		(projectSources as unknown as MockInstance).mockResolvedValue([
+			{
+				sha256: 'hash1',
+				file_name: 'f',
+				csl_json: JSON.stringify(fakeCitationItem),
+				state: 'ready'
+			}
+		]);
+
+		// No bundled files are reachable in this test, so setup must fail cleanly.
+		await expect(citationStore.initializeCitationStore()).resolves.toBe(false);
+		const value = get(citationStore);
+		expect(value.engine).toBeNull();
+		expect(value.error).toEqual(expect.any(String));
+		// The sources are kept, so citations still get readable labels.
+		expect(value.citationSources['hash1']).toMatchObject({ title: 'Test Book' });
 	});
 
 	it('previews nothing for a source that is not in the library', () => {

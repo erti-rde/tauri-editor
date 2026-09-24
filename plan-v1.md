@@ -152,7 +152,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M0-4** Remove `tauri-plugin-shell` (SEC-6)
 - [ ] **M0-5** Re-test #48
 - [ ] **M0-6** Clean up the stale worktree
-- [ ] **M0-7** Merge the planning set (#110) and mirror it to GitHub
+- [x] **M0-7** Merge the planning set (#110, completed by #189) and mirror it to GitHub
 
 ### M1a — Safety net and file format _(M, critical path)_ · [spec](docs/specs/M1a.md)
 
@@ -345,6 +345,7 @@ images · collaboration · macOS E2E once a WKWebView driver exists.
 | Tracking                       | GitHub milestone per plan milestone, one issue per spec ID; this plan stays the source of truth                                                                                                       | Maintainer's call, 2026-09-24                                                                                                                                         |
 | Beta feedback                  | GitHub Issues, plus an email address in the beta notes                                                                                                                                                | Default; the maintainer didn't pick one. Change anytime                                                                                                               |
 | Bundled citation styles        | APA 7, Chicago (author-date, notes), Harvard CTR, IEEE, MLA 9, Vancouver; locales en-US, en-GB                                                                                                        | Offline-first; a fresh install couldn't write without them (M0-3)                                                                                                     |
+| Vancouver                      | Elsevier's NLM/Vancouver (citation-sequence), labelled "Vancouver (NLM)"                                                                                                                              | Upstream has no generic `vancouver.csl` any more; this is the most widely used general-purpose variant                                                                |
 | Dependency upgrades            | Only what 1.0 needs: pdf.js decided in M6-3 (security, extraction). Other majors after 1.0 unless one blocks                                                                                          | Upgrades are churn with no user-facing gain before 1.0                                                                                                                |
 | Compatibility promise          | 1.x reads every manuscript and library written by 0.2+ and 1.x. Library migrations forward-only, with a backup. A newer-format file opens read-only, never overwritten                                | What a co-author one version behind needs                                                                                                                             |
 | Placement of new surfaces      | As docs/ux.md: Check as a rail panel; companion inside Notes; source notes in the Sources sidebar; Export as one menu; history takes over the workspace                                               | One place per job; the writing stays visible for reviews                                                                                                              |
