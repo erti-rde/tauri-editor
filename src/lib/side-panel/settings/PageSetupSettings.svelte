@@ -30,7 +30,7 @@
 
 	const choice =
 		'border-line hover:border-line-strong data-[state=checked]:border-accent ' +
-		'data-[state=checked]:bg-accent-quiet focus-visible:ring-accent focus-visible:ring-2 ' +
+		'data-[state=checked]:bg-accent-quiet ' +
 		'block rounded border px-3 py-2 text-left transition-colors';
 
 	const paper = $derived(paperById($pageSetupStore.paper));
@@ -139,7 +139,7 @@
 					<span class="text-ink mb-1 block text-xs">{slot.label}</span>
 					<input
 						type="text"
-						class="border-line-strong bg-surface-raised text-ink focus-visible:border-accent focus-visible:ring-accent w-full rounded border px-2 py-1 text-xs focus-visible:ring-1"
+						class="border-line-strong bg-surface-raised text-ink w-full rounded border px-2 py-1 text-xs"
 						value={$pageSetupStore.runningHeads[slot.key]}
 						placeholder="Empty"
 						oninput={(e) => setHead({ [slot.key]: e.currentTarget.value })}

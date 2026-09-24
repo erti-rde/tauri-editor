@@ -188,7 +188,7 @@
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Search sources..."
-					class="border-line-strong bg-surface-raised focus-visible:border-accent focus-visible:ring-accent block w-full rounded-md border py-2 pr-3 pl-10 text-sm focus-visible:ring-1"
+					class="border-line-strong bg-surface-raised block w-full rounded-md border py-2 pr-3 pl-10 text-sm"
 				/>
 			</div>
 		</div>
@@ -248,7 +248,7 @@
 										type="text"
 										bind:value={doiInput}
 										placeholder="10.1000/example or https://doi.org/…"
-										class="border-line-strong focus-visible:border-accent focus-visible:ring-accent flex-1 rounded-md border px-3 py-1 text-sm focus-visible:ring-1"
+										class="border-line-strong flex-1 rounded-md border px-3 py-1 text-sm"
 										onkeydown={(e) => e.key === 'Enter' && handleManualDoi(source)}
 									/>
 									<button

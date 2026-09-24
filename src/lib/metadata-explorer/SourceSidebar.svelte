@@ -83,7 +83,7 @@
 				Save
 			</button>
 			<button
-				class="hover:bg-surface-hover focus-visible:ring-accent rounded-full p-1 focus-visible:ring-2"
+				class="hover:bg-surface-hover rounded-full p-1"
 				aria-label="Close source details"
 				onclick={onclose}
 			>

@@ -147,8 +147,7 @@
 						id="citation-item-{index}"
 						role="option"
 						aria-selected={selectedItems.has(item.id)}
-						class="cursor-pointer border-l-[3px] px-4 py-3 transition-colors
-							{focusedIndex !== index
+						class="cursor-pointer border-l-[3px] px-4 py-3 transition-colors {focusedIndex !== index
 							? 'border-transparent'
 							: isInvalid
 								? 'border-l-danger bg-danger/10'
@@ -255,9 +254,7 @@
 			</div>
 			<div class="flex gap-2">
 				<button
-					class="focus:ring-opacity-50 text-accent-ink bg-accent disabled:border-line-strong disabled:text-accent-ink border-accent hover:bg-accent-hover focus:ring-accent disabled:bg-surface-sunken rounded
-          border px-3 py-1.5 text-sm font-medium
-          transition-colors focus-visible:ring-2 disabled:cursor-not-allowed"
+					class="focus:ring-opacity-50 text-accent-ink bg-accent disabled:border-line-strong disabled:text-accent-ink border-accent hover:bg-accent-hover focus:ring-accent disabled:bg-surface-sunken rounded border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed"
 					disabled={selectedItems.size === 0 && initialSelection.length === 0}
 					onclick={insertSelectedCitations}
 					aria-label="Insert selected citations"

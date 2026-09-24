@@ -99,7 +99,7 @@
 			<button
 				{...tooltip}
 				class={[
-					'hover:bg-surface-hover focus-visible:ring-accent rounded p-1.5 transition-colors duration-150 ease-in-out focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50',
+					'hover:bg-surface-hover rounded p-1.5 transition-colors duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-50',
 					isActive && 'bg-accent-quiet text-accent'
 				]}
 				{onclick}
@@ -389,7 +389,7 @@
 			{#snippet children(tooltip)}
 				<button
 					{...tooltip}
-					class="hover:bg-surface-hover focus-visible:ring-accent text-ink-muted hover:text-ink rounded px-1.5 py-1.5 font-mono text-[11px] transition-colors focus-visible:ring-2"
+					class="hover:bg-surface-hover text-ink-muted hover:text-ink rounded px-1.5 py-1.5 font-mono text-[11px] transition-colors"
 					onclick={exportToLatex}
 				>
 					.tex

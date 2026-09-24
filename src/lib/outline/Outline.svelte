@@ -39,8 +39,9 @@
 				<li>
 					<button
 						type="button"
-						class="hover:bg-surface-hover focus-visible:ring-accent block w-full truncate px-3 py-1 text-left text-xs transition-colors focus-visible:ring-2 focus-visible:ring-inset
-							{active ? 'bg-accent-quiet text-ink font-medium' : 'text-ink-muted'}"
+						class="hover:bg-surface-hover focus-inset block w-full truncate px-3 py-1 text-left text-xs transition-colors {active
+							? 'bg-accent-quiet text-ink font-medium'
+							: 'text-ink-muted'}"
 						style="padding-left: {12 + heading.depth * 14}px"
 						aria-current={active ? 'location' : undefined}
 						onclick={() => go(heading.pos)}

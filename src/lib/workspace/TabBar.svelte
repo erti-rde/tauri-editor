@@ -64,8 +64,9 @@
 					role="tab"
 					tabindex={isActive ? 0 : -1}
 					aria-selected={isActive}
-					class="group border-line flex max-w-52 min-w-0 shrink-0 cursor-pointer items-center gap-1.5 border-r px-3 text-xs transition-colors
-						{isActive ? 'bg-surface text-ink' : 'text-ink-muted hover:bg-surface-hover hover:text-ink'}"
+					class="group border-line flex max-w-52 min-w-0 shrink-0 cursor-pointer items-center gap-1.5 border-r px-3 text-xs transition-colors {isActive
+						? 'bg-surface text-ink'
+						: 'text-ink-muted hover:bg-surface-hover hover:text-ink'}"
 					onclick={() => activate(tab)}
 					onkeydown={(e) => {
 						if (e.key === 'Enter' || e.key === ' ') {
@@ -109,7 +110,7 @@
 			{#snippet children(tooltip)}
 				<button
 					{...tooltip}
-					class="text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:ring-accent shrink-0 px-2 transition-colors focus-visible:ring-2"
+					class="text-ink-muted hover:bg-surface-hover hover:text-ink shrink-0 px-2 transition-colors"
 					onclick={() => {
 						workspaceStore.focus(pane.id);
 						workspaceStore.split();

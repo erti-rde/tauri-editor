@@ -249,7 +249,7 @@
 									<input
 										type="checkbox"
 										bind:checked={allowNetwork}
-										class="accent-accent focus-visible:ring-accent mt-1 h-4 w-4"
+										class="accent-accent mt-1 h-4 w-4"
 									/>
 									<span>
 										<span class="text-ink block font-medium">Look up citation details online</span>
