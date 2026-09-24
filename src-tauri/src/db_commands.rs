@@ -200,3 +200,265 @@ pub async fn mark_legacy_consumed(
 ) -> Result<(), String> {
     salvage::mark_legacy_consumed(&state.library().await?, &file_name).await
 }
+
+/* ------------------------------------------------------------- annotations */
+
+#[tauri::command]
+pub async fn save_annotation(
+    state: State<'_, DbState>,
+    annotation: queries::NewAnnotation,
+) -> Result<(), String> {
+    queries::save_annotation(&state.library().await?, &annotation).await
+}
+
+#[tauri::command]
+pub async fn annotations_for_source(
+    state: State<'_, DbState>,
+    sha256: String,
+) -> Result<Vec<queries::Annotation>, String> {
+    queries::annotations_for_source(&state.library().await?, &sha256).await
+}
+
+#[tauri::command]
+pub async fn all_annotations(
+    state: State<'_, DbState>,
+    limit: Option<i64>,
+    offset: Option<i64>,
+) -> Result<Vec<queries::Annotation>, String> {
+    queries::all_annotations(
+        &state.library().await?,
+        limit.unwrap_or(200),
+        offset.unwrap_or(0),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_annotation(state: State<'_, DbState>, id: String) -> Result<(), String> {
+    queries::delete_annotation(&state.library().await?, &id).await
+}
+
+#[tauri::command]
+pub async fn delete_imported_annotations(
+    state: State<'_, DbState>,
+    sha256: String,
+) -> Result<u64, String> {
+    queries::delete_imported_annotations(&state.library().await?, &sha256).await
+}
+
+#[tauri::command]
+pub async fn annotation_labels(
+    state: State<'_, DbState>,
+) -> Result<Vec<queries::AnnotationLabel>, String> {
+    queries::annotation_labels(&state.library().await?).await
+}
+
+#[tauri::command]
+pub async fn save_label(
+    state: State<'_, DbState>,
+    label: queries::AnnotationLabel,
+) -> Result<(), String> {
+    queries::save_label(&state.library().await?, &label).await
+}
+
+#[tauri::command]
+pub async fn delete_label(state: State<'_, DbState>, id: String) -> Result<(), String> {
+    queries::delete_label(&state.library().await?, &id).await
+}
+
+#[tauri::command]
+pub async fn save_reading_position(
+    state: State<'_, DbState>,
+    sha256: String,
+    page: i64,
+    scroll: Option<f64>,
+    scale: Option<String>,
+) -> Result<(), String> {
+    queries::save_reading_position(
+        &state.library().await?,
+        &sha256,
+        page,
+        scroll,
+        scale.as_deref(),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn reading_position(
+    state: State<'_, DbState>,
+    sha256: String,
+) -> Result<Option<i64>, String> {
+    queries::reading_position(&state.library().await?, &sha256).await
+}
+
+#[tauri::command]
+pub async fn path_for_source(
+    state: State<'_, DbState>,
+    sha256: String,
+) -> Result<Option<String>, String> {
+    queries::path_for_source(&state.library().await?, &sha256).await
+}
+
+#[tauri::command]
+pub async fn source_for_path(
+    state: State<'_, DbState>,
+    path: String,
+) -> Result<Option<String>, String> {
+    queries::source_for_path(&state.library().await?, &path).await
+}
+
+#[tauri::command]
+pub async fn save_annotation_image(
+    state: State<'_, DbState>,
+    id: String,
+    png: Vec<u8>,
+) -> Result<(), String> {
+    queries::save_annotation_image(&state.library().await?, &id, &png).await
+}
+
+#[tauri::command]
+pub async fn annotation_image(
+    state: State<'_, DbState>,
+    id: String,
+) -> Result<Option<Vec<u8>>, String> {
+    queries::annotation_image(&state.library().await?, &id).await
+}
+
+/// Embed a mark's text so it can be found by meaning later.
+///
+/// The embedding happens here rather than in the frontend for the same reason
+/// search does: `embed_texts` is synchronous ONNX inference, and a 384-float
+/// vector has no business crossing the IPC boundary in either direction when
+/// only the database needs it.
+///
+/// Skipped when the text has not changed. Recolouring a highlight or moving it
+/// to another label should not cost an inference.
+#[tauri::command]
+pub async fn embed_annotation(
+    state: State<'_, DbState>,
+    id: String,
+    text: String,
+) -> Result<bool, String> {
+    let library = state.library().await?;
+
+    let hash = {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(text.as_bytes());
+        format!("{:x}", hasher.finalize())
+    };
+
+    if queries::annotation_embedding_hash(&library, &id).await? == Some(hash.clone()) {
+        return Ok(false);
+    }
+
+    if text.trim().is_empty() {
+        return Ok(false);
+    }
+
+    // spawn_blocking for the same reason search_sources does it: inference has no
+    // await points and would hold an async worker for its whole duration.
+    let embedding =
+        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&[text], true))
+            .await
+            .map_err(|e| format!("embedding task failed: {e}"))??
+            .into_iter()
+            .next()
+            .ok_or_else(|| "the mark produced no embedding".to_string())?;
+
+    queries::save_annotation_embedding(&library, &id, &embedding, &hash).await?;
+
+    Ok(true)
+}
+
+/// Give every mark that has none a vector, so it can be found by meaning.
+///
+/// Marks are embedded as they are made, and that can fail quietly — a library
+/// not open yet, a model still loading, a save racing a project switch. A
+/// highlight must never be lost to a failed embedding, so the failure is
+/// swallowed; the cost is that the mark is then missing from every search by
+/// meaning with nothing to say so. This is the way back.
+///
+/// Returns how many were embedded, so the caller can say what happened rather
+/// than leave another silence.
+#[tauri::command]
+pub async fn embed_pending_annotations(state: State<'_, DbState>) -> Result<usize, String> {
+    let library = state.library().await?;
+
+    // Bounded: a first run over a large library should take a moment and finish,
+    // not hold the model for a minute. Running it again picks up the rest.
+    let pending = queries::annotations_needing_embedding(&library, 500).await?;
+    if pending.is_empty() {
+        return Ok(0);
+    }
+
+    let (ids, texts): (Vec<String>, Vec<String>) = pending.into_iter().unzip();
+
+    // One batch rather than one inference per mark: the model is loaded once and
+    // the tokeniser pads the whole set together.
+    let embeddings =
+        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&texts, true))
+            .await
+            .map_err(|e| format!("embedding task failed: {e}"))??;
+
+    let mut done = 0;
+    for (id, embedding) in ids.iter().zip(embeddings.iter()) {
+        // A hash of nothing: these are backfills, and the next real edit
+        // re-embeds them under the hash of whatever it then says.
+        queries::save_annotation_embedding(&library, id, embedding, "backfilled").await?;
+        done += 1;
+    }
+
+    Ok(done)
+}
+
+/// Find marks, by their words or by what they are about.
+///
+/// Deliberately separate from `search_sources`. A passage from a paper and a
+/// note the researcher wrote are not the same kind of thing — one is quotable,
+/// the other is a judgement already made — and a 12-word note does not produce
+/// a cosine score comparable with a 100-word passage, so merging the two into
+/// one ranked list would be quietly wrong in a way nobody could see.
+#[tauri::command]
+pub async fn search_annotations(
+    state: State<'_, DbState>,
+    query: String,
+    limit: Option<i64>,
+    semantic: Option<bool>,
+) -> Result<Vec<queries::ScoredAnnotation>, String> {
+    let library = state.library().await?;
+
+    let project_hashes = match state.project().await {
+        Ok(project) => queries::project_source_hashes(&project).await?,
+        Err(_) => Vec::new(),
+    };
+
+    let limit = limit.unwrap_or(50);
+
+    if !semantic.unwrap_or(false) {
+        return queries::search_annotations_literally(&library, &query, &project_hashes, limit)
+            .await;
+    }
+
+    let embedding =
+        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&[query], true))
+            .await
+            .map_err(|e| format!("embedding task failed: {e}"))??
+            .into_iter()
+            .next()
+            .ok_or_else(|| "the query produced no embedding".to_string())?;
+
+    queries::search_annotations_semantically(&library, &embedding, &project_hashes, limit as usize)
+        .await
+}
+
+#[tauri::command]
+pub async fn restore_default_labels(state: State<'_, DbState>) -> Result<u64, String> {
+    queries::restore_default_labels(&state.library().await?).await
+}
+
+#[tauri::command]
+pub async fn name_labels_after_colours(state: State<'_, DbState>) -> Result<u64, String> {
+    queries::name_labels_after_colours(&state.library().await?).await
+}
