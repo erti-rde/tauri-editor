@@ -17,7 +17,6 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_shell::init())
         // Databases are opened on demand rather than through tauri-plugin-sql:
         // the project database lives at <project>/.erti/project.db, a path not
         // known until the user opens a folder, which a build-time connection
