@@ -9,7 +9,6 @@
 //! explained when it is not, rather than being promised and then failing.
 
 use serde::Serialize;
-use std::path::Path;
 use std::process::Command;
 
 /// The TeX engines worth trying, best first.
@@ -112,6 +111,18 @@ fn engine_args(engine: &str) -> &'static [&'static str] {
 #[tauri::command]
 #[specta::specta]
 pub async fn compile_latex(
+    state: tauri::State<'_, crate::db::DbState>,
+    directory: String,
+    engine: String,
+) -> Result<CompileResult, crate::ipc::AppError> {
+    compile_latex_in(&state, directory, engine).await
+}
+
+/// `compile_latex`, scoped (M1a-3): TeX runs in the directory it's given and
+/// reads whatever `main.tex` there tells it to, so the directory must be one
+/// the user has given Erti (the project's `export/`, in practice).
+pub async fn compile_latex_in(
+    state: &crate::db::DbState,
     directory: String,
     engine: String,
 ) -> Result<CompileResult, crate::ipc::AppError> {
@@ -124,7 +135,7 @@ pub async fn compile_latex(
         ));
     }
 
-    let dir = Path::new(&directory).to_path_buf();
+    let dir = crate::scope::authorise(state, &directory).await?;
     if !dir.join("main.tex").exists() {
         return Err(crate::ipc::AppError::new(
             crate::ipc::ErrorKind::NotFound,
@@ -206,7 +217,8 @@ mod tests {
     async fn an_unknown_engine_is_refused() {
         // The name reaches a shell command, so anything outside the known set is
         // rejected before it gets there.
-        let result = compile_latex("/tmp".into(), "rm -rf /".into()).await;
+        let state = crate::db::DbState::default();
+        let result = compile_latex_in(&state, "/tmp".into(), "rm -rf /".into()).await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -216,11 +228,28 @@ mod tests {
 
     #[tokio::test]
     async fn a_directory_without_a_manuscript_is_reported() {
-        let result = compile_latex("/tmp".into(), "pdflatex".into()).await;
+        let dir = std::env::temp_dir().join(format!("erti-latex-empty-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let state = crate::db::DbState::default();
+        state.grants.grant(&dir);
+
+        let result =
+            compile_latex_in(&state, dir.to_string_lossy().to_string(), "pdflatex".into()).await;
 
         let err = result.unwrap_err();
         assert_eq!(err.kind, crate::ipc::ErrorKind::NotFound);
         assert!(err.message.contains("No main.tex"));
+    }
+
+    // M1a-3: the one path command #198 was editing at the time.
+    #[tokio::test]
+    async fn a_directory_outside_what_the_user_gave_erti_is_refused() {
+        let state = crate::db::DbState::default();
+        let err = compile_latex_in(&state, "/etc".into(), "pdflatex".into())
+            .await
+            .unwrap_err();
+        assert_eq!(err.kind, crate::ipc::ErrorKind::PermissionDenied);
+        assert_eq!(err.message, crate::scope::OUTSIDE);
     }
 
     #[tokio::test]

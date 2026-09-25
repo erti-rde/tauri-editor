@@ -61,7 +61,8 @@ Risk = impact × likelihood, High / Medium / Low.
 
 Ordered by what they cut off. Each lands in the milestone that touches the area.
 
-1. **Scope the Rust path commands (T2)** — done in M1a-3 (`src-tauri/src/scope.rs`). It also
+1. **Scope the Rust path commands (T2)** — done in M1a-3 (`src-tauri/src/scope.rs`), and for
+   `compile_latex` once M1a-9, which was editing it, had merged. It also
    gates `open_project`, which decides the scope (a picked folder or one with `.erti/` in it), and
    `register_source`, which writes `locations`. Planned as: `read_pdf_file`, `hash_file`, `read_directory`
    and `source_for_path` canonicalise the path and require it to be under the open project root
