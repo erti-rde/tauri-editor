@@ -93,7 +93,10 @@
 				? await searchAnnotations(asked, { semantic, limit: 100 })
 				: context
 					? await searchAnnotations(context, { semantic: true, limit: 20 })
-					: ((await allAnnotations({ limit: 100 })) as ScoredAnnotation[]);
+					: // Nothing asked: every mark, newest first, each with its paper and
+						// whether it's in this project. The plain list used to be cast to
+						// this type without those, so every mark read "unknown paper".
+						await searchAnnotations('', { limit: 100 });
 			results = Array.isArray(found) ? found : [];
 			ran = true;
 
