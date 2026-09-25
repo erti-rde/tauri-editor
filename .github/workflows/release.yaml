@@ -96,27 +96,48 @@ jobs:
           workspaces: ./src-tauri -> target
           key: ${{ matrix.target }}
 
-      # The pnpm version is `packageManager` in package.json; Node's is .nvmrc.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      # pnpm at the `packageManager` version, through Node's own corepack.
+      # pnpm/action-setup's installer couldn't verify its Intel macOS binary
+      # against a lockfile written on Apple Silicon; corepack has no such step.
+      - name: Install pnpm and the dependencies
+        run: |
+          corepack enable
+          pnpm --version
+          pnpm install --frozen-lockfile
+
+      # Signing is set up only for what the maintainer has provided: an empty
+      # APPLE_CERTIFICATE is still "set", and Tauri would try to import it.
+      - name: Signing
+        env:
+          UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          UPDATER_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          # Updater artefacts are signed once the key exists (M7a-2).
+          if [ -n "$UPDATER_KEY" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY=$UPDATER_KEY" >> "$GITHUB_ENV"
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$UPDATER_PASSWORD" >> "$GITHUB_ENV"
+          fi
+          # macOS: a free self-signed identity once there is one; ad-hoc ("-")
+          # until then, since Apple Silicon won't run unsigned code at all.
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            if [ -n "$CERTIFICATE" ]; then
+              echo "APPLE_CERTIFICATE=$CERTIFICATE" >> "$GITHUB_ENV"
+              echo "APPLE_CERTIFICATE_PASSWORD=$CERTIFICATE_PASSWORD" >> "$GITHUB_ENV"
+              echo "APPLE_SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+            else
+              echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            fi
+          fi
 
       # Release bundles only: no debug builds beside them.
       - name: Build
-        env:
-          # Updater artefacts are signed once the key exists (M7a-2).
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # macOS: a free self-signed identity when the maintainer has set one
-          # up, ad-hoc ("-") until then. Apple Silicon won't run unsigned code.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY || '-' }}
         run: pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
       # 4. Smoke: what breaks releases is packaging, not code.

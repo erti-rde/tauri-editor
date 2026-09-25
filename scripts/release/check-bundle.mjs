@@ -4,12 +4,13 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 
 import { missingResources } from './lib.mjs';
 
 const target = process.argv[2];
-const bundles = join('src-tauri', 'target', target, 'release', 'bundle');
+// Absolute: the AppImage is run from inside a scratch folder.
+const bundles = resolve('src-tauri', 'target', target, 'release', 'bundle');
 if (!existsSync(bundles)) {
 	console.error(`✗ No bundles in ${bundles}. Build first.`);
 	process.exit(1);
