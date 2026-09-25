@@ -50,6 +50,11 @@ export default ts.config(
 		}
 	},
 	{
+		// The real-app journeys (M1a-2) run under WebdriverIO's Mocha.
+		files: ['e2e-app/**/*.mjs'],
+		languageOptions: { globals: { ...globals.mocha } }
+	},
+	{
 		// One way to call Rust (ADR 011). Generated commands check names, arguments
 		// and results at compile time; a hand-written invoke checks none of them.
 		files: ['src/**/*.{ts,svelte}'],

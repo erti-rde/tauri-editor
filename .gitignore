@@ -29,3 +29,6 @@ static/pdf-assets/
 e2e/.results/
 e2e/.report/
 e2e/shots/
+
+# What the real-app journeys saw and said (M1a-2), kept by CI.
+e2e-app/results/

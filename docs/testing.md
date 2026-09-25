@@ -128,7 +128,12 @@ checklist.
 
 - ~~Add the app-in-browser job (Playwright, Chromium) to `ci.yaml`.~~ Done in M1a-1 ("Browser
   journeys"), with a check that the harness stays out of the production build.
-- Add the real-app E2E job on `ubuntu-22.04` with `webkit2gtk-driver` + `tauri-driver` + xvfb.
+- ~~Add the real-app E2E job on `ubuntu-22.04` with `webkit2gtk-driver` + `tauri-driver` +
+  xvfb.~~ Done in M1a-2: "Real app journeys (Linux)", specs in `e2e-app/specs`. Each spec gets a
+  fresh `HOME`. `snapshot(name)` saves the window and everything the app said (console errors,
+  toasts) to `e2e-app/results`, which CI keeps. Two WebKitGTK quirks are handled in
+  `specs/app.mjs`: type with `type()`, since the driver drops repeated keys, and find text with
+  a `tag*=text` selector, since a bare `*=text` means link text.
 - Coverage summary on PRs (report only, no threshold gate). The goal is that the orchestration
   files above stop being dark, not a number.
 - `pnpm audit --prod` / `cargo audit` (docs/security.md task 7).
