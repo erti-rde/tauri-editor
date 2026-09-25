@@ -224,3 +224,22 @@ async fn only_a_picked_or_known_folder_can_become_the_project() {
     assert!(read_directory_in(&fresh, project.clone()).await.is_ok());
     assert!(open_project_in(&fresh, project).await.is_ok());
 }
+
+// M1a-4: the landing screen's question, answered without the fs plugin.
+#[tokio::test]
+async fn only_folders_erti_has_opened_count_as_recent_projects() {
+    use erti_lib::db_commands::recent_projects_present;
+    let w = world("recents").await;
+
+    let present = recent_projects_present(vec![
+        w.project.to_string_lossy().to_string(),
+        w.base.join("secret").to_string_lossy().to_string(),
+        w.base.join("gone").to_string_lossy().to_string(),
+        "relative/path".into(),
+    ])
+    .await;
+
+    // The project has `.erti/project.db` from being opened; an ordinary folder,
+    // a missing one and a relative path all read the same: not a project.
+    assert_eq!(present, vec![true, false, false, false]);
+}

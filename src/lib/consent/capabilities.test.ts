@@ -29,4 +29,33 @@ describe('the webview capability', () => {
 		expect(cargo).not.toContain('tauri-plugin-shell');
 		expect(pkg).not.toContain('@tauri-apps/plugin-shell');
 	});
+
+	// M1a-4 AC-1
+	it('grants the fs plugin only the calls the app makes, and no scope of its own', () => {
+		// Scope comes at runtime: the project folder when it opens, and whatever
+		// the user picks in a dialog. `fs:allow-home-read-recursive` let a script
+		// in the webview read all of $HOME whatever the Rust commands refused, and
+		// `fs:write-all` let it remove files wherever it could write.
+		expect(capability.permissions.filter((p) => p.startsWith('fs:')).sort()).toEqual([
+			'fs:allow-exists',
+			'fs:allow-mkdir',
+			'fs:allow-read-file',
+			'fs:allow-read-text-file',
+			'fs:allow-resource-read-recursive',
+			'fs:allow-write-file',
+			'fs:allow-write-text-file',
+			'fs:default'
+		]);
+	});
+
+	// M1a-4 AC-1
+	it('never lets the webview delete, move or list files', () => {
+		const fs = capability.permissions.filter((p) => p.startsWith('fs:'));
+		for (const forbidden of ['remove', 'rename', 'write-all', 'read-dir', 'home', 'truncate']) {
+			expect(
+				fs.filter((p) => p.includes(forbidden)),
+				forbidden
+			).toEqual([]);
+		}
+	});
 });
