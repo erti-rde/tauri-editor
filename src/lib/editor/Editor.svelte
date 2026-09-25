@@ -37,7 +37,7 @@
 	} from './pagination';
 	import { zoomStore } from './pagination/zoom';
 	import { createReferencesWatcher } from './references/autoReferences';
-	import { readDocumentShape } from './references/documentShape';
+	import { countCitations, readDocumentShape } from './references/documentShape';
 	import { autoReferences } from './references/referencesStore';
 	import { readOutline, headingAt, sameOutline } from '$lib/outline/outline';
 	import { outlineStore } from '$lib/outline/outlineStore';
@@ -157,6 +157,7 @@
 
 			onUpdate: ({ editor }) => {
 				documentStatus.report({ words: countDocument(editor.state.doc) });
+				noticeNewCitations(editor.state.doc);
 				publishOutline(editor);
 				publishDraftContext(editor);
 
@@ -195,6 +196,7 @@
 		// apply a setup to. They cannot watch `editor` itself: it publishes on
 		// every transaction, and applying a setup dispatches transactions.
 		editorReady = true;
+		citationsSeen = countCitations($editor.state.doc);
 
 		// Closing the window is the last chance to write, and `beforeunload` cannot
 		// take it: the browser does not await a promise, so the webview can go away
@@ -459,7 +461,10 @@
 		if (token !== transition) return;
 
 		documentsStore.open(next);
+		loadingContent = true;
 		$editor.commands.setContent(content);
+		loadingContent = false;
+		citationsSeen = countCitations($editor.state.doc);
 		$editor.commands.updateAllCitation();
 		// A dismissal belongs to the document it was made in. Without this,
 		// deleting the reference list in one chapter would suppress it in every
@@ -527,6 +532,7 @@
 		});
 
 		$editor.commands.setContent({ type: 'doc', content: [] });
+		citationsSeen = 0;
 		await fileSystemStore.readDirectory(currentDir);
 	}
 
@@ -629,7 +635,6 @@
 				id: JSON.stringify([sha256]),
 				label: citationStore.previewCitation([sha256])
 			});
-			considerReferences();
 		} catch (failure) {
 			console.error('Could not cite that paper:', failure);
 			errorToast('Could not cite that paper.');
@@ -673,6 +678,24 @@
 		});
 	});
 
+	/**
+	 * The first citation brings a reference list with it, however it was made.
+	 *
+	 * This used to run only from the citation panel and the Cite buttons, so a
+	 * citation typed through the `@` list, the usual way, never brought one.
+	 * Loading a document isn't adding citations to it, so loads don't count.
+	 */
+	let citationsSeen = 0;
+	let loadingContent = false;
+
+	function noticeNewCitations(doc: typeof $editor.state.doc) {
+		if (loadingContent) return;
+		const count = countCitations(doc);
+		const added = count > citationsSeen;
+		citationsSeen = count;
+		if (added) considerReferences();
+	}
+
 	function considerReferences() {
 		const shape = readDocumentShape($editor.state.doc);
 
@@ -686,7 +709,6 @@
 			id: citation.id,
 			label: citation.inlineCitation
 		});
-		considerReferences();
 		handlePanelClose();
 	}
 

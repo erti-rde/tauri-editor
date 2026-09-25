@@ -41,3 +41,19 @@ export function readDocumentShape(doc: ProseMirrorNode): DocumentShape {
 
 	return { hasCitations, hasBibliography };
 }
+
+/**
+ * How many citations the document holds.
+ *
+ * Counted so a rise can be noticed however it happened: typed through the
+ * `@` list, inserted from a panel, pasted, or brought back by undo. Only a
+ * rise brings a reference list, never a document that merely has citations.
+ */
+export function countCitations(doc: ProseMirrorNode): number {
+	let count = 0;
+	doc.descendants((node) => {
+		if (node.type.name === CITATION_NODE) count++;
+		return node.type.name !== CITATION_NODE && node.type.name !== BIBLIOGRAPHY_NODE;
+	});
+	return count;
+}
