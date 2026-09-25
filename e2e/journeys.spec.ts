@@ -48,6 +48,9 @@ test('each rail panel opens', async ({ page }) => {
 	await page.getByRole('button', { name: 'Notes' }).click();
 	await expect(page.getByRole('textbox', { name: 'Search your notes' })).toBeVisible();
 	await expect(page.getByText('Core claim; contrast with the RNN section')).toBeVisible();
+	// Each mark names its paper.
+	await expect(page.getByText('· vaswani-2017.pdf').first()).toBeVisible();
+	await expect(page.getByText('unknown paper')).toHaveCount(0);
 
 	await page.getByRole('button', { name: 'Sources' }).click();
 	await expect(page.getByRole('heading', { name: 'Sources (3)' })).toBeVisible();

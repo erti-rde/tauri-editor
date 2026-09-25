@@ -480,9 +480,13 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			const max = limit ?? 50;
 			if (!semantic) {
 				const needle = query.toLowerCase();
+				// An empty query filters nothing, as in Rust.
 				return newestFirst()
 					.filter(
-						(m) => m.quote?.toLowerCase().includes(needle) || m.note?.toLowerCase().includes(needle)
+						(m) =>
+							needle === '' ||
+							m.quote?.toLowerCase().includes(needle) ||
+							m.note?.toLowerCase().includes(needle)
 					)
 					.slice(0, max)
 					.map((m) => scored(m, 1));
