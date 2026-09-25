@@ -98,6 +98,70 @@ jobs:
             e2e/.report
           retention-days: 7
 
+  app-e2e:
+    name: Real app journeys (Linux)
+    # 22.04 because it ships webkit2gtk-driver; the journeys need WebKitGTK's
+    # own WebDriver, which tauri-driver launches the app under.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Tauri system dependencies, the WebKit driver and a display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            webkit2gtk-driver \
+            xvfb
+
+      - name: Install the pinned Rust toolchain
+        working-directory: ./src-tauri
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+          # tauri-driver is cached with the build, rather than compiled each run.
+          cache-bin: true
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install tauri-driver
+        run: command -v tauri-driver || cargo install tauri-driver --locked
+
+      - name: Build the app
+        run: pnpm tauri build --debug --no-bundle
+
+      # Journeys 1, 2 and 5 (M1a-2) through the real Rust backend, webview and
+      # CSP. Journey 1 resolves metadata from doi.org, so it needs the network.
+      - name: Journeys
+        run: xvfb-run --auto-servernum pnpm e2e:app
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-e2e-results
+          path: e2e-app/results
+          if-no-files-found: ignore
+          retention-days: 7
+
   corpus:
     name: Ingest quality on real papers
     runs-on: ubuntu-latest

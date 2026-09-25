@@ -4,3 +4,7 @@
 allowBuilds:
   '@tailwindcss/oxide': true
   esbuild: true
+  # Pulled in by WebdriverIO (M1a-2). Their install scripts download Edge and
+  # Firefox drivers; the real-app journeys use tauri-driver, so nothing is fetched.
+  edgedriver: false
+  geckodriver: false

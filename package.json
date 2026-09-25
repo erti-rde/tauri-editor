@@ -23,7 +23,8 @@
 		"sync:pdf-assets": "node scripts/sync-pdf-assets.mjs",
 		"harness:build": "pnpm sync:pdf-assets && vite build --mode harness",
 		"e2e": "playwright test",
-		"e2e:shots": "ERTI_SHOTS=1 playwright test shots"
+		"e2e:shots": "ERTI_SHOTS=1 playwright test shots",
+		"e2e:app": "wdio run e2e-app/wdio.conf.mjs"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^19.8.1",
@@ -45,6 +46,11 @@
 		"@testing-library/svelte": "^5.4.2",
 		"@testing-library/user-event": "^14.6.1",
 		"@vitest/coverage-v8": "^3.2.7",
+		"@wdio/cli": "9.32.0",
+		"@wdio/globals": "9.31.3",
+		"@wdio/local-runner": "9.32.0",
+		"@wdio/mocha-framework": "9.32.0",
+		"@wdio/spec-reporter": "9.32.0",
 		"bits-ui": "^2.18.1",
 		"eslint": "^9.39.5",
 		"eslint-config-prettier": "^10.1.8",
