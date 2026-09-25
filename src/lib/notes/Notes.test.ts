@@ -124,6 +124,25 @@ describe('when there is nothing to show', () => {
 	});
 });
 
+describe('browsing, with nothing asked', () => {
+	it('names each paper, and keeps marks from other projects apart', async () => {
+		// Browsing listed every mark as "unknown paper" under "In this project":
+		// the plain list it read carries neither the paper nor the project.
+		db.searchAnnotations.mockResolvedValue([
+			MARK,
+			{ ...MARK, id: 'a2', sha256: 'sha-2', in_project: false, file_name: 'elsewhere.pdf' }
+		]);
+
+		render(Notes);
+
+		expect(await screen.findByText(/paper\.pdf/)).toBeInTheDocument();
+		expect(screen.getByText(/elsewhere\.pdf/)).toBeInTheDocument();
+		expect(screen.getByText('Elsewhere in your library')).toBeInTheDocument();
+		expect(screen.queryByText(/unknown paper/)).not.toBeInTheDocument();
+		expect(db.searchAnnotations).toHaveBeenCalledWith('', { limit: 100 });
+	});
+});
+
 describe('following the writing', () => {
 	it('says what it does, not how it works', async () => {
 		render(Notes);

@@ -945,6 +945,11 @@ const ANNOTATION_SEARCH_WITH_EMBEDDING: &str = "SELECT a.id, a.sha256, a.kind, a
 /// it honest. A researcher has hundreds of marks, not millions; scanning them is
 /// microseconds. FTS5 is the answer if that ever stops being true, and measuring
 /// is how we would know.
+///
+/// An empty query filters nothing: every mark, newest first, with its paper's
+/// name and whether it's in the project. That's what browsing the Notes panel
+/// shows. A `LIKE '%%'` would have skipped marks with neither a quote nor a
+/// note, such as an area snapshot nobody has annotated yet.
 pub async fn search_annotations_literally(
     pool: &SqlitePool,
     query: &str,
@@ -955,7 +960,7 @@ pub async fn search_annotations_literally(
 
     let rows = sqlx::query(&format!(
         "{ANNOTATION_SEARCH_SELECT}
-          WHERE a.quote LIKE ?1 ESCAPE '\\' OR a.note LIKE ?1 ESCAPE '\\'
+          WHERE ?1 = '%%' OR a.quote LIKE ?1 ESCAPE '\\' OR a.note LIKE ?1 ESCAPE '\\'
           ORDER BY a.created_at DESC
           LIMIT ?2"
     ))

@@ -364,6 +364,51 @@ async fn a_search_says_which_paper_a_mark_is_on() {
 }
 
 #[tokio::test]
+async fn browsing_lists_every_mark_with_its_paper_and_project() {
+    // The Notes panel with nothing typed. It used to list marks without their
+    // paper, as "unknown paper", and every one under "In this project".
+    let (_dir, _state, pool) = library_with_source("browse").await;
+    queries::register_source(&pool, "sha-2", "/elsewhere/two.pdf", "two.pdf")
+        .await
+        .unwrap();
+
+    queries::save_annotation(&pool, &highlight("quoted"))
+        .await
+        .unwrap();
+    let mut area = highlight("area");
+    area.kind = "area".into();
+    area.sha256 = "sha-2".into();
+    area.quote = None;
+    area.prefix = None;
+    area.suffix = None;
+    queries::save_annotation(&pool, &area).await.unwrap();
+
+    let found = queries::search_annotations_literally(&pool, "", &["sha-1".into()], 10)
+        .await
+        .unwrap();
+
+    // An area snapshot with no quote and no note is a mark too.
+    let mut rows: Vec<_> = found
+        .iter()
+        .map(|m| {
+            (
+                m.annotation.id.as_str(),
+                m.file_name.as_deref(),
+                m.in_project,
+            )
+        })
+        .collect();
+    rows.sort();
+    assert_eq!(
+        rows,
+        vec![
+            ("area", Some("two.pdf"), false),
+            ("quoted", Some("one.pdf"), true)
+        ]
+    );
+}
+
+#[tokio::test]
 async fn a_wildcard_typed_into_the_box_is_not_a_wildcard() {
     // '%' is an ordinary character in a quotation about statistics, and typing
     // it should not match every mark in the library.
