@@ -1,8 +1,8 @@
 # Releasing Erti
 
-How a version gets from `main` to a researcher's machine, at no cost to the project. This is the
-design M7a implements. Until then, `release.yaml` is the old workflow, and the defects listed at
-the end are why it can't ship 1.0 as-is.
+How a version gets from `main` to a researcher's machine, at no cost to the project.
+`release.yaml` implements the pipeline below (M7a-1), with its decisions in `scripts/release`.
+Running it by hand is a dry run: every build and check, and no release.
 
 ## Principles
 
@@ -95,7 +95,9 @@ release's notes.
 - A **manuscript or library format change** is called out in its own section, even when it's
   backward compatible, because it's what a co-author on an older version runs into.
 
-## Defects in the current `release.yaml`
+## Defects in the old `release.yaml`, fixed in M7a-1
+
+Kept as the record of why each part of the pipeline is the way it is.
 
 1. The changelog is written to `$GITHUB_OUTPUT` with `echo`, which keeps one line. The checkout
    has no `fetch-depth: 0`, so there are no tags to diff from. `git tag --list | tail` sorts
