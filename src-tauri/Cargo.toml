@@ -33,7 +33,11 @@ sqlx = { version = "0.8.2", features = ["runtime-tokio", "sqlite"] }
 sha2 = "0.10"
 ort = "=2.0.0-rc.9"
 ndarray = "0.16.1"
-tokenizers = "0.23.1"
+# Default features off: `esaxx_fast` compiles C++ against the static C runtime,
+# which MSVC refuses to link beside ONNX Runtime's dynamic one, so Windows
+# builds failed outright (LNK2038). It and `progressbar` only serve training a
+# tokenizer; Erti only runs one. `onig` stays for the regex pre-tokenizers.
+tokenizers = { version = "0.23.1", default-features = false, features = ["onig"] }
 tauri-plugin-opener = "2"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
