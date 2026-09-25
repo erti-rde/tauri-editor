@@ -156,19 +156,19 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 
 ### M1a — Safety net and file format _(M, critical path)_ · [spec](docs/specs/M1a.md)
 
-- [ ] **M1a-1** App-in-browser test harness (spiked: feasible)
-- [ ] **M1a-2** Real-app E2E on Linux (journeys 1, 2, 5)
-- [ ] **M1a-3** Scope the Rust path commands (SEC-1)
-- [ ] **M1a-4** Narrow the fs permissions; deletes go to the trash (SEC-2)
-- [ ] **M1a-5** Library backups, always before a migration (ADR-8)
-- [ ] **M1a-6** Tests for `adapterCslZotero.ts` (#67)
-- [ ] **M1a-7** Extract manuscript load and save (ADR-1)
+- [x] **M1a-1** App-in-browser test harness (spiked: feasible) (#197)
+- [x] **M1a-2** Real-app E2E on Linux (journeys 1, 2, 5) (#200)
+- [x] **M1a-3** Scope the Rust path commands (SEC-1) (#199)
+- [ ] **M1a-4** Narrow the fs permissions (SEC-2); the trash command moved to M5-7
+- [x] **M1a-5** Library backups, always before a migration (ADR-8) (#202)
+- [x] **M1a-6** Tests for `adapterCslZotero.ts` (#67) (#201)
+- [x] **M1a-7** Extract manuscript load and save (ADR-1) (#203)
 - [ ] **M1a-8** Manuscript format 1, cross-version safe; citations from outside the library
       (ADR-2, UX-12)
-- [ ] **M1a-9** `-no-shell-escape` (SEC-11)
+- [x] **M1a-9** `-no-shell-escape` (SEC-11) (#198)
 - [x] **M1a-10** One typed contract with Rust: generated bindings, typed errors (ADR-11). The
       harness builds on it (#195)
-- [ ] **M1a-11** Typed settings: one module; nothing opens the settings file directly
+- [x] **M1a-11** Typed settings: one module; nothing opens the settings file directly (#204)
 - [ ] **M1a-12** Logging and global error handling (was M6-6)
 
 ### M1b — Sources, notes and import _(L, critical path)_ · [spec](docs/specs/M1b.md)
@@ -182,7 +182,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M1b-7** Attach a PDF to a source (UX-3 File tab)
 - [ ] **M1b-8** Notes on a source (ADR-4, UX-3)
 - [ ] **M1b-9** Import a bibliography, with preview (ADR-9, UX-6)
-- [ ] **M1b-10** Shape guards and size limits (SEC-3, SEC-4)
+- [x] **M1b-10** Shape guards and size limits (SEC-3, SEC-4) (#205)
 
 ### M1c — Design system _(M, before any new UI)_ · [spec](docs/specs/M1c.md)
 

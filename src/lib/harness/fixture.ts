@@ -236,6 +236,8 @@ export function defaultFixture(): Fixture {
 		],
 		files: {
 			[MANUSCRIPT]: JSON.stringify(manuscript),
+			// Opened before: this is how Erti knows a recent project is still there.
+			[`${ROOT}/.erti/project.db`]: '',
 			[`${ROOT}/papers/vaswani-2017.pdf`]: { pdf: paperUrl },
 			[`${ROOT}/papers/devlin-2019.pdf`]: { pdf: paperUrl },
 			[`${ROOT}/papers/scan-chapter.pdf`]: { pdf: paperUrl }
