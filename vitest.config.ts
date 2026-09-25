@@ -24,7 +24,7 @@ export default defineConfig({
 		// a genuinely hung test still fails rather than hanging the job.
 		testTimeout: 30_000,
 		hookTimeout: 60_000,
-		include: ['src/**/*.{test,spec}.{js,ts,svelte}'],
+		include: ['src/**/*.{test,spec}.{js,ts,svelte}', 'scripts/**/*.test.mjs'],
 		setupFiles: ['./vitest.setup.ts'],
 		coverage: {
 			provider: 'v8',

@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  # The release pipeline runs all of this before it builds anything.
+  workflow_call:
 
 # Dependency install and cargo build both run third-party scripts. Give the token
 # no more than read access, and keep it out of the checkout's git config.
