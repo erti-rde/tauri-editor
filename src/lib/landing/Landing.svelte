@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { documentDir } from '@tauri-apps/api/path';
-	import { exists } from '@tauri-apps/plugin-fs';
 	import { onMount } from 'svelte';
 
+	import { commands } from '$lib/ipc';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { errorToast } from '$lib/toast/Toast.svelte';
 	import {
@@ -39,10 +39,15 @@
 		// A project folder can be moved, renamed or deleted between launches.
 		// Checking up front means the list says which are gone rather than
 		// failing when one is clicked.
-		const gone = await Promise.all(
-			recents.map(async (p) => ((await exists(p.path)) ? null : p.path))
-		);
-		missing = new Set(gone.filter((p): p is string => p !== null));
+		// Asked of Rust rather than the fs plugin, which can no longer see
+		// outside the open project (M1a-4). A folder is present if Erti's
+		// `.erti` folder is still in it.
+		try {
+			const present = await commands.recentProjectsPresent(recents.map((p) => p.path));
+			missing = new Set(recents.filter((_, i) => !present[i]).map((p) => p.path));
+		} catch (error) {
+			console.error('Could not check the recent projects:', error);
+		}
 	});
 
 	async function openProject(path: string) {
