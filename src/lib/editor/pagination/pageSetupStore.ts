@@ -9,6 +9,7 @@ import {
 	toPageRule,
 	type PageSetup
 } from './paper';
+import { log } from '$lib/log';
 
 /**
  * How the page is set up, and where that gets applied.
@@ -67,7 +68,7 @@ function createPageSetupStore() {
 			try {
 				apply(normalisePageSetup(await readSetting('pageSetup')));
 			} catch (error) {
-				console.error('Could not read the page setup:', error);
+				log.error('Could not read the page setup', error);
 				apply(DEFAULT_PAGE_SETUP);
 			}
 		},
@@ -82,7 +83,7 @@ function createPageSetupStore() {
 			} catch (error) {
 				// Already on screen; only persistence failed, so it is reported
 				// rather than reverted under the author mid-sentence.
-				console.error('Could not save the page setup:', error);
+				log.error('Could not save the page setup', error);
 			}
 		},
 

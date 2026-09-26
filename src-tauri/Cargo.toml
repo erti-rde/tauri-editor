@@ -38,6 +38,8 @@ tauri-plugin-opener = "2"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 specta-typescript = "=0.0.12"
+tauri-plugin-log = "2"
+log = "0.4"
 
 
 [dev-dependencies]

@@ -25,6 +25,8 @@ pub fn run() {
     .expect("failed to export the TypeScript bindings");
 
     tauri::Builder::default()
+        // First, so everything after it can log (M1a-12).
+        .plugin(logger())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
@@ -35,6 +37,13 @@ pub fn run() {
         // string cannot express.
         .manage(db::DbState::default())
         .setup(|app| {
+            log::info!(
+                "Erti {} started on {} {}",
+                app.package_info().version,
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            );
+
             // A folder or file the user picks in a dialog is theirs to hand to
             // Erti. The dialog plugin announces each pick through the fs scope;
             // the path commands accept it for the rest of the session (M1a-3).
@@ -57,7 +66,7 @@ pub fn run() {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = ml::initialize_ml_state(&resource_dir).await {
-                    eprintln!("Failed to initialize ML state: {}", e);
+                    log::error!("Failed to initialize ML state: {e}");
                     handle.exit(1);
                 }
             });
@@ -71,6 +80,36 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
+/// One log file, Rust's and the webview's lines together (M1a-12).
+///
+/// It stays on the machine: the log directory, and the terminal in a debug
+/// build. One file, started afresh when it passes 2 MB, so it never grows
+/// without bound and there's only one thing to attach to a bug report. Times
+/// are UTC: the plugin can't read the local offset from a multithreaded
+/// process on Unix, and a setting asking for local time falls back to UTC.
+///
+/// What goes in is Erti's own account of what it did. Crates that log what
+/// they were given are held to warnings: sqlx logs each statement at debug.
+fn logger() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    use log::LevelFilter;
+    use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
+
+    let mut targets = vec![Target::new(TargetKind::LogDir { file_name: None })];
+    if cfg!(debug_assertions) {
+        targets.push(Target::new(TargetKind::Stdout));
+    }
+    tauri_plugin_log::Builder::new()
+        .clear_targets()
+        .targets(targets)
+        .level(LevelFilter::Info)
+        .level_for("sqlx", LevelFilter::Warn)
+        .level_for("ort", LevelFilter::Warn)
+        .level_for("tokenizers", LevelFilter::Warn)
+        .max_file_size(2_000_000)
+        .rotation_strategy(RotationStrategy::KeepOne)
+        .build()
+}
+
 /// Every command the webview can call, in one place (ADR 011).
 ///
 /// Tauri's generated command helpers are only visible inside this crate, so the
@@ -78,6 +117,7 @@ pub fn run() {
 pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
         read_directory,
+        open_log_folder,
         read_pdf_file,
         embed_chunks,
         // Database surface. No statement is accepted from the frontend.

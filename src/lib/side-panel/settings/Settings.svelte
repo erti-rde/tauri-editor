@@ -3,6 +3,7 @@
 
 	import AppearanceSettings from './AppearanceSettings.svelte';
 	import PageSetupSettings from './PageSetupSettings.svelte';
+	import LogSettings from './LogSettings.svelte';
 	import ReadingSettings from './ReadingSettings.svelte';
 	import { autoReferences } from '$lib/editor/references/referencesStore';
 	import { onMount } from 'svelte';
@@ -17,6 +18,7 @@
 		parseManifest,
 		type BundledManifest
 	} from '$lib/citations/bundled';
+	import { log } from '$lib/log';
 
 	interface Props {
 		isOpen: boolean;
@@ -111,7 +113,7 @@
 						) as { [key: string]: string[] })
 					: {};
 		} catch (error) {
-			console.error('Error loading resources:', error);
+			log.error('Error loading resources', error);
 			errorToast('Could not load the bundled citation styles.');
 		}
 
@@ -120,7 +122,7 @@
 		try {
 			bundled = parseManifest(JSON.parse(await readResource('bundled.json')));
 		} catch (error) {
-			console.error('Could not read the bundled citation styles:', error);
+			log.error('Could not read the bundled citation styles', error);
 			bundled = null;
 		}
 	}
@@ -188,14 +190,13 @@
 
 						// Verify that we received valid XML
 						if (!styleXml || !styleXml.trim().startsWith('<')) {
-							console.error('Invalid style XML received:', styleXml?.substring(0, 100));
 							throw new Error(`"${selectedStyle}" could not be read as a citation style.`);
 						}
 
 						await writeSetting('cslXml', styleXml);
 						styleHasChanged = true;
 					} catch (error) {
-						console.error('Error fetching style:', error);
+						log.error('Error fetching style', error);
 						// If fetch fails, keep the old style selected
 						await writeSetting('selectedStyle', oldStyle);
 						selectedStyle = oldStyle ?? '';
@@ -235,7 +236,6 @@
 
 						// Verify that we received valid XML
 						if (!localeXml || !localeXml.trim().startsWith('<')) {
-							console.error('Invalid locale XML received:', localeXml?.substring(0, 100));
 							throw new Error(`The ${selectedLocale} citation language could not be read.`);
 						}
 
@@ -243,7 +243,7 @@
 						localeHasChanged = true;
 					}
 				} catch (error) {
-					console.error('Error fetching locale:', error);
+					log.error('Error fetching locale', error);
 					// If fetch fails, keep the old locale selected
 					await writeSetting('selectedLocale', oldLocale);
 					selectedLocale = oldLocale ?? 'en-GB';
@@ -267,7 +267,7 @@
 
 			closeSettings();
 		} catch (error) {
-			console.error('Error saving settings:', error);
+			log.error('Error saving settings', error);
 			// The dialog stays open so the failed choice can be corrected. The error
 			// used to go only to a console nobody has open, and the style simply
 			// did not change.
@@ -395,6 +395,8 @@
 									</p>
 								</div>
 							{/if}
+
+							<LogSettings />
 						</div>
 					</Tabs.Content>
 

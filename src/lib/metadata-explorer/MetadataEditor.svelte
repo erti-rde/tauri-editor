@@ -10,6 +10,7 @@
 	import { augmentSchema } from './adapterCslZotero';
 	import { describeAuthors, describeType } from './sourceRows';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
+	import { log } from '$lib/log';
 
 	type Source = {
 		id: string;
@@ -49,7 +50,7 @@
 		try {
 			return JSON.parse(cslJson) as CitationItem;
 		} catch (error) {
-			console.error('Unreadable citation metadata; treating the source as unresolved.', error);
+			log.error('Unreadable citation metadata; treating the source as unresolved.', error);
 			return null;
 		}
 	}

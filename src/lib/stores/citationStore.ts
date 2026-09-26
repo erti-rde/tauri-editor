@@ -10,6 +10,7 @@ import {
 	resolveCitationSetup,
 	type BundledManifest
 } from '$lib/citations/bundled';
+import { log } from '$lib/log';
 
 // Define types for our citation data
 export interface CitationItem {
@@ -81,7 +82,7 @@ function createCitationStore() {
 	async function initializeCitationStore(): Promise<boolean> {
 		const state = await getInitialState();
 		set(state);
-		if (state.error) console.error('Citations cannot be formatted:', state.error);
+		if (state.error) log.error('Citations cannot be formatted', state.error);
 		return state.engine !== null;
 	}
 
@@ -108,7 +109,7 @@ function createCitationStore() {
 		try {
 			return engine.render([{ id: 'preview', itemIds: known }])[0]?.text ?? '';
 		} catch (error) {
-			console.error('Could not preview citation:', error);
+			log.error('Could not preview citation', error);
 			return '';
 		}
 	}
@@ -142,7 +143,7 @@ function createCitationStore() {
 			return rendered;
 		} catch (error) {
 			// A style the processor rejects must not take the manuscript with it.
-			console.error('Could not render the document citations:', error);
+			log.error('Could not render the document citations', error);
 			return null;
 		}
 	}

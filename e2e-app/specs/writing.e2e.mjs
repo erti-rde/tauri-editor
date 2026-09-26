@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { $, browser } from '@wdio/globals';
 
@@ -51,5 +51,34 @@ describe('writing with sources', () => {
 		const bib = readFileSync(join(dir, 'references.bib'), 'utf8');
 		expect(tex).toMatch(/\\cite[pt]?\{/);
 		expect(bib).toContain('Attention Is All You Need');
+	});
+
+	// M1a-12 AC-1, AC-3 and AC-4, in the real app.
+	it('keeps one log on this machine, with nothing that was written in it', async () => {
+		// An error nothing catches, thrown in the webview as a bug would be.
+		await browser.execute(() => {
+			setTimeout(() => {
+				throw new Error('Probe from the journey');
+			});
+		});
+		await $('div*=Something went wrong: Probe from the journey').waitForDisplayed();
+
+		const dir = join(process.env.ERTI_E2E_HOME, '.local', 'share', 'com.erti.app', 'logs');
+		const read = () => {
+			const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.log')) : [];
+			return files.length === 1 ? readFileSync(join(dir, files[0]), 'utf8') : '';
+		};
+		await browser.waitUntil(() => read().includes('Probe from the journey'), {
+			timeout: 10_000,
+			timeoutMsg: `no log in ${dir} with the webview's line`
+		});
+
+		expect(readdirSync(dir).filter((f) => f.endsWith('.log'))).toHaveLength(1);
+		const logged = read();
+		// Rust's lines and the webview's, in the one file.
+		expect(logged).toMatch(/Erti \S+ started on linux/);
+		expect(logged).toMatch(/Uncaught error: Error: Probe from the journey/);
+		// What was typed into the manuscript isn't.
+		expect(logged).not.toContain('Attention-only models train in parallel');
 	});
 });

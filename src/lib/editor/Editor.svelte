@@ -55,6 +55,7 @@
 	import BubbleMenu from './extensions/BubbleMenu.svelte';
 	import Result from './extensions/citation/Result.svelte';
 	import ToolBar from './extensions/ToolBar.svelte';
+	import { log } from '$lib/log';
 
 	let editor = $state() as Readable<Editor>;
 	let editable = true;
@@ -108,7 +109,7 @@
 			// A failed save is the one thing the user must not miss. The content is
 			// kept and retried on a backoff, so this says that rather than implying
 			// the work is gone.
-			console.error('Save failed:', error);
+			log.error('Save failed', error);
 			errorToast(
 				`Could not save your document: ${error instanceof Error ? error.message : String(error)}. Your changes are kept and will be saved again automatically.`
 			);
@@ -387,14 +388,16 @@
 			if (result.ok) {
 				successToast(`Compiled export/main.pdf with ${tex.engine}.`);
 			} else {
-				// The log is the only thing that says what went wrong.
-				console.error(result.log);
+				// TeX's log is the only thing that says what went wrong, and TeX
+				// writes it beside the bundle. It's never copied into Erti's log:
+				// it quotes the manuscript line by line.
+				log.warn(`${tex.engine} could not compile the LaTeX bundle`);
 				errorToast(
-					`${tex.engine} could not compile the document. The bundle is in export/ and the log is in the console.`
+					`${tex.engine} could not compile the document. The bundle is in export/, with TeX's account of what went wrong in main.log.`
 				);
 			}
 		} catch (error) {
-			console.error('LaTeX export failed:', error);
+			log.error('LaTeX export failed', error);
 			errorToast(
 				`Could not write the LaTeX bundle: ${error instanceof Error ? error.message : String(error)}`
 			);
@@ -419,10 +422,10 @@
 
 		const loaded = await manuscript.open(target);
 		if (loaded.status === 'empty') {
-			console.warn(`${target} is empty; starting from a blank document.`);
+			log.warn(`${target} is empty; starting from a blank document`);
 		}
 		if (loaded.status === 'unreadable') {
-			console.error(`Could not read ${target}:`, loaded.error);
+			log.error(`Could not read ${target}`, loaded.error);
 			errorToast(
 				`${target.split('/').pop()} could not be read. It has been left untouched — open it in a text editor to check.`
 			);
@@ -474,7 +477,7 @@
 	/** An empty manuscript, written only if that name is genuinely free. */
 	async function createOnDisk(path: string): Promise<boolean> {
 		const result = await manuscript.create(path);
-		if (!result.created) console.error(`Could not create ${path}:`, result.error);
+		if (!result.created) log.error(`Could not create ${path}`, result.error);
 		return result.created;
 	}
 
@@ -635,7 +638,7 @@
 				label: citationStore.previewCitation([sha256])
 			});
 		} catch (failure) {
-			console.error('Could not cite that paper:', failure);
+			log.error('Could not cite that paper', failure);
 			errorToast('Could not cite that paper.');
 		}
 	}

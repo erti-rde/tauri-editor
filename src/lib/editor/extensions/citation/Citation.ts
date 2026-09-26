@@ -17,6 +17,7 @@ import { citationStore } from '$lib/stores/citationStore';
 import SvelteRenderer from '../../core/SvelteRenderer';
 import CitationSuggestion from './CitationSuggestion.svelte';
 import { suggestion } from './Suggestion.svelte';
+import { log } from '$lib/log';
 
 declare module '@tiptap/core' {
 	interface Commands<ReturnType> {
@@ -188,7 +189,6 @@ export const Citation = Node.create({
 				items: Object.values(citationStore.getAllSourcesAsJson()),
 				initialSelection: JSON.parse(attrs.id),
 				cl: (id: string | null) => {
-					console.log('Command executed with id:', id);
 					const { state: editorState } = this.editor;
 					const { selection } = editorState;
 					const { from, to } = selection;
@@ -233,8 +233,6 @@ export const Citation = Node.create({
 						this.storage.popup[0].destroy();
 						this.storage.popup = null;
 					}
-
-					console.log({ state: this.storage });
 				}
 			};
 			// Create the component
@@ -359,7 +357,6 @@ export const Citation = Node.create({
 						// Let the component handle the keydown event
 						const handled =
 							this.storage.component.onKeyDown && this.storage.component.onKeyDown({ event });
-						// console.log({ handled, key: event.key });
 
 						// If component handled it, make sure to prevent default behavior
 						if (handled) {
@@ -374,8 +371,6 @@ export const Citation = Node.create({
 		}
 		// Case 2: We're leaving a citation node
 		else if (!isInCitation && this.storage.active) {
-			console.log('Case 2: We are leaving a citation node');
-
 			// Clean up the popup and component
 			if (this.storage.popup && this.storage.popup[0]) {
 				this.storage.popup[0].destroy();
@@ -394,7 +389,7 @@ export const Citation = Node.create({
 						capture: true
 					});
 				} catch (e) {
-					console.error('Error removing event listener:', e);
+					log.error('Error removing event listener', e);
 				}
 				this.storage.handleKeyDown = null;
 			}
@@ -403,7 +398,6 @@ export const Citation = Node.create({
 		}
 		// Case 3: We're updating within a citation node
 		else if (isInCitation && this.storage.active) {
-			console.log('Case 3: We re updating within a citation node');
 			// Update the popup position if needed
 			const { state: editorState } = this.editor;
 			const { selection } = editorState;

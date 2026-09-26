@@ -45,6 +45,7 @@
 		type PdfLocation,
 		type Rect
 	} from './location';
+	import { log } from '$lib/log';
 
 	/**
 	 * A paper, on screen.
@@ -111,7 +112,7 @@
 		} catch (failure) {
 			// A page whose text cannot be read still gets its mark, drawn on the
 			// browser's own measurement. Loosely placed beats absent.
-			console.error('Could not read the lines of this page:', failure);
+			log.error('Could not read the lines of this page', failure);
 			lineCache.remember(page, []);
 			return [];
 		}
@@ -423,7 +424,7 @@
 				const printed = await created.pageLabels();
 				if (mine === generation) labelsForPages = printed;
 			} catch (failure) {
-				console.error('Could not read the printed page numbers:', failure);
+				log.error('Could not read the printed page numbers', failure);
 			}
 
 			try {
@@ -431,14 +432,14 @@
 				if (mine === generation) contents = found;
 			} catch (failure) {
 				// A paper without one is the ordinary case, not a fault.
-				console.error('Could not read the table of contents:', failure);
+				log.error('Could not read the table of contents', failure);
 			}
 
 			if (mine === generation) document_ += 1;
 		} catch (failure) {
 			if (mine !== generation) return;
 
-			console.error('Could not open the PDF:', failure);
+			log.error('Could not open the PDF', failure);
 			error = failure instanceof Error ? failure.message : String(failure);
 		} finally {
 			if (mine === generation) loading = false;
@@ -887,7 +888,7 @@
 		} catch (failure) {
 			// A page whose text cannot be read still gets its rectangles, which are
 			// what draw the mark. Only finding it again later is weaker.
-			console.error('Could not read the page text for this mark:', failure);
+			log.error('Could not read the page text for this mark', failure);
 		}
 
 		return {
@@ -952,7 +953,7 @@
 			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 			successToast('Copied the picture.');
 		} catch (failure) {
-			console.error('Could not copy that picture:', failure);
+			log.error('Could not copy that picture', failure);
 			errorToast('Could not copy that picture.');
 		}
 	}
@@ -974,7 +975,7 @@
 			await writeFile(target, new Uint8Array(bytes));
 			successToast('Saved the picture.');
 		} catch (failure) {
-			console.error('Could not save that picture:', failure);
+			log.error('Could not save that picture', failure);
 			errorToast('Could not save that picture.');
 		}
 	}
@@ -1278,7 +1279,7 @@
 			const undone = await annotationsStore.undo();
 			if (undone) successToast(`Put back ${undone}.`);
 		} catch (failure) {
-			console.error('Could not undo that:', failure);
+			log.error('Could not undo that', failure);
 			errorToast('Could not undo that.');
 		}
 	}
@@ -1321,7 +1322,7 @@
 
 			if (mine === generation) offered = found;
 		} catch (failure) {
-			console.error('Could not look for existing highlights:', failure);
+			log.error('Could not look for existing highlights', failure);
 		}
 	}
 
@@ -1360,7 +1361,7 @@
 			sidebarTab = 'marks';
 			sidebarOpen = true;
 		} catch (failure) {
-			console.error('Could not import those highlights:', failure);
+			log.error('Could not import those highlights', failure);
 			errorToast('Could not bring in those highlights.');
 		} finally {
 			importing = false;
@@ -1424,7 +1425,7 @@
 
 			if (png) await saveAnnotationImage(id, Array.from(png));
 		} catch (failure) {
-			console.error('Could not keep that region:', failure);
+			log.error('Could not keep that region', failure);
 			errorToast('Could not keep that region of the page.');
 		}
 	}

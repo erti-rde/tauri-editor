@@ -195,6 +195,11 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			return tree(prefix, below);
 		},
 
+		// There's no log folder to show; journeys check the call was made.
+		openLogFolder() {
+			return null;
+		},
+
 		async readPdfFile(path) {
 			const url = disk.pdfUrl(path);
 			if (!url) throw notFound(path);

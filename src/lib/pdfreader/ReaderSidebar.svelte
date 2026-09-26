@@ -6,6 +6,7 @@
 
 	import type { Annotation, AnnotationLabel } from '$lib/stores/db';
 	import type { OutlineItem } from './viewer';
+	import { log } from '$lib/log';
 
 	/**
 	 * The panel a PDF reader has.
@@ -102,7 +103,7 @@
 		} catch (failure) {
 			// A page that will not draw leaves an empty frame with its number on
 			// it, which is still a place to click.
-			console.error('Could not draw that page small:', failure);
+			log.error('Could not draw that page small', failure);
 		} finally {
 			delete drawing[n];
 		}

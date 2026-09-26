@@ -10,6 +10,7 @@
 
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { clickOutside } from '$utils/clickOutside.svelte';
+	import { log } from '$lib/log';
 
 	interface Props {
 		selectedText: string;
@@ -97,7 +98,7 @@
 				inlineCitation: citationStore.previewCitation([match.sha256])
 			});
 		} catch (error) {
-			console.error('Could not cite that source:', error);
+			log.error('Could not cite that source', error);
 			errorToast(
 				`Could not add that source to this project: ${error instanceof Error ? error.message : String(error)}`
 			);

@@ -13,6 +13,7 @@
 		rememberProject,
 		type RecentProject
 	} from './recentProjects';
+	import { log } from '$lib/log';
 
 	/**
 	 * The first thing anyone sees.
@@ -54,7 +55,7 @@
 			await rememberProject(path);
 			handleProjectOpening();
 		} catch (error) {
-			console.error('Could not open the project:', error);
+			log.error('Could not open the project', error);
 			errorToast(
 				`Could not open ${path}: ${error instanceof Error ? error.message : String(error)}`
 			);
