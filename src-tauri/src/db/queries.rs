@@ -221,6 +221,47 @@ pub async fn set_source_metadata(
     Ok(())
 }
 
+/// Add a source the library doesn't have, from the snapshot a manuscript
+/// carries (M1a-8, UX-12 "Add to library").
+///
+/// It has metadata and no file: nothing to extract, so it's recorded as ready
+/// and never offered for ingest, and no location says where a PDF is. Keyed by
+/// the id the manuscript cites, which for a paper is the hash of the
+/// co-author's PDF, so adding that PDF later lands on this same source.
+///
+/// A source already in the library is left exactly as it is: its own metadata
+/// and ingest state win over a snapshot. Returns whether it was new.
+pub async fn add_source_without_file(
+    pool: &SqlitePool,
+    id: &str,
+    csl_json: &str,
+    zotero_type: Option<&str>,
+    doi: Option<&str>,
+) -> Result<bool, String> {
+    let inserted = sqlx::query(
+        "INSERT OR IGNORE INTO sources (sha256, csl_json, zotero_type, doi, resolved_via, resolved_at)
+         VALUES (?, ?, ?, ?, 'manuscript', CURRENT_TIMESTAMP)",
+    )
+    .bind(id)
+    .bind(csl_json)
+    .bind(zotero_type)
+    .bind(doi)
+    .execute(pool)
+    .await
+    .map_err(|e| e.to_string())?
+    .rows_affected()
+        > 0;
+
+    if inserted {
+        sqlx::query("INSERT OR IGNORE INTO ingest_status (sha256, state) VALUES (?, 'ready')")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(inserted)
+}
+
 pub async fn project_source_hashes(project: &SqlitePool) -> Result<Vec<String>, String> {
     sqlx::query_scalar("SELECT sha256 FROM source_set ORDER BY added_at")
         .fetch_all(project)

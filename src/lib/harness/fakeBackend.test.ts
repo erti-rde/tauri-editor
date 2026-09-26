@@ -133,8 +133,12 @@ describe('behaving like the database', () => {
 	it('lists the project folder without its hidden files', async () => {
 		backend().files.set(`${ROOT}/.erti/project.db`, '');
 		const listing = await call(commands.readDirectory(ROOT));
-		expect(listing.map((i) => i.name)).toEqual(['Chapter 1.erti.json', 'papers']);
-		expect(listing[1].children?.map((i) => i.name)).toEqual([
+		expect(listing.map((i) => i.name)).toEqual([
+			'Chapter 1.erti.json',
+			'Shared chapter.erti.json',
+			'papers'
+		]);
+		expect(listing[2].children?.map((i) => i.name)).toEqual([
 			'devlin-2019.pdf',
 			'scan-chapter.pdf',
 			'vaswani-2017.pdf'

@@ -305,6 +305,25 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 				.sort((a, b) => a.file_name.localeCompare(b.file_name));
 		},
 
+		addSourceFromManuscript(id, cslJson) {
+			root();
+			state.project.add(id);
+			if (state.library.has(id)) return false;
+			const csl = JSON.parse(cslJson);
+			state.library.set(id, {
+				sha256: id,
+				file_name: '',
+				path: null,
+				csl_json: cslJson,
+				zotero_type: typeof csl.zotero_type === 'string' ? csl.zotero_type : null,
+				doi: typeof csl.DOI === 'string' ? csl.DOI : null,
+				resolved_via: 'manuscript',
+				state: 'ready',
+				last_error: null
+			});
+			return true;
+		},
+
 		addToProject(sha256) {
 			root();
 			if (!state.library.has(sha256)) throw appError('NotFound', `No source ${sha256}.`);

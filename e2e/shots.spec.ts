@@ -38,7 +38,15 @@ test('shots', async ({ page }) => {
 	await expect(page.getByText('Sample Paper for the Erti Harness').first()).toBeVisible();
 	await page.screenshot(shot('07-reader'));
 
+	// Back to the manuscript, whose document bar switches chapters.
+	await page.getByText('Chapter 1.erti.json').locator('visible=true').first().click();
+	await page.getByRole('button', { name: 'Shared chapter', exact: true }).click();
+	const away = page.locator('.ProseMirror [data-type="citation"][data-away]');
+	await away.hover();
+	await expect(page.getByRole('dialog', { name: 'Source from the manuscript' })).toBeVisible();
+	await page.screenshot(shot('08-away-citation'));
+
 	await page.getByRole('button', { name: 'Settings' }).click();
 	await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
-	await page.screenshot(shot('08-settings'));
+	await page.screenshot(shot('09-settings'));
 });

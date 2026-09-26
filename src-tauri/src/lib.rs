@@ -83,6 +83,7 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         // Database surface. No statement is accepted from the frontend.
         open_library,
         open_project,
+        add_source_from_manuscript,
         project_root,
         hash_file,
         register_source,
