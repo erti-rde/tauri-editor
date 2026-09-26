@@ -126,17 +126,26 @@ function updateAllCitations(tr: Transaction): boolean {
 	updated = refreshNotes(tr, rendered.notes) || updated;
 
 	if (sites.length === 0) return updated;
+	const idsAt = new Map(sites.map((site) => [site.pos, site.itemIds]));
 	for (const site of rendered.sites) {
 		const node = tr.doc.nodeAt(site.pos);
 		if (!node) continue;
-		if (node.attrs.label === site.label && node.attrs.noteIndex === site.noteIndex) continue;
+		const cited = idsAt.get(site.pos) ?? [];
+		const away = cited.some((id) => citationStore.isAway(id));
+		if (
+			node.attrs.label === site.label &&
+			node.attrs.noteIndex === site.noteIndex &&
+			node.attrs.away === away
+		)
+			continue;
 
 		// A citation is an inline atom, so rewriting its attributes does not move
 		// anything after it and the collected positions stay valid.
 		tr.setNodeMarkup(site.pos, undefined, {
 			...node.attrs,
 			label: site.label,
-			noteIndex: site.noteIndex
+			noteIndex: site.noteIndex,
+			away
 		});
 		updated = true;
 	}
@@ -457,6 +466,16 @@ export const Citation = Node.create({
 				parseHTML: (element) => Number(element.getAttribute('data-note-index')) || 0,
 				renderHTML: (attributes) =>
 					attributes.noteIndex ? { 'data-note-index': String(attributes.noteIndex) } : {}
+			},
+			/**
+			 * Rendered from the snapshot the manuscript carries, because this
+			 * library doesn't have the source (M1a-8, UX-12). Set with the label on
+			 * every render, since adding the source changes it.
+			 */
+			away: {
+				default: false,
+				parseHTML: (element) => element.hasAttribute('data-away'),
+				renderHTML: (attributes) => (attributes.away ? { 'data-away': '' } : {})
 			}
 		};
 	},
@@ -474,6 +493,7 @@ export const Citation = Node.create({
 		span.dataset.type = this.name;
 		span.dataset.id = node.attrs.id;
 		span.dataset.label = node.attrs.label;
+		if (node.attrs.away) span.dataset.away = '';
 
 		// In a note style the sentence carries a marker and the reference itself is
 		// in the notes section. Rendering the note text here instead would put a

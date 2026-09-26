@@ -62,6 +62,38 @@ const csl = (
 
 export const MANUSCRIPT = `${ROOT}/Chapter 1.erti.json`;
 
+/** A chapter a co-author wrote, citing a book this library doesn't have (UX-12). */
+export const SHARED = `${ROOT}/Shared chapter.erti.json`;
+export const AWAY = 'd'.repeat(64);
+
+export const sharedManuscript = {
+	type: 'doc',
+	content: [
+		{
+			type: 'paragraph',
+			content: [
+				{ type: 'text', text: 'As the classic account has it ' },
+				{ type: 'citation', attrs: { id: JSON.stringify([AWAY]) } },
+				{ type: 'text', text: '.' }
+			]
+		}
+	],
+	erti: {
+		format: 1,
+		savedWith: '1.0.0',
+		sources: {
+			[AWAY]: {
+				id: AWAY,
+				type: 'book',
+				title: 'The Structure of Scientific Revolutions',
+				author: [{ family: 'Kuhn', given: 'Thomas S.' }],
+				issued: { 'date-parts': [[1962]] },
+				publisher: 'University of Chicago Press'
+			}
+		}
+	}
+};
+
 /**
  * A short chapter with a heading, prose and one citation: enough for the
  * outline, the word count, the citation renderer and the bibliography to each
@@ -236,6 +268,7 @@ export function defaultFixture(): Fixture {
 		],
 		files: {
 			[MANUSCRIPT]: JSON.stringify(manuscript),
+			[SHARED]: JSON.stringify(sharedManuscript),
 			[`${ROOT}/papers/vaswani-2017.pdf`]: { pdf: paperUrl },
 			[`${ROOT}/papers/devlin-2019.pdf`]: { pdf: paperUrl },
 			[`${ROOT}/papers/scan-chapter.pdf`]: { pdf: paperUrl }

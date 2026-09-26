@@ -236,3 +236,64 @@ describe('citationStore', () => {
 		expect(citationStore.renderDocument([{ pos: 0, itemIds: ['1'] }])).toBeNull();
 	});
 });
+
+// M1a-8 AC-6, UX-12: sources the manuscript brings with it.
+describe('sources the manuscript carries', () => {
+	const library = [
+		{
+			sha256: 'hash1',
+			file_name: 'mine.pdf',
+			csl_json: JSON.stringify(fakeCitationItem),
+			state: 'ready'
+		}
+	];
+	const carried = {
+		hash1: { ...fakeCitationItem, title: 'The co-author’s older copy' },
+		hash2: { id: 'hash2', type: 'book', title: 'A book I don’t have' }
+	};
+
+	async function initialise(sources = library) {
+		const fakeStore = { get: vi.fn(async () => undefined) };
+		(pluginStore.load as unknown as MockInstance).mockResolvedValue(fakeStore);
+		(projectSources as unknown as MockInstance).mockResolvedValue(sources);
+		await citationStore.initializeCitationStore();
+	}
+
+	it('renders the ones the library lacks, marked away; the library wins for the rest', async () => {
+		await initialise();
+		citationStore.setManuscriptSources(carried);
+
+		const { citationSources, awayIds } = get(citationStore);
+		expect(awayIds).toEqual(['hash2']);
+		expect(citationSources.hash1.title).toBe('Test Book');
+		expect(citationSources.hash2.title).toBe('A book I don’t have');
+		expect(citationStore.isAway('hash2')).toBe(true);
+		expect(citationStore.isAway('hash1')).toBe(false);
+	});
+
+	it('goes when another manuscript opens', async () => {
+		await initialise();
+		citationStore.setManuscriptSources(carried);
+		citationStore.setManuscriptSources({});
+
+		expect(get(citationStore).awayIds).toEqual([]);
+		expect(get(citationStore).citationSources).not.toHaveProperty('hash2');
+	});
+
+	it('stays through a reload of the library, until the library has the source', async () => {
+		await initialise();
+		citationStore.setManuscriptSources(carried);
+
+		await initialise();
+		expect(get(citationStore).awayIds).toEqual(['hash2']);
+
+		// Added to the library: now it's the library's copy, and not away.
+		await initialise([
+			...library,
+			{ sha256: 'hash2', file_name: '', csl_json: JSON.stringify(carried.hash2), state: 'ready' }
+		]);
+		expect(get(citationStore).awayIds).toEqual([]);
+		expect(get(citationStore).citationSources.hash2.title).toBe('A book I don’t have');
+		citationStore.setManuscriptSources({});
+	});
+});

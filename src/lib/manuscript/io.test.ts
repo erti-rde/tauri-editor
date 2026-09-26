@@ -41,11 +41,16 @@ const DOC = {
 
 describe('reading a manuscript', () => {
 	it('parses a document', () => {
-		expect(parseManuscript(JSON.stringify(DOC))).toEqual({ status: 'ok', content: DOC });
+		expect(parseManuscript(JSON.stringify(DOC))).toEqual({
+			status: 'ok',
+			content: DOC,
+			sources: {},
+			format: 0
+		});
 	});
 
 	it.each(['', '   \n', 'undefined'])('treats %j as empty, to start from blank', (text) => {
-		expect(parseManuscript(text)).toEqual({ status: 'empty', content: {} });
+		expect(parseManuscript(text)).toEqual({ status: 'empty', content: {}, sources: {} });
 	});
 
 	it('reports a file that is not a document as unreadable', () => {
@@ -58,7 +63,8 @@ describe('reading a manuscript', () => {
 	it('treats a missing file as a new, blank document', async () => {
 		expect(await loadManuscript('/p/none.erti.json', disk().api)).toEqual({
 			status: 'missing',
-			content: {}
+			content: {},
+			sources: {}
 		});
 	});
 
@@ -68,7 +74,7 @@ describe('reading a manuscript', () => {
 			'{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Thesis"}]}]}';
 		const { api } = disk({ '/p/magnum_opus.json': legacy });
 		const loaded = await loadManuscript('/p/magnum_opus.json', api);
-		expect(loaded).toEqual({ status: 'ok', content: JSON.parse(legacy) });
+		expect(loaded).toEqual({ status: 'ok', content: JSON.parse(legacy), sources: {}, format: 0 });
 	});
 
 	it('writes what it read back unchanged', () => {
@@ -80,7 +86,11 @@ describe('creating a manuscript', () => {
 	it('writes an empty document under a free name', async () => {
 		const { files, api } = disk();
 		expect(await createManuscript('/p/Chapter 2.erti.json', api)).toEqual({ created: true });
-		expect(JSON.parse(files.get('/p/Chapter 2.erti.json')!)).toEqual({ type: 'doc', content: [] });
+		expect(JSON.parse(files.get('/p/Chapter 2.erti.json')!)).toMatchObject({
+			type: 'doc',
+			content: [],
+			erti: { format: 1, sources: {} }
+		});
 	});
 
 	it("never writes over a file that's already there", async () => {
@@ -101,7 +111,7 @@ describe('the read-failed guard', () => {
 
 		expect((await session.open('/p/a.erti.json')).status).toBe('unreadable');
 		expect(session.mayWrite('/p/a.erti.json')).toBe(false);
-		expect(await session.save('/p/a.erti.json', { type: 'doc', content: [] })).toBe(false);
+		expect(await session.save('/p/a.erti.json', { type: 'doc', content: [] }, {})).toBe(false);
 		expect(files.get('/p/a.erti.json')).toBe(broken);
 	});
 
@@ -118,7 +128,7 @@ describe('the read-failed guard', () => {
 		await session.open('/p/bad.erti.json');
 
 		expect(session.mayWrite('/p/bad.erti.json')).toBe(false);
-		await session.save('/p/bad.erti.json', {});
+		await session.save('/p/bad.erti.json', {}, {});
 		expect(files.get('/p/bad.erti.json')).toBe(broken);
 	});
 
@@ -131,8 +141,8 @@ describe('the read-failed guard', () => {
 		await session.open('/p/bad.erti.json');
 
 		expect(session.mayWrite('/p/good.erti.json')).toBe(true);
-		expect(await session.save('/p/good.erti.json', DOC)).toBe(true);
-		expect(JSON.parse(files.get('/p/good.erti.json')!)).toEqual(DOC);
+		expect(await session.save('/p/good.erti.json', DOC, {})).toBe(true);
+		expect(JSON.parse(files.get('/p/good.erti.json')!)).toMatchObject(DOC);
 	});
 
 	it('lifts when a readable file is opened, or the editor moves on', async () => {

@@ -52,6 +52,50 @@ pub async fn open_project_in(state: &DbState, root: String) -> Result<(), AppErr
     state.open_project(&PathBuf::from(root)).await.or_database()
 }
 
+/// Add a cited source this library lacks, from the manuscript's snapshot, and
+/// put it in the open project (M1a-8 AC-6). The webview guards the snapshot as
+/// CSL first (M1b-10); this refuses anything that isn't a JSON object or an id
+/// that couldn't be a source's.
+#[tauri::command]
+#[specta::specta]
+pub async fn add_source_from_manuscript(
+    state: State<'_, DbState>,
+    id: String,
+    csl_json: String,
+) -> Result<bool, AppError> {
+    add_source_from_manuscript_in(&state, id, csl_json).await
+}
+
+pub async fn add_source_from_manuscript_in(
+    state: &DbState,
+    id: String,
+    csl_json: String,
+) -> Result<bool, AppError> {
+    let invalid = |message: &str| AppError::new(crate::ipc::ErrorKind::InvalidInput, message);
+    if id.is_empty() || id.len() > 200 || id.chars().any(char::is_control) {
+        return Err(invalid("That isn't a source id."));
+    }
+    let csl: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&csl_json)
+        .map_err(|_| invalid("That source's details are damaged."))?;
+    let text = |key: &str| csl.get(key).and_then(|v| v.as_str()).map(str::to_owned);
+
+    let library = state.library().await?;
+    let added = queries::add_source_without_file(
+        &library,
+        &id,
+        &csl_json,
+        text("zotero_type").as_deref(),
+        text("DOI").as_deref(),
+    )
+    .await
+    .or_database()?;
+
+    if let Ok(project) = state.project().await {
+        queries::add_to_project(&project, &id).await.or_database()?;
+    }
+    Ok(added)
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn project_root(state: State<'_, DbState>) -> Result<String, AppError> {

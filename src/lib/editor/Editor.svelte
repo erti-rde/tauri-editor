@@ -14,6 +14,8 @@
 
 	import { createAutosave } from './autosave';
 	import { createManuscriptSession } from '$lib/manuscript/io';
+	import { citedIds, snapshotSources } from '$lib/manuscript/format';
+	import AwayCitationTip from './AwayCitationTip.svelte';
 	import { readSetting } from '$lib/settings';
 	import { countDocument } from './wordCount';
 	import { documentStatus } from '$lib/statusFooter/documentStatus';
@@ -82,6 +84,21 @@
 	 * (`$lib/manuscript/io`).
 	 */
 	const manuscript = createManuscriptSession();
+
+	/**
+	 * Set when the open file was saved by a newer Erti: the version that wrote
+	 * it, if it said. Shown read-only and never saved (M1a-8 AC-4), since this
+	 * build can't know what it would lose.
+	 */
+	let newerFile = $state<string | null>(null);
+
+	/** Editable if the user wants it and the file allows it. */
+	function applyEditable() {
+		// Without an update: changing whether the page can be edited isn't an
+		// edit, and an update here was counted as a citation arriving.
+		$editor?.setEditable(editable && newerFile === null, false);
+	}
+
 	/** Bumped on each document switch, so a superseded one abandons itself. */
 	let transition = 0;
 
@@ -101,7 +118,10 @@
 			const target = get(documentsStore).current;
 			if (!target) return;
 
-			await manuscript.save(target.path, content);
+			// The sources cited, as they are now, go with the document (ADR 002):
+			// a co-author without the PDFs still sees real citations.
+			const sources = snapshotSources(citedIds(content), citationStore.getAllSourcesAsJson(), {});
+			await manuscript.save(target.path, content, sources);
 		},
 		onStateChange: (next) => documentStatus.report({ save: next }),
 		onError: (error) => {
@@ -136,6 +156,10 @@
 		await autoReferences.initialise();
 		const setup = get(pageSetupStore);
 
+		// Building the editor re-renders the citations it was opened with, which
+		// is an update. It isn't the author adding a citation, so it mustn't
+		// bring a reference list into a manuscript that had none.
+		loadingContent = true;
 		editor = createEditor({
 			editorProps: {
 				attributes: {
@@ -196,6 +220,8 @@
 		// every transaction, and applying a setup dispatches transactions.
 		editorReady = true;
 		citationsSeen = countCitations($editor.state.doc);
+		loadingContent = false;
+		applyEditable();
 
 		// Closing the window is the last chance to write, and `beforeunload` cannot
 		// take it: the browser does not await a promise, so the webview can go away
@@ -311,7 +337,7 @@
 
 	function toggleView() {
 		editable = !editable;
-		$editor.setEditable(editable);
+		applyEditable();
 	}
 
 	/**
@@ -418,6 +444,10 @@
 		if (!target) return {};
 
 		const loaded = await manuscript.open(target);
+		// Its own sources render the citations this library can't (UX-12).
+		citationStore.setManuscriptSources(loaded.sources);
+		newerFile = loaded.status === 'newer' ? (loaded.savedWith ?? 'a newer version of Erti') : null;
+		applyEditable();
 		if (loaded.status === 'empty') {
 			console.warn(`${target} is empty; starting from a blank document.`);
 		}
@@ -733,6 +763,17 @@
 		<!-- The editor used to refuse to open when citations couldn't be set up,
 		     so a fresh install couldn't write at all (M0-3). Now it opens, and
 		     says plainly what's wrong. Moves onto the Banner primitive in M1c. -->
+		{#if newerFile !== null}
+			<p
+				role="status"
+				class="border-line bg-surface-raised text-ink-muted shrink-0 border-b px-4 py-1.5 text-xs"
+			>
+				<span class="text-warning font-medium">This document was saved by a newer Erti.</span>
+				It was written by {newerFile}. It's open read-only, so nothing in it can be lost here;
+				update Erti to edit it.
+			</p>
+		{/if}
+
 		{#if $citationStore.error}
 			<p
 				role="status"
@@ -751,6 +792,10 @@
 			style="zoom: {$zoomStore}"
 		>
 			<EditorContent editor={$editor} />
+			<AwayCitationTip
+				root={editorReady ? $editor.view.dom : undefined}
+				onadded={() => $editor.commands.updateAllCitation()}
+			/>
 			<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
 
 			{#if showCitationPanel}

@@ -72,3 +72,79 @@ test('settings open and close', async ({ page }) => {
 	await settings.getByRole('button', { name: 'Close settings' }).click();
 	await expect(settings).toBeHidden();
 });
+
+// M1a-8 AC-6, UX-12
+test('a co-author’s citation renders from the manuscript, and can be kept', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	// Chapters switch from the document bar.
+	await page.getByRole('button', { name: 'Shared chapter', exact: true }).click();
+
+	// Rendered from the file's own sources, dotted, not an error.
+	const away = page.locator('.ProseMirror [data-type="citation"][data-away]');
+	await expect(away).toContainText('Kuhn');
+
+	await away.hover();
+	const tip = page.getByRole('dialog', { name: 'Source from the manuscript' });
+	await expect(tip).toContainText('From the manuscript: not in your library');
+	await tip.getByRole('button', { name: 'Add to library' }).click();
+
+	// Now the library's own, so no longer marked.
+	await expect(page.getByText('Added to your library.')).toBeVisible();
+	await expect(away).toHaveCount(0);
+	await expect(page.locator('.ProseMirror [data-type="citation"]')).toContainText('Kuhn');
+});
+
+// M1a-8 AC-1, AC-7
+test('saving a chapter from before 1.0 upgrades it, and keeps the old file beside it', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	await page.locator('.ProseMirror').click();
+	await page.keyboard.press('End');
+	await page.keyboard.type(' More.');
+
+	// "Saved" shows before the edit too; wait for the file itself to change.
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const files = window.__ERTI_FAKE__!.files;
+				const path = [...files.keys()].find((p) => p.endsWith('Chapter 1.erti.json'))!;
+				return (files.get(path) as string).includes('"erti"');
+			})
+		)
+		.toBe(true);
+
+	const written = await page.evaluate(() => {
+		const files = window.__ERTI_FAKE__!.files;
+		const path = [...files.keys()].find((p) => p.endsWith('Chapter 1.erti.json'))!;
+		return {
+			file: JSON.parse(files.get(path) as string),
+			backup: files.has(`${path}.format0.bak`)
+		};
+	});
+	expect(written.file.type).toBe('doc');
+	expect(written.file.erti.format).toBe(1);
+	// The one work Chapter 1 cites travels with it.
+	expect(Object.keys(written.file.erti.sources)).toHaveLength(1);
+	expect(written.backup).toBe(true);
+});
+
+// Opening isn't citing: a manuscript without a reference list keeps it that
+// way, however long it's open. An update fired while the editor was being set
+// up once looked like the first citation arriving, and brought one in.
+test('opening a manuscript with no reference list leaves it without one', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	await expect(page.locator('.ProseMirror')).toContainText('(Vaswani, 2017)');
+	// Past the project's scan too, which reloads the sources and re-renders.
+	await expect(page.getByText('scan-chapter.pdf processed successfully')).toBeVisible();
+	await page.waitForTimeout(500);
+	await expect(page.locator('.ProseMirror [data-type="bibliography"]')).toHaveCount(0);
+});

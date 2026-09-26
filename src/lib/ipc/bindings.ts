@@ -13,6 +13,13 @@ export const commands = {
 	openLibrary: (path: string) => typedError<null, AppError>(__TAURI_INVOKE("open_library", { path })),
 	/**  Open a project folder, creating `<root>/.erti/project.db` if needed. */
 	openProject: (root: string) => typedError<null, AppError>(__TAURI_INVOKE("open_project", { root })),
+	/**
+	 *  Add a cited source this library lacks, from the manuscript's snapshot, and
+	 *  put it in the open project (M1a-8 AC-6). The webview guards the snapshot as
+	 *  CSL first (M1b-10); this refuses anything that isn't a JSON object or an id
+	 *  that couldn't be a source's.
+	 */
+	addSourceFromManuscript: (id: string, cslJson: string) => typedError<boolean, AppError>(__TAURI_INVOKE("add_source_from_manuscript", { id, cslJson })),
 	projectRoot: () => typedError<string, AppError>(__TAURI_INVOKE("project_root")),
 	/**  Hash a file's contents. See `db::hash_file`. */
 	hashFile: (path: string) => typedError<string, AppError>(__TAURI_INVOKE("hash_file", { path })),
