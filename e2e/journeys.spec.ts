@@ -72,3 +72,45 @@ test('settings open and close', async ({ page }) => {
 	await settings.getByRole('button', { name: 'Close settings' }).click();
 	await expect(settings).toBeHidden();
 });
+
+// M1a-12 AC-5
+test('the log folder opens from Settings', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+
+	await page.getByRole('button', { name: 'Settings' }).click();
+	const settings = page.getByRole('dialog', { name: 'Settings' });
+	await settings.getByRole('button', { name: 'Open log folder' }).click();
+
+	await expect
+		.poll(() => page.evaluate(() => window.__ERTI_FAKE__!.calls.map((c) => c.cmd)))
+		.toContain('open_log_folder');
+});
+
+// M1a-12 AC-3
+test('an error nothing caught is said once, and logged', async ({ page, errors }) => {
+	// Thrown on purpose, so not the journey's failure.
+	errors.expected.push(/The outline lost its place/);
+	await launch(page);
+	await openProject(page);
+
+	// Thrown twice from outside any handler, as a bug in a redraw would be.
+	await page.evaluate(() => {
+		for (let i = 0; i < 2; i++) {
+			setTimeout(() => {
+				throw new Error('The outline lost its place');
+			});
+		}
+	});
+
+	const toast = page.getByText(
+		'Something went wrong: The outline lost its place. Details are in the log.'
+	);
+	await expect(toast).toHaveCount(1);
+	const logged = () =>
+		page.evaluate(() =>
+			window.__ERTI_FAKE__!.logs.filter((l) => l.message.includes('The outline lost its place'))
+		);
+	await expect.poll(async () => (await logged()).length).toBe(1);
+	expect((await logged())[0].message).toMatch(/^Uncaught error: Error: The outline lost its place/);
+});

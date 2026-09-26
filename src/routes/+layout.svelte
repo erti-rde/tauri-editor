@@ -4,6 +4,8 @@
 	import { Tooltip } from 'bits-ui';
 
 	import { Toast } from '$lib';
+	import { catchUnhandled } from '$lib/log';
+	import { errorToast } from '$lib/toast/Toast.svelte';
 	import { appearanceStore } from '$lib/theme/appearanceStore';
 	import '../global.css';
 
@@ -13,6 +15,9 @@
 	// only corrects it to whatever the user chose. Doing it here rather than
 	// there keeps the settings file out of the critical path.
 	onMount(() => void appearanceStore.initialise());
+
+	// Anything thrown that nothing caught is logged and said, not lost (M1a-12).
+	onMount(() => catchUnhandled(window, errorToast));
 </script>
 
 <!--

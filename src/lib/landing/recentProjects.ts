@@ -1,4 +1,5 @@
 import { readSetting, writeSetting } from '$lib/settings';
+import { log } from '$lib/log';
 
 /**
  * The projects this person has open recently.
@@ -78,7 +79,7 @@ export async function readRecents(): Promise<RecentProject[]> {
 		return normaliseRecents(await readSetting('recentProjects'));
 	} catch (error) {
 		// A launch screen is not worth failing over.
-		console.error('Could not read recent projects:', error);
+		log.error('Could not read recent projects', error);
 		return [];
 	}
 }
@@ -88,7 +89,7 @@ export async function rememberProject(path: string): Promise<void> {
 		const recents = normaliseRecents(await readSetting('recentProjects'));
 		await writeSetting('recentProjects', withProject(recents, path));
 	} catch (error) {
-		console.error('Could not record the recent project:', error);
+		log.error('Could not record the recent project', error);
 	}
 }
 
@@ -100,7 +101,7 @@ export async function forgetProject(path: string): Promise<RecentProject[]> {
 		await writeSetting('recentProjects', next);
 		return next;
 	} catch (error) {
-		console.error('Could not remove the recent project:', error);
+		log.error('Could not remove the recent project', error);
 		return readRecents();
 	}
 }

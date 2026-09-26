@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 
 import { readSetting, writeSetting } from '$lib/settings';
+import { log } from '$lib/log';
 
 /**
  * Whether a reference list appears on its own.
@@ -24,7 +25,7 @@ function createReferencesSettings() {
 				// before this existed still gets the list.
 				set(await readSetting('autoReferences'));
 			} catch (error) {
-				console.error('Could not read the references setting:', error);
+				log.error('Could not read the references setting', error);
 				set(true);
 			}
 		},
@@ -35,7 +36,7 @@ function createReferencesSettings() {
 			try {
 				await writeSetting('autoReferences', enabled);
 			} catch (error) {
-				console.error('Could not save the references setting:', error);
+				log.error('Could not save the references setting', error);
 			}
 		},
 

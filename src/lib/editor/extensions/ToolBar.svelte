@@ -69,7 +69,6 @@
 		const selectedFile = await open({
 			multiple: false
 		});
-		console.log('Selected file:', selectedFile);
 		if (selectedFile) {
 			const imageUrl = typeof selectedFile === 'string' ? selectedFile : selectedFile[0];
 			const convertedUrl = convertFileSrc(imageUrl);

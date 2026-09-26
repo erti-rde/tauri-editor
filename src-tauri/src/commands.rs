@@ -229,3 +229,22 @@ fn embed_chunks_blocking(chunks: Vec<String>) -> Result<Vec<EmbeddingResult>, St
         })
         .collect())
 }
+
+/// Show the folder Erti's log is in, in the file manager (M1a-12 AC-5).
+///
+/// From Rust rather than the opener plugin's `open_path`, which would need a
+/// capability reaching the log directory for one button.
+#[tauri::command]
+#[specta::specta]
+pub fn open_log_folder(app: tauri::AppHandle) -> Result<(), AppError> {
+    use tauri::Manager;
+    use tauri_plugin_opener::OpenerExt;
+
+    let dir = app.path().app_log_dir().map_err(AppError::internal)?;
+    // The plugin makes it on the first line written, but a button that fails
+    // before then would be a poor way to learn that.
+    std::fs::create_dir_all(&dir).map_err(AppError::io)?;
+    app.opener()
+        .open_path(dir.to_string_lossy(), None::<&str>)
+        .map_err(AppError::io)
+}

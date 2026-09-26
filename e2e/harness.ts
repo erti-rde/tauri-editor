@@ -8,10 +8,11 @@ import { expect, test as base, type Page } from '@playwright/test';
  * something without breaking the step being looked at. So does a command the
  * fake backend was never taught, which would otherwise pass as `undefined`.
  */
-export const test = base.extend<{ errors: string[] }>({
+export const test = base.extend<{ errors: string[] & { expected: RegExp[] } }>({
 	errors: [
 		async ({ page }, use) => {
-			const errors: string[] = [];
+			// A journey that throws on purpose names what it throws in `expected`.
+			const errors = Object.assign([] as string[], { expected: [] as RegExp[] });
 			page.on('console', (message) => {
 				if (message.type() === 'error') errors.push(message.text());
 			});
@@ -23,7 +24,8 @@ export const test = base.extend<{ errors: string[] }>({
 				.evaluate(() => window.__ERTI_FAKE__?.unhandled ?? [])
 				.catch(() => []);
 			expect(unhandled, 'commands the fake backend has no handler for').toEqual([]);
-			expect(errors, 'console errors during the journey').toEqual([]);
+			const unexpected = errors.filter((e) => !errors.expected.some((pattern) => pattern.test(e)));
+			expect(unexpected, 'console errors during the journey').toEqual([]);
 		},
 		{ auto: true }
 	]
