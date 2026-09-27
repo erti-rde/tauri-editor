@@ -148,3 +148,62 @@ test('opening a manuscript with no reference list leaves it without one', async 
 	await page.waitForTimeout(500);
 	await expect(page.locator('.ProseMirror [data-type="bibliography"]')).toHaveCount(0);
 });
+
+// M1a-8 AC-4: read-only belongs to the file from a newer Erti, not to whatever
+// is opened after it. A new document once stayed read-only under that file's
+// banner.
+test('a new document after one from a newer Erti can be written in', async ({ page }) => {
+	await launch(page);
+	await page.waitForFunction(() => window.__ERTI_FAKE__ !== undefined);
+	await page.evaluate(() => {
+		const files = window.__ERTI_FAKE__!.files;
+		const chapter = [...files.keys()].find((p) => p.endsWith('/Chapter 1.erti.json'))!;
+		const away = 'e'.repeat(64);
+		files.set(
+			chapter.replace('Chapter 1', 'Future chapter'),
+			JSON.stringify({
+				type: 'doc',
+				content: [
+					{
+						type: 'paragraph',
+						content: [
+							{ type: 'text', text: 'Written later ' },
+							{ type: 'citation', attrs: { id: JSON.stringify([away]) } }
+						]
+					}
+				],
+				erti: {
+					format: 99,
+					savedWith: '9.0.0',
+					sources: {
+						[away]: { id: away, type: 'book', title: 'Later', author: [{ family: 'Later' }] }
+					}
+				}
+			})
+		);
+	});
+	await openProject(page);
+	await openManuscript(page);
+
+	await page.getByRole('button', { name: 'Future chapter', exact: true }).click();
+	const banner = page.getByText('This document was saved by a newer Erti.');
+	await expect(banner).toBeVisible();
+	await expect(page.locator('.ProseMirror')).toHaveAttribute('contenteditable', 'false');
+
+	await page.getByRole('button', { name: '+ New' }).click();
+	await page.getByRole('textbox', { name: 'Name for the new document' }).fill('Chapter two');
+	// Leaving the field names it. (Enter names it twice: it confirms, and the
+	// field's removal then blurs it, which confirms again.)
+	await page.keyboard.press('Tab');
+	await expect(page.getByRole('button', { name: 'Chapter two', exact: true })).toHaveAttribute(
+		'aria-current',
+		'page'
+	);
+
+	await expect(banner).toBeHidden();
+	const editor = page.locator('.ProseMirror');
+	await expect(editor).toHaveAttribute('contenteditable', 'true');
+	await editor.click();
+	await page.keyboard.type('A fresh start.');
+	await expect(editor).toContainText('A fresh start.');
+});

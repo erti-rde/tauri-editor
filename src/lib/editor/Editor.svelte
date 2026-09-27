@@ -553,6 +553,12 @@
 		if (token !== transition) return;
 
 		manuscript.reset();
+		// What `getDocumentData` would say of a blank file: it wasn't saved by a
+		// newer Erti and carries no sources. Left alone, the new document stayed
+		// read-only under the last one's banner.
+		citationStore.setManuscriptSources({});
+		newerFile = null;
+		applyEditable();
 		documentsStore.add({
 			fileName: result.fileName!,
 			path,

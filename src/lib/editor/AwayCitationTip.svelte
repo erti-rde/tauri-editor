@@ -122,6 +122,7 @@
 	<div
 		bind:this={tip}
 		role="dialog"
+		tabindex="-1"
 		aria-label="Source from the manuscript"
 		class="border-line bg-surface-overlay text-ink fixed z-30 flex items-center gap-3 rounded border px-3 py-2 text-xs shadow-lg"
 		onmouseenter={() => clearTimeout(hideTimer)}

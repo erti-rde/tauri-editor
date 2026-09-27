@@ -238,6 +238,10 @@ pub async fn add_source_without_file(
     zotero_type: Option<&str>,
     doi: Option<&str>,
 ) -> Result<bool, String> {
+    // One transaction, as in `register_source`: a source left without its
+    // ingest status would never get one, since the next try finds it present.
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
     let inserted = sqlx::query(
         "INSERT OR IGNORE INTO sources (sha256, csl_json, zotero_type, doi, resolved_via, resolved_at)
          VALUES (?, ?, ?, ?, 'manuscript', CURRENT_TIMESTAMP)",
@@ -246,7 +250,7 @@ pub async fn add_source_without_file(
     .bind(csl_json)
     .bind(zotero_type)
     .bind(doi)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?
     .rows_affected()
@@ -255,10 +259,12 @@ pub async fn add_source_without_file(
     if inserted {
         sqlx::query("INSERT OR IGNORE INTO ingest_status (sha256, state) VALUES (?, 'ready')")
             .bind(id)
-            .execute(pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
     }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
     Ok(inserted)
 }
 
