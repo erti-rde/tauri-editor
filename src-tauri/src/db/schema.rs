@@ -10,7 +10,7 @@
 //! than once per phase.
 
 /// Schema version applied to a freshly created or upgraded database.
-pub const LIBRARY_VERSION: i64 = 5;
+pub const LIBRARY_VERSION: i64 = 6; // SPIKE (M1b-1)
 pub const PROJECT_VERSION: i64 = 1;
 
 /// One step up to schema version `to`.
@@ -63,7 +63,25 @@ pub const LIBRARY_MIGRATIONS: &[Migration] = &[
         sql: PAGE_LABEL_SCHEMA,
         skip_if: Some("SELECT 1 FROM pragma_table_info('annotations') WHERE name = 'page_label'"),
     },
+    // SPIKE (M1b-1): a prototype of migration 6's alias table, nothing else.
+    Migration {
+        to: 6,
+        sql: ALIASES_SPIKE_SCHEMA,
+        skip_if: None,
+    },
 ];
+
+/// SPIKE (M1b-1, ADR 003): one id per work, aliases for the rest.
+pub const ALIASES_SPIKE_SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS source_aliases (
+    alias     TEXT PRIMARY KEY,
+    canonical TEXT NOT NULL,
+    FOREIGN KEY (alias) REFERENCES sources(sha256) ON DELETE CASCADE,
+    FOREIGN KEY (canonical) REFERENCES sources(sha256) ON DELETE CASCADE,
+    CHECK (alias <> canonical)
+);
+CREATE INDEX IF NOT EXISTS idx_source_aliases_canonical ON source_aliases(canonical);
+"#;
 
 pub const PROJECT_MIGRATIONS: &[Migration] = &[Migration {
     to: 1,

@@ -387,6 +387,68 @@ pub async fn set_metadata_override(
     Ok(())
 }
 
+/// SPIKE (M1b-1): the id a work is known by. Chains are refused on write, so
+/// one lookup is enough.
+pub async fn canonical(pool: &SqlitePool, id: &str) -> Result<String, String> {
+    let found: Option<String> =
+        sqlx::query_scalar("SELECT canonical FROM source_aliases WHERE alias = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+    Ok(found.unwrap_or_else(|| id.to_string()))
+}
+
+/// SPIKE (M1b-1): say `alias` is the same work as `canonical`.
+///
+/// Attaching a PDF to a no-file source and merging two duplicates are this one
+/// operation. No chains: `canonical` is resolved first, anything that pointed at
+/// `alias` is re-pointed, and an id never becomes an alias of itself.
+pub async fn alias_source(pool: &SqlitePool, alias: &str, canonical: &str) -> Result<(), String> {
+    if alias == canonical {
+        return Err(format!("{alias} can't be an alias of itself"));
+    }
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    // Promoting one of a work's aliases to be the work: it stops being an alias
+    // first, and everything below re-points to it.
+    sqlx::query("DELETE FROM source_aliases WHERE alias = ? AND canonical = ?")
+        .bind(canonical)
+        .bind(alias)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    let target: String = sqlx::query_scalar(
+        "SELECT COALESCE((SELECT canonical FROM source_aliases WHERE alias = ?), ?)",
+    )
+    .bind(canonical)
+    .bind(canonical)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+    if target == alias {
+        return Err(format!(
+            "{alias} is already the work {canonical} is known by"
+        ));
+    }
+    sqlx::query("UPDATE source_aliases SET canonical = ? WHERE canonical = ?")
+        .bind(&target)
+        .bind(alias)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    sqlx::query(
+        "INSERT INTO source_aliases (alias, canonical) VALUES (?, ?)
+         ON CONFLICT(alias) DO UPDATE SET canonical = excluded.canonical",
+    )
+    .bind(alias)
+    .bind(&target)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Rank chunks against a query vector.
 ///
 /// Scoring happens here rather than in the webview: the old implementation
@@ -402,19 +464,28 @@ pub async fn search_similar(
     limit: usize,
     include_library: bool,
 ) -> Result<Vec<ScoredChunk>, String> {
-    let rows = sqlx::query("SELECT sha256, idx, text, page_start, section, embedding FROM chunks")
-        .fetch_all(library)
-        .await
-        .map_err(|e| e.to_string())?;
+    // SPIKE (M1b-1): every result reports the work, not the file it came from.
+    let rows = sqlx::query(
+        "SELECT COALESCE(a.canonical, c.sha256) AS sha256, c.idx, c.text, c.page_start,
+                c.section, c.embedding
+           FROM chunks c
+           LEFT JOIN source_aliases a ON a.alias = c.sha256",
+    )
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?;
 
-    let in_set: std::collections::HashSet<&str> =
-        project_hashes.iter().map(|s| s.as_str()).collect();
+    // SPIKE (M1b-1): the project's set may name either id of a work.
+    let mut in_set: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for id in project_hashes {
+        in_set.insert(canonical(library, id).await?);
+    }
 
     let mut scored: Vec<ScoredChunk> = rows
         .into_iter()
         .filter_map(|r| {
             let sha256: String = r.get("sha256");
-            let in_project = in_set.contains(sha256.as_str());
+            let in_project = in_set.contains(&sha256);
             if !in_project && !include_library {
                 return None;
             }
