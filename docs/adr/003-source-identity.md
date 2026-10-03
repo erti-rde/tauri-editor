@@ -86,16 +86,25 @@ What migration 6 and the resolver (M1b-2, M1b-3) take from it:
   with `ON DELETE CASCADE`, plus `CHECK (alias <> canonical)` and an index on `canonical`.
   Removal's "removes alias rows pointing at it" then needs no code.
 - **One write operation, no chains.** Making `a` an alias of `b` resolves `b` first, re-points
-  every alias of `a` to the result, and refuses `a` itself. Promoting an alias to be the work
-  (the published version over the preprint) is the same operation the other way round: its
-  alias row is deleted first. Reads then need one lookup.
+  every alias of `a` to the result, and refuses to make an id an alias of itself. Promoting an
+  alias to be the work (the published version over the preprint) is the same operation the
+  other way round: its alias row is deleted first. Reads then need one lookup.
 - **Boundaries the code shows, beyond the ones listed above:**
   - `project_sources` lists a work twice once a folder scan adds its PDF's hash to the
     `source_set`. The work's file path hangs off the alias row (`locations` is keyed by the
     file's hash), so "Open PDF" on a work reads its aliases' locations.
   - Search's `in_project` compares canonical ids on both sides.
+  - A search result or a highlight carries two ids, not one. "Show in PDF" (`ResultCard.svelte`,
+    `Notes.svelte`) opens the file by the id it's given, at a page in that file. Given only the
+    canonical id, it opens nothing for an attached work (the uuid has no location) and can open
+    the wrong file for two merged PDFs. So the canonical id is for citing, project membership
+    and metadata, and the file's hash stays for opening the page. The spike's search reports
+    only the canonical id, which is enough for AC-2 and not for M1b-3.
   - Citing from a highlight (`Editor.svelte`, `citeSource`) inserts the annotation's own hash,
-    which is the file's. Highlights reporting the canonical id, as decided above, covers it.
+    which is the file's. Citing from the canonical id the highlight also carries covers it.
+  - Removing a work (M1b-4) leaves the files aliased to it as works of their own: their chunks
+    and highlights stay, under the file's row. The UX-4 dialog's highlight count has to sum
+    over the work's aliases, and M1b-4 decides whether removal takes those rows too.
   - `snapshotSources` (the ADR 002 envelope) looks the library up by the cited id. After a merge
     it has to look up `canonical(id)`, or a save falls back to the snapshot the file carried.
   - `metadata_overrides` in a project is keyed by id, so an override made on an id later merged
