@@ -20,6 +20,16 @@ export const commands = {
 	 *  that couldn't be a source's.
 	 */
 	addSourceFromManuscript: (id: string, cslJson: string) => typedError<boolean, AppError>(__TAURI_INVOKE("add_source_from_manuscript", { id, cslJson })),
+	/**
+	 *  Which of these folders are still Erti projects: there, with the
+	 *  `.erti/project.db` opening them left behind.
+	 * 
+	 *  The landing screen marks a moved or deleted recent project, and used to ask
+	 *  the fs plugin whether each path existed, which needed read access to all of
+	 *  `$HOME`. This answers only the question it had, and only about project
+	 *  folders: an arbitrary path gets `false`, so it says nothing about the disk.
+	 */
+	recentProjectsPresent: (paths: string[]) => typedError<boolean[], AppError>(__TAURI_INVOKE("recent_projects_present", { paths })),
 	projectRoot: () => typedError<string, AppError>(__TAURI_INVOKE("project_root")),
 	/**  Hash a file's contents. See `db::hash_file`. */
 	hashFile: (path: string) => typedError<string, AppError>(__TAURI_INVOKE("hash_file", { path })),

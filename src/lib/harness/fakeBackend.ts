@@ -223,6 +223,17 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 
 		projectRoot: () => root(),
 
+		// A folder Erti has opened before carries `.erti/project.db`, as in Rust,
+		// which also answers false for a path that isn't absolute.
+		recentProjectsPresent: (paths) =>
+			paths.map(
+				(path, i) =>
+					i < 100 &&
+					path.startsWith('/') &&
+					!path.startsWith('//') &&
+					disk.has(`${path}/.erti/project.db`)
+			),
+
 		hashFile(path) {
 			if (!disk.has(path)) throw notFound(path);
 			const known = [...state.library.values()].find((s) => s.path === path);
@@ -492,19 +503,24 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		},
 
 		// Library-wide, like Rust. Literal is SQLite's case-insensitive LIKE on
-		// the quote or the note, newest first; by meaning scores every mark with a
-		// vector and puts the project's first.
+		// the quote or the note, the project's first and then newest; by meaning
+		// scores every mark with a vector and puts the project's first.
 		searchAnnotations(query, limit, semantic) {
 			library();
 			const max = limit ?? 50;
 			if (!semantic) {
 				const needle = query.toLowerCase();
+				// An empty query filters nothing, as in Rust.
 				return newestFirst()
 					.filter(
-						(m) => m.quote?.toLowerCase().includes(needle) || m.note?.toLowerCase().includes(needle)
+						(m) =>
+							needle === '' ||
+							m.quote?.toLowerCase().includes(needle) ||
+							m.note?.toLowerCase().includes(needle)
 					)
-					.slice(0, max)
-					.map((m) => scored(m, 1));
+					.map((m) => scored(m, 1))
+					.sort(projectFirst)
+					.slice(0, max);
 			}
 			return [...state.marks.values()]
 				.filter((m) => state.embedded.has(m.id))

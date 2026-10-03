@@ -41,8 +41,51 @@ pub async fn open_library(
 /// Open a project folder, creating `<root>/.erti/project.db` if needed.
 #[tauri::command]
 #[specta::specta]
-pub async fn open_project(state: State<'_, DbState>, root: String) -> Result<(), AppError> {
+pub async fn open_project(
+    app: tauri::AppHandle,
+    state: State<'_, DbState>,
+    root: String,
+) -> Result<(), AppError> {
+    // The webview reads and writes the project through the fs plugin (PDFs,
+    // manuscripts, the export folder), and its scope starts with nothing of
+    // the user's: `fs:allow-home-read-recursive` is gone (M1a-4). Granted
+    // before the switch, so a failure leaves the previous project open rather
+    // than a new one the webview can't reach. Tauri's scope can't be narrowed
+    // again later, so a project opened earlier stays reachable until Erti
+    // restarts; the grant also reaches `Grants` through the `PathAllowed`
+    // listener in lib.rs, so the Rust path commands keep it for the session too.
+    //
+    // The path as the user chose it, not where it resolves: Tauri adds the
+    // canonical form itself, but matches a file that doesn't exist yet (a new
+    // manuscript, the export) by the path the webview sends, which is this one.
+    crate::scope::may_open_project(&state, &root).await?;
+    tauri_plugin_fs::FsExt::fs_scope(&app)
+        .allow_directory(PathBuf::from(&root), true)
+        .map_err(|e| AppError::internal(format!("could not grant the project folder: {e}")))?;
+
     open_project_in(&state, root).await
+}
+
+/// Which of these folders are still Erti projects: there, with the
+/// `.erti/project.db` opening them left behind.
+///
+/// The landing screen marks a moved or deleted recent project, and used to ask
+/// the fs plugin whether each path existed, which needed read access to all of
+/// `$HOME`. This answers only the question it had, and only about project
+/// folders: an arbitrary path gets `false`, so it says nothing about the disk.
+#[tauri::command]
+#[specta::specta]
+pub async fn recent_projects_present(paths: Vec<String>) -> Result<Vec<bool>, AppError> {
+    let mut present = Vec::with_capacity(paths.len());
+    for path in paths.iter().take(100) {
+        let known = !crate::scope::refused_form(path)
+            && tokio::fs::try_exists(PathBuf::from(path).join(".erti").join("project.db"))
+                .await
+                .unwrap_or(false);
+        present.push(known);
+    }
+    present.resize(paths.len(), false);
+    Ok(present)
 }
 
 /// `open_project`, gated (M1a-3): the open project decides what the other path
