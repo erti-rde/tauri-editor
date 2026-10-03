@@ -12,15 +12,18 @@ import { describe, expect, it } from 'vitest';
  */
 const capability = JSON.parse(
 	readFileSync(resolve(process.cwd(), 'src-tauri/capabilities/default.json'), 'utf8')
-) as { permissions: string[] };
+) as { permissions: (string | { identifier: string; deny?: { path: string }[] })[] };
+
+/** Each permission's name, whether it's granted bare or with a scope of its own. */
+const granted = capability.permissions.map((p) => (typeof p === 'string' ? p : p.identifier));
 
 describe('the webview capability', () => {
 	it('grants nothing from the shell plugin (M0-4 AC-1)', () => {
-		expect(capability.permissions.filter((p) => p.startsWith('shell:'))).toEqual([]);
+		expect(granted.filter((p) => p.startsWith('shell:'))).toEqual([]);
 	});
 
 	it('keeps the opener, which opens links in the system browser (M0-4 AC-2)', () => {
-		expect(capability.permissions).toContain('opener:default');
+		expect(granted).toContain('opener:default');
 	});
 
 	it('does not depend on the shell plugin anywhere', () => {
@@ -36,7 +39,7 @@ describe('the webview capability', () => {
 		// the user picks in a dialog. `fs:allow-home-read-recursive` let a script
 		// in the webview read all of $HOME whatever the Rust commands refused, and
 		// `fs:write-all` let it remove files wherever it could write.
-		expect(capability.permissions.filter((p) => p.startsWith('fs:')).sort()).toEqual([
+		expect(granted.filter((p) => p.startsWith('fs:')).sort()).toEqual([
 			'fs:allow-exists',
 			'fs:allow-mkdir',
 			'fs:allow-read-file',
@@ -48,14 +51,35 @@ describe('the webview capability', () => {
 		]);
 	});
 
-	// M1a-4 AC-1
-	it('never lets the webview delete, move or list files', () => {
-		const fs = capability.permissions.filter((p) => p.startsWith('fs:'));
-		for (const forbidden of ['remove', 'rename', 'write-all', 'read-dir', 'home', 'truncate']) {
+	// M1a-4 AC-1. Names only: `fs:default` and the resource set still bring
+	// `read_dir`, `stat` and `watch` with them, within the same scope as reads.
+	it('never lets the webview delete or move files', () => {
+		const fs = granted.filter((p) => p.startsWith('fs:'));
+		for (const forbidden of ['remove', 'rename', 'write-all', 'home', 'truncate']) {
 			expect(
 				fs.filter((p) => p.includes(forbidden)),
 				forbidden
 			).toEqual([]);
+		}
+	});
+
+	// M1a-4 AC-1. A scope with no commands is global in Tauri, so the resource
+	// folder `fs:allow-resource-read-recursive` opens for reading was open to
+	// every write too: a script could have replaced a bundled style or the model.
+	it('never lets the webview write into the app’s own resources', () => {
+		const writes = capability.permissions.filter(
+			(p) => typeof p !== 'string' || /^fs:allow-(write|mkdir)/.test(p)
+		);
+		expect(writes.map((p) => (typeof p === 'string' ? p : p.identifier)).sort()).toEqual([
+			'fs:allow-mkdir',
+			'fs:allow-write-file',
+			'fs:allow-write-text-file'
+		]);
+		for (const p of writes) {
+			expect(typeof p === 'string' ? [] : p.deny?.map((d) => d.path)).toEqual([
+				'$RESOURCE',
+				'$RESOURCE/**'
+			]);
 		}
 	});
 });

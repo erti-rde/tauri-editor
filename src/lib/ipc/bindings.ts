@@ -22,7 +22,7 @@ export const commands = {
 	 *  `$HOME`. This answers only the question it had, and only about project
 	 *  folders: an arbitrary path gets `false`, so it says nothing about the disk.
 	 */
-	recentProjectsPresent: (paths: string[]) => __TAURI_INVOKE<boolean[]>("recent_projects_present", { paths }),
+	recentProjectsPresent: (paths: string[]) => typedError<boolean[], AppError>(__TAURI_INVOKE("recent_projects_present", { paths })),
 	projectRoot: () => typedError<string, AppError>(__TAURI_INVOKE("project_root")),
 	/**  Hash a file's contents. See `db::hash_file`. */
 	hashFile: (path: string) => typedError<string, AppError>(__TAURI_INVOKE("hash_file", { path })),

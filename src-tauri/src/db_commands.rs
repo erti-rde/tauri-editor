@@ -46,26 +46,24 @@ pub async fn open_project(
     state: State<'_, DbState>,
     root: String,
 ) -> Result<(), AppError> {
-    open_project_in(&state, root.clone()).await?;
-
     // The webview reads and writes the project through the fs plugin (PDFs,
     // manuscripts, the export folder), and its scope starts with nothing of
-    // the user's: `fs:allow-home-read-recursive` is gone (M1a-4). The folder
-    // just checked by `may_open_project` is the one to hand it. Tauri's scope
-    // can't be narrowed again later, so a project opened earlier stays
-    // reachable until Erti restarts.
+    // the user's: `fs:allow-home-read-recursive` is gone (M1a-4). Granted
+    // before the switch, so a failure leaves the previous project open rather
+    // than a new one the webview can't reach. Tauri's scope can't be narrowed
+    // again later, so a project opened earlier stays reachable until Erti
+    // restarts; the grant also reaches `Grants` through the `PathAllowed`
+    // listener in lib.rs, so the Rust path commands keep it for the session too.
     //
-    // Both spellings: the fs plugin compares the path the webview sends, which
-    // is the one the user chose (`/tmp/…`, a synced folder behind a symlink),
-    // not where it resolves to.
-    let canonical = crate::scope::may_open_project(&state, &root).await?;
-    let fs_scope = tauri_plugin_fs::FsExt::fs_scope(&app);
-    for path in [canonical, PathBuf::from(&root)] {
-        fs_scope
-            .allow_directory(&path, true)
-            .map_err(|e| AppError::internal(format!("could not grant the project folder: {e}")))?;
-    }
-    Ok(())
+    // The path as the user chose it, not where it resolves: Tauri adds the
+    // canonical form itself, but matches a file that doesn't exist yet (a new
+    // manuscript, the export) by the path the webview sends, which is this one.
+    crate::scope::may_open_project(&state, &root).await?;
+    tauri_plugin_fs::FsExt::fs_scope(&app)
+        .allow_directory(PathBuf::from(&root), true)
+        .map_err(|e| AppError::internal(format!("could not grant the project folder: {e}")))?;
+
+    open_project_in(&state, root).await
 }
 
 /// Which of these folders are still Erti projects: there, with the
@@ -77,7 +75,7 @@ pub async fn open_project(
 /// folders: an arbitrary path gets `false`, so it says nothing about the disk.
 #[tauri::command]
 #[specta::specta]
-pub async fn recent_projects_present(paths: Vec<String>) -> Vec<bool> {
+pub async fn recent_projects_present(paths: Vec<String>) -> Result<Vec<bool>, AppError> {
     let mut present = Vec::with_capacity(paths.len());
     for path in paths.iter().take(100) {
         let known = !crate::scope::refused_form(path)
@@ -87,7 +85,7 @@ pub async fn recent_projects_present(paths: Vec<String>) -> Vec<bool> {
         present.push(known);
     }
     present.resize(paths.len(), false);
-    present
+    Ok(present)
 }
 
 /// `open_project`, gated (M1a-3): the open project decides what the other path

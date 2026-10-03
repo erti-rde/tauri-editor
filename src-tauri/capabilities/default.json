@@ -11,9 +11,18 @@
 		"fs:allow-resource-read-recursive",
 		"fs:allow-read-file",
 		"fs:allow-read-text-file",
-		"fs:allow-write-file",
-		"fs:allow-write-text-file",
-		"fs:allow-mkdir",
+		{
+			"identifier": "fs:allow-write-file",
+			"deny": [{ "path": "$RESOURCE" }, { "path": "$RESOURCE/**" }]
+		},
+		{
+			"identifier": "fs:allow-write-text-file",
+			"deny": [{ "path": "$RESOURCE" }, { "path": "$RESOURCE/**" }]
+		},
+		{
+			"identifier": "fs:allow-mkdir",
+			"deny": [{ "path": "$RESOURCE" }, { "path": "$RESOURCE/**" }]
+		},
 		"fs:allow-exists",
 		"store:default",
 		"opener:default"

@@ -318,7 +318,9 @@ Paraphrase-level attribution and inline mode · real footnotes in the editor (#1
 numbers (#104) · document bar in the tab strip (#99) · drag tabs between panes (#101) ·
 draggable blocks (#11) · Semantic Scholar recommendations (#17, needs its own consent entry) ·
 the embedding model bake-off (plan.md §12) · a zip container for manuscripts with embedded
-images · collaboration · macOS E2E once a WKWebView driver exists.
+images · collaboration · macOS E2E once a WKWebView driver exists · reopening a project only
+if Erti recorded the user picking it, in Rust-owned state, rather than on finding
+`.erti/project.db` (security.md T2; kept for 1.0 by the maintainer, 2026-10-03).
 
 ---
 
