@@ -87,6 +87,16 @@ pub async fn register_source(
         .rows_affected()
         > 0;
 
+    // A source added from a manuscript (M1a-8) is `ready` with no file, since
+    // there was nothing to read. Its PDF arriving is the first chance to
+    // extract and embed it, so its first location puts it back in the queue.
+    let had_file: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM locations WHERE sha256 = ?)")
+            .bind(sha256)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
     sqlx::query(
         "INSERT INTO locations (sha256, path, file_name, last_seen)
          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
@@ -105,6 +115,15 @@ pub async fn register_source(
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+    } else if !had_file {
+        sqlx::query(
+            "INSERT INTO ingest_status (sha256, state) VALUES (?, 'pending')
+             ON CONFLICT(sha256) DO UPDATE SET state = 'pending', attempts = 0, last_error = NULL",
+        )
+        .bind(sha256)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
     }
 
     tx.commit().await.map_err(|e| e.to_string())?;

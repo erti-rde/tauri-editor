@@ -100,3 +100,34 @@ async fn a_malformed_request_is_refused() {
         .await
         .is_err());
 }
+
+// M1a-8 AC-6: adding the co-author's PDF later lands on the same source, and
+// that's when there's finally something to extract and embed.
+#[tokio::test]
+async fn the_pdf_arriving_later_queues_the_source_for_ingest() {
+    let state = project("arrives").await;
+    add_source_from_manuscript_in(&state, "abc".into(), BOOK.into())
+        .await
+        .unwrap();
+    let library = state.library().await.unwrap();
+
+    let new = queries::register_source(&library, "abc", "/papers/kuhn.pdf", "kuhn.pdf")
+        .await
+        .unwrap();
+
+    assert!(!new, "the same source, not a second one");
+    assert!(queries::sources_needing_ingest(&library)
+        .await
+        .unwrap()
+        .contains(&"abc".to_string()));
+
+    // A second copy of a paper that already has a file isn't read again.
+    queries::store_chunks(&library, "abc", &[]).await.unwrap();
+    queries::register_source(&library, "abc", "/elsewhere/kuhn.pdf", "kuhn.pdf")
+        .await
+        .unwrap();
+    assert!(!queries::sources_needing_ingest(&library)
+        .await
+        .unwrap()
+        .contains(&"abc".to_string()));
+}

@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { computePosition, flip, offset, shift } from '@floating-ui/dom';
+	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 	import { onDestroy } from 'svelte';
 
 	import { parseCitationIds } from '$lib/citations/document';
 	import { guardCslItem } from '$lib/guard';
+	import { describeError } from '$lib/ipc';
 	import { addSourceFromManuscript } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
@@ -60,12 +61,20 @@
 		const out = (event: Event) => {
 			if (awayCitation(event.target)) hideSoon();
 		};
-		// A citation selected with the keyboard gets the same tip.
+		// A citation selected with the keyboard gets the same tip, and loses it
+		// when the selection moves on, unless the pointer is holding it open.
+		let byKeyboard = false;
 		const selected = new MutationObserver(() => {
 			const span = root.querySelector<HTMLElement>(
 				'[data-type="citation"][data-away].ProseMirror-selectednode'
 			);
-			if (span) show(span);
+			if (span) {
+				byKeyboard = true;
+				show(span);
+			} else if (byKeyboard) {
+				byKeyboard = false;
+				if (!target?.matches(':hover') && !tip?.matches(':hover')) hideSoon();
+			}
 		});
 		root.addEventListener('mouseover', over);
 		root.addEventListener('mouseout', out);
@@ -79,13 +88,17 @@
 
 	$effect(() => {
 		if (!target || !tip) return;
+		const reference = target;
 		const floating = tip;
-		void computePosition(target, floating, {
-			placement: 'bottom-start',
-			middleware: [offset(6), flip(), shift({ padding: 8 })]
-		}).then(({ x, y }) => {
-			floating.style.left = `${x}px`;
-			floating.style.top = `${y}px`;
+		// Kept beside its citation as the manuscript scrolls or reflows.
+		return autoUpdate(reference, floating, () => {
+			void computePosition(reference, floating, {
+				placement: 'bottom-start',
+				middleware: [offset(6), flip(), shift({ padding: 8 })]
+			}).then(({ x, y }) => {
+				floating.style.left = `${x}px`;
+				floating.style.top = `${y}px`;
+			});
 		});
 	});
 
@@ -107,9 +120,7 @@
 			);
 			target = null;
 		} catch (error) {
-			errorToast(
-				`Could not add it to your library: ${error instanceof Error ? error.message : String(error)}`
-			);
+			errorToast(`Could not add it to your library: ${describeError(error)}`);
 		} finally {
 			busy = false;
 		}

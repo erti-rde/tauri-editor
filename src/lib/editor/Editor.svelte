@@ -798,10 +798,6 @@
 			style="zoom: {$zoomStore}"
 		>
 			<EditorContent editor={$editor} />
-			<AwayCitationTip
-				root={editorReady ? $editor.view.dom : undefined}
-				onadded={() => $editor.commands.updateAllCitation()}
-			/>
 			<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
 
 			{#if showCitationPanel}
@@ -812,5 +808,11 @@
 				/>
 			{/if}
 		</div>
+		<!-- Outside the zoomed area: the tip is placed in viewport coordinates,
+		     which zoom would scale a second time. -->
+		<AwayCitationTip
+			root={editorReady ? $editor.view.dom : undefined}
+			onadded={() => $editor.commands.updateAllCitation()}
+		/>
 	</div>
 {/if}

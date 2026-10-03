@@ -1,5 +1,5 @@
 import { parseCitationIds } from '$lib/citations/document';
-import { guardCslItem, guardDocument, guardEnvelope, type CslItem } from '$lib/guard';
+import { guardCslItem, guardDocument, guardEnvelope, ShapeError, type CslItem } from '$lib/guard';
 
 /**
  * The manuscript file format (ADR 002 as amended, M1a-8).
@@ -49,6 +49,13 @@ export function readManuscript(parsed: unknown): Manuscript {
 	// Checked structurally: depth, size and shape. Unknown keys beside the
 	// document are dropped, so they don't ride along into the next save.
 	const doc = guardDocument(rest);
+	// No `erti` is a file from before 1.0. One with a format that isn't a
+	// whole number wasn't written by any Erti, and reading it as format 0 would
+	// make it editable and "upgrade" it, dropping whatever its writer kept.
+	const format = (erti as { format?: unknown } | null | undefined)?.format;
+	if (erti !== undefined && !(Number.isInteger(format) && (format as number) >= 0)) {
+		throw new ShapeError('This manuscript says it has a format no Erti writes.');
+	}
 	const envelope = erti === undefined ? { format: 0, sources: {} } : guardEnvelope(erti);
 
 	return {
@@ -67,8 +74,31 @@ export function writeManuscript(
 	savedWith: string
 ): Record<string, unknown> {
 	// The editor's JSON never carries `erti`; this makes sure a stale one can't.
-	const { erti: _, ...body } = doc;
+	const { erti: _, ...body } = withoutViewState(doc) as Record<string, unknown>;
 	return { ...body, erti: { format: FORMAT, sources, savedWith } };
+}
+
+/**
+ * The document without what only describes this reader's view of it. A
+ * citation's `away` says whether this library has the source, which differs
+ * from one co-author to the next; written down, it would flip, and be saved,
+ * each time the file changed hands. It's worked out again on every render.
+ */
+function withoutViewState(node: unknown): unknown {
+	if (typeof node !== 'object' || node === null || Array.isArray(node)) return node;
+	const { content, attrs, ...rest } = node as Record<string, unknown>;
+	const out: Record<string, unknown> = { ...rest };
+	if (attrs !== undefined) {
+		if (rest.type === 'citation' && typeof attrs === 'object' && attrs !== null) {
+			const { away: _, ...kept } = attrs as Record<string, unknown>;
+			out.attrs = kept;
+		} else {
+			out.attrs = attrs;
+		}
+	}
+	if (content !== undefined)
+		out.content = Array.isArray(content) ? content.map(withoutViewState) : content;
+	return out;
 }
 
 /** Every source id the document cites, in order, once each. */

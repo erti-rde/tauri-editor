@@ -52,6 +52,19 @@ function disk(initial: Record<string, string> = {}) {
 
 // M1a-8 AC-1
 describe('the file a manuscript is written as', () => {
+	it('leaves out whether this reader’s library has each source', () => {
+		// `away` differs between co-authors; saved, it would flip on every hand-over.
+		const viewed = {
+			type: 'doc',
+			content: [
+				para(text('As Kuhn has it '), { ...cite('k'), attrs: { ...cite('k').attrs, away: true } })
+			]
+		};
+		const file = writeManuscript(viewed, {}, '1.0.0');
+		expect(JSON.stringify(file)).not.toContain('away');
+		expect(citedIds(file)).toEqual(['k']);
+	});
+
 	it('keeps the document at the root, with Erti’s block beside it', () => {
 		const file = writeManuscript(DOC, { aaa: { ...VASWANI } }, '1.0.0');
 		expect(file).toEqual({
@@ -131,6 +144,20 @@ describe('a file from a newer Erti', () => {
 		expect(loaded.status === 'newer' && loaded.savedWith).toBe('2.0.0');
 	});
 
+	it('is refused, not read as format 0, when its format is not a whole number', async () => {
+		// Read as 0, it would be editable and "upgraded", dropping what its writer kept.
+		for (const format of ['2', 2.5, -1, null]) {
+			const file = JSON.stringify({ ...DOC, erti: { format, sources: {} } });
+			expect(parseManuscript(file).status, String(format)).toBe('unreadable');
+
+			const { files, api } = disk({ '/p/m.erti.json': file });
+			const session = createManuscriptSession(api);
+			await session.open('/p/m.erti.json');
+			expect(await session.save('/p/m.erti.json', DOC, {})).toBe(false);
+			expect(files.get('/p/m.erti.json')).toBe(file);
+		}
+	});
+
 	it('is never saved over', async () => {
 		const { files, api } = disk({ '/p/n.erti.json': newer });
 		const session = createManuscriptSession(api);
@@ -189,6 +216,29 @@ describe('upgrading a file from before 1.0', () => {
 		await session.save('/p/c.erti.json', DOC, {});
 
 		expect(files.get(format0Backup('/p/c.erti.json'))).toBe('an earlier copy');
+	});
+
+	it('is not saved at all when the copy cannot be made', async () => {
+		// Read-only folder, full disk, a narrowed scope: anything but "already there".
+		const { files, api } = disk({ '/p/c.erti.json': old });
+		const write = api.write;
+		api.write = async (path, t, options) => {
+			if (path === format0Backup('/p/c.erti.json')) throw new Error('Permission denied');
+			return write(path, t, options);
+		};
+		const session = createManuscriptSession(api);
+		await session.open('/p/c.erti.json');
+
+		await expect(session.save('/p/c.erti.json', DOC, {})).rejects.toThrow('Permission denied');
+		expect(files.get('/p/c.erti.json')).toBe(old);
+	});
+
+	it('copies the text that was opened, read once', async () => {
+		const { api } = disk({ '/p/c.erti.json': old });
+		const read = vi.spyOn(api, 'read');
+		const session = createManuscriptSession(api);
+		await session.open('/p/c.erti.json');
+		expect(read).toHaveBeenCalledTimes(1);
 	});
 
 	it('needs no copy of a file that is already format 1', async () => {

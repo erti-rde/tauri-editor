@@ -139,12 +139,14 @@ export function createManuscriptSession(
 
 	return {
 		async open(path) {
-			const loaded = await loadManuscript(path, files);
+			// Read once: the backup must be the text that was parsed, not a second
+			// read a sync client may have changed in between.
+			const text = (await files.exists(path)) ? await files.read(path) : null;
+			const loaded: Loaded =
+				text === null ? { status: 'missing', content: {}, sources: {} } : parseManuscript(text);
 			refused = loaded.status === 'unreadable' || loaded.status === 'newer' ? path : null;
 			upgrading =
-				loaded.status === 'ok' && loaded.format === 0
-					? { path, text: await files.read(path) }
-					: null;
+				loaded.status === 'ok' && loaded.format === 0 && text !== null ? { path, text } : null;
 			return loaded;
 		},
 		async save(path, doc, sources) {
@@ -153,8 +155,17 @@ export function createManuscriptSession(
 			// Until version history (M5-1) exists, the copy beside the file is
 			// the way back to what an older Erti wrote. Never over an earlier one:
 			// the first copy is the one worth keeping.
+			//
+			// A copy already there is that first copy, and is kept. Any other
+			// failure stops the save: writing format 1 over the only copy of what
+			// an older Erti wrote is the loss the backup exists to prevent.
 			if (upgrading?.path === path) {
-				await files.write(format0Backup(path), upgrading.text, { createNew: true }).catch(() => {});
+				const backup = format0Backup(path);
+				try {
+					await files.write(backup, upgrading.text, { createNew: true });
+				} catch (error) {
+					if (!(await files.exists(backup))) throw error;
+				}
 				upgrading = null;
 			}
 

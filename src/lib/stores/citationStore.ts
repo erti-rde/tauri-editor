@@ -77,6 +77,8 @@ function createCitationStore() {
 
 	/** The sources the open manuscript carries (ADR 002). */
 	let carried: Record<string, object> = {};
+	/** `awayIds` as a set: every citation asks on every render. */
+	let away = new Set<string>();
 
 	/**
 	 * Put the manuscript's sources beside the library's, for ids the library
@@ -89,6 +91,7 @@ function createCitationStore() {
 			for (const id of state.awayIds ?? []) delete sources[id];
 			const awayIds = Object.keys(carried).filter((id) => !(id in sources));
 			for (const id of awayIds) sources[id] = { ...carried[id], id } as CitationItem;
+			away = new Set(awayIds);
 			return { ...state, awayIds };
 		});
 	}
@@ -100,7 +103,7 @@ function createCitationStore() {
 	}
 
 	function isAway(id: string): boolean {
-		return (get(citationStore).awayIds ?? []).includes(id);
+		return away.has(id);
 	}
 
 	/**

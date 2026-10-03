@@ -416,8 +416,11 @@ export function guardDocument(value: unknown): Record<string, unknown> {
 		}
 		if (value === null || typeof value === 'boolean') return value;
 		if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-		if (typeof value === 'string') return text(value, LIMITS.longField);
-		if (Array.isArray(value)) return value.slice(0, LIMITS.names).map((v) => plain(v, depth + 1));
+		// Kept whole: a manuscript's attributes are the author's, and a value cut
+		// here would be saved back cut. The file's size, checked before parsing,
+		// already bounds them.
+		if (typeof value === 'string') return value;
+		if (Array.isArray(value)) return value.map((v) => plain(v, depth + 1));
 		if (isRecord(value)) return attrs(value, depth);
 		return undefined;
 	}
