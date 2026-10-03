@@ -223,8 +223,16 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 
 		projectRoot: () => root(),
 
-		// A folder Erti has opened before carries `.erti/project.db`, as in Rust.
-		recentProjectsPresent: (paths) => paths.map((path) => disk.has(`${path}/.erti/project.db`)),
+		// A folder Erti has opened before carries `.erti/project.db`, as in Rust,
+		// which also answers false for a path that isn't absolute.
+		recentProjectsPresent: (paths) =>
+			paths.map(
+				(path, i) =>
+					i < 100 &&
+					path.startsWith('/') &&
+					!path.startsWith('//') &&
+					disk.has(`${path}/.erti/project.db`)
+			),
 
 		hashFile(path) {
 			if (!disk.has(path)) throw notFound(path);

@@ -3,7 +3,7 @@
 	import { documentDir } from '@tauri-apps/api/path';
 	import { onMount } from 'svelte';
 
-	import { commands } from '$lib/ipc';
+	import { call, commands } from '$lib/ipc';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { errorToast } from '$lib/toast/Toast.svelte';
 	import {
@@ -43,7 +43,7 @@
 		// outside the open project (M1a-4). A folder is present if Erti's
 		// `.erti` folder is still in it.
 		try {
-			const present = await commands.recentProjectsPresent(recents.map((p) => p.path));
+			const present = await call(commands.recentProjectsPresent(recents.map((p) => p.path)));
 			missing = new Set(recents.filter((_, i) => !present[i]).map((p) => p.path));
 		} catch (error) {
 			console.error('Could not check the recent projects:', error);
