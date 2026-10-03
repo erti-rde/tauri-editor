@@ -81,6 +81,14 @@ export const projectSources = () => call(commands.projectSources()) as Promise<S
 
 export const addToProject = (sha256: string) => run(commands.addToProject(sha256));
 
+/**
+ * Add a cited source this library lacks, from the snapshot the manuscript
+ * carries (M1a-8, UX-12). A source with metadata and no file. Resolves true
+ * when it was new to the library.
+ */
+export const addSourceFromManuscript = (id: string, cslJson: string) =>
+	call(commands.addSourceFromManuscript(id, cslJson));
+
 /** Correct a source's metadata for this project only, leaving the library's copy alone. */
 export const setMetadataOverride = (sha256: string, cslJson: string) =>
 	run(commands.setMetadataOverride(sha256, cslJson));

@@ -229,6 +229,15 @@ describe('a manuscript', () => {
 		).toThrow(LimitError);
 	});
 
+	// M1a-8: a manuscript goes through this on load and is saved from what it
+	// returns, so a value cut here would be cut on disk at the next keystroke.
+	it('keeps long attribute values whole rather than cutting them', () => {
+		const src = `data:image/png;base64,${'A'.repeat(LIMITS.longField + 10)}`;
+		const list = Array.from({ length: LIMITS.names + 10 }, (_, i) => i);
+		const doc = { type: 'doc', content: [{ type: 'image', attrs: { src, list } }] };
+		expect(guardDocument(doc)).toEqual(doc);
+	});
+
 	it('refuses something that is not a document', () => {
 		expect(() => guardDocument({ type: 'paragraph' })).toThrow(ShapeError);
 		expect(() => guardDocument({ type: 'doc', content: ['text'] })).toThrow(ShapeError);

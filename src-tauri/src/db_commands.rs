@@ -41,8 +41,51 @@ pub async fn open_library(
 /// Open a project folder, creating `<root>/.erti/project.db` if needed.
 #[tauri::command]
 #[specta::specta]
-pub async fn open_project(state: State<'_, DbState>, root: String) -> Result<(), AppError> {
+pub async fn open_project(
+    app: tauri::AppHandle,
+    state: State<'_, DbState>,
+    root: String,
+) -> Result<(), AppError> {
+    // The webview reads and writes the project through the fs plugin (PDFs,
+    // manuscripts, the export folder), and its scope starts with nothing of
+    // the user's: `fs:allow-home-read-recursive` is gone (M1a-4). Granted
+    // before the switch, so a failure leaves the previous project open rather
+    // than a new one the webview can't reach. Tauri's scope can't be narrowed
+    // again later, so a project opened earlier stays reachable until Erti
+    // restarts; the grant also reaches `Grants` through the `PathAllowed`
+    // listener in lib.rs, so the Rust path commands keep it for the session too.
+    //
+    // The path as the user chose it, not where it resolves: Tauri adds the
+    // canonical form itself, but matches a file that doesn't exist yet (a new
+    // manuscript, the export) by the path the webview sends, which is this one.
+    crate::scope::may_open_project(&state, &root).await?;
+    tauri_plugin_fs::FsExt::fs_scope(&app)
+        .allow_directory(PathBuf::from(&root), true)
+        .map_err(|e| AppError::internal(format!("could not grant the project folder: {e}")))?;
+
     open_project_in(&state, root).await
+}
+
+/// Which of these folders are still Erti projects: there, with the
+/// `.erti/project.db` opening them left behind.
+///
+/// The landing screen marks a moved or deleted recent project, and used to ask
+/// the fs plugin whether each path existed, which needed read access to all of
+/// `$HOME`. This answers only the question it had, and only about project
+/// folders: an arbitrary path gets `false`, so it says nothing about the disk.
+#[tauri::command]
+#[specta::specta]
+pub async fn recent_projects_present(paths: Vec<String>) -> Result<Vec<bool>, AppError> {
+    let mut present = Vec::with_capacity(paths.len());
+    for path in paths.iter().take(100) {
+        let known = !crate::scope::refused_form(path)
+            && tokio::fs::try_exists(PathBuf::from(path).join(".erti").join("project.db"))
+                .await
+                .unwrap_or(false);
+        present.push(known);
+    }
+    present.resize(paths.len(), false);
+    Ok(present)
 }
 
 /// `open_project`, gated (M1a-3): the open project decides what the other path
@@ -50,6 +93,50 @@ pub async fn open_project(state: State<'_, DbState>, root: String) -> Result<(),
 pub async fn open_project_in(state: &DbState, root: String) -> Result<(), AppError> {
     crate::scope::may_open_project(state, &root).await?;
     state.open_project(&PathBuf::from(root)).await.or_database()
+}
+
+/// Add a cited source this library lacks, from the manuscript's snapshot, and
+/// put it in the open project (M1a-8 AC-6). The webview guards the snapshot as
+/// CSL first (M1b-10); this refuses anything that isn't a JSON object or an id
+/// that couldn't be a source's.
+#[tauri::command]
+#[specta::specta]
+pub async fn add_source_from_manuscript(
+    state: State<'_, DbState>,
+    id: String,
+    csl_json: String,
+) -> Result<bool, AppError> {
+    add_source_from_manuscript_in(&state, id, csl_json).await
+}
+
+pub async fn add_source_from_manuscript_in(
+    state: &DbState,
+    id: String,
+    csl_json: String,
+) -> Result<bool, AppError> {
+    let invalid = |message: &str| AppError::new(crate::ipc::ErrorKind::InvalidInput, message);
+    if id.is_empty() || id.len() > 200 || id.chars().any(char::is_control) {
+        return Err(invalid("That isn't a source id."));
+    }
+    let csl: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&csl_json)
+        .map_err(|_| invalid("That source's details are damaged."))?;
+    let text = |key: &str| csl.get(key).and_then(|v| v.as_str()).map(str::to_owned);
+
+    let library = state.library().await?;
+    let added = queries::add_source_without_file(
+        &library,
+        &id,
+        &csl_json,
+        text("zotero_type").as_deref(),
+        text("DOI").as_deref(),
+    )
+    .await
+    .or_database()?;
+
+    if let Ok(project) = state.project().await {
+        queries::add_to_project(&project, &id).await.or_database()?;
+    }
+    Ok(added)
 }
 
 #[tauri::command]

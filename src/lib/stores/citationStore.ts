@@ -56,6 +56,11 @@ interface CitationState {
 	 * instead of refusing to open (M0-3). Null when all is well.
 	 */
 	error: string | null;
+	/**
+	 * Cited sources this library doesn't have, rendered from the snapshot the
+	 * manuscript carries (M1a-8, UX-12). The library's copy wins when both exist.
+	 */
+	awayIds: string[];
 }
 
 export const citationStore = createCitationStore();
@@ -67,8 +72,40 @@ function createCitationStore() {
 		citationSources: {},
 		bibliography: [],
 		missingIds: [],
-		error: null
+		error: null,
+		awayIds: []
 	});
+
+	/** The sources the open manuscript carries (ADR 002). */
+	let carried: Record<string, object> = {};
+	/** `awayIds` as a set: every citation asks on every render. */
+	let away = new Set<string>();
+
+	/**
+	 * Put the manuscript's sources beside the library's, for ids the library
+	 * lacks. Added to the same object the engine reads, so citeproc formats
+	 * them like any other source.
+	 */
+	function mergeCarried() {
+		update((state) => {
+			const sources = state.citationSources;
+			for (const id of state.awayIds ?? []) delete sources[id];
+			const awayIds = Object.keys(carried).filter((id) => !(id in sources));
+			for (const id of awayIds) sources[id] = { ...carried[id], id } as CitationItem;
+			away = new Set(awayIds);
+			return { ...state, awayIds };
+		});
+	}
+
+	/** The open manuscript's carried sources; replaces the previous manuscript's. */
+	function setManuscriptSources(sources: Record<string, object>) {
+		carried = sources;
+		mergeCarried();
+	}
+
+	function isAway(id: string): boolean {
+		return away.has(id);
+	}
 
 	/**
 	 * Load the sources and build the citation engine.
@@ -81,8 +118,11 @@ function createCitationStore() {
 	 */
 	async function initializeCitationStore(): Promise<boolean> {
 		const state = await getInitialState();
-		set(state);
-		if (state.error) log.error('Citations cannot be formatted', state.error);
+		set({ ...state, awayIds: [] });
+		mergeCarried();
+		// As an error, so its words reach the log (quotes taken out): a bare
+		// string is never written, and this one says why nothing can be cited.
+		if (state.error) log.error('Citations cannot be formatted', new Error(state.error));
 		return state.engine !== null;
 	}
 
@@ -154,6 +194,8 @@ function createCitationStore() {
 		previewCitation,
 		renderDocument,
 		getAllSourcesAsJson,
+		setManuscriptSources,
+		isAway,
 		set
 	};
 }
@@ -172,7 +214,7 @@ function bundledManifest(): Promise<BundledManifest> {
 }
 
 async function getInitialState(): Promise<CitationState> {
-	const empty = { bibliography: [], missingIds: [] };
+	const empty = { bibliography: [], missingIds: [], awayIds: [] };
 
 	// Sources first, and independently of the style: if the style can't load,
 	// citations can still be labelled from the sources' own metadata.

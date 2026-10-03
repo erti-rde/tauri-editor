@@ -8,9 +8,22 @@
 		"core:webview:allow-print",
 		"dialog:default",
 		"fs:default",
-		"fs:write-all",
 		"fs:allow-resource-read-recursive",
-		"fs:allow-home-read-recursive",
+		"fs:allow-read-file",
+		"fs:allow-read-text-file",
+		{
+			"identifier": "fs:allow-write-file",
+			"deny": [{ "path": "$RESOURCE" }, { "path": "$RESOURCE/**" }]
+		},
+		{
+			"identifier": "fs:allow-write-text-file",
+			"deny": [{ "path": "$RESOURCE" }, { "path": "$RESOURCE/**" }]
+		},
+		{
+			"identifier": "fs:allow-mkdir",
+			"deny": [{ "path": "$RESOURCE" }, { "path": "$RESOURCE/**" }]
+		},
+		"fs:allow-exists",
 		"store:default",
 		"log:default",
 		"opener:default"
