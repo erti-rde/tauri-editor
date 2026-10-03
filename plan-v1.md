@@ -159,17 +159,17 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M1a-1** App-in-browser test harness (spiked: feasible) (#197)
 - [x] **M1a-2** Real-app E2E on Linux (journeys 1, 2, 5) (#200)
 - [x] **M1a-3** Scope the Rust path commands (SEC-1) (#199)
-- [ ] **M1a-4** Narrow the fs permissions (SEC-2); the trash command moved to M5-7
+- [x] **M1a-4** Narrow the fs permissions (SEC-2); the trash command moved to M5-7 (#206)
 - [x] **M1a-5** Library backups, always before a migration (ADR-8) (#202)
 - [x] **M1a-6** Tests for `adapterCslZotero.ts` (#67) (#201)
 - [x] **M1a-7** Extract manuscript load and save (ADR-1) (#203)
-- [ ] **M1a-8** Manuscript format 1, cross-version safe; citations from outside the library
-      (ADR-2, UX-12)
+- [x] **M1a-8** Manuscript format 1, cross-version safe; citations from outside the library
+      (ADR-2, UX-12) (#209)
 - [x] **M1a-9** `-no-shell-escape` (SEC-11) (#198)
 - [x] **M1a-10** One typed contract with Rust: generated bindings, typed errors (ADR-11). The
       harness builds on it (#195)
 - [x] **M1a-11** Typed settings: one module; nothing opens the settings file directly (#204)
-- [ ] **M1a-12** Logging and global error handling (was M6-6)
+- [x] **M1a-12** Logging and global error handling (was M6-6) (#210)
 
 ### M1b — Sources, notes and import _(L, critical path)_ · [spec](docs/specs/M1b.md)
 
