@@ -1,6 +1,7 @@
 import { mockConvertFileSrc, mockIPC, mockWindows } from '@tauri-apps/api/mocks';
 
 import { commands } from '$lib/ipc';
+import { log } from '$lib/log';
 
 import { fakeCommands, stateFrom, type FakeCommands, type FakeState } from './fakeBackend';
 import { defaultFixture, HOME, type Fixture } from './fixture';
@@ -43,6 +44,8 @@ export interface FakeBackend {
 	opened: string[];
 	/** Commands nobody implemented. A journey fails if this isn't empty. */
 	unhandled: string[];
+	/** Lines written to the log file, as tauri-plugin-log would get them. */
+	logs: { level: number; message: string }[];
 	uninstall(): void;
 }
 
@@ -167,6 +170,7 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 		calls: [],
 		opened: [],
 		unhandled: [],
+		logs: [],
 		uninstall() {
 			// Not `clearMocks()`: a component's async work can outlive the test that
 			// started it, and a missing `invoke` would throw into whichever test runs
@@ -347,6 +351,12 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 			return null;
 		},
 
+		// The log file (M1a-12).
+		'plugin:log|log': ({ level, message }) => {
+			backend.logs.push({ level: Number(level), message: String(message) });
+			return null;
+		},
+
 		// The window: closing is the only thing the app asks of it.
 		'plugin:window|destroy': () => null,
 		'plugin:window|close': () => null
@@ -378,11 +388,11 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 			);
 		}
 
-		// Loud, twice over: a rejection the caller may swallow, and a console
-		// error the journeys fail on.
+		// Loud, twice over: a rejection the caller may swallow, and a logged
+		// error, which reaches the console the journeys fail on.
 		backend.unhandled.push(cmd);
 		const message = `Fake backend: no handler for "${cmd}". Add one in src/lib/harness/.`;
-		console.error(message, args);
+		log.error(message);
 		throw new Error(message);
 	};
 

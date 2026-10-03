@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 
 import { readSetting, writeSetting } from '$lib/settings';
+import { log } from '$lib/log';
 
 /**
  * Whether the margin may point out an unused note.
@@ -32,7 +33,7 @@ function createNudgeSetting() {
 			try {
 				await writeSetting('noteNudges', enabled);
 			} catch (failure) {
-				console.error('Could not remember that preference:', failure);
+				log.error('Could not remember that preference', failure);
 			}
 		}
 	};

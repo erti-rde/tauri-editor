@@ -169,7 +169,6 @@ function chooseCslField(
 	if (mediumFields.includes(zoteroField) && potentialCslFields.includes('medium')) return 'medium';
 
 	// --- Fallback for unresolved ambiguity ---
-	// console.warn(`Ambiguity unresolved for field '${zoteroField}' on itemType '${itemType}'. Potentials: ${potentialCslFields.join(', ')}`);
 	return undefined; // Keep returning undefined if no specific rule matches ambiguity
 }
 

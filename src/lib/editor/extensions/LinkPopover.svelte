@@ -55,7 +55,6 @@
 	function closePopover() {
 		isActive = false;
 		const position = editor.state.selection.$anchor.pos;
-		console.log('pos', position);
 
 		editor.commands.focus(position);
 	}
@@ -74,7 +73,6 @@
 	async function handleOpenLink() {
 		if (!url) return;
 		const safeUrl = sanitizeUrl(url, window.location.href);
-		console.log('Opening link:', safeUrl);
 		if (safeUrl !== '#') {
 			await openUrl(safeUrl);
 			closePopover();

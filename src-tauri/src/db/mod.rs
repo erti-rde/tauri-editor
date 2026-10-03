@@ -180,7 +180,8 @@ async fn migration_is_applied(
 
 impl DbState {
     pub async fn open_library(&self, path: &Path) -> Result<(), String> {
-        let report: BackupReport = std::sync::Arc::new(|e| eprintln!("Library backup failed: {e}"));
+        let report: BackupReport =
+            std::sync::Arc::new(|e| log::warn!("Library backup failed: {e}"));
         self.open_library_reporting(path, report).await
     }
 

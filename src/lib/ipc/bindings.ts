@@ -7,6 +7,13 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	readDirectory: (path: string) => typedError<FileItem[], AppError>(__TAURI_INVOKE("read_directory", { path })),
+	/**
+	 *  Show the folder Erti's log is in, in the file manager (M1a-12 AC-5).
+	 * 
+	 *  From Rust rather than the opener plugin's `open_path`, which would need a
+	 *  capability reaching the log directory for one button.
+	 */
+	openLogFolder: () => typedError<null, AppError>(__TAURI_INVOKE("open_log_folder")),
 	readPdfFile: (path: string) => typedError<string, AppError>(__TAURI_INVOKE("read_pdf_file", { path })),
 	embedChunks: (chunks: string[]) => typedError<EmbeddingResult[], AppError>(__TAURI_INVOKE("embed_chunks", { chunks })),
 	/**  Open the source library, creating it if this is the first run. */

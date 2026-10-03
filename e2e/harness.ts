@@ -3,15 +3,21 @@ import { expect, test as base, type Page } from '@playwright/test';
 /**
  * The page every journey starts from, with the checks every journey ends with.
  *
- * A console error or an uncaught exception fails the journey even when every
- * assertion passed: the bugs this harness exists for are the ones that break
- * something without breaking the step being looked at. So does a command the
- * fake backend was never taught, which would otherwise pass as `undefined`.
+ * A console error, an error written to the log, or an uncaught exception fails
+ * the journey even when every assertion passed: the bugs this harness exists
+ * for are the ones that break something without breaking the step being looked
+ * at. So does a command the fake backend was never taught, which would
+ * otherwise pass as `undefined`.
+ *
+ * The log counts as well as the console because the journeys run on a
+ * production build, where `log.*` writes only to the log (M1a-12): a caught
+ * failure that used to reach the console now reaches only the fake's `logs`.
  */
-export const test = base.extend<{ errors: string[] }>({
+export const test = base.extend<{ errors: string[] & { expected: RegExp[] } }>({
 	errors: [
 		async ({ page }, use) => {
-			const errors: string[] = [];
+			// A journey that throws on purpose names what it throws in `expected`.
+			const errors = Object.assign([] as string[], { expected: [] as RegExp[] });
 			page.on('console', (message) => {
 				if (message.type() === 'error') errors.push(message.text());
 			});
@@ -23,7 +29,14 @@ export const test = base.extend<{ errors: string[] }>({
 				.evaluate(() => window.__ERTI_FAKE__?.unhandled ?? [])
 				.catch(() => []);
 			expect(unhandled, 'commands the fake backend has no handler for').toEqual([]);
-			expect(errors, 'console errors during the journey').toEqual([]);
+			// tauri-plugin-log's `LogLevel.Error`.
+			const logged = await page
+				.evaluate(() => (window.__ERTI_FAKE__?.logs ?? []).filter((l) => l.level >= 5))
+				.catch(() => []);
+			const unexpected = [...errors, ...logged.map((l) => l.message)].filter(
+				(e) => !errors.expected.some((pattern) => pattern.test(e))
+			);
+			expect(unexpected, 'errors logged or shown in the console during the journey').toEqual([]);
 		},
 		{ auto: true }
 	]

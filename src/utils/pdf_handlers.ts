@@ -35,6 +35,7 @@ import { commitIngest, selectSourcesToIngest } from '$lib/ingest/pipeline';
 import { resolveMetadata, type ResolvedVia } from '$lib/ingest/resolve';
 import { findDoi } from '$lib/ingest/identifiers';
 import { getMailto, networkAllowed } from '$lib/stores/consent';
+import { log } from '$lib/log';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -171,8 +172,7 @@ async function getPdfMetadata(
 	} catch (error) {
 		// Resolution failing must not stop the text from being indexed; the source
 		// is simply left unresolved, visible and retryable.
-		const errorMessage = error instanceof Error ? error.message : String(error);
-		console.error(`Failed to get metadata for ${fileName}: ${errorMessage}`);
+		log.warn(`Could not resolve metadata for ${fileName}`, error);
 		return undefined;
 	}
 }
@@ -243,7 +243,7 @@ export async function extractAndChunkPdfs(): Promise<void> {
 			unfinished: new Set(await sourcesNeedingIngest()),
 			onError: (file, message) => {
 				unreadable.push(file.name);
-				console.error(`Could not register ${file.name}:`, message);
+				log.error(`Could not register ${file.name}`, new Error(message));
 			}
 		});
 
@@ -295,8 +295,7 @@ export async function extractAndChunkPdfs(): Promise<void> {
 						// Continue with the rest. The failure is recorded against the
 						// source, so it stays visible and can be retried rather than
 						// being skipped forever.
-						const errorMessage = error instanceof Error ? error.message : String(error);
-						console.error(`Error processing ${file.name}:`, errorMessage);
+						log.error(`Could not process ${file.name}`, error);
 					}
 				})
 			);
@@ -318,7 +317,7 @@ export async function extractAndChunkPdfs(): Promise<void> {
 			message: `Error processing PDFs: ${errorMessage}`,
 			type: 'error'
 		});
-		console.error('Error processing PDFs:', error);
+		log.error('Error processing PDFs', error);
 	}
 }
 

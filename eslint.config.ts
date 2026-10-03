@@ -13,6 +13,7 @@ import svelteConfig from './svelte.config.js';
  *   arguments and results at compile time; a hand-written invoke checks none.
  * - the settings store: one module declares every key, its type and default
  *   (M1a-11). A key spelt differently in two places failed quietly.
+ * - the log plugin: one logger decides what may be written (M1a-12).
  *
  * A file may import what it owns and nothing else on the list. One rule entry
  * per group of files, because a later `no-restricted-imports` replaces an
@@ -28,17 +29,26 @@ function restrictedImports() {
 		name: '@tauri-apps/plugin-store',
 		message: "Read and write settings through '$lib/settings' (M1a-11)."
 	};
+	const logPlugin = {
+		name: '@tauri-apps/plugin-log',
+		message: "Log through '$lib/log', which keeps what the user wrote out of the file (M1a-12)."
+	};
 	const rule = (...paths: object[]) => ({
 		rules: { 'no-restricted-imports': ['error', { paths }] as const }
 	});
 	return [
 		{
 			files: ['src/**/*.{ts,svelte}'],
-			ignores: ['src/lib/ipc/**', 'src/lib/settings/**', 'src/**/*.test.ts'],
-			...rule(invoke, store)
+			ignores: ['src/lib/ipc/**', 'src/lib/settings/**', 'src/lib/log.ts', 'src/**/*.test.ts'],
+			...rule(invoke, store, logPlugin)
 		},
-		{ files: ['src/lib/ipc/**/*.ts'], ignores: ['src/**/*.test.ts'], ...rule(store) },
-		{ files: ['src/lib/settings/**/*.ts'], ignores: ['src/**/*.test.ts'], ...rule(invoke) }
+		{ files: ['src/lib/ipc/**/*.ts'], ignores: ['src/**/*.test.ts'], ...rule(store, logPlugin) },
+		{
+			files: ['src/lib/settings/**/*.ts'],
+			ignores: ['src/**/*.test.ts'],
+			...rule(invoke, logPlugin)
+		},
+		{ files: ['src/lib/log.ts'], ...rule(invoke, store) }
 	];
 }
 
@@ -91,6 +101,14 @@ export default ts.config(
 		languageOptions: { globals: { ...globals.mocha } }
 	},
 	...restrictedImports(),
+	{
+		// One logger (M1a-12). `console` reaches a devtools window nobody has
+		// open, and nothing checks what it's given; `$lib/log` writes the file
+		// and keeps manuscript text out of it.
+		files: ['src/**/*.{ts,svelte}'],
+		ignores: ['src/**/*.test.ts'],
+		rules: { 'no-console': 'error' }
+	},
 	{
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		ignores: ['eslint.config.js', 'svelte.config.js'],

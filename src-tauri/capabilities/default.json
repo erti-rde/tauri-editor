@@ -25,6 +25,7 @@
 		},
 		"fs:allow-exists",
 		"store:default",
+		"log:default",
 		"opener:default"
 	]
 }

@@ -15,6 +15,7 @@
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';
 
 	import type { PanelNames } from '$types/page';
+	import { log } from '$lib/log';
 
 	// Asked once, before anything can be sent anywhere.
 	let askForConsent = $state(false);
@@ -93,12 +94,12 @@
 			const legacy = await join(await appDataDir(), 'magnum_opus_test.db');
 			const report = await importLegacyMetadata(legacy);
 			if (report.imported > 0) {
-				console.info(
+				log.info(
 					`Carried forward metadata for ${report.imported} sources from the previous library.`
 				);
 			}
 		} catch (error) {
-			console.error('Could not read the previous library:', error);
+			log.error('Could not read the previous library', error);
 		}
 	});
 </script>

@@ -59,7 +59,6 @@ describe('putting the stored appearance on', () => {
 	it('still opens when the settings file is unreadable', async () => {
 		// An unreadable settings file must not keep someone out of their
 		// manuscript, so this is logged rather than thrown.
-		vi.spyOn(console, 'error').mockImplementation(() => {});
 		store.get.mockRejectedValue(new Error('disk is on fire'));
 
 		await appearanceStore.initialise();
@@ -111,7 +110,6 @@ describe('changing one thing', () => {
 	it('shows the change even when it cannot be saved', async () => {
 		// The change is already on screen. Reverting it under the user because a
 		// write failed would be the worse of the two outcomes.
-		vi.spyOn(console, 'error').mockImplementation(() => {});
 		await appearanceStore.initialise();
 		store.set.mockRejectedValue(new Error('read-only volume'));
 

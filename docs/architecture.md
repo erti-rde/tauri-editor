@@ -162,6 +162,16 @@ in the same PR. The request goes through the consent gate.
 Put it in the `lib/` folder of its domain, with no Tauri, Svelte or `$lib` alias imports
 (ADR 001), and a `*.test.ts` beside it. Hostile fixtures if it reads files from other people.
 
+### Log something
+
+`log.error('Could not save the notes', error)` from `$lib/log`, the only logger (M1a-12; ESLint
+refuses `console`). The message is Erti's own words, and may name a file. Anything the user
+wrote goes in the second argument or nowhere: the logger writes an error's name, its message
+with quoted text removed and a few stack frames, and only the shape of anything else. Rust uses
+`log::warn!` and friends, into the same file. Something thrown that nothing catches is logged
+and toasted by `catchUnhandled`, so a failure you can handle should be caught and said where it
+happens.
+
 ### Look at the UI or the real app
 
 See "Seeing the app" in [CLAUDE.md](../CLAUDE.md): the fake-backend harness in a browser,
@@ -170,7 +180,9 @@ and probe builds for the real webview.
 ### Test against the backend
 
 - **A journey** (Playwright, `e2e/`): start from `launch(page)` in `e2e/harness.ts`. Every
-  journey fails on a console error or a command the fake doesn't handle, without asking.
+  journey fails on a console error or a command the fake doesn't handle, without asking. A
+  journey that throws on purpose names it in `errors.expected`; `backend.logs` holds the lines
+  the log would have.
 - **A component or store** (vitest): `useFakeBackend()` from `$lib/harness/testing` instead of
   `vi.mock('@tauri-apps/…')`. `backend()` exposes its files, stores and calls to assert on.
   Change the world with `useFakeBackend(() => ({ ...defaultFixture(), … }))`.
@@ -184,4 +196,3 @@ Tracked in the plan, and listed here so nobody trips over them:
   `lib/ingest` when M1b-7 touches it.
 - `Editor.svelte` (750 lines) and `PdfReader.svelte` (1,869) mix decisions with orchestration.
   Extract when touched (M1a-7 does the manuscript part).
-- There's no log file or global error handler until M1a-12. Errors reach `console.*` (76 calls).

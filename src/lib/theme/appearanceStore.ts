@@ -3,6 +3,7 @@ import { writable, get } from 'svelte/store';
 import { readSetting, writeSetting } from '$lib/settings';
 
 import { DEFAULT_APPEARANCE, applyAppearance, normalise, type Appearance } from './theme';
+import { log } from '$lib/log';
 
 /**
  * The appearance the app is currently wearing.
@@ -61,7 +62,7 @@ function createAppearanceStore() {
 			try {
 				apply(normalise(await readSetting('appearance')));
 			} catch (error) {
-				console.error('Could not read the stored appearance:', error);
+				log.error('Could not read the stored appearance', error);
 				apply(DEFAULT_APPEARANCE);
 			}
 		},
@@ -76,7 +77,7 @@ function createAppearanceStore() {
 			} catch (error) {
 				// The change is already on screen; only persistence failed, so it is
 				// reported rather than reverted under the user.
-				console.error('Could not save the appearance:', error);
+				log.error('Could not save the appearance', error);
 			}
 		},
 

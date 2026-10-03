@@ -17,6 +17,7 @@
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { toMarkdown, toSidecar } from './export';
 	import { draftContext, draftMatches } from './draftContext';
+	import { log } from '$lib/log';
 
 	/**
 	 * Everything marked, across every paper.
@@ -123,7 +124,7 @@
 			// ordinary state for a panel that can be opened at any time — but it is
 			// still said, because a panel that goes blank for two different reasons
 			// cannot be acted on.
-			console.error('Could not search the marks:', thrown);
+			log.error('Could not search the marks', thrown);
 			results = [];
 			ran = true;
 			failure = thrown instanceof Error ? thrown.message : String(thrown);
@@ -144,7 +145,7 @@
 			);
 			await run();
 		} catch (thrown) {
-			console.error('Could not prepare the notes:', thrown);
+			log.error('Could not prepare the notes', thrown);
 			errorToast('Could not prepare the notes for searching by meaning.');
 		} finally {
 			preparing = false;
@@ -197,7 +198,7 @@
 			await writeTextFile(path, contents);
 			successToast(`Wrote ${marks.length} notes.`);
 		} catch (failure) {
-			console.error('Could not export the notes:', failure);
+			log.error('Could not export the notes', failure);
 			errorToast('Could not write the notes out.');
 		}
 	}

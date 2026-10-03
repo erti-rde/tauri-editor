@@ -14,6 +14,7 @@ import {
 	type AnnotationLabel,
 	type NewAnnotation
 } from '$lib/stores/db';
+import { log } from '$lib/log';
 
 /**
  * What has been marked on the paper being read.
@@ -155,7 +156,7 @@ function createAnnotationsStore() {
 					lastLabel: lastLabel ?? state.lastLabel ?? labels.find((l) => l.enabled)?.id ?? null
 				}));
 			} catch (failure) {
-				console.error('Could not load the highlight labels:', failure);
+				log.error('Could not load the highlight labels', failure);
 			}
 		},
 
@@ -192,7 +193,7 @@ function createAnnotationsStore() {
 				const annotations = Array.isArray(loaded) ? loaded : [];
 				update((state) => ({ ...state, sha256, annotations, loading: false }));
 			} catch (failure) {
-				console.error('Could not load the annotations for this paper:', failure);
+				log.error('Could not load the annotations for this paper', failure);
 				update((state) => ({ ...state, loading: false }));
 			}
 		},
@@ -227,7 +228,7 @@ function createAnnotationsStore() {
 				} catch (failure) {
 					// Losing the remembered colour is a small thing; failing the
 					// highlight over it is not.
-					console.error('Could not remember the last label:', failure);
+					log.error('Could not remember the last label', failure);
 				}
 			}
 
@@ -246,7 +247,7 @@ function createAnnotationsStore() {
 						[annotation.quote, annotation.note].filter(Boolean).join(' — ')
 					);
 				} catch (failure) {
-					console.error('Could not embed that mark:', failure);
+					log.error('Could not embed that mark', failure);
 				}
 			})();
 
@@ -279,7 +280,7 @@ function createAnnotationsStore() {
 				try {
 					await writeSetting('lastAnnotationLabel', labelId);
 				} catch (failure) {
-					console.error('Could not remember the last label:', failure);
+					log.error('Could not remember the last label', failure);
 				}
 			})();
 		},
@@ -296,7 +297,7 @@ function createAnnotationsStore() {
 				await nameLabelsAfterColours();
 				await this.loadLabels();
 			} catch (failure) {
-				console.error('Could not rename the labels after their colours:', failure);
+				log.error('Could not rename the labels after their colours', failure);
 			}
 		},
 
@@ -306,7 +307,7 @@ function createAnnotationsStore() {
 				await saveLabel({ ...label, name });
 				await this.loadLabels();
 			} catch (failure) {
-				console.error('Could not rename that label:', failure);
+				log.error('Could not rename that label', failure);
 			}
 		},
 

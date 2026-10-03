@@ -13,6 +13,7 @@
 		rememberProject,
 		type RecentProject
 	} from './recentProjects';
+	import { log } from '$lib/log';
 
 	/**
 	 * The first thing anyone sees.
@@ -46,7 +47,7 @@
 			const present = await call(commands.recentProjectsPresent(recents.map((p) => p.path)));
 			missing = new Set(recents.filter((_, i) => !present[i]).map((p) => p.path));
 		} catch (error) {
-			console.error('Could not check the recent projects:', error);
+			log.error('Could not check the recent projects', error);
 		}
 	});
 
@@ -59,7 +60,7 @@
 			await rememberProject(path);
 			handleProjectOpening();
 		} catch (error) {
-			console.error('Could not open the project:', error);
+			log.error('Could not open the project', error);
 			errorToast(
 				`Could not open ${path}: ${error instanceof Error ? error.message : String(error)}`
 			);

@@ -7,6 +7,7 @@ import { workspaceStore } from '$lib/workspace/workspaceStore';
 import { readerStore } from './readerStore';
 
 import type { PdfLocation } from './location';
+import { log } from '$lib/log';
 
 /**
  * Show a passage in the paper it came from.
@@ -39,7 +40,7 @@ export async function showInPdf(target: SourceLocation): Promise<boolean> {
 		// the case content-addressing exists to serve.
 		path = await pathForSource(sha256);
 	} catch (failure) {
-		console.error('Could not look up the source:', failure);
+		log.error('Could not look up the source', failure);
 	}
 
 	if (!path) {

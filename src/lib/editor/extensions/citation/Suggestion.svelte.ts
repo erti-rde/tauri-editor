@@ -14,7 +14,6 @@ import type { Instance, Props } from 'tippy.js';
 export const suggestion = (editor: Editor): SuggestionOptions => ({
 	editor,
 	command: ({ editor, range, props }) => {
-		console.log({ editor, range, props });
 		// Get the formatted citation text from our store
 		// Provisional. Inserting runs a document render, which is what makes the
 		// citation correct with respect to everything else cited.
@@ -61,7 +60,6 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 		return !!from.parent.type.contentMatch.matchType(type);
 	},
 	items: ({ query }) => {
-		console.log(`🚀 ~ query:`, query);
 		const sources = citationStore.getAllSourcesAsJson();
 
 		if (!query) return Object.values(sources);
