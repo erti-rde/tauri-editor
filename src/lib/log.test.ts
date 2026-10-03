@@ -106,15 +106,40 @@ describe('what the log never holds', () => {
 		expect(line).toContain('log.test.ts');
 	});
 
-	it('takes quotes out, and leaves apostrophes alone', () => {
-		expect(withoutQuotes(`Erti couldn't read "the file" or 'that' or \`this\``)).toBe(
-			`Erti couldn't read "…" or '…' or \`…\``
+	it('takes out everything from the first quote, and leaves apostrophes alone', () => {
+		expect(withoutQuotes(`Erti couldn't read "the file" or 'that'`)).toBe(`Erti couldn't read "…`);
+		expect(withoutQuotes('Could not cite `x`')).toBe('Could not cite `…');
+		expect(withoutQuotes('Nothing quoted here, and that’s fine')).toBe(
+			'Nothing quoted here, and that’s fine'
 		);
+	});
+
+	it('is not fooled by an apostrophe or a quote inside the quoted text', () => {
+		// Pairing quotes leaked what followed the inner one.
+		const cases = [
+			`Could not cite '${'Smith'}'s results are wrong'`,
+			'Unknown note “He said “no” to me”',
+			'Unexpected token \'m\', "x"text":"Contradicts Smith"... is not valid JSON'
+		];
+		for (const message of cases) {
+			const line = formatLine('Could not save', new Error(message));
+			expect(line).not.toMatch(/results|to me|Smith|text/);
+		}
+	});
+
+	it('keeps only stack frames, whatever the stack starts with', () => {
+		const error = new Error('changed later');
+		error.stack = `Error: the message as first read, "${NOTE}"\n    at save (Editor.svelte:10:5)\nsave@Editor.svelte:10:5`;
+		const line = formatLine('Could not save', error);
+		expect(line).not.toContain(NOTE);
+		expect(line).toContain('at save (Editor.svelte:10:5)');
+		expect(line).toContain('save@Editor.svelte:10:5');
 	});
 
 	it('writes the message alone when there is no detail', () => {
 		expect(formatLine('Erti started')).toBe('Erti started');
-		expect(formatLine('Nothing', undefined)).toBe('Nothing: undefined');
+		// An absent detail, however it's passed, isn't one.
+		expect(formatLine('Nothing', undefined)).toBe('Nothing');
 	});
 
 	it('caps a runaway message', () => {

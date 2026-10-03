@@ -42,31 +42,35 @@ const MAX_FRAMES = 5;
 const cap = (text: string, max = MAX_TEXT) =>
 	text.length > max ? `${text.slice(0, max)}… (${text.length} characters)` : text;
 
+/** Where quoted text starts. A single quote only opens after a non-letter, so "couldn't" isn't one. */
+const OPENING_QUOTE = /["“‘`]|(?<!\p{L})'/u;
+
 /**
- * Text in quotation marks, replaced with a mark saying it was there.
+ * The text up to its first quotation mark, and a mark saying more was there.
  *
  * Parsers quote the input they choke on: V8's JSON.parse says `"my chapter
  * begins…" is not valid JSON`, ProseMirror prints nodes as `paragraph("…")`.
- * A single quote only opens after a non-letter, so "couldn't" isn't one.
+ * Everything from the first quote goes, not just what lies between pairs:
+ * pairing is fooled by an apostrophe or a nested quote inside the quoted
+ * text ("Smith's results"), and then the rest of it would be written.
  */
 export function withoutQuotes(text: string): string {
-	return text
-		.replace(/"[^"]*"/g, '"…"')
-		.replace(/“[^”]*”/g, '“…”')
-		.replace(/‘[^’]*’/g, '‘…’')
-		.replace(/`[^`]*`/g, '`…`')
-		.replace(/(^|[^\p{L}])'[^']*'/gu, "$1'…'");
+	const opening = OPENING_QUOTE.exec(text);
+	return opening ? `${text.slice(0, opening.index)}${opening[0]}…` : text;
 }
+
+/** A stack line that points at code: V8's `at f (file:1:2)`, WebKit's `f@file:1:2`. */
+const FRAME = /^at\s|@.*:\d+:\d+$/;
 
 function frames(error: Error): string {
 	if (!error.stack) return '';
-	// V8 starts the stack with the name and message again, unredacted.
-	const head = `${error.name}: ${error.message}`;
-	const stack = error.stack.startsWith(head) ? error.stack.slice(head.length) : error.stack;
-	return stack
+	// Frames only. V8 starts the stack with the name and message again,
+	// unredacted, and not always as `error.message` now reads (it's fixed when
+	// the stack is first read), so nothing that isn't a frame is kept.
+	return error.stack
 		.split('\n')
 		.map((line) => line.trim())
-		.filter((line) => line.length > 0)
+		.filter((line) => FRAME.test(line))
 		.slice(0, MAX_FRAMES)
 		.map((line) => `\n    ${cap(line, 200)}`)
 		.join('');
@@ -102,11 +106,11 @@ export function describe(detail: unknown, depth = 0): string {
 /** The line as written: the message, then the detail if there is one. */
 export function formatLine(message: string, detail?: unknown): string {
 	const text = cap(message);
-	return arguments.length < 2 ? text : `${text}: ${describe(detail)}`;
+	return detail === undefined ? text : `${text}: ${describe(detail)}`;
 }
 
 function write(level: Level, message: string, rest: unknown[]) {
-	const line = rest.length ? formatLine(message, rest[0]) : formatLine(message);
+	const line = formatLine(message, rest[0]);
 	// Only where there's no log file to read: `pnpm dev` and the harness. Never
 	// in tests, where the failures being logged are the ones being tested.
 	if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
@@ -155,6 +159,11 @@ export function catchUnhandled(
 
 		const key = `${what}\u0000${reason || describe(thrown)}`;
 		const seen = lastSeen.get(key);
+		// Forgotten once quiet, so a fault whose message changes each time (a
+		// position, an id) doesn't grow this for the whole session.
+		for (const [other, at] of lastSeen) {
+			if (now() - at >= REPEAT_WINDOW_MS) lastSeen.delete(other);
+		}
 		lastSeen.set(key, now());
 		if (seen !== undefined && now() - seen < REPEAT_WINDOW_MS) return;
 

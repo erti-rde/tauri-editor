@@ -414,12 +414,14 @@
 			if (result.ok) {
 				successToast(`Compiled export/main.pdf with ${tex.engine}.`);
 			} else {
-				// TeX's log is the only thing that says what went wrong, and TeX
-				// writes it beside the bundle. It's never copied into Erti's log:
-				// it quotes the manuscript line by line.
+				// What the engine said is the only account of what went wrong. It's
+				// written beside the bundle, the user's own folder, and never into
+				// Erti's log: TeX quotes the manuscript line by line. Not main.log,
+				// which tectonic doesn't write unless asked.
 				log.warn(`${tex.engine} could not compile the LaTeX bundle`);
+				await writeTextFile(await pathJoin(dir, 'compile.log'), result.log);
 				errorToast(
-					`${tex.engine} could not compile the document. The bundle is in export/, with TeX's account of what went wrong in main.log.`
+					`${tex.engine} could not compile the document. The bundle is in export/, with what ${tex.engine} said in compile.log.`
 				);
 			}
 		} catch (error) {
