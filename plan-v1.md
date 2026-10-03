@@ -173,7 +173,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 
 ### M1b — Sources, notes and import _(L, critical path)_ · [spec](docs/specs/M1b.md)
 
-- [ ] **M1b-1** Spike: aliases hold (ADR-3)
+- [x] **M1b-1** Spike: aliases hold (ADR-3) (#211)
 - [ ] **M1b-2** Library migration 6
 - [ ] **M1b-3** One canonical-id resolver
 - [ ] **M1b-4** Remove a source (UX-4)
