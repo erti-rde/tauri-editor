@@ -305,6 +305,13 @@ body {
 	[data-type='citation'].ProseMirror-selectednode {
 		text-decoration: underline;
 	}
+
+	/* From the manuscript's own sources, not this library (UX-12): marked, but
+	   not as an error. The dotted line says "not yours"; the tip says why. */
+	[data-type='citation'][data-away] {
+		text-decoration: underline dotted;
+		text-underline-offset: 3px;
+	}
 }
 
 .tiptap {
