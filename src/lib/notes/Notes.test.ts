@@ -70,9 +70,16 @@ async function ask(user: ReturnType<typeof userEvent.setup>, words: string) {
 describe('when there is nothing to show', () => {
 	it('says a search failed rather than going blank', async () => {
 		const user = userEvent.setup();
-		db.searchAnnotations.mockRejectedValue(new Error('no library is open'));
+		// Only the typed search fails: browsing on mount succeeds, so what's on
+		// screen afterwards is the search's own failure.
+		db.searchAnnotations.mockImplementation(async (query) => {
+			if (query === 'attention') throw new Error('no library is open');
+			return [];
+		});
 
 		render(Notes);
+		await waitFor(() => expect(db.searchAnnotations).toHaveBeenCalledWith('', { limit: 100 }));
+		expect(screen.queryByText('That search could not be run.')).not.toBeInTheDocument();
 		await ask(user, 'attention');
 
 		expect(await screen.findByText('That search could not be run.')).toBeInTheDocument();
@@ -101,11 +108,15 @@ describe('when there is nothing to show', () => {
 
 		render(Notes);
 		await ask(user, 'attention');
-		await user.click(await screen.findByRole('button', { name: 'Prepare my notes' }));
+		const prepare = await screen.findByRole('button', { name: 'Prepare my notes' });
+		// Counted from here: browsing on mount and the question itself both search.
+		const before = db.searchAnnotations.mock.calls.length;
+		await user.click(prepare);
 
 		await waitFor(() => expect(db.embedPendingAnnotations).toHaveBeenCalled());
 		// And asks again, so a successful preparation shows its results at once.
-		await waitFor(() => expect(db.searchAnnotations.mock.calls.length).toBeGreaterThan(1));
+		await waitFor(() => expect(db.searchAnnotations.mock.calls.length).toBeGreaterThan(before));
+		expect(db.searchAnnotations.mock.calls.at(-1)?.[0]).toBe('attention');
 	});
 
 	it('does not blame preparation when a literal search finds nothing', async () => {
