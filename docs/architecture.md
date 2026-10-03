@@ -27,8 +27,9 @@ planned item lands, it says so.
 │ fs_errors.rs      human messages for OS errors                                                 │
 └───────────────┬──────────────────────────────────────┬────────────────────────────────────────┘
         ~/Erti/library.db                        <project>/.erti/project.db
-   sources, chunks, annotations, labels,     documents, source_set, metadata overrides,
-   reading positions (follows the paper)     settings (belongs to the folder)
+   sources, aliases, chunks, annotations,    documents, source_set, metadata overrides,
+   source notes, labels, reading positions   settings (belongs to the folder)
+   (follows the paper)
 ```
 
 Manuscripts are files, not rows: `<project>/*.erti.json`. The folder is the source of truth

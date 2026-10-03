@@ -120,6 +120,10 @@ fn shipped_migrations_are_frozen() {
             5,
             "ce44383282c351c8db399db93e20f6bb1ce21951d316b6a5f25f4285f069c210",
         ),
+        (
+            6,
+            "4ebc0b4ddc7871329dc8e994d5c53832087ad048de48b8f8c3b93d3394395f95",
+        ),
     ];
 
     assert_eq!(

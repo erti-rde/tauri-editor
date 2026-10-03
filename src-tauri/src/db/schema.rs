@@ -8,9 +8,16 @@
 //! Everything Phases 2-4 need is here from the start — chunk page/section columns,
 //! ingest status, embedding provenance — so the corpus is re-ingested once rather
 //! than once per phase.
+//!
+//! `sources.sha256`, and every `sha256` column that refers to it, holds a
+//! source's id rather than strictly a hash (ADR 003). A source with a file is
+//! keyed by the SHA-256 of its bytes; one without a file, added by hand or from
+//! a DOI or an imported bibliography, by `erti:<uuid>`. The name stayed because
+//! renaming a column means rebuilding every table that refers to it, on the
+//! tables holding work that can't be regenerated.
 
 /// Schema version applied to a freshly created or upgraded database.
-pub const LIBRARY_VERSION: i64 = 5;
+pub const LIBRARY_VERSION: i64 = 6;
 pub const PROJECT_VERSION: i64 = 1;
 
 /// One step up to schema version `to`.
@@ -62,6 +69,11 @@ pub const LIBRARY_MIGRATIONS: &[Migration] = &[
         to: 5,
         sql: PAGE_LABEL_SCHEMA,
         skip_if: Some("SELECT 1 FROM pragma_table_info('annotations') WHERE name = 'page_label'"),
+    },
+    Migration {
+        to: 6,
+        sql: WORKS_AND_NOTES_SCHEMA,
+        skip_if: None,
     },
 ];
 
@@ -327,6 +339,69 @@ ALTER TABLE annotations ADD COLUMN style TEXT NOT NULL DEFAULT 'fill'
 /// PDFs and costs nothing to store.
 pub const PAGE_LABEL_SCHEMA: &str = r#"
 ALTER TABLE annotations ADD COLUMN page_label TEXT;
+"#;
+
+/// One work under several ids, and notes on a work rather than on a page.
+///
+/// **`source_aliases`** (ADR 003). A work keeps one id; any other id that turns
+/// out to be the same work points at it. A PDF attached to a source added by
+/// hand keeps its own row, chunks and highlights under its hash, and an alias
+/// row says it is that source. Two ids merged as duplicates are the same. Every
+/// citation, search result and project membership resolves through this table,
+/// so a manuscript citing either id renders the one work.
+///
+/// Chains aren't allowed: a canonical id is never itself an alias, so reading
+/// takes one lookup. That is kept by the one function that writes here, not by
+/// SQL, which can't express it without a trigger. What SQL can keep is kept:
+/// both ids must be sources, an id can't alias itself, and removing either
+/// source removes the row, which is all "removing a work removes its aliases"
+/// needs. The spike in ADR 003 checked this shape against the real queries.
+///
+/// **`source_notes`** (ADR 004). A note about a work as a whole, or about a work
+/// read on paper: what was thought, the words transcribed, and the page as
+/// printed. Annotations can't hold these: their `page` is NOT NULL and `kind`
+/// is a CHECK, and SQLite changes neither without rebuilding the table.
+///
+/// `sha256` is always the canonical id. `id` is a uuid for the same reason an
+/// annotation's is: notes export to a sidecar and come back on another machine.
+/// `label_id` names one of the highlight labels, with no foreign key, as on
+/// `annotations`: removing a label leaves the notes that carried it. `body` is
+/// Markdown and may be empty when the note is just the quote.
+///
+/// **`source_note_embeddings`** mirrors `annotation_embeddings`, a table of its
+/// own so that a delete cascades and `text_hash` spares unchanged text from
+/// being embedded again. The text embedded is the quote, then the body.
+pub const WORKS_AND_NOTES_SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS source_aliases (
+    alias     TEXT PRIMARY KEY,
+    canonical TEXT NOT NULL,
+    FOREIGN KEY (alias) REFERENCES sources(sha256) ON DELETE CASCADE,
+    FOREIGN KEY (canonical) REFERENCES sources(sha256) ON DELETE CASCADE,
+    CHECK (alias <> canonical)
+);
+
+CREATE TABLE IF NOT EXISTS source_notes (
+    id         TEXT PRIMARY KEY,
+    sha256     TEXT NOT NULL,
+    body       TEXT NOT NULL DEFAULT '',
+    quote      TEXT,
+    page_label TEXT,
+    label_id   TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sha256) REFERENCES sources(sha256) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS source_note_embeddings (
+    id        TEXT PRIMARY KEY,
+    embedding BLOB NOT NULL,
+    text_hash TEXT NOT NULL,
+    FOREIGN KEY (id) REFERENCES source_notes(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_aliases_canonical ON source_aliases(canonical);
+CREATE INDEX IF NOT EXISTS idx_source_notes_source ON source_notes(sha256);
+CREATE INDEX IF NOT EXISTS idx_source_notes_label ON source_notes(label_id);
 "#;
 
 /// Per-project database, stored at `<project>/.erti/project.db`.
