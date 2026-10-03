@@ -387,8 +387,9 @@ async fn browsing_lists_every_mark_with_its_paper_and_project() {
         .await
         .unwrap();
 
-    // An area snapshot with no quote and no note is a mark too.
-    let mut rows: Vec<_> = found
+    // An area snapshot with no quote and no note is a mark too. The project's
+    // mark comes first although the other is newer.
+    let rows: Vec<_> = found
         .iter()
         .map(|m| {
             (
@@ -398,12 +399,11 @@ async fn browsing_lists_every_mark_with_its_paper_and_project() {
             )
         })
         .collect();
-    rows.sort();
     assert_eq!(
         rows,
         vec![
-            ("area", Some("two.pdf"), false),
-            ("quoted", Some("one.pdf"), true)
+            ("quoted", Some("one.pdf"), true),
+            ("area", Some("two.pdf"), false)
         ]
     );
 }

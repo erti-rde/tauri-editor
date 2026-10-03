@@ -946,10 +946,14 @@ const ANNOTATION_SEARCH_WITH_EMBEDDING: &str = "SELECT a.id, a.sha256, a.kind, a
 /// microseconds. FTS5 is the answer if that ever stops being true, and measuring
 /// is how we would know.
 ///
-/// An empty query filters nothing: every mark, newest first, with its paper's
-/// name and whether it's in the project. That's what browsing the Notes panel
-/// shows. A `LIKE '%%'` would have skipped marks with neither a quote nor a
-/// note, such as an area snapshot nobody has annotated yet.
+/// An empty query filters nothing: every mark, with its paper's name and
+/// whether it's in the project. That's what browsing the Notes panel shows. A
+/// `LIKE '%%'` would have skipped marks with neither a quote nor a note, such
+/// as an area snapshot nobody has annotated yet.
+///
+/// The project's marks come first, then the newest: the limit applies after
+/// ordering, and a busy week in another project mustn't push this one's marks
+/// out of the list, as the semantic search already ensures.
 pub async fn search_annotations_literally(
     pool: &SqlitePool,
     query: &str,
@@ -957,15 +961,18 @@ pub async fn search_annotations_literally(
     limit: i64,
 ) -> Result<Vec<ScoredAnnotation>, String> {
     let pattern = format!("%{}%", query.replace('%', "\\%").replace('_', "\\_"));
+    let project = serde_json::to_string(project_hashes).map_err(|e| e.to_string())?;
 
     let rows = sqlx::query(&format!(
         "{ANNOTATION_SEARCH_SELECT}
-          WHERE ?1 = '%%' OR a.quote LIKE ?1 ESCAPE '\\' OR a.note LIKE ?1 ESCAPE '\\'
-          ORDER BY a.created_at DESC
+          WHERE ?3 OR a.quote LIKE ?1 ESCAPE '\\' OR a.note LIKE ?1 ESCAPE '\\'
+          ORDER BY a.sha256 IN (SELECT value FROM json_each(?4)) DESC, a.created_at DESC
           LIMIT ?2"
     ))
     .bind(&pattern)
     .bind(limit)
+    .bind(query.is_empty())
+    .bind(&project)
     .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
