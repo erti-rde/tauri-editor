@@ -193,7 +193,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M1c-4** Primitives: content (`Item`, `LabelChip`) (#218)
 - [x] **M1c-5** Catalogue, and contrast measured on rendered components in 7 palettes × 2
       densities (#219)
-- [ ] **M1c-6** Ratchet guard and [design-system.md](docs/design-system.md)
+- [x] **M1c-6** Ratchet guard and [design-system.md](docs/design-system.md) (#220)
 
 ### M2 — Retrieval index _(M)_ · [spec](docs/specs/M2.md)
 
@@ -320,7 +320,9 @@ draggable blocks (#11) · Semantic Scholar recommendations (#17, needs its own c
 the embedding model bake-off (plan.md §12) · a zip container for manuscripts with embedded
 images · collaboration · macOS E2E once a WKWebView driver exists · reopening a project only
 if Erti recorded the user picking it, in Rust-owned state, rather than on finding
-`.erti/project.db` (security.md T2; kept for 1.0 by the maintainer, 2026-10-03).
+`.erti/project.db` (security.md T2; kept for 1.0 by the maintainer, 2026-10-03) · remembering a
+source removed from the library, so the next scan of a project folder holding its PDF doesn't
+add it back (found in M1b-4, whose dialog says that it will; the maintainer may want it in 1.0).
 
 ---
 
