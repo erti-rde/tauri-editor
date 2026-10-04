@@ -175,7 +175,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 
 - [x] **M1b-1** Spike: aliases hold (ADR-3) (#211)
 - [x] **M1b-2** Library migration 6 (#212)
-- [ ] **M1b-3** One canonical-id resolver
+- [x] **M1b-3** One canonical-id resolver (#214)
 - [ ] **M1b-4** Remove a source (UX-4)
 - [ ] **M1b-5** Add a source by hand (UX-2)
 - [ ] **M1b-6** Add from a DOI; ISBN deferred
@@ -186,11 +186,11 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 
 ### M1c — Design system _(M, before any new UI)_ · [spec](docs/specs/M1c.md)
 
-- [ ] **M1c-1** One token source: remove the starter-template tokens; type, elevation and motion
-      tokens (ADR-10)
-- [ ] **M1c-2** Primitives: actions and inputs
-- [ ] **M1c-3** Primitives: containers and feedback
-- [ ] **M1c-4** Primitives: content (`Item`, `LabelChip`)
+- [x] **M1c-1** One token source: remove the starter-template tokens; type, elevation and motion
+      tokens (ADR-10) (#215)
+- [x] **M1c-2** Primitives: actions and inputs (#216)
+- [x] **M1c-3** Primitives: containers and feedback (#217)
+- [x] **M1c-4** Primitives: content (`Item`, `LabelChip`) (#218)
 - [ ] **M1c-5** Catalogue, and contrast measured on rendered components in 7 palettes × 2
       densities
 - [ ] **M1c-6** Ratchet guard and [design-system.md](docs/design-system.md)
