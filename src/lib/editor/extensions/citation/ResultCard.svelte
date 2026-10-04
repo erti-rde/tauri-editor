@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { Icon } from '$lib';
+	import { Button, Item } from '$lib/ui';
+	import { buttonClass } from '$lib/ui/Button.svelte';
 	import { showInPdf } from '$lib/pdfreader/showInPdf';
 
 	interface Props {
@@ -20,12 +22,6 @@
 	}
 
 	let { sentenceMetadata, oncite, busy = false }: Props = $props();
-
-	let isExpanded = $state(false);
-
-	function toggleExpand() {
-		isExpanded = !isExpanded;
-	}
 
 	/**
 	 * Open the paper at this passage.
@@ -67,95 +63,61 @@
 	const sourceUrl = $derived(
 		sentenceMetadata.metadata.DOI ? `https://doi.org/${sentenceMetadata.metadata.DOI}` : null
 	);
-	const needsExpander = $derived(sentenceMetadata.sentence.length > 120);
 </script>
 
-<div
-	class="border-line bg-surface-raised mb-2 overflow-hidden rounded-md border shadow-sm transition-shadow hover:shadow"
->
-	<!-- Header with similarity score and title -->
-	<div class="flex items-center">
-		<div class={`flex h-12 w-12 items-center justify-center text-xs font-bold ${similarityColor}`}>
+<Item title={sentenceMetadata.metadata.title} quote={sentenceMetadata.sentence} clamp>
+	{#snippet leading()}
+		<!-- The score is what the researcher judges relevance by. -->
+		<span
+			class={[
+				'text-caption grid size-9 shrink-0 place-items-center rounded font-semibold tabular-nums',
+				similarityColor
+			]}
+		>
 			{scorePercentage}%
-		</div>
-		<div class="text-ink ml-2 flex-1 text-sm font-medium">
-			{sentenceMetadata.metadata.title}
-		</div>
-	</div>
+		</span>
+	{/snippet}
 
-	<!-- Citation text preview -->
-	<div class="border-line bg-surface-sunken text-ink border-y px-3 pt-1.5 pb-0.5 text-xs">
-		<!-- Text content -->
-		<div class="relative">
-			<p class:line-clamp-2={!isExpanded} class="mb-1 pr-14 italic">
-				{sentenceMetadata.sentence}
-			</p>
+	{#snippet meta()}
+		<!--
+			Where the passage is, which is what Phase 2 recorded page and section for:
+			"p. 4, Results" is what lets a researcher check a quotation against the PDF.
+		-->
+		{#if sentenceMetadata.page_start}<span>p. {sentenceMetadata.page_start}</span>{/if}
+		{#if sentenceMetadata.section}<span class="truncate">· {sentenceMetadata.section}</span>{/if}
+	{/snippet}
 
-			<!-- Fixed position expander button -->
-			{#if needsExpander}
-				<button
-					class="bg-surface-sunken text-ink-muted hover:text-ink absolute top-0 right-0 flex items-center p-1 text-sm"
-					onclick={toggleExpand}
-					aria-label={isExpanded ? 'Show less' : 'Show more'}
-				>
-					<span class="mr-1">{isExpanded ? 'Less' : 'More'}</span>
-					{#if isExpanded}
-						<Icon icon="ChevronUp" size="s" />
-					{:else}
-						<Icon icon="ChevronDown" size="s" />
-					{/if}
-				</button>
-			{/if}
-		</div>
-	</div>
-
-	<!--
-		Where the passage is, which is what Phase 2 recorded page and section for:
-		"p. 4, Results" is what lets a researcher check a quotation against the PDF.
-	-->
-	{#if sentenceMetadata.page_start || sentenceMetadata.section}
-		<p class="text-ink-muted px-1.5 text-xs">
-			{#if sentenceMetadata.page_start}p. {sentenceMetadata.page_start}{/if}{#if sentenceMetadata.page_start && sentenceMetadata.section},
-			{/if}{#if sentenceMetadata.section}{sentenceMetadata.section}{/if}
-		</p>
-	{/if}
-
-	<!-- Action buttons -->
-	<div class="flex justify-start space-x-2 p-1.5">
+	{#snippet actions()}
 		<!--
 			A source from outside the project says so, because citing it changes the
 			project: it joins this project's sources. Adding silently would leave the
 			researcher unsure which papers a project actually contains.
 		-->
-		<button
-			class="bg-accent text-accent-ink hover:bg-accent-hover flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60"
+		<Button
+			variant="primary"
+			size="sm"
+			class="ml-2"
 			onclick={oncite}
-			disabled={busy}
+			loading={busy}
 			title={sentenceMetadata.in_project === false
 				? 'Add this source to the project and cite it'
 				: 'Cite this source'}
 		>
-			<Icon icon="Quote" size="s" />
-			<span class="ml-1">
-				{#if busy}
-					Adding…
-				{:else if sentenceMetadata.in_project === false}
-					Add &amp; cite
-				{:else}
-					Cite
-				{/if}
-			</span>
-		</button>
+			{#if !busy}<Icon icon="Quote" size="s" />{/if}
+			{#if busy}
+				Adding…
+			{:else if sentenceMetadata.in_project === false}
+				Add &amp; cite
+			{:else}
+				Cite
+			{/if}
+		</Button>
 
 		{#if sentenceMetadata.page_start}
-			<button
-				class="bg-surface-sunken text-ink hover:bg-surface-hover flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors"
-				onclick={showSource}
-				title="Open the paper at this passage"
-			>
+			<Button variant="ghost" size="sm" onclick={showSource} title="Open the paper at this passage">
 				<Icon icon="BookOpen" size="s" />
-				<span class="ml-1">Show in PDF</span>
-			</button>
+				Show in PDF
+			</Button>
 		{/if}
 
 		{#if sourceUrl}
@@ -166,12 +128,12 @@
 				href={sourceUrl}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="bg-surface-sunken text-ink hover:bg-surface-hover flex items-center space-x-1 rounded px-3 py-1.5 text-xs font-medium transition-colors"
+				class={buttonClass({ variant: 'ghost', size: 'sm' })}
 			>
 				<Icon icon="ExternalLink" size="s" />
-				<span class="ml-1">View online</span>
+				View online
 			</a>
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/if}
-	</div>
-</div>
+	{/snippet}
+</Item>

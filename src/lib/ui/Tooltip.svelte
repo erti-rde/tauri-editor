@@ -2,6 +2,8 @@
 	import { Tooltip } from 'bits-ui';
 	import type { Snippet } from 'svelte';
 
+	import Kbd from './Kbd.svelte';
+
 	/**
 	 * What a toolbar button does.
 	 *
@@ -55,15 +57,11 @@
 		<Tooltip.Content
 			{side}
 			sideOffset={6}
-			class="border-line bg-surface-overlay text-ink z-50 flex items-center gap-2 rounded border px-2 py-1 text-[11px] shadow-md"
+			class="border-line-strong bg-surface-raised text-ink text-caption shadow-overlay z-50 flex items-center gap-2 rounded border px-2 py-1"
 		>
 			<span>{label}</span>
 			{#if shortcut}
-				<!-- Monospaced, because a shortcut is characters to be typed exactly
-				     and proportional digits make that harder to read at 11px. -->
-				<kbd class="border-line text-ink-muted rounded border px-1 font-mono text-[10px]">
-					{shortcut}
-				</kbd>
+				<Kbd keys={shortcut} />
 			{/if}
 		</Tooltip.Content>
 	</Tooltip.Portal>

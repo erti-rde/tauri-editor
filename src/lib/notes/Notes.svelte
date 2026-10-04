@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 
 	import Icon from '$lib/icon/Icon.svelte';
+	import { Button, Item, LabelChip } from '$lib/ui';
 	import Loader from '$lib/loader/Loader.svelte';
 	import { annotationsStore, pageLabelOf } from '$lib/stores/annotations.svelte';
 	import {
@@ -374,29 +375,17 @@
 					</h3>
 
 					{#each group.rows as row (row.id)}
-						<div class="border-line border-b px-3 py-2">
-							<div class="text-ink-muted flex items-center gap-2 text-[11px]">
-								<span
-									class="inline-block h-2 w-2 shrink-0 rounded-sm"
-									style:background="hsl({colourOf(row.label_id)})"
-									aria-hidden="true"
-								></span>
-								<span>{nameOf(row.label_id)}</span>
+						<Item text={row.note ?? undefined} quote={row.quote ?? undefined}>
+							{#snippet meta()}
+								<LabelChip name={nameOf(row.label_id)} colour={colourOf(row.label_id)} />
 								<span class="truncate">· {row.file_name ?? 'unknown paper'}</span>
-								<span>· p. {pageLabelOf(row)}</span>
-							</div>
+								<span class="shrink-0">· p. {pageLabelOf(row)}</span>
+							{/snippet}
 
-							{#if row.note}
-								<p class="text-ink mt-1 text-xs">{row.note}</p>
-							{/if}
-
-							{#if row.quote}
-								<p class="text-ink-muted mt-1 text-xs italic">{row.quote}</p>
-							{/if}
-
-							<div class="mt-1 flex items-center gap-3">
-								<button
-									class="text-ink-muted hover:text-accent flex items-center gap-1 text-[11px]"
+							{#snippet actions()}
+								<Button
+									variant="ghost"
+									size="sm"
 									onclick={() =>
 										void showInPdf({
 											sha256: row.sha256,
@@ -406,7 +395,7 @@
 								>
 									<Icon icon="BookOpen" size="s" />
 									Show in PDF
-								</button>
+								</Button>
 
 								<!--
 									Offered only when a manuscript is open, because a citation
@@ -415,16 +404,17 @@
 									makes from a search result.
 								-->
 								{#if $draftContext.cite}
-									<button
-										class="text-ink-muted hover:text-accent flex items-center gap-1 text-[11px]"
+									<Button
+										variant="ghost"
+										size="sm"
 										onclick={() => void $draftContext.cite?.(row.sha256)}
 									>
 										<Icon icon="Quote" size="s" />
 										Cite
-									</button>
+									</Button>
 								{/if}
-							</div>
-						</div>
+							{/snippet}
+						</Item>
 					{/each}
 				{/if}
 			{/each}
