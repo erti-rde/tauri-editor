@@ -227,8 +227,8 @@ async fn the_index_is_built_on_the_first_search_not_on_opening() {
     assert!(state.index_is_built());
 
     // Kept between searches.
-    let first = state.index().await.unwrap();
-    let second = state.index().await.unwrap();
+    let (_, first) = state.index().await.unwrap();
+    let (_, second) = state.index().await.unwrap();
     assert!(std::sync::Arc::ptr_eq(&first, &second));
 }
 
@@ -239,7 +239,7 @@ async fn a_change_of_model_rebuilds_the_index() {
     queries::set_embedding_meta(&pool, "model-a", 2)
         .await
         .unwrap();
-    let before = state.index().await.unwrap();
+    let (_, before) = state.index().await.unwrap();
     assert_eq!(before.model(), Some("model-a"));
 
     // Written straight to the library, as a migration might, not through the
@@ -248,7 +248,7 @@ async fn a_change_of_model_rebuilds_the_index() {
         .await
         .unwrap();
 
-    let after = state.index().await.unwrap();
+    let (_, after) = state.index().await.unwrap();
     assert!(!std::sync::Arc::ptr_eq(&before, &after));
     assert_eq!(after.model(), Some("model-b"));
 }
@@ -297,4 +297,109 @@ async fn opening_another_library_drops_the_index_of_the_last() {
         .await
         .unwrap();
     assert!(hits.is_empty(), "nothing from the last library");
+}
+
+#[tokio::test]
+async fn a_search_whose_library_was_dropped_before_it_built_chooses_again() {
+    // The race `open_library` can lose: a search picks the library's pool,
+    // the library is swapped and the index dropped, and the search then builds
+    // from the pool it already had. That index is the old library's.
+    let (_dir, state, pool) = library("overtaken").await;
+    let index = erti_lib::db::index::IndexState::default();
+
+    // Dropped before the build starts: nothing is read, and the caller is
+    // told to choose the library again.
+    let before = index.generation();
+    index.invalidate();
+    assert!(index.get(&pool, before).await.unwrap().is_none());
+    assert!(!index.is_built());
+
+    let current = index.generation();
+    let built = index.get(&pool, current).await.unwrap().unwrap();
+    assert!(!built.is_empty());
+    assert!(index.is_built());
+    drop(state);
+}
+
+#[tokio::test]
+async fn a_search_holding_a_closed_library_is_not_handed_the_open_one_s_index() {
+    // The other half of the race: the new library's index is built and kept
+    // by another search first. The one still holding the old pool must not
+    // score that index and read the passages back from the old library.
+    let (dir, state, old_pool) = library("handed").await;
+    let index = erti_lib::db::index::IndexState::default();
+    let before = index.generation();
+
+    state.open_library(&dir.join("other.db")).await.unwrap();
+    index.invalidate();
+    let new_pool = state.library().await.unwrap();
+    let kept = index
+        .get(&new_pool, index.generation())
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert!(index.get(&old_pool, before).await.unwrap().is_none());
+    assert!(kept.is_empty(), "the new library has nothing yet");
+}
+
+#[tokio::test]
+async fn a_search_s_index_and_library_are_the_same_library() {
+    let (dir, state, _pool) = library("paired").await;
+    let (_, first) = state.index().await.unwrap();
+    assert!(!first.is_empty());
+
+    state.open_library(&dir.join("other.db")).await.unwrap();
+
+    let (pool, index) = state.index().await.unwrap();
+    assert!(index.is_empty(), "the other library's index");
+    assert!(
+        queries::index_rows(&pool).await.unwrap().is_empty(),
+        "with the library it was built from"
+    );
+}
+
+#[tokio::test]
+async fn the_width_recorded_for_the_model_is_read_from_the_library() {
+    // M2-1 review: an old model's vector first among rows, and the current
+    // model recorded. Only through `load` does the recorded width reach the
+    // index; built from the rows alone, the seven old rows would outvote the
+    // six current ones, and nothing would rank.
+    let (_dir, state, pool) = library("width").await;
+    queries::register_source(&pool, "old", "/old.pdf", "old.pdf")
+        .await
+        .unwrap();
+    queries::store_chunks(
+        &pool,
+        "old",
+        &[
+            chunk("old a", vec![1.0, 0.0, 0.0]),
+            chunk("old b", vec![0.0, 1.0, 0.0]),
+            chunk("old c", vec![0.0, 0.0, 1.0]),
+            chunk("old d", vec![1.0, 1.0, 0.0]),
+            chunk("old e", vec![0.0, 1.0, 1.0]),
+            chunk("old f", vec![1.0, 0.0, 1.0]),
+            chunk("old g", vec![1.0, 1.0, 1.0]),
+        ],
+    )
+    .await
+    .unwrap();
+    queries::set_embedding_meta(&pool, "current", 2)
+        .await
+        .unwrap();
+    state.invalidate_index();
+
+    let hits = search_library_in(
+        &state,
+        &[1.0, 0.0],
+        Some(vec![HitKind::Chunk]),
+        Some(1),
+        Some(true),
+    )
+    .await
+    .unwrap();
+    let queries::Hit::Chunk(best) = &hits[0] else {
+        panic!("a passage was asked for")
+    };
+    assert!(best.similarity > 0.9, "a current row still ranks");
 }

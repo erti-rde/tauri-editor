@@ -306,12 +306,31 @@ impl DbState {
             .ok_or_else(no_project)
     }
 
-    /// The open library's index, built on the first search after it opened
-    /// or after something it holds changed.
-    pub async fn index(&self) -> Result<std::sync::Arc<index::Index>, crate::ipc::AppError> {
+    /// The open library and its index, built on the first search after it
+    /// opened or after something it holds changed.
+    ///
+    /// The two come from one read, so a search never scores one library's
+    /// index and reads the passages back from another's.
+    pub async fn index(
+        &self,
+    ) -> Result<(SqlitePool, std::sync::Arc<index::Index>), crate::ipc::AppError> {
         use crate::ipc::Classify;
+        // A few tries: each one that finds the index dropped since it chose
+        // the library chooses again. Writes during an ingest drop it once a
+        // paper, so a query can lose a race, but not many in a row.
+        for _ in 0..3 {
+            // Before the pool: an `open_library` between the two would
+            // otherwise leave the old library's index kept as the new one's.
+            let generation = self.index.generation();
+            let library = self.library().await?;
+            if let Some(index) = self.index.get(&library, generation).await.or_database()? {
+                return Ok((library, index));
+            }
+        }
+        // Still racing: build for this query alone, from the pool it read.
         let library = self.library().await?;
-        self.index.get(&library).await.or_database()
+        let index = index::load(&library).await.or_database()?;
+        Ok((library, std::sync::Arc::new(index)))
     }
 
     /// Drop the index after a write it may not reflect. Every command that

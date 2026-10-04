@@ -367,11 +367,11 @@ pub async fn search_sources(
 ) -> Result<Vec<queries::ScoredChunk>, AppError> {
     let embedding = embed_query(query).await?;
 
-    let library = state.library().await?;
     let project_hashes = open_project_sources(&state).await?;
+    let (library, index) = state.index().await?;
 
     queries::search_chunks(
-        &*state.index().await?,
+        &index,
         &library,
         &embedding,
         &project_hashes,
@@ -430,11 +430,11 @@ pub async fn search_library_in(
     limit: Option<u32>,
     include_library: Option<bool>,
 ) -> Result<Vec<queries::Hit>, AppError> {
-    let library = state.library().await?;
     let project_hashes = open_project_sources(state).await?;
+    let (library, index) = state.index().await?;
 
     queries::search_index(
-        &*state.index().await?,
+        &index,
         &library,
         embedding,
         &project_hashes,
@@ -808,9 +808,10 @@ pub async fn search_annotations(
     }
 
     let embedding = embed_query(query).await?;
+    let (library, index) = state.index().await?;
 
     queries::search_annotations_in(
-        &*state.index().await?,
+        &index,
         &library,
         &embedding,
         &project_hashes,
