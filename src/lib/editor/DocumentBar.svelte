@@ -29,7 +29,16 @@
 		queueMicrotask(() => input?.focus());
 	}
 
+	/**
+	 * Name the new document, once.
+	 *
+	 * Enter and Escape end naming, which removes the field, and the browser then
+	 * blurs it on its way out. Without the check that blur confirmed again: Enter
+	 * created the document twice ("File exists" the second time), and Escape
+	 * created the one it meant to cancel.
+	 */
 	function confirm() {
+		if (!naming) return;
 		const name = draft.trim();
 		if (name.length > 0) oncreate(name);
 		naming = false;

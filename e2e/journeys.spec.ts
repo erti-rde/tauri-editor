@@ -237,9 +237,7 @@ test('a new document after one from a newer Erti can be written in', async ({ pa
 
 	await page.getByRole('button', { name: '+ New' }).click();
 	await page.getByRole('textbox', { name: 'Name for the new document' }).fill('Chapter two');
-	// Leaving the field names it. (Enter names it twice: it confirms, and the
-	// field's removal then blurs it, which confirms again.)
-	await page.keyboard.press('Tab');
+	await page.keyboard.press('Enter');
 	await expect(page.getByRole('button', { name: 'Chapter two', exact: true })).toHaveAttribute(
 		'aria-current',
 		'page'
