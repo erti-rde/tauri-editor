@@ -362,8 +362,12 @@ ALTER TABLE annotations ADD COLUMN page_label TEXT;
 /// printed. Annotations can't hold these: their `page` is NOT NULL and `kind`
 /// is a CHECK, and SQLite changes neither without rebuilding the table.
 ///
-/// `sha256` is always the canonical id. `id` is a uuid for the same reason an
-/// annotation's is: notes export to a sidecar and come back on another machine.
+/// `sha256` is always the canonical id. Like the no-chains rule, the alias write
+/// keeps it: making an id an alias moves that id's notes to the work it now
+/// points at, in the same transaction. Left behind, they'd sit under an alias
+/// that no read looks at, and go with it if that file's row is later removed.
+/// `id` is a uuid for the same reason an annotation's is: notes export to a
+/// sidecar and come back on another machine.
 /// `label_id` names one of the highlight labels, with no foreign key, as on
 /// `annotations`: removing a label leaves the notes that carried it. `body` is
 /// Markdown and may be empty when the note is just the quote.
