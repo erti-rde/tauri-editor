@@ -108,20 +108,39 @@ fn normalise(v: &mut [f32]) {
     }
 }
 
+/// The width the index is built at: the current model's (`embedding_meta`)
+/// when some row has it, else the width most rows have.
+///
+/// Not the first row's: after a change of model, a library can still hold
+/// vectors from the last one, and rows come in no particular order. Taking an
+/// old row's width zeroed every current one, so nothing ranked by meaning at
+/// all. And nothing records a model yet, so the rows themselves have to say.
+///
+/// The recorded width counts only when a row has it, so a bad one can't size
+/// a matrix that holds nothing: every row would be zeroed anyway.
+fn width(rows: &[Row], recorded: Option<usize>) -> usize {
+    if let Some(dims) = recorded.filter(|&d| rows.iter().any(|r| r.embedding.len() == d)) {
+        return dims;
+    }
+    let mut counts: HashMap<usize, usize> = HashMap::new();
+    for row in rows {
+        *counts.entry(row.embedding.len()).or_default() += 1;
+    }
+    // Ties to the wider, so the same library always gets the same width.
+    counts
+        .into_iter()
+        .max_by_key(|&(dims, count)| (count, dims))
+        .map_or(0, |(dims, _)| dims)
+}
+
 impl Index {
     /// Normalise and pack rows into one matrix. CPU work, for `spawn_blocking`.
-    ///
-    /// The width is the current model's (`embedding_meta`), or the first row's
-    /// when nothing records one. Not the first row's regardless: after a change
-    /// of model, a library can still hold vectors from the last one, and rows
-    /// come in no particular order. Taking an old row's width zeroed every
-    /// current one, so nothing ranked by meaning at all.
     ///
     /// A row of another width came from another model; it's kept, as a zero
     /// vector, so it's still found by a filter and scores 0, which is what
     /// comparing vectors of different lengths gave.
     pub fn build(rows: Vec<Row>, model: Option<String>, dims: Option<usize>) -> Index {
-        let dims = dims.unwrap_or_else(|| rows.first().map_or(0, |r| r.embedding.len()));
+        let dims = width(&rows, dims);
         let mut vectors = Vec::with_capacity(rows.len() * dims);
         let mut keys = Vec::with_capacity(rows.len());
         let mut owner_of = Vec::with_capacity(rows.len());
@@ -241,11 +260,17 @@ impl Index {
 }
 
 /// Read every vector in the library and build the index from them.
+pub async fn load(library: &SqlitePool) -> Result<Index, String> {
+    let meta = queries::embedding_meta(library).await?;
+    load_under(library, meta).await
+}
+
+/// `load`, under `meta` (the model and width `embedding_meta` records) already
+/// read, so `IndexState::get` doesn't read it twice.
 ///
 /// The read is async I/O; normalising and packing tens of thousands of rows is
 /// CPU work, so it runs on the blocking pool rather than an async worker.
-pub async fn load(library: &SqlitePool) -> Result<Index, String> {
-    let meta = queries::embedding_meta(library).await?;
+async fn load_under(library: &SqlitePool, meta: Option<(String, i64)>) -> Result<Index, String> {
     let dims = meta
         .as_ref()
         .and_then(|(_, dims)| usize::try_from(*dims).ok());
@@ -305,34 +330,47 @@ impl IndexState {
     ///
     /// `generation` is `self.generation()` as it was before the caller picked
     /// `library`. If anything was dropped since, `library` may be one that has
-    /// been closed (`open_library` swaps the pool, then invalidates), so what's
-    /// built from it serves this query only and isn't kept.
-    pub async fn get(&self, library: &SqlitePool, generation: u64) -> Result<Arc<Index>, String> {
-        let model = queries::embedding_meta(library)
-            .await?
-            .map(|(model, _)| model);
+    /// been closed (`open_library` swaps the pool, then invalidates), and
+    /// what's held now may be another library's. So:
+    ///
+    /// - before building, `None`: the caller picks the library again, rather
+    ///   than every query queued behind a build reading the whole library only
+    ///   to throw it away;
+    /// - during the build, the index answers this query, from the pool it was
+    ///   asked about, and isn't kept.
+    pub async fn get(
+        &self,
+        library: &SqlitePool,
+        generation: u64,
+    ) -> Result<Option<Arc<Index>>, String> {
+        let meta = queries::embedding_meta(library).await?;
+        let model = meta.as_ref().map(|(model, _)| model.as_str());
         let current = |state: &Self| {
-            state
-                .slot()
-                .index
-                .clone()
-                .filter(|index| index.model() == model.as_deref())
+            let slot = state.slot();
+            if slot.generation != generation {
+                return Err(());
+            }
+            Ok(slot.index.clone().filter(|index| index.model() == model))
         };
 
-        if let Some(index) = current(self) {
-            return Ok(index);
+        match current(self) {
+            Err(()) => return Ok(None),
+            Ok(Some(index)) => return Ok(Some(index)),
+            Ok(None) => {}
         }
         let _one = self.building.lock().await;
-        if let Some(index) = current(self) {
-            return Ok(index);
+        match current(self) {
+            Err(()) => return Ok(None),
+            Ok(Some(index)) => return Ok(Some(index)),
+            Ok(None) => {}
         }
 
-        let index = Arc::new(load(library).await?);
+        let index = Arc::new(load_under(library, meta).await?);
         let mut slot = self.slot();
         if slot.generation == generation {
             slot.index = Some(index.clone());
         }
-        Ok(index)
+        Ok(Some(index))
     }
 }
 
@@ -488,11 +526,50 @@ mod tests {
     }
 
     #[test]
+    fn with_no_model_recorded_the_width_is_the_one_most_rows_have() {
+        // Nothing writes embedding_meta yet, so in the app this is the path
+        // every library takes.
+        let rows = |old_first: bool| {
+            let mut rows = vec![
+                row(chunk("a", 0), "a", &[0.0, 1.0]),
+                row(chunk("a", 1), "a", &[1.0, 0.0]),
+            ];
+            let old = row(chunk("old", 0), "a", &[1.0, 0.0, 0.0]);
+            if old_first {
+                rows.insert(0, old);
+            } else {
+                rows.push(old);
+            }
+            rows
+        };
+
+        for old_first in [true, false] {
+            let index = Index::build(rows(old_first), None, None);
+            assert_eq!(index.dims, 2, "old row first: {old_first}");
+        }
+    }
+
+    #[test]
+    fn a_recorded_width_no_row_has_sizes_nothing() {
+        // A bad meta row must not size a matrix of zeros: billions of floats
+        // would abort the app. The rows' own width serves instead.
+        let index = Index::build(
+            vec![row(chunk("a", 0), "a", &[1.0, 0.0])],
+            Some("current".into()),
+            Some(4_000_000_000),
+        );
+
+        assert_eq!(index.dims, 2);
+        assert_eq!(index.vectors.len(), 2);
+    }
+
+    #[test]
     fn a_vector_of_another_width_scores_zero_rather_than_failing() {
         let index = Index::build(
             vec![
                 row(chunk("a", 0), "a", &[1.0, 0.0]),
                 row(chunk("a", 1), "a", &[1.0, 0.0, 0.0]),
+                row(chunk("a", 2), "a", &[0.0, 1.0]),
             ],
             None,
             None,
@@ -506,8 +583,9 @@ mod tests {
         };
 
         let found = index.search(&[1.0, 0.0], &filter, 5);
-        assert_eq!(found.len(), 2);
-        assert_eq!(found[1].similarity, 0.0);
+        assert_eq!(found.len(), 3);
+        let odd = found.iter().find(|f| f.key == &chunk("a", 1)).unwrap();
+        assert_eq!(odd.similarity, 0.0);
 
         let other_model = index.search(&[1.0, 0.0, 0.0], &filter, 5);
         assert!(other_model.iter().all(|f| f.similarity == 0.0));
