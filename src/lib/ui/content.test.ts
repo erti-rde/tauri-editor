@@ -49,6 +49,8 @@ describe('Item', () => {
 
 		const more = screen.getByRole('button', { name: 'Show more' });
 		expect(more).toHaveAttribute('aria-expanded', 'false');
+		// Tied to the passage it shortens, not only placed beside it.
+		expect(document.getElementById(more.getAttribute('aria-controls')!)).toHaveTextContent(LONG);
 		more.focus();
 		await user.keyboard('{Enter}');
 		expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute(
@@ -147,5 +149,34 @@ describe('the lists that render through Item', () => {
 		const button = screen.getByRole('button', { name: /Adding…/ });
 		expect(button).toBeDisabled();
 		expect(button).toHaveAttribute('aria-busy', 'true');
+	});
+
+	it('draws no meta line for a passage with no page or section', () => {
+		const view = mount(ResultCard, {
+			sentenceMetadata: {
+				sha256: 'a'.repeat(64),
+				similarity: 0.5,
+				sentence: 'short',
+				metadata: { id: 'x', type: 'book', title: 'Elsewhere' },
+				in_project: true
+			},
+			oncite: vi.fn()
+		});
+		expect(view.container.querySelector('.text-caption.text-ink-muted.flex')).toBeNull();
+	});
+
+	it('names a section with no page without a stray separator', () => {
+		mount(ResultCard, {
+			sentenceMetadata: {
+				sha256: 'a'.repeat(64),
+				similarity: 0.5,
+				sentence: 'short',
+				metadata: { id: 'x', type: 'book', title: 'Elsewhere' },
+				section: 'Results',
+				in_project: true
+			},
+			oncite: vi.fn()
+		});
+		expect(screen.getByText('Results').textContent?.trim()).toBe('Results');
 	});
 });

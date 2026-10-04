@@ -26,7 +26,7 @@
 	/**
 	 * Open the paper at this passage.
 	 *
-	 * The card has said "p. 4, Results" since the chunker started recording it,
+	 * The card has said "p. 4 · Results" since the chunker started recording it,
 	 * and finding page 4 was still the researcher's job. The passage text goes
 	 * along as the quote so the reader marks the sentence itself rather than
 	 * dropping the reader at the top of a dense page (#37).
@@ -65,7 +65,27 @@
 	);
 </script>
 
-<Item title={sentenceMetadata.metadata.title} quote={sentenceMetadata.sentence} clamp>
+<!--
+	Where the passage is, which is what Phase 2 recorded page and section for:
+	"p. 4 · Results" is what lets a researcher check a quotation against the PDF.
+	Given to the row only when there's something to say, so a passage with
+	neither draws no empty line.
+-->
+{#snippet meta()}
+	{#if sentenceMetadata.page_start}<span>p. {sentenceMetadata.page_start}</span>{/if}
+	{#if sentenceMetadata.section}
+		<span class="truncate">
+			{sentenceMetadata.page_start ? '· ' : ''}{sentenceMetadata.section}
+		</span>
+	{/if}
+{/snippet}
+
+<Item
+	title={sentenceMetadata.metadata.title}
+	quote={sentenceMetadata.sentence}
+	clamp
+	meta={sentenceMetadata.page_start || sentenceMetadata.section ? meta : undefined}
+>
 	{#snippet leading()}
 		<!-- The score is what the researcher judges relevance by. -->
 		<span
@@ -76,15 +96,6 @@
 		>
 			{scorePercentage}%
 		</span>
-	{/snippet}
-
-	{#snippet meta()}
-		<!--
-			Where the passage is, which is what Phase 2 recorded page and section for:
-			"p. 4, Results" is what lets a researcher check a quotation against the PDF.
-		-->
-		{#if sentenceMetadata.page_start}<span>p. {sentenceMetadata.page_start}</span>{/if}
-		{#if sentenceMetadata.section}<span class="truncate">· {sentenceMetadata.section}</span>{/if}
 	{/snippet}
 
 	{#snippet actions()}
@@ -128,7 +139,11 @@
 				href={sourceUrl}
 				target="_blank"
 				rel="noopener noreferrer"
-				class={buttonClass({ variant: 'ghost', size: 'sm' })}
+				class={[
+					buttonClass({ variant: 'ghost', size: 'sm' }),
+					// The variant's hover is `enabled:`, which a link never is.
+					'hover:bg-surface-hover hover:text-ink'
+				]}
 			>
 				<Icon icon="ExternalLink" size="s" />
 				View online

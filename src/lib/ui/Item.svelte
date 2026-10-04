@@ -29,6 +29,7 @@
 
 	let { meta, title, text, body, quote, clamp = false, leading, actions }: Props = $props();
 
+	const id = $props.id();
 	let expanded = $state(false);
 	const long = $derived(clamp && (quote?.length ?? 0) > 120);
 </script>
@@ -53,6 +54,7 @@
 		{#if quote}
 			<div class="flex items-start gap-2">
 				<p
+					id="{id}-quote"
 					class={[
 						'font-page text-small text-ink-muted flex-1 italic',
 						long && !expanded && 'line-clamp-2'
@@ -66,6 +68,7 @@
 						class="text-caption text-ink-muted hover:text-ink flex shrink-0 items-center gap-0.5"
 						aria-label={expanded ? 'Show less' : 'Show more'}
 						aria-expanded={expanded}
+						aria-controls="{id}-quote"
 						onclick={() => (expanded = !expanded)}
 					>
 						{expanded ? 'Less' : 'More'}
@@ -79,6 +82,8 @@
 			</div>
 		{/if}
 		{#if actions}
+			<!-- Offset by a ghost button's padding, so the first action's words line
+			     up with the text above. A filled first action cancels it. -->
 			<div class="-ml-2 flex flex-wrap items-center gap-1">{@render actions()}</div>
 		{/if}
 	</div>
