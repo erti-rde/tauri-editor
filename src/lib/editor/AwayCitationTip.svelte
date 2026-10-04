@@ -105,12 +105,19 @@
 	async function add() {
 		if (!target) return;
 		busy = true;
-		const ids = parseCitationIds(target.dataset.id).filter((id) => citationStore.isAway(id));
+		// One per work: a citation naming two ids of a work the project lacks adds
+		// that work once (ADR 003).
+		const work = (id: string) => citationStore.canonicalId(id);
+		const ids = parseCitationIds(target.dataset.id).filter(
+			(id, i, all) =>
+				citationStore.isAway(id) && all.findIndex((other) => work(other) === work(id)) === i
+		);
 		const sources = citationStore.getAllSourcesAsJson();
 		try {
 			for (const id of ids) {
 				// Checked as CSL before it goes anywhere: the snapshot came in a file.
-				const csl = { ...guardCslItem(sources[id]), id };
+				// Filed under its work's id (ADR 003), and added under the id cited.
+				const csl = { ...guardCslItem(sources[citationStore.canonicalId(id)]), id };
 				await addSourceFromManuscript(id, JSON.stringify(csl));
 			}
 			await citationStore.initializeCitationStore();

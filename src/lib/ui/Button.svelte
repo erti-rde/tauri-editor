@@ -20,7 +20,9 @@
 			},
 			size: {
 				sm: 'h-5 px-2 text-caption',
-				md: 'h-(--row-height) px-2.5 text-small'
+				md: 'h-(--row-height) px-2.5 text-small',
+				// A row's height, close round its content: a trigger among icons.
+				tight: 'h-(--row-height) px-1 text-small'
 			}
 		},
 		defaults: { variant: 'secondary', size: 'md' }
@@ -56,12 +58,13 @@
 	}: Props = $props();
 </script>
 
+<!-- The spread first, so a caller's attributes can't undo the loading state. -->
 <button
+	{...rest}
 	{type}
-	class={buttonClass({ variant, size }, typeof extra === 'string' ? extra : undefined)}
+	class={[buttonClass({ variant, size }), extra]}
 	disabled={disabled || loading}
 	aria-busy={loading || undefined}
-	{...rest}
 >
 	{#if loading}
 		<Spinner class="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />

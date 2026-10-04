@@ -69,17 +69,23 @@ export const MISSING_SOURCE_LABEL = '[source removed]';
  * resolve throws deep inside the processor, which would blank every citation in
  * the document over one missing paper. Unresolvable ids are dropped from their
  * cluster instead, and reported so the editor can mark them.
+ *
+ * Each cited id is resolved to its work first (ADR 003), then de-duplicated,
+ * so a citation naming a book and its attached PDF cites the book once, and
+ * `knownIds` holds canonical ids only.
  */
 export function renderDocumentCitations(
 	sites: readonly CitationSite[],
 	engine: CitationEngine,
-	knownIds: ReadonlySet<string>
+	knownIds: ReadonlySet<string>,
+	resolve: (id: string) => string = (id) => id
 ): DocumentCitations {
 	const missing = new Set<string>();
 
 	const perSite = sites.map((site, i) => {
-		const present = site.itemIds.filter((id) => knownIds.has(id));
-		for (const id of site.itemIds) {
+		const ids = [...new Set(site.itemIds.map(resolve))];
+		const present = ids.filter((id) => knownIds.has(id));
+		for (const id of ids) {
 			if (!knownIds.has(id)) missing.add(id);
 		}
 
@@ -87,7 +93,7 @@ export function renderDocumentCitations(
 			site,
 			clusterId: `c${i}`,
 			present,
-			missingIds: site.itemIds.filter((id) => !knownIds.has(id))
+			missingIds: ids.filter((id) => !knownIds.has(id))
 		};
 	});
 

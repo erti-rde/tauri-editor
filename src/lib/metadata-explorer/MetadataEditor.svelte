@@ -16,6 +16,8 @@
 		id: string;
 		file_name: string;
 		path: string | null;
+		/** The hash of the file at `path`, which may be a PDF attached to the work. */
+		file_sha256: string | null;
 		/** Null when the source has not resolved to anything citable. */
 		metadata: CitationItem | null;
 		state: 'pending' | 'ready' | 'failed';
@@ -65,6 +67,7 @@
 				id: source.sha256,
 				file_name: source.file_name,
 				path: source.path,
+				file_sha256: source.file_sha256,
 				metadata,
 				state: source.state,
 				last_error: source.last_error,
@@ -87,14 +90,20 @@
 	let doiInput = $state('');
 
 	async function handleRetry(source: Source) {
-		if (!source.path) {
+		if (!source.path || !source.file_sha256) {
 			errorToast(`Erti no longer knows where ${source.file_name} is.`);
 			return;
 		}
 
 		busyWith = source.id;
 		try {
-			await retryIngest({ sha256: source.id, path: source.path, file_name: source.file_name });
+			// Under the file's own hash: the path may be a PDF attached to the work
+			// (ADR 003), whose chunks and metadata must not land on the work's id.
+			await retryIngest({
+				sha256: source.file_sha256,
+				path: source.path,
+				file_name: source.file_name
+			});
 			await loadSources();
 		} catch (error) {
 			errorToast(error instanceof Error ? error.message : String(error));

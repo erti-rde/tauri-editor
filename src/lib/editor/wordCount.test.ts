@@ -8,7 +8,10 @@ import { Notes, NOTES_NODE } from './extensions/citation/Notes';
 import { countDocument, countWords, progressTo } from './wordCount';
 
 vi.mock('@tauri-apps/plugin-store', () => ({ load: vi.fn() }));
-vi.mock('$lib/stores/db', () => ({ projectSources: vi.fn() }));
+vi.mock('$lib/stores/db', () => ({
+	projectSources: vi.fn(),
+	sourceAliases: vi.fn(async () => ({}))
+}));
 
 /**
  * The count a researcher is judged on is the one the submission form asks for,

@@ -20,7 +20,10 @@ import { Notes, NOTES_NODE, type NoteEntry } from './Notes';
  */
 
 vi.mock('@tauri-apps/plugin-store', () => ({ load: vi.fn() }));
-vi.mock('$lib/stores/db', () => ({ projectSources: vi.fn() }));
+vi.mock('$lib/stores/db', () => ({
+	projectSources: vi.fn(),
+	sourceAliases: vi.fn(async () => ({}))
+}));
 
 const FIXTURES = resolve(process.cwd(), 'tests/fixtures/csl');
 const read = (p: string) => readFileSync(resolve(FIXTURES, p), 'utf8');
