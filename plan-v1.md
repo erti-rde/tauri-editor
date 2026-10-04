@@ -193,7 +193,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M1c-4** Primitives: content (`Item`, `LabelChip`) (#218)
 - [x] **M1c-5** Catalogue, and contrast measured on rendered components in 7 palettes × 2
       densities (#219)
-- [ ] **M1c-6** Ratchet guard and [design-system.md](docs/design-system.md)
+- [x] **M1c-6** Ratchet guard and [design-system.md](docs/design-system.md) (#220)
 
 ### M2 — Retrieval index _(M)_ · [spec](docs/specs/M2.md)
 
