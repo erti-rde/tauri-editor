@@ -305,6 +305,32 @@ pub async fn set_metadata_override(
         .or_database()
 }
 
+/// What removing a source would delete, for the dialog that asks first.
+#[tauri::command]
+#[specta::specta]
+pub async fn source_removal(
+    state: State<'_, DbState>,
+    id: String,
+) -> Result<queries::SourceRemoval, AppError> {
+    queries::source_removal(&state.library().await?, &id)
+        .await
+        .or_database()
+}
+
+/// Remove a source from the library, with its files' records, marks and
+/// notes (M1b-4). The PDFs stay where they are.
+#[tauri::command]
+#[specta::specta]
+pub async fn remove_source(state: State<'_, DbState>, id: String) -> Result<(), AppError> {
+    remove_source_in(&state, &id).await
+}
+
+pub async fn remove_source_in(state: &DbState, id: &str) -> Result<(), AppError> {
+    queries::remove_source(&state.library().await?, id)
+        .await
+        .or_database()
+}
+
 /// Rank chunks against a piece of text the user is writing.
 ///
 /// Embedding and scoring both happen here; only the top results cross the IPC

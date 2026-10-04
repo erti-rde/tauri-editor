@@ -559,6 +559,75 @@ pub async fn alias_source(
     Ok(())
 }
 
+/// What removing a work would take with it, for the dialog that asks first
+/// (docs/ux.md UX-4).
+#[derive(Debug, Serialize, Deserialize, specta::Type, PartialEq, Eq)]
+pub struct SourceRemoval {
+    /// Source notes, and page notes on its files.
+    pub notes: u32,
+    /// Highlights and area snapshots on its files.
+    pub highlights: u32,
+}
+
+/// A work and every file attached to it: what "remove from the library" means
+/// for the id the researcher picked, whichever of them it was (ADR 003).
+///
+/// Removing only the work's own row would leave an attached PDF behind as a
+/// work of its own, with the highlights the dialog said were going.
+async fn work_and_files(library: &SqlitePool, id: &str) -> Result<Vec<String>, String> {
+    let aliases = alias_map(library).await?;
+    let work = resolve(&aliases, id).to_string();
+    let mut group: Vec<String> = aliases
+        .iter()
+        .filter(|(_, canonical)| **canonical == work)
+        .map(|(alias, _)| alias.clone())
+        .collect();
+    group.sort();
+    group.insert(0, work);
+    Ok(group)
+}
+
+pub async fn source_removal(library: &SqlitePool, id: &str) -> Result<SourceRemoval, String> {
+    let group =
+        serde_json::to_string(&work_and_files(library, id).await?).map_err(|e| e.to_string())?;
+    let (notes, highlights): (i64, i64) = sqlx::query_as(
+        "SELECT
+           (SELECT COUNT(*) FROM source_notes WHERE sha256 IN (SELECT value FROM json_each(?1)))
+         + (SELECT COUNT(*) FROM annotations
+             WHERE kind = 'page-note' AND sha256 IN (SELECT value FROM json_each(?1))),
+           (SELECT COUNT(*) FROM annotations
+             WHERE kind <> 'page-note' AND sha256 IN (SELECT value FROM json_each(?1)))",
+    )
+    .bind(&group)
+    .fetch_one(library)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(SourceRemoval {
+        notes: u32::try_from(notes).unwrap_or(u32::MAX),
+        highlights: u32::try_from(highlights).unwrap_or(u32::MAX),
+    })
+}
+
+/// Remove a work from the library, with every file attached to it.
+///
+/// One delete: every table that hangs off a source cascades from it (chunks,
+/// locations, ingest state, marks and their images and vectors, source notes
+/// and theirs, reading positions, and the alias rows on either side). The PDF
+/// files themselves are never touched. A project's `source_set` and metadata
+/// corrections keep the id, as every project's do: they're in other
+/// databases, and the manuscripts citing it render from their own copy
+/// (M1a-8) until it's added again.
+pub async fn remove_source(library: &SqlitePool, id: &str) -> Result<(), String> {
+    let group =
+        serde_json::to_string(&work_and_files(library, id).await?).map_err(|e| e.to_string())?;
+    sqlx::query("DELETE FROM sources WHERE sha256 IN (SELECT value FROM json_each(?))")
+        .bind(&group)
+        .execute(library)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Rank chunks against a query vector.
 ///
 /// Scoring happens here rather than in the webview: the old implementation

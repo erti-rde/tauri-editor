@@ -1,21 +1,31 @@
 <script lang="ts">
-	import { fly } from 'svelte/transition';
-	import { Icon } from '$lib';
 	import type { CitationItem } from '$lib/stores/citationStore';
-	import Select from '$ui/Select.svelte';
-	import DateField from '$ui/DateField.svelte';
+	import { Button, DateField, Select, Sidebar, TextField } from '$lib/ui';
 	import { CalendarDate } from '@internationalized/date';
+
+	import RemoveSource from './RemoveSource.svelte';
 
 	import type { DateValue } from '@internationalized/date';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 
 	interface Props {
 		source: CitationItem;
+		/** The row being edited: its id, what it's called, and where its PDF is. */
+		record: { id: string; title: string; path: string | null };
 		onclose: () => void;
 		onupdate: (sourceId: string, metadata: CitationItem) => void;
+		/** After it's been removed from the library. */
+		onremoved: () => void;
 		augmentedSchema: AugmentedZoteroSchema;
 	}
-	const { source = $bindable(), onclose, augmentedSchema, onupdate }: Props = $props();
+	const {
+		source = $bindable(),
+		record,
+		onclose,
+		augmentedSchema,
+		onupdate,
+		onremoved
+	}: Props = $props();
 
 	const currentFormFields = $derived.by(() => {
 		return (
@@ -47,6 +57,11 @@
 		return [year, month, day];
 	}
 
+	/** A field's value as text; anything that isn't one yet starts empty. */
+	function textOf(value: CitationItem[string]): string {
+		return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+	}
+
 	function handleSave() {
 		onupdate(String(source.id), source);
 	}
@@ -67,74 +82,45 @@
 	}
 </script>
 
-<div
-	class="border-line bg-surface-raised fixed top-0 right-0 z-10 h-full w-[400px] overflow-auto border-l shadow-lg"
-	transition:fly={{ x: 400, duration: 300 }}
->
-	<div
-		class="border-line bg-surface-raised sticky top-0 z-20 flex items-center justify-between border-b px-4 py-3"
-	>
-		<h3 class="text-lg font-bold">Edit Source</h3>
-		<div>
-			<button
-				class="bg-accent text-accent-ink hover:bg-accent-hover mr-2 rounded px-3 py-1"
-				onclick={handleSave}
-			>
-				Save
-			</button>
-			<button
-				class="hover:bg-surface-hover rounded-full p-1"
-				aria-label="Close source details"
-				onclick={onclose}
-			>
-				<Icon icon="X" class="h-5 w-5" />
-			</button>
-		</div>
-	</div>
-	<div class="p-4">
-		<div class="mb-4">
-			<Select
-				label="Source type"
-				placeholder="Choose a source type"
-				items={itemTypesFields}
-				value={source.zotero_type}
-				type="single"
-				onValueChange={handleSourceTypeChange}
-			/>
-		</div>
-		{#if currentFormFields}
-			<!-- Render form fields based on selected type -->
-			<div class="space-y-4">
-				{#each currentFormFields as { cslField, label, field, inputType } (field)}
-					{#if cslField}
-						<div class="mb-4">
-							{#if inputType === 'date'}
-								{@const dateValue = getDateParts(source[cslField])}
-								<!-- Date input -->
-								<DateField
-									{label}
-									value={dateValue
-										? new CalendarDate(dateValue[0], dateValue[1], dateValue[2])
-										: undefined}
-									onValueChange={(value) => value && handleDateValueChange(cslField, value)}
-								/>
-							{:else}
-								<label class="text-ink mb-1 block text-sm font-medium">
-									{label}
-									<input
-										type={inputType}
-										class="border-line-strong w-full rounded-md border p-2"
-										bind:value={source[cslField]}
-										oninput={(event) => (source[cslField] = event.currentTarget.value)}
-									/>
-								</label>
-							{/if}
-						</div>
+<Sidebar title="Edit source" subtitle={record.title} {onclose}>
+	<div class="grid gap-3 p-3">
+		<Select
+			label="Source type"
+			placeholder="Choose a source type"
+			items={itemTypesFields}
+			value={source.zotero_type}
+			type="single"
+			onValueChange={handleSourceTypeChange}
+		/>
+		{#if currentFormFields.length}
+			{#each currentFormFields as { cslField, label, field, inputType } (field)}
+				{#if cslField}
+					{#if inputType === 'date'}
+						{@const dateValue = getDateParts(source[cslField])}
+						<DateField
+							{label}
+							value={dateValue
+								? new CalendarDate(dateValue[0], dateValue[1], dateValue[2])
+								: undefined}
+							onValueChange={(value) => value && handleDateValueChange(cslField, value)}
+						/>
+					{:else}
+						<!-- Text whatever the field: CSL's numbers are often ranges, "12–14". -->
+						<TextField
+							{label}
+							value={textOf(source[cslField])}
+							oninput={(event) => (source[cslField] = event.currentTarget.value)}
+						/>
 					{/if}
-				{/each}
-			</div>
+				{/if}
+			{/each}
 		{:else}
-			<div class="text-ink-muted italic">Select a source type to see available fields</div>
+			<p class="text-small text-ink-muted">Choose a source type to see its fields.</p>
 		{/if}
 	</div>
-</div>
+	{#snippet footer()}
+		<RemoveSource id={record.id} title={record.title} path={record.path} {onremoved} />
+		<span class="flex-1"></span>
+		<Button variant="primary" onclick={handleSave}>Save</Button>
+	{/snippet}
+</Sidebar>

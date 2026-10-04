@@ -74,7 +74,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | Extra detail on demand             | `Popover`, `Tooltip`                   | A tooltip never holds the only copy of information                                       |
 | Sections of one surface            | `Tabs`                                 |                                                                                          |
 | A rail panel                       | `Panel` + `PanelHeader`                | Header: title, one primary action, a scope line                                          |
-| A right-hand detail view           | `Sidebar`                              | Close with Esc                                                                           |
+| A right-hand detail view           | `Sidebar`                              | Close with Esc; its actions in `footer`, Save last                                       |
 | Something happened                 | `Toast`                                | Past tense, with an action if there's a next step ("Show in folder")                     |
 | Something needs attention in place | `Banner`                               | `info`/`warning`/`danger`/`success`, in words, optionally one action                     |
 | Nothing to show                    | `EmptyState`                           | Say which kind of nothing: none yet, none match, or failed                               |

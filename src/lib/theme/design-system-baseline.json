@@ -60,12 +60,6 @@
 		"radius": 9,
 		"shadow": 1
 	},
-	"src/lib/metadata-explorer/SourceSidebar.svelte": {
-		"button": 2,
-		"input": 1,
-		"radius": 1,
-		"shadow": 1
-	},
 	"src/lib/notes/Notes.svelte": {
 		"button": 6,
 		"input": 2,

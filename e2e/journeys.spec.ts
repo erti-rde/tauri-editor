@@ -141,6 +141,61 @@ test('a co-author’s citation renders from the manuscript, and can be kept', as
 	await expect(page.locator('.ProseMirror [data-type="citation"]')).toContainText('Kuhn');
 });
 
+// M1b-4, UX-4
+test('removing a source asks first, and its citations then render from the manuscript', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	// Saved once by this Erti, so the chapter carries its own copy of what it cites.
+	await page.locator('.ProseMirror').click();
+	await page.keyboard.press('End');
+	await page.keyboard.type(' More.');
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const files = window.__ERTI_FAKE__!.files;
+				const path = [...files.keys()].find((p) => p.endsWith('Chapter 1.erti.json'))!;
+				return (files.get(path) as string).includes('"erti"');
+			})
+		)
+		.toBe(true);
+
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
+	const sidebar = page.getByRole('complementary', { name: 'Edit source' });
+	await sidebar.getByRole('button', { name: 'Remove from library…' }).click();
+
+	// M1b-4 AC-1: what it touches, before anything happens.
+	const dialog = page.getByRole('dialog', {
+		name: 'Remove “Attention Is All You Need” from your library?'
+	});
+	await expect(dialog).toContainText('Cited 1 time in Chapter 1 in this project.');
+	await expect(dialog).toContainText(/\d+ highlights? will be deleted\./);
+	await expect(dialog).toContainText('It’s in this project’s folder');
+	await dialog.getByRole('button', { name: 'Remove' }).click();
+
+	// M1b-4 AC-4
+	await expect(
+		page.getByText('Removed. You can restore it from a library backup in Settings › Library.')
+	).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Sources (2)' })).toBeVisible();
+	await expect(sidebar).toBeHidden();
+
+	// M1b-4 AC-2: its marks went with it.
+	await page.getByRole('button', { name: 'Notes' }).click();
+	await expect(page.getByText('· vaswani-2017.pdf')).toHaveCount(0);
+
+	// M1b-4 AC-3: dotted, from the chapter's own copy, not an error.
+	// The chapter is still open in its tab, and is read again as the editor returns.
+	await page.getByRole('button', { name: 'Files' }).click();
+	await expect(page.locator('.ProseMirror')).toContainText('Attention in Low-Resource Translation');
+	const away = page.locator('.ProseMirror [data-type="citation"][data-away]');
+	await expect(away).toContainText('Vaswani');
+});
+
 // M1a-8 AC-1, AC-7
 test('saving a chapter from before 1.0 upgrades it, and keeps the old file beside it', async ({
 	page

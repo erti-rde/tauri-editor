@@ -93,6 +93,15 @@ export const addToProject = (sha256: string) => run(commands.addToProject(sha256
 export const addSourceFromManuscript = (id: string, cslJson: string) =>
 	call(commands.addSourceFromManuscript(id, cslJson));
 
+/** What removing a source would delete: its notes and highlights (UX-4). */
+export const sourceRemoval = (id: string) => call(commands.sourceRemoval(id));
+
+/**
+ * Remove a source from the library, with every file attached to it and their
+ * marks and notes (M1b-4). The PDFs themselves stay where they are.
+ */
+export const removeSource = (id: string) => run(commands.removeSource(id));
+
 /** Correct a source's metadata for this project only, leaving the library's copy alone. */
 export const setMetadataOverride = (sha256: string, cslJson: string) =>
 	run(commands.setMetadataOverride(sha256, cslJson));

@@ -14,10 +14,12 @@
 		onclose: () => void;
 		/** Under the title: tabs, a toolbar. */
 		header?: Snippet;
+		/** Pinned under the content: the view's actions, its one way out of the library. */
+		footer?: Snippet;
 		children: Snippet;
 	}
 
-	let { title, subtitle, onclose, header, children }: Props = $props();
+	let { title, subtitle, onclose, header, footer, children }: Props = $props();
 
 	const id = $props.id();
 	let aside = $state<HTMLElement>();
@@ -73,4 +75,9 @@
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{@render children()}
 	</div>
+	{#if footer}
+		<footer class="border-line flex items-center gap-2 border-t px-3 py-2.5">
+			{@render footer()}
+		</footer>
+	{/if}
 </aside>

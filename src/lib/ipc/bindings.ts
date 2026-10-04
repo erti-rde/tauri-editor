@@ -144,6 +144,13 @@ export const commands = {
 	 *  one ranked list would be quietly wrong in a way nobody could see.
 	 */
 	searchAnnotations: (query: string, limit: number | null, semantic: boolean | null) => typedError<ScoredAnnotation[], AppError>(__TAURI_INVOKE("search_annotations", { query, limit, semantic })),
+	/**  What removing a source would delete, for the dialog that asks first. */
+	sourceRemoval: (id: string) => typedError<SourceRemoval, AppError>(__TAURI_INVOKE("source_removal", { id })),
+	/**
+	 *  Remove a source from the library, with its files' records, marks and
+	 *  notes (M1b-4). The PDFs stay where they are.
+	 */
+	removeSource: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_source", { id })),
 	restoreDefaultLabels: () => typedError<number, AppError>(__TAURI_INVOKE("restore_default_labels")),
 	nameLabelsAfterColours: () => typedError<number, AppError>(__TAURI_INVOKE("name_labels_after_colours")),
 };
@@ -362,6 +369,17 @@ export type Source = {
 	resolved_via: string | null,
 	state: string,
 	last_error: string | null,
+};
+
+/**
+ *  What removing a work would take with it, for the dialog that asks first
+ *  (docs/ux.md UX-4).
+ */
+export type SourceRemoval = {
+	/**  Source notes, and page notes on its files. */
+	notes: number,
+	/**  Highlights and area snapshots on its files. */
+	highlights: number,
 };
 
 export type TexToolchain = {

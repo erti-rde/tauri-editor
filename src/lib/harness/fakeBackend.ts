@@ -166,6 +166,12 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 	// As `queries::resolve`: one lookup, and an unknown id is its own.
 	const canon = (id: string) => state.aliases.get(id) ?? id;
 	const projectWorks = () => new Set([...state.project].map(canon));
+	// As `queries::work_and_files`: the work, then every file attached to it.
+	const workAndFiles = (id: string) => {
+		const work = canon(id);
+		const files = [...state.aliases].filter(([, w]) => w === work).map(([alias]) => alias);
+		return [work, ...files.sort()];
+	};
 	// An override made on an alias still corrects the work, unless the work has
 	// its own. A work with no file opens its alias's, and says whose file it is.
 	const effective = (s: LibrarySource): Source => {
@@ -295,7 +301,7 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		sourcesNeedingIngest() {
 			root();
 			return [...state.project]
-				.map((sha) => state.library.get(sha)!)
+				.flatMap((sha) => state.library.get(sha) ?? [])
 				.filter((s) => s.state === 'pending' || s.state === 'failed')
 				.map((s) => s.sha256)
 				.sort();
@@ -333,8 +339,12 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 
 		projectSources() {
 			root();
+			// A removed work stays in the project's set, as in Rust, and isn't listed.
 			return [...projectWorks()]
-				.map((sha) => effective(state.library.get(sha)!))
+				.flatMap((sha) => {
+					const source = state.library.get(sha);
+					return source ? [effective(source)] : [];
+				})
 				.sort((a, b) => a.file_name.localeCompare(b.file_name));
 		},
 
@@ -455,6 +465,37 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			library();
 			const start = offset ?? 0;
 			return newestFirst().slice(start, start + (limit ?? 200));
+		},
+
+		sourceRemoval(id) {
+			library();
+			const files = workAndFiles(id);
+			const marks = [...state.marks.values()].filter((m) => files.includes(m.sha256));
+			// The fake keeps no source notes: nothing writes one until M1b-8.
+			return {
+				notes: marks.filter((m) => m.kind === 'page-note').length,
+				highlights: marks.filter((m) => m.kind !== 'page-note').length
+			};
+		},
+
+		removeSource(id) {
+			library();
+			const files = workAndFiles(id);
+			for (const sha of files) {
+				state.library.delete(sha);
+				state.chunks.delete(sha);
+				state.positions.delete(sha);
+			}
+			for (const [markId, m] of state.marks) {
+				if (!files.includes(m.sha256)) continue;
+				state.marks.delete(markId);
+				state.embedded.delete(markId);
+				state.images.delete(markId);
+			}
+			for (const [alias, work] of state.aliases) {
+				if (files.includes(alias) || files.includes(work)) state.aliases.delete(alias);
+			}
+			return null;
 		},
 
 		deleteAnnotation(id) {
