@@ -5,11 +5,15 @@
 export { default as Banner } from './Banner.svelte';
 export { default as Button } from './Button.svelte';
 export { default as Checkbox } from './Checkbox.svelte';
+export { default as Chip } from './Chip.svelte';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export { default as DateField } from './DateField.svelte';
 export { default as Dialog } from './Dialog.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
 export { default as IconButton } from './IconButton.svelte';
+export { default as Item } from './Item.svelte';
+export { default as Kbd } from './Kbd.svelte';
+export { default as LabelChip } from './LabelChip.svelte';
 export { default as Menu, type MenuItem } from './Menu.svelte';
 export { default as Panel } from './Panel.svelte';
 export { default as PanelHeader } from './PanelHeader.svelte';
