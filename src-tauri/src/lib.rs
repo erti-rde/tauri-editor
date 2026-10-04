@@ -135,6 +135,7 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         mark_ingest_failed,
         set_source_metadata,
         project_sources,
+        source_aliases,
         add_to_project,
         set_metadata_override,
         search_sources,

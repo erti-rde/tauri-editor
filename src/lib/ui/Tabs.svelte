@@ -59,9 +59,11 @@
 		{/each}
 	</Tabs.List>
 
-	<div class="bg-surface-raised relative min-h-0 flex-1">
+	<!-- The panel fills what the tabs are given and scrolls inside it, or is as
+	     tall as its content where the parent sets no height. -->
+	<div class="bg-surface-raised min-h-0 flex-1">
 		{#each tabs as tab (tab.value)}
-			<Tabs.Content value={tab.value} class="absolute inset-0 overflow-y-auto p-5">
+			<Tabs.Content value={tab.value} class="h-full overflow-y-auto p-5">
 				{@render panel(tab.value)}
 			</Tabs.Content>
 		{/each}

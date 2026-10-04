@@ -32,23 +32,29 @@
 	let { label, hideLabel = false, hint, error, control }: Props = $props();
 
 	const id = $props.id();
-	const note = $derived(error ?? hint);
+	// An empty error is no error: a form that clears it with '' keeps its hint.
+	const note = $derived(error || hint);
 </script>
 
-<div class="grid gap-1">
-	<label for={id} class={hideLabel ? 'sr-only' : 'text-small text-ink font-medium'}>{label}</label>
-	{@render control({
-		id,
-		...(note ? { 'aria-describedby': `${id}-note` } : {}),
-		...(error ? { 'aria-invalid': true as const } : {})
-	})}
-	{#if note}
-		<p
-			id="{id}-note"
-			class={['text-caption', error ? 'text-danger' : 'text-ink-muted']}
-			aria-live={error ? 'polite' : undefined}
-		>
-			{note}
-		</p>
-	{/if}
+<div>
+	<div class="grid gap-1">
+		<label for={id} class={hideLabel ? 'sr-only' : 'text-small text-ink font-medium'}>
+			{label}
+		</label>
+		{@render control({
+			id,
+			...(note ? { 'aria-describedby': `${id}-note` } : {}),
+			...(error ? { 'aria-invalid': true as const } : {})
+		})}
+	</div>
+	<!-- Always in the page, and always live: a region added with its words
+	     already in it isn't announced, and neither is one made live as they
+	     change. Empty, it has no height, and outside the grid, no gap. -->
+	<p
+		id="{id}-note"
+		class={['text-caption', note && 'mt-1', error ? 'text-danger' : 'text-ink-muted']}
+		aria-live="polite"
+	>
+		{note ?? ''}
+	</p>
 </div>

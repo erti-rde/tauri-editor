@@ -44,6 +44,9 @@
 	}: Props = $props();
 
 	const safe = $derived(items.filter((item) => !item.danger));
+	// The current choice is said in words on the trigger, not only shown by an
+	// icon's colour: "List style: Bullet list".
+	const current = $derived(items.find((item) => item.active));
 	const dangerous = $derived(items.filter((item) => item.danger));
 </script>
 
@@ -75,9 +78,10 @@
 
 <DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger
-		aria-label={label}
+		aria-label={current ? `${label}: ${current.label}` : label}
 		{disabled}
-		class={buttonClass({ variant: 'ghost', size: 'md' }, 'px-1')}
+		data-current={current ? '' : undefined}
+		class={[buttonClass({ variant: 'ghost', size: 'tight' }), 'data-current:bg-surface-active']}
 	>
 		{#if trigger}
 			{@render trigger()}

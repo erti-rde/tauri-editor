@@ -34,14 +34,18 @@ function labelName(labels: AnnotationLabel[], id: string | null): string | null 
 export function toMarkdown(
 	annotations: Annotation[],
 	sources: ExportSource[],
-	labels: AnnotationLabel[]
+	labels: AnnotationLabel[],
+	resolve: (id: string) => string = (id) => id
 ): string {
 	const byPaper = new Map<string, Annotation[]>();
 
+	// A mark sits on its file's hash, and a project lists works (ADR 003), so a
+	// mark on a PDF attached to a book is filed under the book.
 	for (const annotation of annotations) {
-		const group = byPaper.get(annotation.sha256) ?? [];
+		const work = resolve(annotation.sha256);
+		const group = byPaper.get(work) ?? [];
 		group.push(annotation);
-		byPaper.set(annotation.sha256, group);
+		byPaper.set(work, group);
 	}
 
 	const lines: string[] = ['# Notes', ''];

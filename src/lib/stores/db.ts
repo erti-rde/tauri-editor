@@ -79,6 +79,10 @@ export const setSourceMetadata = (args: {
 /** Sources in the open project, with project-local overrides applied. */
 export const projectSources = () => call(commands.projectSources()) as Promise<Source[]>;
 
+/** Every alias in the library, alias → the work it belongs to (ADR 003). */
+export const sourceAliases = () =>
+	call(commands.sourceAliases()) as Promise<Record<string, string>>;
+
 export const addToProject = (sha256: string) => run(commands.addToProject(sha256));
 
 /**

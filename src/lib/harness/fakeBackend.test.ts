@@ -70,6 +70,32 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 		});
 	});
 
+	// M1b-3: the same rules as `canonical_ids.rs`, so journeys see what the app would.
+	it('resolves aliases as Rust does: one row per work, opening its attached file', async () => {
+		await openFixtureProject();
+		const { state } = backend();
+		state.library.set('erti:book', {
+			...state.library.get(SHA.devlin)!,
+			sha256: 'erti:book',
+			path: null,
+			file_name: ''
+		});
+		state.aliases.set(SHA.devlin, 'erti:book');
+		state.overrides.set(SHA.devlin, '{"title":"Made on the PDF"}');
+
+		expect(await db.sourceAliases()).toEqual({ [SHA.devlin]: 'erti:book' });
+		const listed = (await db.projectSources()).filter((s) =>
+			[SHA.devlin, 'erti:book'].includes(s.sha256)
+		);
+		expect(listed).toHaveLength(1);
+		expect(listed[0]).toMatchObject({
+			sha256: 'erti:book',
+			path: `${ROOT}/papers/devlin-2019.pdf`,
+			file_sha256: SHA.devlin,
+			csl_json: '{"title":"Made on the PDF"}'
+		});
+	});
+
 	it('fails with a kind, as Rust does', async () => {
 		const failure = await db.projectRoot().catch((e: unknown) => e);
 		expect(failure).toBeInstanceOf(IpcError);

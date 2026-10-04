@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { sourceFiles, withoutComments } from './sourceScan';
 
 /**
  * No colour is written into a class name.
@@ -15,22 +16,6 @@ const RAW_COLOUR =
 	/\b(?:bg|text|border|ring|fill|stroke|from|to|via|outline|divide|placeholder|decoration|shadow|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d{2,3})?(?:\/\d+)?\b/g;
 
 const SRC = join(process.cwd(), 'src');
-
-function sourceFiles(dir: string): string[] {
-	return readdirSync(dir).flatMap((name) => {
-		const path = join(dir, name);
-		if (statSync(path).isDirectory()) return sourceFiles(path);
-		return /\.(svelte|ts|css)$/.test(name) && !/\.test\.ts$/.test(name) ? [path] : [];
-	});
-}
-
-/** Comments are prose, and may name a colour to explain why it was removed. */
-function withoutComments(source: string): string {
-	return source
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|[^:])\/\/.*$/gm, '$1');
-}
 
 describe('colours come from tokens', () => {
 	it('uses no raw Tailwind colour class anywhere in src', () => {

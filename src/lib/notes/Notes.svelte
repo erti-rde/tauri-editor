@@ -14,7 +14,8 @@
 	import { showInPdf } from '$lib/pdfreader/showInPdf';
 	import { save } from '@tauri-apps/plugin-dialog';
 	import { writeTextFile } from '@tauri-apps/plugin-fs';
-	import { projectSources } from '$lib/stores/db';
+	import { projectSources, sourceAliases } from '$lib/stores/db';
+	import { canonical } from '$lib/citations/aliases';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { toMarkdown, toSidecar } from './export';
 	import { draftContext, draftMatches } from './draftContext';
@@ -117,7 +118,8 @@
 			if (context && !asked) {
 				draftMatches.set({
 					paragraph: context,
-					sources: results.map((row) => ({ sha256: row.sha256, similarity: row.similarity }))
+					// By work, which is what the paragraph's citations resolve to.
+					sources: results.map((row) => ({ sha256: row.source_id, similarity: row.similarity }))
 				});
 			}
 		} catch (thrown) {
@@ -175,14 +177,18 @@
 			if (format === 'json') {
 				contents = toSidecar(marks);
 			} else {
-				const sources = await projectSources().catch(() => []);
+				const [sources, aliases] = await Promise.all([
+					projectSources().catch(() => []),
+					sourceAliases().catch(() => ({}))
+				]);
 				contents = toMarkdown(
 					marks,
 					sources.map((source) => ({
 						sha256: source.sha256,
 						title: titleOf(source.csl_json) ?? source.file_name
 					})),
-					$annotationsStore.labels
+					$annotationsStore.labels,
+					(id) => canonical(aliases, id)
 				);
 			}
 
@@ -399,15 +405,16 @@
 
 								<!--
 									Offered only when a manuscript is open, because a citation
-									needs somewhere to go. A note carries its paper's hash and
-									its page, so this is the same insertion the citation panel
-									makes from a search result.
+									needs somewhere to go. A note carries the work its paper
+									belongs to, so this is the same insertion the citation panel
+									makes from a search result. Show in PDF, above, keeps the
+									file's own hash: the work may be a book with no file.
 								-->
 								{#if $draftContext.cite}
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() => void $draftContext.cite?.(row.sha256)}
+										onclick={() => void $draftContext.cite?.(row.source_id)}
 									>
 										<Icon icon="Quote" size="s" />
 										Cite

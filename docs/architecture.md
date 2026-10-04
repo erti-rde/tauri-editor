@@ -52,7 +52,13 @@ in the Tauri store `settings-store.json`.
   in the document together (disambiguation, ibid., note numbers). Output goes through
   `citations/sanitize.ts`.
 - **Finding sources.** Selection → `search_sources` (Rust embeds the text, scores chunks) →
-  `extensions/citation/Result.svelte`.
+  `extensions/citation/Result.svelte`. A result, like a mark, carries two ids: `source_id`, the
+  work to cite (ADR 003), and `sha256`, the file "Show in PDF" opens.
+- **Works and aliases.** `alias_source` in `db/queries.rs` is the only write to
+  `source_aliases`, and never leaves a chain. Rust resolves with `queries::resolve`; the webview
+  gets the map from `source_aliases` and resolves with `citations/aliases.ts`. Both agree on
+  `tests/fixtures/aliases.json`. The `source_set` and overrides keep the id they were given and
+  are resolved when read.
 - **Reading.** `pdfreader/PdfReader.svelte` + `viewer.ts` (pdf.js) → marks in
   `stores/annotations.svelte.ts` → `save_annotation` + `embed_annotation`. The Notes panel
   searches them. `notes/draftContext.ts` carries the paragraph under the cursor to the panel.
@@ -64,6 +70,7 @@ in the Tauri store `settings-store.json`.
 | Rule                                                                                  | Why / where                                 |
 | ------------------------------------------------------------------------------------- | ------------------------------------------- |
 | A source's id is its content hash (or `erti:<uuid>` without a file, from M1b)         | ADR 003; renames and duplicates collapse    |
+| An id from a manuscript, search or note is resolved before it's cited or looked up    | ADR 003; `canonical()` in Rust and TS       |
 | Shipped migrations are frozen and idempotent; a library backup precedes any migration | `schema.rs` header; ADR 008                 |
 | Decisions live in pure TS modules; components orchestrate; vectors never cross IPC    | ADR 001                                     |
 | Citation HTML is untrusted and goes through `sanitize.ts`                             | Manuscripts travel between people           |

@@ -13,13 +13,21 @@ import paperUrl from '../../../tests/fixtures/harness/sample.pdf?url';
  * by hand. Every path is under `/fake`, which no real machine has, so nothing
  * here can be mistaken for a real file.
  */
+/**
+ * A source as the library stores it. Which file a work opens, and so
+ * `file_sha256`, is worked out when the project's sources are listed.
+ */
+export type LibrarySource = Omit<Source, 'file_sha256'>;
+
 export interface Fixture {
 	/** The project folder. */
 	root: string;
 	/** Where the source library lives. */
 	libraryPath: string;
 	/** Sources in the library, all in the project. */
-	sources: Source[];
+	sources: LibrarySource[];
+	/** Alias → the work it belongs to (ADR 003). None by default. */
+	aliases?: Record<string, string>;
 	labels: AnnotationLabel[];
 	marks: Annotation[];
 	/**
@@ -182,7 +190,7 @@ function mark(
 }
 
 export function defaultFixture(): Fixture {
-	const sources: Source[] = [
+	const sources: LibrarySource[] = [
 		{
 			sha256: SHA.vaswani,
 			file_name: 'vaswani-2017.pdf',

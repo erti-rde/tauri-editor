@@ -60,6 +60,20 @@ describe('Button', () => {
 		expect(onclick).not.toHaveBeenCalled();
 	});
 
+	it("keeps saying it's busy whatever the caller passes, and takes a class list", () => {
+		mount(Button, {
+			children: text('Adding…'),
+			loading: true,
+			'aria-busy': false,
+			class: ['ml-auto', { hidden: false }]
+		});
+
+		const button = screen.getByRole('button', { name: 'Adding…' });
+		expect(button).toHaveAttribute('aria-busy', 'true');
+		expect(button).toHaveClass('ml-auto');
+		expect(button).not.toHaveClass('hidden');
+	});
+
 	it('is a button, not a submit, unless asked', () => {
 		mount(Button, { children: text('Save') });
 		expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('type', 'button');
@@ -118,9 +132,9 @@ describe('Menu', () => {
 		const list = items();
 		mount(Menu, { label: 'Document', items: list });
 
-		screen.getByRole('button', { name: 'Document' }).focus();
+		screen.getByRole('button', { name: /^Document/ }).focus();
 		await user.keyboard('{Enter}');
-		expect(screen.getByRole('button', { name: 'Document' })).toHaveAttribute(
+		expect(screen.getByRole('button', { name: /^Document/ })).toHaveAttribute(
 			'aria-expanded',
 			'true'
 		);
@@ -151,7 +165,7 @@ describe('Menu', () => {
 		const user = userEvent.setup();
 		mount(Menu, { label: 'Document', items: items(), disabled: true });
 
-		await user.click(screen.getByRole('button', { name: 'Document' }));
+		await user.click(screen.getByRole('button', { name: /^Document/ }));
 		expect(screen.queryByRole('menu', anyVisibility)).not.toBeInTheDocument();
 	});
 
@@ -159,13 +173,26 @@ describe('Menu', () => {
 		const user = userEvent.setup();
 		mount(Menu, { label: 'Text style', items: items() });
 
-		await user.click(screen.getByRole('button', { name: 'Text style' }));
+		await user.click(screen.getByRole('button', { name: 'Text style: Heading 1' }));
 		// By its text: a hidden element's accessible name computes as empty.
 		await screen.findByRole('menu', anyVisibility);
 		const current = screen
 			.getAllByRole('menuitem', anyVisibility)
 			.find((item) => item.textContent?.includes('Heading 1'));
 		expect(current).toHaveAttribute('aria-current', 'true');
+	});
+
+	it('says the current choice on its trigger, in words as well as colour', () => {
+		mount(Menu, { label: 'List style', items: items() });
+		expect(screen.getByRole('button', { name: 'List style: Heading 1' })).toHaveAttribute(
+			'data-current'
+		);
+	});
+
+	it('is named by its label alone when nothing is current', () => {
+		const none = items().map((item) => ({ ...item, active: false }));
+		mount(Menu, { label: 'List style', items: none });
+		expect(screen.getByRole('button', { name: 'List style' })).not.toHaveAttribute('data-current');
 	});
 });
 
@@ -197,6 +224,22 @@ describe('TextField and TextArea', () => {
 			const field = screen.getByRole('textbox', { name: 'DOI' });
 			expect(field).toHaveAttribute('aria-invalid', 'true');
 			expect(field).toHaveAccessibleDescription('Enter a DOI, such as 10.1000/xyz');
+		});
+
+		it(`${name}: an empty error is no error, and keeps the hint`, () => {
+			mount(primitive, { label: 'DOI', hint: 'Such as 10.1000/xyz', error: '' });
+
+			const field = screen.getByRole('textbox', { name: 'DOI' });
+			expect(field).not.toHaveAttribute('aria-invalid');
+			expect(field).toHaveAccessibleDescription('Such as 10.1000/xyz');
+		});
+
+		it(`${name}: its note is a live region before there's anything to say`, () => {
+			const view = mount(primitive, { label: 'DOI' });
+
+			const note = view.container.querySelector('[aria-live="polite"]');
+			expect(note).toBeInTheDocument();
+			expect(note).toHaveTextContent('');
 		});
 
 		it(`${name}: can't be typed into while disabled`, async () => {
@@ -308,6 +351,16 @@ describe('RadioGroup', () => {
 		);
 	});
 
+	it('describes an option whose value has a space in it', () => {
+		mount(RadioGroup, {
+			label: 'Page',
+			options: [{ value: 'on paper', label: 'On paper', description: 'Black on white' }]
+		});
+		expect(screen.getByRole('radio', { name: 'On paper' })).toHaveAccessibleDescription(
+			'Black on white'
+		);
+	});
+
 	it('skips a disabled option, and a disabled group takes no choice', async () => {
 		const user = userEvent.setup();
 		const onValueChange = vi.fn();
@@ -337,6 +390,12 @@ describe('Select', () => {
 		await screen.findByRole('listbox', anyVisibility);
 		await user.keyboard('{ArrowDown}{Enter}');
 		expect(onValueChange).toHaveBeenCalled();
+	});
+
+	it('is reached from its label, as the label it replaced was', () => {
+		const view = mount(Select, { label: 'Source type', items, type: 'single' });
+		const label = view.container.querySelector('label');
+		expect(label?.getAttribute('for')).toBe(screen.getByRole('button', { name: 'Source type' }).id);
 	});
 
 	it("can't be opened while disabled", async () => {

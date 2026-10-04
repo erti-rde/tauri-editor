@@ -3,6 +3,8 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 
 import Notes from './Notes.svelte';
+import { draftContext } from './draftContext';
+import { showInPdf } from '$lib/pdfreader/showInPdf';
 
 /**
  * The panel that answers "where did I write something about this idea".
@@ -21,6 +23,7 @@ const db = vi.hoisted(() => ({
 	searchAnnotations: vi.fn<(...args: unknown[]) => Promise<unknown[]>>(async () => []),
 	embedPendingAnnotations: vi.fn<() => Promise<number>>(async () => 0),
 	projectSources: vi.fn<() => Promise<unknown[]>>(async () => []),
+	sourceAliases: vi.fn<() => Promise<Record<string, string>>>(async () => ({})),
 	annotationLabels: vi.fn<() => Promise<unknown[]>>(async () => [])
 }));
 vi.mock('$lib/stores/db', () => db);
@@ -51,6 +54,7 @@ const MARK = {
 	created_at: '2026-01-01',
 	updated_at: '2026-01-01',
 	similarity: 0.8,
+	source_id: 'sha-1',
 	in_project: true,
 	file_name: 'paper.pdf'
 };
@@ -172,5 +176,25 @@ describe('following the writing', () => {
 
 		const how = await screen.findByRole('group', { name: 'How to search' });
 		expect(how).toHaveAttribute('aria-disabled', 'true');
+	});
+});
+
+// M1b-3 AC-1: notes. A mark on a PDF attached to a book cites the book, and
+// still opens the PDF (ADR 003).
+describe('a mark on a file attached to a work', () => {
+	it('cites the work and shows the file', async () => {
+		const user = userEvent.setup();
+		const cite = vi.fn(async () => {});
+		draftContext.report({ cite });
+		db.searchAnnotations.mockResolvedValue([{ ...MARK, source_id: 'erti:book' }]);
+
+		render(Notes);
+
+		await user.click(await screen.findByRole('button', { name: 'Cite' }));
+		expect(cite).toHaveBeenCalledWith('erti:book');
+
+		await user.click(screen.getByRole('button', { name: 'Show in PDF' }));
+		expect(showInPdf).toHaveBeenCalledWith(expect.objectContaining({ sha256: 'sha-1', page: 4 }));
+		draftContext.report({ cite: null });
 	});
 });
