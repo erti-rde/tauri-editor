@@ -34,7 +34,7 @@
 		{disabled}
 		{onCheckedChange}
 		aria-describedby={description ? `${id}-description` : undefined}
-		class="border-line-strong bg-surface-raised data-[state=checked]:bg-accent data-[state=checked]:border-accent data-[state=indeterminate]:bg-accent data-[state=indeterminate]:border-accent text-accent-ink mt-px grid size-3.5 shrink-0 place-items-center rounded-sm border disabled:cursor-not-allowed disabled:opacity-50"
+		class="border-line-control bg-surface-raised data-[state=checked]:bg-accent data-[state=checked]:border-accent data-[state=indeterminate]:bg-accent data-[state=indeterminate]:border-accent text-accent-ink mt-px grid size-3.5 shrink-0 place-items-center rounded-sm border disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		{#snippet children({ checked, indeterminate })}
 			{#if indeterminate}

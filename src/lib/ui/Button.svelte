@@ -16,7 +16,8 @@
 				ghost:
 					'border-transparent bg-transparent text-ink-muted enabled:hover:bg-surface-hover enabled:hover:text-ink',
 				// Says the verb ("Remove"), and sits last.
-				danger: 'bg-danger border-danger text-accent-ink enabled:hover:opacity-90'
+				danger:
+					'bg-danger border-danger text-accent-ink enabled:hover:bg-danger-hover enabled:hover:border-danger-hover'
 			},
 			size: {
 				sm: 'h-5 px-2 text-caption',

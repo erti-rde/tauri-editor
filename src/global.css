@@ -55,6 +55,7 @@
 
 	--color-line: hsl(var(--line));
 	--color-line-strong: hsl(var(--line-strong));
+	--color-line-control: hsl(var(--line-control));
 
 	--color-accent: hsl(var(--accent));
 	--color-accent-ink: hsl(var(--accent-ink));
@@ -62,6 +63,7 @@
 	--color-accent-hover: hsl(var(--accent-hover));
 
 	--color-danger: hsl(var(--danger));
+	--color-danger-hover: hsl(var(--danger-hover));
 	--color-warning: hsl(var(--warning));
 	--color-success: hsl(var(--success));
 

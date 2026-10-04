@@ -16,7 +16,9 @@ const BUILD = 'build';
 const MARKERS = [
 	'Fake backend: no handler',
 	'/fake/home/Documents/Thesis',
-	'Sample Paper for the Erti Harness'
+	'Sample Paper for the Erti Harness',
+	// The catalogue (M1c-5).
+	'A DOI has a slash: 10.48550/arXiv.1706.03762'
 ];
 
 function* files(dir) {

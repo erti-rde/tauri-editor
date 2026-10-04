@@ -21,9 +21,9 @@ scale and the overlay shadow are derived there, from `--ui-size` and each palett
 | Surfaces    | `surface`, `surface-raised`, `surface-sunken`, `surface-overlay` | Layout ground; inputs and cards; wells and rails; menus and dialogs |
 | Interaction | `surface-hover`, `surface-active`, `selection`                   | Only through primitives                                             |
 | Ink         | `ink`, `ink-muted`, `ink-faint`                                  | Text by importance; `ink-faint` never for anything required to read |
-| Rules       | `line`, `line-strong`                                            | Dividers; control borders                                           |
+| Rules       | `line`, `line-strong`, `line-control`                            | Dividers; button and overlay edges; the edge of a field (3:1)       |
 | Accent      | `accent`, `accent-ink`, `accent-quiet`, `accent-hover`           | One primary action per view; the selected item                      |
-| Status      | `danger`, `warning`, `success`                                   | Meaning, never decoration; always with words                        |
+| Status      | `danger`, `danger-hover`, `warning`, `success`                   | Meaning, never decoration; always with words                        |
 | Page        | `surface-page-themed`, `ink-page-themed`                         | The manuscript only                                                 |
 
 **Type**
@@ -93,7 +93,36 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 
 ## The catalogue
 
-A test-only route (see testing.md) shows every primitive in every state. CI screenshots it in
-all seven palettes at both densities, and checks the contrast of the colour pairs primitives
-really render. When you change a primitive, attach the relevant catalogue screenshots to the
-PR.
+`/harness/catalogue` shows every primitive in every state (rest, hover, focus, active,
+disabled, loading, error, and checked or open where a primitive has them). It exists only in a
+`--mode harness` build, like `/harness`. `?theme=<palette>&density=<density>` picks the
+appearance. The source is `src/lib/harness/Catalogue.svelte`; each state is one `Specimen`.
+
+`e2e/catalogue.spec.ts` runs in every `pnpm e2e`, in all seven palettes at both densities:
+
+- **States from markup** (disabled, loading, error, checked) are props. **Hover, focus and
+  active** are forced on each specimen's control through the devtools protocol, so every state
+  shows at once.
+- **Contrast is measured as rendered** (`e2e/contrast.ts`). The check takes the colour the
+  browser computed for each piece of text, placeholder, icon-only control, field edge and
+  focus ring, and compares it with what is really behind it, with every translucent layer
+  blended in. Below WCAG AA (4.5:1 for text, 3:1 for large text, field edges and focus rings),
+  the test fails and names the specimen. Disabled controls are exempt, as WCAG exempts them.
+  The overlays (menu, select, popover, tooltip, dialog, confirm) are opened one at a time and
+  checked the same way.
+- **Screenshots:** with `ERTI_SHOTS` set (CI sets it), the page and each overlay are saved to
+  `e2e/shots/catalogue/`, which CI keeps as the `e2e-screenshots` artefact.
+
+`src/lib/theme/contrast.test.ts` checks the token pairs as intended. This check catches a
+component that puts an ink on a surface nobody paired it with.
+
+A new primitive gets specimens here. When you change a primitive, attach the relevant
+catalogue screenshots to the PR.
+
+What the first run found, and the rules that came out of it:
+
+- Placeholders and date separators are `ink-muted`, not `ink-faint`: they're text.
+- Fields, checkboxes, radios and switch tracks are edged in `line-control`, not `line-strong`.
+- In a menu, the words of a danger or current item stay in `ink`. The icon carries the
+  colour (`danger`, or the `accent` check).
+- An accent `Chip` is `ink` on `accent-quiet`. Orange text missed 4.5:1 on the light surface.

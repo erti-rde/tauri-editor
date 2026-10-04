@@ -57,12 +57,17 @@
 		onSelect={item.onSelect}
 		class={[
 			'text-small flex cursor-default items-start gap-2 rounded-sm px-2 py-1.5 outline-hidden select-none',
-			'data-highlighted:bg-surface-hover data-disabled:opacity-50',
-			item.danger ? 'text-danger' : item.active ? 'text-accent' : 'text-ink'
+			// The words stay in ink: red or orange text on a highlighted row fell
+			// below 4.5:1 in the darker palettes (M1c-5). The icon carries the
+			// colour, where 3:1 is enough, and the words carry the meaning.
+			'text-ink data-highlighted:bg-surface-hover data-disabled:opacity-50'
 		]}
 	>
 		{#if item.icon}
-			<item.icon class="mt-px size-4 shrink-0" aria-hidden="true" />
+			<item.icon
+				class={['mt-px size-4 shrink-0', item.danger ? 'text-danger' : 'text-ink-muted']}
+				aria-hidden="true"
+			/>
 		{/if}
 		<span class="grid flex-1 gap-0.5">
 			<span>{item.label}</span>
@@ -71,7 +76,7 @@
 			{/if}
 		</span>
 		{#if item.active}
-			<Check class="mt-px size-3.5 shrink-0" aria-hidden="true" />
+			<Check class="text-accent mt-px size-3.5 shrink-0" aria-hidden="true" />
 		{/if}
 	</DropdownMenu.Item>
 {/snippet}
@@ -81,7 +86,10 @@
 		aria-label={current ? `${label}: ${current.label}` : label}
 		{disabled}
 		data-current={current ? '' : undefined}
-		class={[buttonClass({ variant: 'ghost', size: 'tight' }), 'data-current:bg-surface-active']}
+		class={[
+			buttonClass({ variant: 'ghost', size: 'tight' }),
+			'data-current:bg-surface-active data-current:text-ink'
+		]}
 	>
 		{#if trigger}
 			{@render trigger()}

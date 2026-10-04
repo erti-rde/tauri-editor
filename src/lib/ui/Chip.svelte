@@ -14,7 +14,9 @@
 <span
 	class={[
 		'text-caption inline-flex items-center rounded-full border px-1.5 whitespace-nowrap',
-		tone === 'accent' ? 'border-accent text-accent' : 'border-line-strong text-ink-muted'
+		tone === 'accent'
+			? 'border-accent bg-accent-quiet text-ink'
+			: 'border-line-strong text-ink-muted'
 	]}
 >
 	{@render children()}

@@ -46,6 +46,7 @@
 
 	--line: 223 16% 83%;
 	--line-strong: 228 11% 65%;
+	--line-control: 228 11% 54%;
 
 	--accent: 266 85% 58%;
 	/* Catppuccin's peach is the palette's own colour and is not ours to darken, so
@@ -58,6 +59,7 @@
 	--accent-hover: 266 85% 50%;
 
 	--danger: 347 87% 41.5%;
+	--danger-hover: 347 87% 36.5%;
 	/* Latte's own yellow is #DF8E1D, which reads 1.55:1 against the lightest
 	   surface it has to sit on — and warning is prose here: the failed-ingest
 	   message, "not found", "N sources need attention". The palette has no
@@ -95,6 +97,7 @@
 
 	--line: 230 16% 30%;
 	--line-strong: 229 13% 52%;
+	--line-control: 229 13% 61%;
 
 	--accent: 20 79% 70%;
 	--accent-ink: 229 20% 17%;
@@ -102,6 +105,7 @@
 	--accent-hover: 20 79% 78%;
 
 	--danger: 359 68% 71%;
+	--danger-hover: 359 68% 76.5%;
 	--warning: 40 62% 73%;
 	--success: 96 44% 68%;
 
@@ -131,6 +135,7 @@
 
 	--line: 230 19% 26%;
 	--line-strong: 230 12% 49%;
+	--line-control: 230 12% 56%;
 
 	--accent: 21 86% 73%;
 	--accent-ink: 236 23% 12%;
@@ -138,6 +143,7 @@
 	--accent-hover: 21 86% 81%;
 
 	--danger: 351 74% 73%;
+	--danger-hover: 351 74% 78.5%;
 	--warning: 40 70% 78%;
 	--success: 105 48% 72%;
 
@@ -167,6 +173,7 @@
 
 	--line: 237 16% 23%;
 	--line-strong: 231 11% 47%;
+	--line-control: 231 11% 53%;
 
 	--accent: 23 92% 75%;
 	--accent-ink: 240 23% 9%;
@@ -174,6 +181,7 @@
 	--accent-hover: 23 92% 83%;
 
 	--danger: 343 81% 75%;
+	--danger-hover: 343 81% 80.5%;
 	--warning: 41 86% 83%;
 	--success: 115 54% 76%;
 
@@ -203,6 +211,7 @@
 
 	--line: 207 48% 22%;
 	--line-strong: 180 9% 43%;
+	--line-control: 180 9% 49%;
 
 	--accent: 14 90% 70%;
 	--accent-ink: 215 100% 6%;
@@ -210,6 +219,7 @@
 	--accent-hover: 14 90% 78%;
 
 	--danger: 1 83% 63%;
+	--danger-hover: 1 83% 69%;
 	--warning: 35 71% 74%;
 	--success: 84 62% 63%;
 

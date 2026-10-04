@@ -170,6 +170,21 @@ describe.each(PALETTES.map((p) => [p.id, p.label] as const))('%s', (id) => {
 		expect(contrast(at('accent-hover'), at('accent'))).toBeGreaterThan(1.15);
 	});
 
+	it('shows the edge of a field on every surface it sits on', () => {
+		// WCAG 1.4.11: a text field, checkbox or switch track is found by its edge.
+		// The rendered check (e2e/catalogue.spec.ts) found --line-strong at 1.74:1
+		// on these, so fields have a token of their own.
+		for (const surface of ['surface', 'surface-raised', 'surface-overlay', 'surface-sunken']) {
+			expect(contrast(at('line-control'), at(surface))).toBeGreaterThanOrEqual(AA_LARGE);
+		}
+	});
+
+	it('keeps a danger button legible on hover, and visibly different', () => {
+		expect(contrast(at('accent-ink'), at('danger'))).toBeGreaterThanOrEqual(AA);
+		expect(contrast(at('accent-ink'), at('danger-hover'))).toBeGreaterThanOrEqual(AA);
+		expect(contrast(at('danger-hover'), at('danger'))).toBeGreaterThan(1.15);
+	});
+
 	it('separates a rule from the surface it divides', () => {
 		// A border nobody can see is a border that does not do its job.
 		expect(contrast(at('line'), at('surface'))).toBeGreaterThan(1.1);
