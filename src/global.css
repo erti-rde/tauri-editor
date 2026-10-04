@@ -798,8 +798,8 @@ body {
 	background: transparent;
 	cursor: pointer;
 	transition:
-		background 120ms ease,
-		border-color 120ms ease;
+		background var(--duration-fast) var(--ease-standard),
+		border-color var(--duration-fast) var(--ease-standard);
 }
 
 .erti-nudge:hover {
