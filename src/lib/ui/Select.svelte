@@ -31,7 +31,11 @@
 </script>
 
 <div class="grid gap-1">
-	<Label.Root id="{id}-label" class={hideLabel ? 'sr-only' : 'text-small text-ink font-medium'}>
+	<Label.Root
+		id="{id}-label"
+		for="{id}-trigger"
+		class={hideLabel ? 'sr-only' : 'text-small text-ink font-medium'}
+	>
 		{label}
 	</Label.Root>
 	<!--
@@ -41,6 +45,7 @@
 	-->
 	<Select.Root bind:value={value as never} {...restProps}>
 		<Select.Trigger
+			id="{id}-trigger"
 			aria-labelledby="{id}-label"
 			class={[controlClass, 'flex h-(--row-height) items-center justify-between px-2']}
 		>

@@ -26,7 +26,9 @@
 		<DateField.Input
 			class={[
 				controlClass,
-				'data-invalid:border-danger flex h-(--row-height) items-center px-2 data-disabled:cursor-not-allowed data-disabled:opacity-50'
+				// A div, which `enabled:` and `disabled:` never match, so its hover
+				// and disabled looks come from bits-ui's data attributes instead.
+				'data-invalid:border-danger not-data-disabled:hover:border-ink-faint flex h-(--row-height) items-center px-2 data-disabled:cursor-not-allowed data-disabled:opacity-50'
 			]}
 		>
 			{#snippet children({ segments })}

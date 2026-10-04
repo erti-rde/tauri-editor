@@ -38,13 +38,15 @@
 		aria-labelledby="{id}-label"
 		class={['flex gap-1.5', orientation === 'vertical' ? 'flex-col' : 'flex-row flex-wrap gap-3']}
 	>
-		{#each options as option (option.value)}
+		<!-- Ids by position: a value may hold a space, which would split an id
+		     list such as aria-describedby in two. -->
+		{#each options as option, i (option.value)}
 			<div class="flex items-start gap-2">
 				<RadioGroup.Item
-					id="{id}-{option.value}"
+					id="{id}-{i}"
 					value={option.value}
 					disabled={option.disabled}
-					aria-describedby={option.description ? `${id}-${option.value}-description` : undefined}
+					aria-describedby={option.description ? `${id}-${i}-description` : undefined}
 					class="border-line-strong bg-surface-raised data-[state=checked]:border-accent mt-px grid size-3.5 shrink-0 place-items-center rounded-full border disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{#snippet children({ checked })}
@@ -54,11 +56,11 @@
 					{/snippet}
 				</RadioGroup.Item>
 				<span class="grid gap-0.5">
-					<Label.Root for="{id}-{option.value}" class="text-small text-ink">
+					<Label.Root for="{id}-{i}" class="text-small text-ink">
 						{option.label}
 					</Label.Root>
 					{#if option.description}
-						<span id="{id}-{option.value}-description" class="text-caption text-ink-muted">
+						<span id="{id}-{i}-description" class="text-caption text-ink-muted">
 							{option.description}
 						</span>
 					{/if}

@@ -26,6 +26,9 @@ export function variants<V extends Options>(config: {
 			const value = chosen[option] ?? config.defaults[option];
 			classes.push(config.variants[option][value as string]);
 		}
+		// Added after, but not over: Tailwind orders its rules itself, so an extra
+		// class can't override a variant's (`px-1` beside `px-2.5` loses). A look
+		// that differs is a variant of its own.
 		if (extra) classes.push(extra);
 		return classes.filter(Boolean).join(' ');
 	};

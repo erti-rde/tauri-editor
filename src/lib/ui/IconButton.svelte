@@ -46,11 +46,11 @@
 <Tooltip {label} {shortcut} {side}>
 	{#snippet children(trigger)}
 		<button
+			{...mergeProps(rest, trigger)}
 			{type}
 			{disabled}
 			aria-pressed={pressed}
-			class={iconButton({ size }, typeof extra === 'string' ? extra : undefined)}
-			{...mergeProps(rest, trigger)}
+			class={[iconButton({ size }), extra]}
 		>
 			<Icon class={size === 'sm' ? 'size-3.5' : 'size-4'} aria-hidden="true" />
 		</button>
