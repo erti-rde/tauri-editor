@@ -482,7 +482,8 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			// The fake keeps no source notes: nothing writes one until M1b-8.
 			return {
 				notes: marks.filter((m) => m.kind === 'page-note').length,
-				highlights: marks.filter((m) => m.kind !== 'page-note').length
+				highlights: marks.filter((m) => m.kind !== 'page-note').length,
+				paths: files.flatMap((sha) => state.library.get(sha)?.path ?? []).sort()
 			};
 		},
 

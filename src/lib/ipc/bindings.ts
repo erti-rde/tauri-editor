@@ -433,6 +433,11 @@ export type SourceRemoval = {
 	notes: number,
 	/**  Highlights and area snapshots on its files. */
 	highlights: number,
+	/**
+	 *  Everywhere its files have been seen, the work's own and every attached
+	 *  one's: any inside the project folder is read again by the next scan.
+	 */
+	paths: string[],
 };
 
 export type TexToolchain = {

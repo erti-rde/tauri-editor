@@ -321,8 +321,9 @@ pub async fn add_to_project(project: &SqlitePool, sha256: &str) -> Result<(), St
 /// One row per work (ADR 003). The `source_set` may name a work by any of its
 /// ids: a folder scan adds a PDF's own hash after it was attached to a work,
 /// and a manuscript adds whichever id it cites. Each is resolved here, on
-/// reading, rather than rewritten when stored, so a PDF whose work is removed
-/// (M1b-4) is back in the project as a work of its own.
+/// reading, rather than rewritten when stored, so attaching a file or merging
+/// two works never rewrites a project's set. Removing a work (M1b-4) takes
+/// its attached files with it, and ids that name nothing are skipped.
 pub async fn project_sources(
     library: &SqlitePool,
     project: &SqlitePool,
@@ -568,6 +569,9 @@ pub struct SourceRemoval {
     pub notes: u32,
     /// Highlights and area snapshots on its files.
     pub highlights: u32,
+    /// Everywhere its files have been seen, the work's own and every attached
+    /// one's: any inside the project folder is read again by the next scan.
+    pub paths: Vec<String>,
 }
 
 /// A work and every file attached to it: what "remove from the library" means
@@ -603,9 +607,18 @@ pub async fn source_removal(library: &SqlitePool, id: &str) -> Result<SourceRemo
     .fetch_one(library)
     .await
     .map_err(|e| e.to_string())?;
+    let paths = sqlx::query_scalar(
+        "SELECT path FROM locations WHERE sha256 IN (SELECT value FROM json_each(?))
+         ORDER BY path",
+    )
+    .bind(&group)
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?;
     Ok(SourceRemoval {
         notes: u32::try_from(notes).unwrap_or(u32::MAX),
         highlights: u32::try_from(highlights).unwrap_or(u32::MAX),
+        paths,
     })
 }
 

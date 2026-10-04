@@ -244,6 +244,31 @@ impl DbState {
         }
     }
 
+    /// Back the open library up now, under today's daily name (ADR 008).
+    ///
+    /// For before something that can't be undone: the copy a toast points to
+    /// has to hold what was there a moment ago, not at this morning's open. A
+    /// daily backup still running is waited for, since both write today's file.
+    pub async fn back_up_library(&self) -> Result<PathBuf, crate::ipc::AppError> {
+        use crate::ipc::Classify;
+        self.backups_settled().await;
+        let pool = self.library().await?;
+        let file: String =
+            sqlx::query_scalar("SELECT file FROM pragma_database_list WHERE name = 'main'")
+                .fetch_one(&pool)
+                .await
+                .map_err(|e| e.to_string())
+                .or_database()?;
+        backup::write(
+            &pool,
+            &backup::dir_for(Path::new(&file)),
+            SystemTime::now(),
+            None,
+        )
+        .await
+        .or_database()
+    }
+
     /// Open `<root>/.erti/project.db`, creating it on first use.
     pub async fn open_project(&self, root: &Path) -> Result<(), String> {
         let pool = connect(&root.join(".erti").join("project.db")).await?;

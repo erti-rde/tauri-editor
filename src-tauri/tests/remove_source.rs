@@ -118,13 +118,15 @@ async fn library(name: &str) -> (PathBuf, DbState, SqlitePool, PathBuf) {
 // M1b-4 AC-1
 #[tokio::test]
 async fn the_dialog_counts_the_notes_and_highlights_on_the_work_and_its_files() {
-    let (_dir, _state, library, _pdf) = library("counts").await;
+    let (_dir, _state, library, pdf) = library("counts").await;
 
     let expected = queries::SourceRemoval {
         // The source note, and the page note on the PDF.
         notes: 2,
         // A highlight and an area snapshot on the PDF; none from `other`.
         highlights: 2,
+        // The attached PDF's: the book has no file of its own.
+        paths: vec![pdf.to_string_lossy().into_owned()],
     };
     assert_eq!(
         queries::source_removal(&library, "erti:book")
@@ -206,6 +208,30 @@ async fn a_removed_source_is_gone_from_the_next_search() {
         .await
         .unwrap();
     assert_eq!(after.len(), 2, "only `other`'s");
+}
+
+// M1b-4 AC-4: the toast points to a backup, so there has to be one holding
+// what was removed, not only this morning's.
+#[tokio::test]
+async fn removing_a_source_backs_the_library_up_first() {
+    let (dir, state, _library, _pdf) = library("backup").await;
+
+    remove_source_in(&state, "erti:book").await.unwrap();
+
+    let backups: Vec<PathBuf> = std::fs::read_dir(dir.join("backups"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    assert_eq!(backups.len(), 1, "{backups:?}");
+    let copy = sqlx::SqlitePool::connect(&format!("sqlite:{}", backups[0].display()))
+        .await
+        .unwrap();
+    let highlights: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM annotations WHERE sha256 = 'pdf'")
+            .fetch_one(&copy)
+            .await
+            .unwrap();
+    assert_eq!(highlights, 3, "the marks are in the copy");
 }
 
 #[tokio::test]

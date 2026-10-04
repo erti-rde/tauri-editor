@@ -365,7 +365,7 @@
 			record={{
 				id: selected.id,
 				title: selected.metadata?.title || selected.file_name,
-				path: selected.path
+				csl: selected.metadata
 			}}
 			{augmentedSchema}
 			onclose={handleSidebarClose}

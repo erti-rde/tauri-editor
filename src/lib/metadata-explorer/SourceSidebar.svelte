@@ -10,12 +10,12 @@
 
 	interface Props {
 		source: CitationItem;
-		/** The row being edited: its id, what it's called, and where its PDF is. */
-		record: { id: string; title: string; path: string | null };
+		/** The row being edited: its id, what it’s called, and its metadata. */
+		record: { id: string; title: string; csl: object | null };
 		onclose: () => void;
 		onupdate: (sourceId: string, metadata: CitationItem) => void;
 		/** After it's been removed from the library. */
-		onremoved: () => void;
+		onremoved: () => void | Promise<void>;
 		augmentedSchema: AugmentedZoteroSchema;
 	}
 	const {
@@ -119,7 +119,7 @@
 		{/if}
 	</div>
 	{#snippet footer()}
-		<RemoveSource id={record.id} title={record.title} path={record.path} {onremoved} />
+		<RemoveSource id={record.id} title={record.title} csl={record.csl} {onremoved} />
 		<span class="flex-1"></span>
 		<Button variant="primary" onclick={handleSave}>Save</Button>
 	{/snippet}

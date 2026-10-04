@@ -336,6 +336,17 @@ pub async fn remove_source(state: State<'_, DbState>, id: String) -> Result<(), 
 }
 
 pub async fn remove_source_in(state: &DbState, id: &str) -> Result<(), AppError> {
+    // The toast says it can be restored from a backup, and the marks made
+    // since this morning's would otherwise be in none. No copy, no removal.
+    state.back_up_library().await.map_err(|e| {
+        AppError::new(
+            e.kind,
+            format!(
+                "Could not back up the library first, so nothing was removed: {}",
+                e.message
+            ),
+        )
+    })?;
     let removed = queries::remove_source(&state.library().await?, id).await;
     // Its passages, marks and notes had vectors, and the cascade took them.
     state.invalidate_index();
