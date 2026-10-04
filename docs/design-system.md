@@ -55,6 +55,9 @@ page they came from. Numbers that line up use `tabular-nums`.
 
 ## Primitives (`src/lib/ui`)
 
+Import them from `$lib/ui`. In a component test, mount one with `UiHarness.svelte`, which supplies
+the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
+
 | Need                               | Use                                    | Notes                                                                                    |
 | ---------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
 | An action with words               | `Button`                               | `primary` once per view · `secondary` · `ghost` · `danger`; `sm`/`md`; `loading`         |
