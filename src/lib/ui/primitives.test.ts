@@ -127,6 +127,30 @@ describe('Menu', () => {
 		{ label: 'Rename', description: 'Change the file name', onSelect: vi.fn() }
 	];
 
+	// Focus bounces while bits-ui opens a menu: to the menu, back to the trigger,
+	// to the first item, then a frame later its focus scope moves it to the menu
+	// and an item once more. A key sent while the menu itself has focus chooses
+	// nothing, and the menu's text holds every item's, so checking focus by text
+	// can't tell. How many frames the bounce takes depends on load, so wait until
+	// an item has kept focus through two whole frames rather than for any one step.
+	const focusSettlesOnAnItem = () =>
+		vi.waitFor(async () => {
+			const focused = document.activeElement;
+			expect(focused).toHaveAttribute('role', 'menuitem');
+			let moved = false;
+			const onFocusIn = () => (moved = true);
+			document.addEventListener('focusin', onFocusIn);
+			try {
+				for (let frame = 0; frame < 2; frame++) {
+					await new Promise(requestAnimationFrame);
+				}
+			} finally {
+				document.removeEventListener('focusin', onFocusIn);
+			}
+			expect(moved).toBe(false);
+			expect(document.activeElement).toBe(focused);
+		});
+
 	it('opens from the keyboard, moves with arrows and chooses with Enter', async () => {
 		const user = userEvent.setup();
 		const list = items();
@@ -138,27 +162,28 @@ describe('Menu', () => {
 			'aria-expanded',
 			'true'
 		);
-		const menu = await screen.findByRole('menu', anyVisibility);
-		// bits-ui moves focus into the menu after it opens; keys sent before that
-		// land on the trigger, which only shows under load.
-		await waitFor(() => expect(menu).toContainElement(document.activeElement as HTMLElement));
+		await screen.findByRole('menu', anyVisibility);
+		await focusSettlesOnAnItem();
 
 		// The danger item sits last, whatever order it was given in.
-		const names = screen
-			.getAllByRole('menuitem', anyVisibility)
-			.map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+		const menuItems = screen.getAllByRole('menuitem', anyVisibility);
+		const names = menuItems.map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
 		expect(names).toEqual(['Heading 1', 'Rename Change the file name', 'Delete document']);
+		const [heading, rename] = menuItems;
 
-		// Down until Rename has focus. Whether opening focuses the menu or its
-		// first item varies with timing, so the count of presses isn't fixed.
-		const focused = () => document.activeElement?.textContent ?? '';
-		for (let i = 0; i < 3 && !focused().includes('Rename'); i++) {
-			await user.keyboard('{ArrowDown}');
-		}
-		expect(focused()).toContain('Rename');
+		// Opening from the keyboard lands on the first item, one press from Rename.
+		expect(document.activeElement).toBe(heading);
+		await user.keyboard('{ArrowDown}');
+		expect(document.activeElement).toBe(rename);
 		await user.keyboard('{Enter}');
 		expect(list[2].onSelect).toHaveBeenCalledTimes(1);
 		expect(list[0].onSelect).not.toHaveBeenCalled();
+		await waitFor(() =>
+			expect(screen.getByRole('button', { name: /^Document/ })).toHaveAttribute(
+				'aria-expanded',
+				'false'
+			)
+		);
 	});
 
 	it("can't be opened while disabled", async () => {
