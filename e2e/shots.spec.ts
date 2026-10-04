@@ -61,4 +61,11 @@ test('shots', async ({ page }) => {
 	await expect(remove).toBeVisible();
 	await page.screenshot(shot('11-remove-source'));
 	await remove.getByRole('button', { name: 'Cancel' }).click();
+
+	// Entered by hand (UX-2): the kind first, then its fields.
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /Enter details…/ }).click();
+	await page.getByRole('button', { name: 'Kind of source' }).click();
+	await page.getByRole('option', { name: 'Book Section', exact: true }).click();
+	await page.screenshot(shot('12-new-source'));
 });

@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { projectSources, setMetadataOverride } from '$lib/stores/db';
+	import FileWarning from '~icons/lucide/file-warning';
+
+	import { projectSources } from '$lib/stores/db';
 	import { applyManualDoi, retryIngest } from '$utils/pdf_handlers';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
+	import { Banner, Button, EmptyState, Loader, Menu, SearchField, TextField } from '$lib/ui';
 	import SourceSidebar from './SourceSidebar.svelte';
-	import { Icon } from '$lib';
 	import { augmentSchema } from './adapterCslZotero';
 	import { describeAuthors, describeType } from './sourceRows';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
@@ -20,6 +22,8 @@
 		file_sha256: string | null;
 		/** Null when the source has not resolved to anything citable. */
 		metadata: CitationItem | null;
+		/** The Zotero kind, when it was recorded; older sources have none (M1b-5 AC-5). */
+		zotero_type: string | null;
 		state: 'pending' | 'ready' | 'failed';
 		last_error: string | null;
 		/** True when ingest succeeded but nothing could be resolved to cite. */
@@ -27,12 +31,12 @@
 	};
 
 	let sources: Source[] = $state([]);
-	let editingSource: CitationItem | null = $state(null);
 
 	let loading = $state(true);
 	let searchQuery = $state('');
-	let selectedSourceId: string | null = $state(null);
-	let sidebarOpen = $state(false);
+	/** The row being edited, or `new` while a source is being entered by hand. */
+	let sidebar = $state<{ mode: 'edit'; id: string } | { mode: 'new' } | null>(null);
+	const selectedSourceId = $derived(sidebar?.mode === 'edit' ? sidebar.id : null);
 	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
 	onMount(async () => {
@@ -69,6 +73,7 @@
 				path: source.path,
 				file_sha256: source.file_sha256,
 				metadata,
+				zotero_type: source.zotero_type ?? null,
 				state: source.state,
 				last_error: source.last_error,
 				unresolved: metadata === null
@@ -134,47 +139,19 @@
 		}
 	}
 
-	function handleSourceSelect(sourceId: string) {
-		selectedSourceId = sourceId;
-		const source = sources.find((s) => s.id === sourceId);
-		if (source) {
-			// A copy: SourceSidebar takes this as $bindable() and mutates fields in
-			// place, which would otherwise edit the loaded list as the user types,
-			// before anything is saved.
-			editingSource = source.metadata
-				? (structuredClone($state.snapshot(source.metadata)) as CitationItem)
-				: ({ id: source.id, type: '' } as CitationItem);
-			if (source.file_name) {
-				editingSource.id = source.id;
-			}
-		} else {
-			editingSource = null;
-		}
-
-		sidebarOpen = true;
-	}
-
 	const selected = $derived(sources.find((s) => s.id === selectedSourceId) ?? null);
 
-	async function handleSourceRemoved() {
-		handleSidebarClose();
-		selectedSourceId = null;
-		await loadSources();
+	function handleSourceSelect(sourceId: string) {
+		sidebar = { mode: 'edit', id: sourceId };
 	}
 
-	function handleSidebarClose() {
-		sidebarOpen = false;
-		editingSource = null;
+	function closeSidebar() {
+		sidebar = null;
 	}
 
-	async function handleSourceUpdate(sourceId: string, metadata: CitationItem) {
-		// Written as a project-local override, so correcting a source here does
-		// not silently rewrite it for every other project citing the same paper.
-		await setMetadataOverride(sourceId, JSON.stringify(metadata));
+	async function afterChange() {
+		sidebar = null;
 		await loadSources();
-
-		editingSource = null;
-		sidebarOpen = false;
 	}
 
 	const filteredSources = $derived.by(() => {
@@ -189,20 +166,26 @@
 </script>
 
 <div class="flex h-full w-full">
-	<div class="bg-surface-raised flex-grow overflow-auto rounded-lg p-4 shadow">
-		<!-- Header with search -->
-		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-xl font-bold">Sources ({sources.length})</h2>
-
-			<div class="relative max-w-md">
-				<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-					<Icon icon="Search" class="text-ink-muted h-4 w-4" />
-				</div>
-				<input
-					type="text"
+	<div class="bg-surface min-w-0 flex-grow overflow-auto p-4">
+		<div class="mb-4 flex items-center gap-3">
+			<h2 class="text-heading text-ink flex-1 font-semibold">Sources ({sources.length})</h2>
+			<Menu
+				label="Add"
+				align="end"
+				items={[
+					{
+						label: 'Enter details…',
+						description: 'A book, chapter or page with no PDF',
+						onSelect: () => (sidebar = { mode: 'new' })
+					}
+				]}
+			/>
+			<div class="w-64">
+				<SearchField
+					label="Search sources"
+					hideLabel
+					placeholder="Search sources"
 					bind:value={searchQuery}
-					placeholder="Search sources..."
-					class="border-line-strong bg-surface-raised block w-full rounded-md border py-2 pr-3 pl-10 text-sm"
 				/>
 			</div>
 		</div>
@@ -212,84 +195,86 @@
 			file, failed silently and never offered it again.
 		-->
 		{#if needsAttention.length > 0}
-			<div class="border-warning bg-surface-sunken mb-4 rounded-lg border p-4">
-				<div class="mb-2 flex items-center gap-2">
-					<Icon icon="FileWarning" class="text-warning h-4 w-4" />
-					<span class="text-warning font-medium">
+			<div class="mb-4">
+				<Banner tone="warning">
+					<p class="font-medium">
 						{needsAttention.length}
 						{needsAttention.length === 1 ? 'source needs' : 'sources need'} attention
-					</span>
-				</div>
+					</p>
+					<div class="divide-line mt-1 divide-y">
+						{#each needsAttention as source (source.id)}
+							<div class="py-2">
+								<div class="flex items-center justify-between gap-3">
+									<div class="min-w-0">
+										<div class="text-ink truncate font-medium">{source.file_name}</div>
+										<div class="text-caption text-ink-muted">
+											{#if source.state === 'failed'}
+												{source.last_error ?? 'Could not be processed'}
+											{:else}
+												No citation details found
+											{/if}
+										</div>
+									</div>
 
-				<div class="divide-line divide-y">
-					{#each needsAttention as source (source.id)}
-						<div class="py-2">
-							<div class="flex items-center justify-between gap-3">
-								<div class="min-w-0">
-									<div class="text-ink truncate text-sm font-medium">{source.file_name}</div>
-									<div class="text-warning text-xs">
-										{#if source.state === 'failed'}
-											{source.last_error ?? 'Could not be processed'}
-										{:else}
-											No citation details found
-										{/if}
+									<div class="flex shrink-0 gap-2">
+										<Button
+											size="sm"
+											loading={busyWith === source.id}
+											onclick={() => handleRetry(source)}
+										>
+											{busyWith === source.id ? 'Working…' : 'Retry'}
+										</Button>
+										<Button
+											size="sm"
+											onclick={() => {
+												doiFor = doiFor === source.id ? null : source.id;
+												doiInput = '';
+											}}
+										>
+											Enter DOI
+										</Button>
 									</div>
 								</div>
 
-								<div class="flex shrink-0 gap-2">
-									<button
-										class="hover:bg-surface-hover border-warning text-warning rounded-md border px-3 py-1 text-sm disabled:opacity-50"
-										disabled={busyWith === source.id}
-										onclick={() => handleRetry(source)}
-									>
-										{busyWith === source.id ? 'Working…' : 'Retry'}
-									</button>
-									<button
-										class="hover:bg-surface-hover border-warning text-warning rounded-md border px-3 py-1 text-sm"
-										onclick={() => {
-											doiFor = doiFor === source.id ? null : source.id;
-											doiInput = '';
-										}}
-									>
-										Enter DOI
-									</button>
-								</div>
+								{#if doiFor === source.id}
+									<div class="mt-2 flex items-end gap-2">
+										<div class="flex-1">
+											<TextField
+												label="DOI for {source.file_name}"
+												hideLabel
+												placeholder="10.1000/example or https://doi.org/…"
+												bind:value={doiInput}
+												onkeydown={(e) => e.key === 'Enter' && handleManualDoi(source)}
+											/>
+										</div>
+										<Button
+											variant="primary"
+											disabled={busyWith === source.id || doiInput.trim().length === 0}
+											onclick={() => handleManualDoi(source)}
+										>
+											Resolve
+										</Button>
+									</div>
+								{/if}
 							</div>
-
-							{#if doiFor === source.id}
-								<div class="mt-2 flex gap-2">
-									<input
-										type="text"
-										bind:value={doiInput}
-										placeholder="10.1000/example or https://doi.org/…"
-										class="border-line-strong flex-1 rounded-md border px-3 py-1 text-sm"
-										onkeydown={(e) => e.key === 'Enter' && handleManualDoi(source)}
-									/>
-									<button
-										class="bg-accent text-accent-ink hover:bg-accent-hover rounded-md px-3 py-1 text-sm font-medium disabled:opacity-50"
-										disabled={busyWith === source.id || doiInput.trim().length === 0}
-										onclick={() => handleManualDoi(source)}
-									>
-										Resolve
-									</button>
-								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
+						{/each}
+					</div>
+				</Banner>
 			</div>
 		{/if}
 
 		{#if loading}
-			<div class="flex h-20 items-center justify-center">
-				<div class="text-ink-muted animate-pulse">Loading sources...</div>
-			</div>
+			<div class="flex h-20 items-center justify-center"><Loader /></div>
 		{:else if filteredSources.length === 0}
-			<div class="bg-surface-sunken rounded-lg p-4 text-center">
-				<p class="text-ink-muted">
-					{searchQuery ? 'No sources match your search' : 'No sources found in the database'}
-				</p>
-			</div>
+			<EmptyState
+				message={searchQuery ? 'No sources match your search.' : 'No sources in this project yet.'}
+				detail={searchQuery
+					? undefined
+					: 'Add PDFs to the project folder, or enter a source’s details by hand.'}
+				action={searchQuery
+					? { label: 'Clear the search', onclick: () => (searchQuery = '') }
+					: undefined}
+			/>
 		{:else}
 			<!--
 				Table-like layout for sources.
@@ -300,14 +285,16 @@
 				and "Type" labelled nothing at all — the field was never rendered,
 				though every resolved source carries one.
 			-->
-			<div class="text-ink-muted mb-2 grid grid-cols-12 gap-3 px-3 text-xs font-medium uppercase">
+			<div
+				class="text-caption text-ink-muted mb-2 grid grid-cols-12 gap-3 px-3 font-medium uppercase"
+			>
 				<div class="col-span-2">Type</div>
 				<div class="col-span-4">Title</div>
 				<div class="col-span-3">Author</div>
 				<div class="col-span-3">File</div>
 			</div>
 
-			<div class="divide-line border-line divide-y rounded-lg border">
+			<div class="divide-line border-line divide-y rounded border">
 				{#each filteredSources as source (source.id)}
 					<!--
 						A button rather than a div with a click handler: the row is the
@@ -317,40 +304,35 @@
 					-->
 					<button
 						type="button"
-						class="hover:bg-surface-hover grid w-full cursor-pointer grid-cols-12 gap-3 px-3 py-3 text-left transition-colors"
+						class="hover:bg-surface-hover text-small grid w-full cursor-pointer grid-cols-12 gap-3 px-3 py-3 text-left transition-colors"
 						class:bg-accent-quiet={selectedSourceId === source.id}
 						aria-current={selectedSourceId === source.id ? 'true' : undefined}
 						onclick={() => handleSourceSelect(source.id)}
 					>
-						<!-- Type -->
 						<div class="col-span-2 flex items-center">
-							<span class="text-ink-muted truncate text-xs">{describeType(source.metadata)}</span>
+							<span class="text-caption text-ink-muted truncate"
+								>{describeType(source.metadata)}</span
+							>
 						</div>
 
-						<!-- Title -->
 						<div class="col-span-4 flex items-center">
 							<div class="truncate">
-								<span class="font-medium">{source.metadata?.title || source.file_name}</span>
+								<span class="text-ink font-medium"
+									>{source.metadata?.title || source.file_name}</span
+								>
 								{#if !source.metadata?.title}
-									<Icon icon="FileWarning" class="text-warning ml-1 inline h-3.5 w-3.5" />
+									<FileWarning class="text-warning ml-1 inline size-3.5" aria-label="No title" />
 								{/if}
 							</div>
 						</div>
 
-						<!-- Author -->
-						<div class="text-ink-muted col-span-3 flex items-center text-sm">
-							{#if describeAuthors(source.metadata)}
-								<span class="truncate">{describeAuthors(source.metadata)}</span>
-							{:else}
-								<span class="text-ink-muted flex items-center text-xs">
-									<span>No author</span>
-								</span>
-							{/if}
+						<div class="text-ink-muted col-span-3 flex items-center">
+							<span class="truncate">{describeAuthors(source.metadata) || 'No author'}</span>
 						</div>
 
-						<!-- Filename -->
-						<div class="text-ink-muted col-span-3 flex items-center text-xs">
-							<span class="truncate">{source.file_name}</span>
+						<!-- M1b-5 AC-4. Attaching one is M1b-7. -->
+						<div class="text-caption text-ink-muted col-span-3 flex items-center">
+							<span class="truncate">{source.path ? source.file_name : 'No file'}</span>
 						</div>
 					</button>
 				{/each}
@@ -358,28 +340,23 @@
 		{/if}
 	</div>
 
-	<!-- Sidebar for editing source -->
-	{#if sidebarOpen && editingSource && augmentedSchema && selected}
-		<SourceSidebar
-			bind:source={editingSource}
-			record={{
-				id: selected.id,
-				title: selected.metadata?.title || selected.file_name,
-				path: selected.path
-			}}
-			{augmentedSchema}
-			onclose={handleSidebarClose}
-			onupdate={handleSourceUpdate}
-			onremoved={handleSourceRemoved}
-		/>
+	{#if sidebar && augmentedSchema && (sidebar.mode === 'new' || selected)}
+		{#key sidebar.mode === 'new' ? 'new' : sidebar.id}
+			<SourceSidebar
+				schema={augmentedSchema}
+				record={selected && sidebar.mode === 'edit'
+					? {
+							id: selected.id,
+							title: selected.metadata?.title || selected.file_name,
+							path: selected.path,
+							csl: selected.metadata,
+							zoteroType: selected.zotero_type
+						}
+					: undefined}
+				onclose={closeSidebar}
+				onsaved={afterChange}
+				onremoved={afterChange}
+			/>
+		{/key}
 	{/if}
 </div>
-
-<style>
-	/* Ensure truncated text has ellipsis */
-	.truncate {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-</style>

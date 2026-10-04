@@ -141,6 +141,44 @@ test('a co-author’s citation renders from the manuscript, and can be kept', as
 	await expect(page.locator('.ProseMirror [data-type="citation"]')).toContainText('Kuhn');
 });
 
+// M1b-5, UX-2
+test('a book with no PDF can be entered by hand, and joins the project', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await expect(page.getByRole('heading', { name: 'Sources (3)' })).toBeVisible();
+
+	// M1b-5 AC-1: kind first, then that kind's fields, the required ones marked.
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /Enter details…/ }).click();
+	const sidebar = page.getByRole('complementary', { name: 'New source' });
+	await sidebar.getByRole('button', { name: 'Kind of source' }).click();
+	await page.getByRole('option', { name: 'Book', exact: true }).click();
+	await sidebar.getByRole('textbox', { name: 'Title (required)' }).fill('Orality and Literacy');
+	await sidebar.getByRole('textbox', { name: 'Publisher' }).fill('Methuen');
+	await sidebar.getByRole('textbox', { name: 'Date', exact: true }).fill('1982');
+	await sidebar.getByRole('button', { name: 'Add a person' }).click();
+	await sidebar.getByRole('textbox', { name: 'Family name' }).fill('Ong');
+	await sidebar.getByRole('textbox', { name: 'Given names' }).fill('Walter J.');
+	await sidebar.getByRole('button', { name: 'Add to library' }).click();
+
+	// M1b-5 AC-2: in the library and this project.
+	await expect(
+		page.getByText('Added “Orality and Literacy” to your library and this project.')
+	).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+	const row = page.getByRole('button', { name: /Orality and Literacy/ });
+	await expect(row).toContainText('Ong, Walter J.');
+	// M1b-5 AC-4
+	await expect(row).toContainText('No file');
+
+	const added = await page.evaluate(() =>
+		[...window.__ERTI_FAKE__!.state.library.values()].find((s) => s.csl_json?.includes('Orality'))
+	);
+	expect(added?.sha256).toMatch(/^erti:[0-9a-f-]{36}$/);
+	expect(added?.resolved_via).toBe('manual');
+});
+
 // M1b-4, UX-4
 test('removing a source asks first, and its citations then render from the manuscript', async ({
 	page

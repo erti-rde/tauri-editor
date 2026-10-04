@@ -268,18 +268,41 @@ pub async fn add_source_without_file(
     zotero_type: Option<&str>,
     doi: Option<&str>,
 ) -> Result<bool, String> {
+    insert_source_without_file(pool, id, csl_json, zotero_type, doi, "manuscript").await
+}
+
+/// A source the researcher entered by hand (M1b-5): an `erti:<uuid>` work
+/// with no file, its details as typed. Resolves true when it was new.
+pub async fn add_source_by_hand(
+    pool: &SqlitePool,
+    id: &str,
+    csl_json: &str,
+    zotero_type: &str,
+) -> Result<bool, String> {
+    insert_source_without_file(pool, id, csl_json, Some(zotero_type), None, "manual").await
+}
+
+async fn insert_source_without_file(
+    pool: &SqlitePool,
+    id: &str,
+    csl_json: &str,
+    zotero_type: Option<&str>,
+    doi: Option<&str>,
+    resolved_via: &str,
+) -> Result<bool, String> {
     // One transaction, as in `register_source`: a source left without its
     // ingest status would never get one, since the next try finds it present.
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
     let inserted = sqlx::query(
         "INSERT OR IGNORE INTO sources (sha256, csl_json, zotero_type, doi, resolved_via, resolved_at)
-         VALUES (?, ?, ?, ?, 'manuscript', CURRENT_TIMESTAMP)",
+         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
     )
     .bind(id)
     .bind(csl_json)
     .bind(zotero_type)
     .bind(doi)
+    .bind(resolved_via)
     .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?

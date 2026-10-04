@@ -55,10 +55,7 @@
 		"textPx": 3
 	},
 	"src/lib/metadata-explorer/MetadataEditor.svelte": {
-		"button": 4,
-		"input": 2,
-		"radius": 9,
-		"shadow": 1
+		"button": 1
 	},
 	"src/lib/notes/Notes.svelte": {
 		"button": 6,

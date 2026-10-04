@@ -139,6 +139,68 @@ pub async fn add_source_from_manuscript_in(
     Ok(added)
 }
 
+/// Add a source the researcher entered by hand (M1b-5, UX-2): a work with no
+/// file, in the library and the open project.
+///
+/// The id is made in the webview, as a mark's is (`crypto.randomUUID`), and
+/// checked here: it has to be one no hash can be, so a PDF found later never
+/// collides with it (ADR 003).
+#[tauri::command]
+#[specta::specta]
+pub async fn add_source_by_hand(
+    state: State<'_, DbState>,
+    id: String,
+    csl_json: String,
+    zotero_type: String,
+) -> Result<(), AppError> {
+    add_source_by_hand_in(&state, id, csl_json, zotero_type).await
+}
+
+pub async fn add_source_by_hand_in(
+    state: &DbState,
+    id: String,
+    csl_json: String,
+    zotero_type: String,
+) -> Result<(), AppError> {
+    let invalid = |message: &str| AppError::new(crate::ipc::ErrorKind::InvalidInput, message);
+    let uuid = id.strip_prefix("erti:").unwrap_or_default();
+    let shaped = uuid.len() == 36
+        && uuid.char_indices().all(|(i, c)| match i {
+            8 | 13 | 18 | 23 => c == '-',
+            _ => c.is_ascii_hexdigit(),
+        });
+    if !shaped {
+        return Err(invalid("That isn't an id for a source entered by hand."));
+    }
+    let csl: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_str(&csl_json).map_err(|_| invalid("Those details aren't a source."))?;
+    let titled = csl
+        .get("title")
+        .and_then(|v| v.as_str())
+        .is_some_and(|t| !t.trim().is_empty());
+    if !titled {
+        return Err(invalid("Give the source a title."));
+    }
+    if zotero_type.is_empty() || zotero_type.len() > 64 {
+        return Err(invalid("Choose what kind of source it is."));
+    }
+
+    let library = state.library().await?;
+    let added = queries::add_source_by_hand(&library, &id, &csl_json, &zotero_type)
+        .await
+        .or_database()?;
+    if !added {
+        return Err(AppError::new(
+            crate::ipc::ErrorKind::Conflict,
+            "A source with that id is already in the library.",
+        ));
+    }
+    if let Ok(project) = state.project().await {
+        queries::add_to_project(&project, &id).await.or_database()?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn project_root(state: State<'_, DbState>) -> Result<String, AppError> {

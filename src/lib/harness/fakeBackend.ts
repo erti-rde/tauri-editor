@@ -467,6 +467,33 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			return newestFirst().slice(start, start + (limit ?? 200));
 		},
 
+		addSourceByHand(id, cslJson, zoteroType) {
+			library();
+			if (!/^erti:[0-9a-f-]{36}$/i.test(id)) {
+				throw appError('InvalidInput', "That isn't an id for a source entered by hand.");
+			}
+			const title = (JSON.parse(cslJson) as { title?: unknown }).title;
+			if (typeof title !== 'string' || !title.trim()) {
+				throw appError('InvalidInput', 'Give the source a title.');
+			}
+			if (state.library.has(id)) {
+				throw appError('Conflict', 'A source with that id is already in the library.');
+			}
+			state.library.set(id, {
+				sha256: id,
+				file_name: '',
+				path: null,
+				csl_json: cslJson,
+				zotero_type: zoteroType,
+				doi: null,
+				resolved_via: 'manual',
+				state: 'ready',
+				last_error: null
+			});
+			if (state.root !== null) state.project.add(id);
+			return null;
+		},
+
 		sourceRemoval(id) {
 			library();
 			const files = workAndFiles(id);
