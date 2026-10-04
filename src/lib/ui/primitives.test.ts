@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { createRawSnippet, type Component, type ComponentProps } from 'svelte';
 import { readFileSync } from 'node:fs';
@@ -124,7 +124,10 @@ describe('Menu', () => {
 			'aria-expanded',
 			'true'
 		);
-		await screen.findByRole('menu', anyVisibility);
+		const menu = await screen.findByRole('menu', anyVisibility);
+		// bits-ui moves focus into the menu after it opens; keys sent before that
+		// land on the trigger, which only shows under load.
+		await waitFor(() => expect(menu).toContainElement(document.activeElement as HTMLElement));
 
 		// The danger item sits last, whatever order it was given in.
 		const names = screen

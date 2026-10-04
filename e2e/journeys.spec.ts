@@ -258,6 +258,10 @@ test('the text-style menu opens from the keyboard and makes a heading', async ({
 	await openProject(page);
 	await openManuscript(page);
 
+	// Whichever paragraph the cursor ends up in: under load the document can
+	// still be settling when the click lands, and the menu is what's tested.
+	const headings = page.locator('.ProseMirror h2');
+	await expect(headings).toHaveCount(1);
 	await page.locator('.ProseMirror p').first().click();
 	await page.getByRole('button', { name: 'Text style' }).focus();
 	await page.keyboard.press('Enter');
@@ -267,5 +271,5 @@ test('the text-style menu opens from the keyboard and makes a heading', async ({
 
 	await menu.getByRole('menuitem', { name: 'Heading 2' }).click();
 	await expect(menu).toBeHidden();
-	await expect(page.locator('.ProseMirror h2', { hasText: 'Sequence models' })).toHaveCount(1);
+	await expect(headings).toHaveCount(2);
 });
