@@ -10,7 +10,7 @@ import type {
 	Source
 } from '$lib/ipc';
 
-import type { Fixture } from './fixture';
+import type { Fixture, LibrarySource } from './fixture';
 
 /**
  * Erti's Rust side, in memory (M1a-1).
@@ -92,7 +92,7 @@ export interface FakeState {
 	root: string | null;
 	libraryOpen: boolean;
 	/** Every source the library knows, by hash. */
-	library: Map<string, Source>;
+	library: Map<string, LibrarySource>;
 	/** The open project's sources. */
 	project: Set<string>;
 	/** Project-local metadata corrections. */
@@ -167,8 +167,8 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 	const canon = (id: string) => state.aliases.get(id) ?? id;
 	const projectWorks = () => new Set([...state.project].map(canon));
 	// An override made on an alias still corrects the work, unless the work has
-	// its own. A work with no file opens its alias's.
-	const effective = (s: Source): Source => {
+	// its own. A work with no file opens its alias's, and says whose file it is.
+	const effective = (s: LibrarySource): Source => {
 		const aliases = [...state.aliases].filter(([, work]) => work === s.sha256).map(([a]) => a);
 		const override = [s.sha256, ...aliases].map((id) => state.overrides.get(id)).find(Boolean);
 		const file = s.path ? s : aliases.map((a) => state.library.get(a)).find((f) => f?.path);
@@ -176,6 +176,7 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			...s,
 			csl_json: override ?? s.csl_json,
 			path: file?.path ?? null,
+			file_sha256: file?.sha256 ?? null,
 			file_name: file?.file_name ?? s.file_name
 		};
 	};

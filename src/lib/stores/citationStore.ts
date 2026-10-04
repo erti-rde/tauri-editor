@@ -185,7 +185,7 @@ function createCitationStore() {
 	 * re-renders with it.
 	 */
 	function renderDocument(sites: CitationSite[]) {
-		const { engine, citationSources } = get(citationStore);
+		const { engine, citationSources, aliases } = get(citationStore);
 		if (!engine) return null;
 
 		try {
@@ -193,7 +193,8 @@ function createCitationStore() {
 				sites,
 				engine,
 				new Set(Object.keys(citationSources)),
-				canonicalId
+				// The state read once above, not a store read per cited id.
+				(id) => canonical(aliases ?? {}, id)
 			);
 
 			update((state) => ({
@@ -242,7 +243,16 @@ async function getInitialState(): Promise<CitationState> {
 	let citationSources: Record<string, CitationItem> = {};
 	let aliases: Aliases = {};
 	try {
-		[citationSources, aliases] = await Promise.all([loadCitationSources(), sourceAliases()]);
+		[citationSources, aliases] = await Promise.all([
+			loadCitationSources(),
+			// Without the aliases only a citation of an attached PDF or a merged id
+			// goes missing; without the sources, every citation does. So a failure
+			// here costs the aliases alone.
+			sourceAliases().catch((error: unknown) => {
+				log.error('Could not load the library’s aliases', error);
+				return {};
+			})
+		]);
 	} catch (error) {
 		const empty = { bibliography: [], missingIds: [], awayIds: [], aliases };
 		return { ...empty, engine: null, citationSources, error: messageOf(error) };

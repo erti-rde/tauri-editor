@@ -158,7 +158,11 @@ function serialize(node: JSONContent, options: LatexOptions): string {
 
 		case 'citation': {
 			const ids = parseCitationIds(node.attrs?.id);
-			const keys = ids.map((id) => options.citationKeys?.[id]).filter((k): k is string => !!k);
+			// Once each: a citation naming a work and its attached PDF has one key
+			// for both (ADR 003), and \cite{k,k} would list the reference twice.
+			const keys = [
+				...new Set(ids.map((id) => options.citationKeys?.[id]).filter((k): k is string => !!k))
+			];
 
 			// A citation whose source is gone becomes a visible marker rather than
 			// an empty \cite{}, which LaTeX renders as a silent "[?]".

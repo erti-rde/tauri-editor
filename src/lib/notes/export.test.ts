@@ -82,6 +82,20 @@ describe('notes as Markdown', () => {
 		);
 	});
 
+	// M1b-3: the project lists the work; the mark sits on the PDF attached to it.
+	it('files a mark on an attached PDF under its work', () => {
+		const resolve = (id: string) => (id === 'pdf' || id === 'pdf-2' ? 'sha-1' : id);
+		const out = toMarkdown(
+			[mark({ sha256: 'pdf' }), mark({ id: 'a2', sha256: 'pdf-2', page: 9 })],
+			sources,
+			labels,
+			resolve
+		);
+		expect(out).not.toContain('Unknown paper');
+		expect(out.match(/^## /gm)).toHaveLength(1);
+		expect(out).toContain('## Smith 2020, A Study');
+	});
+
 	it('names a paper it has no record of rather than leaving a gap', () => {
 		expect(toMarkdown([mark({ sha256: 'missing' })], sources, labels)).toContain('Unknown paper');
 	});
