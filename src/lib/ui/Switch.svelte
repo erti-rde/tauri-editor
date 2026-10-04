@@ -38,7 +38,7 @@
 		{disabled}
 		{onCheckedChange}
 		aria-describedby={description ? `${id}-description` : undefined}
-		class="bg-line-strong data-[state=checked]:bg-accent ease-standard relative mt-px inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-(--duration-fast) disabled:cursor-not-allowed disabled:opacity-50"
+		class="bg-line-control data-[state=checked]:bg-accent ease-standard relative mt-px inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors duration-(--duration-fast) disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		<Switch.Thumb
 			class="bg-surface-raised ease-standard pointer-events-none block size-3 translate-x-0.5 rounded-full transition-transform duration-(--duration-fast) data-[state=checked]:translate-x-3.5"

@@ -8,7 +8,7 @@
 
 	/** The box every text control is drawn in. */
 	export const controlClass =
-		'w-full rounded border border-line-strong bg-surface-raised text-small text-ink placeholder:text-ink-faint transition-colors duration-(--duration-fast) ease-standard enabled:hover:border-ink-faint disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger';
+		'w-full rounded border border-line-control bg-surface-raised text-small text-ink placeholder:text-ink-muted transition-colors duration-(--duration-fast) ease-standard enabled:hover:border-ink-muted disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger';
 </script>
 
 <script lang="ts">

@@ -43,6 +43,12 @@
 	/* One-pixel rules do the work shadows would. */
 	--line: 214 15% 88%;
 	--line-strong: 214 12% 76%;
+	/* The edge of a control whose edge is what shows it's there: a text field,
+	   a checkbox, a radio, a switch's track. WCAG 1.4.11 wants 3:1 against every
+	   surface a control sits on, and --line-strong is too quiet for that in most
+	   palettes (1.74 here), so it stays for buttons with words and overlay edges,
+	   and fields take this. Measured on the rendered catalogue (M1c-5). */
+	--line-control: 214 12% 55%;
 
 	/* 40%, not 48%: white on the lighter orange measured 3.37:1, below the 4.5
 	   AA threshold, so the primary button was the least readable thing on screen.
@@ -56,6 +62,10 @@
 	--accent-hover: 24 88% 33%;
 
 	--danger: 0 65% 48%;
+	/* A danger button under the pointer, moved away from its ink as --accent-hover
+	   is. It was `opacity-90`, which in a dark palette faded the fill towards the
+	   surface and the dark ink with it, to 4.16:1. */
+	--danger-hover: 0 65% 42.5%;
 	--warning: 32 85% 32.5%;
 	--success: 150 45% 33%;
 
@@ -96,6 +106,7 @@
 
 	--line: 220 10% 24%;
 	--line-strong: 220 9% 34%;
+	--line-control: 220 9% 48%;
 
 	--accent: 24 90% 58%;
 	--accent-ink: 24 40% 10%;
@@ -103,6 +114,7 @@
 	--accent-hover: 24 90% 67%;
 
 	--danger: 0 70% 62%;
+	--danger-hover: 0 70% 67.5%;
 	--warning: 36 85% 60%;
 	--success: 150 40% 55%;
 

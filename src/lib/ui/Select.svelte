@@ -53,7 +53,7 @@
 				{#if selectedLabel}
 					{selectedLabel}
 				{:else}
-					<span class="text-ink-faint">{placeholder}</span>
+					<span class="text-ink-muted">{placeholder}</span>
 				{/if}
 			</span>
 			<ChevronsUpDown class="text-ink-muted ml-2 size-3.5" aria-hidden="true" />

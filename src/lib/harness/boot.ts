@@ -1,3 +1,5 @@
+import { normalise } from '$lib/theme/theme';
+
 import { defaultFixture } from './fixture';
 import { installFakeBackend } from './install';
 
@@ -7,6 +9,8 @@ import { installFakeBackend } from './install';
  *
  * - `?consent=unasked` — a first launch: the privacy question is shown.
  * - `?recents=none` — nothing opened before: the landing screen is empty.
+ * - `?theme=night-owl&density=comfortable` — an appearance, as if chosen in
+ *   Settings. The catalogue (M1c-5) is screenshotted in each.
  */
 export function boot(url: URL) {
 	const fixture = defaultFixture();
@@ -14,6 +18,20 @@ export function boot(url: URL) {
 
 	if (url.searchParams.get('consent') === 'unasked') delete settings.allowNetworkLookups;
 	if (url.searchParams.get('recents') === 'none') delete settings.recentProjects;
+
+	const theme = url.searchParams.get('theme');
+	const density = url.searchParams.get('density');
+	if (theme || density) {
+		// Through `normalise`, as a hand-edited settings file would be: a palette
+		// that doesn't exist falls back rather than rendering unstyled.
+		const appearance = normalise({
+			theme: (theme ?? undefined) as never,
+			density: (density ?? undefined) as never
+		});
+		settings.appearance = appearance;
+		// And before the first paint, as app.html does from localStorage.
+		if (appearance.theme !== 'system') document.documentElement.dataset.theme = appearance.theme;
+	}
 
 	return installFakeBackend(fixture);
 }

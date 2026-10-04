@@ -47,7 +47,7 @@
 					value={option.value}
 					disabled={option.disabled}
 					aria-describedby={option.description ? `${id}-${i}-description` : undefined}
-					class="border-line-strong bg-surface-raised data-[state=checked]:border-accent mt-px grid size-3.5 shrink-0 place-items-center rounded-full border disabled:cursor-not-allowed disabled:opacity-50"
+					class="border-line-control bg-surface-raised data-[state=checked]:border-accent mt-px grid size-3.5 shrink-0 place-items-center rounded-full border disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{#snippet children({ checked })}
 						{#if checked}
