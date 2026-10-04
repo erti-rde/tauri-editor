@@ -49,4 +49,16 @@ test('shots', async ({ page }) => {
 	await page.getByRole('button', { name: 'Settings' }).click();
 	await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
 	await page.screenshot(shot('09-settings'));
+	await page.keyboard.press('Escape');
+
+	// Asked before, never undone by accident (UX-4). Cancelled: later shots
+	// keep the source.
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
+	await page.screenshot(shot('10-source-sidebar'));
+	await page.getByRole('button', { name: 'Remove from library…' }).click();
+	const remove = page.getByRole('dialog', { name: /^Remove “Attention/ });
+	await expect(remove).toBeVisible();
+	await page.screenshot(shot('11-remove-source'));
+	await remove.getByRole('button', { name: 'Cancel' }).click();
 });

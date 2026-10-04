@@ -342,6 +342,18 @@
 						</Sidebar>
 					</div>
 				</Specimen>
+				<Specimen name="Sidebar" state="with footer">
+					<div class="border-line flex h-56 justify-end rounded border">
+						<Sidebar title="Source" subtitle="Vaswani et al., 2017" onclose={() => {}}>
+							<p class="text-small text-ink p-3">Attention Is All You Need</p>
+							{#snippet footer()}
+								<Button variant="ghost">Remove from library…</Button>
+								<span class="flex-1"></span>
+								<Button variant="primary">Save</Button>
+							{/snippet}
+						</Sidebar>
+					</div>
+				</Specimen>
 			</div>
 		</section>
 

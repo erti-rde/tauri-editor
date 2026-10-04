@@ -154,6 +154,14 @@
 		sidebarOpen = true;
 	}
 
+	const selected = $derived(sources.find((s) => s.id === selectedSourceId) ?? null);
+
+	async function handleSourceRemoved() {
+		handleSidebarClose();
+		selectedSourceId = null;
+		await loadSources();
+	}
+
 	function handleSidebarClose() {
 		sidebarOpen = false;
 		editingSource = null;
@@ -181,11 +189,7 @@
 </script>
 
 <div class="flex h-full w-full">
-	<div
-		class="bg-surface-raised flex-grow overflow-auto rounded-lg p-4 shadow {sidebarOpen
-			? 'mr-[400px]'
-			: ''}"
-	>
+	<div class="bg-surface-raised flex-grow overflow-auto rounded-lg p-4 shadow">
 		<!-- Header with search -->
 		<div class="mb-4 flex items-center justify-between">
 			<h2 class="text-xl font-bold">Sources ({sources.length})</h2>
@@ -355,12 +359,18 @@
 	</div>
 
 	<!-- Sidebar for editing source -->
-	{#if sidebarOpen && editingSource && augmentedSchema}
+	{#if sidebarOpen && editingSource && augmentedSchema && selected}
 		<SourceSidebar
 			bind:source={editingSource}
+			record={{
+				id: selected.id,
+				title: selected.metadata?.title || selected.file_name,
+				csl: selected.metadata
+			}}
 			{augmentedSchema}
 			onclose={handleSidebarClose}
 			onupdate={handleSourceUpdate}
+			onremoved={handleSourceRemoved}
 		/>
 	{/if}
 </div>

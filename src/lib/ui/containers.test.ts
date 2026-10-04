@@ -259,6 +259,20 @@ describe('Sidebar', () => {
 		expect(onclose).toHaveBeenCalledTimes(2);
 	});
 
+	it('pins its actions in a footer, inside the region it names', () => {
+		mount(Sidebar, {
+			title: 'Orality and Literacy',
+			onclose: vi.fn(),
+			children: html('<p>Details</p>'),
+			footer: html('<button>Remove from library…</button>')
+		});
+
+		const sidebar = screen.getByRole('complementary', { name: 'Orality and Literacy' });
+		const remove = screen.getByRole('button', { name: 'Remove from library…' });
+		expect(sidebar).toContainElement(remove);
+		expect(remove.closest('footer')).not.toBeNull();
+	});
+
 	it("leaves an Escape that's cancelling an input method's composition alone", async () => {
 		const onclose = vi.fn();
 		mount(Sidebar, { title: 'A note', onclose, children: html('<input aria-label="Note" />') });

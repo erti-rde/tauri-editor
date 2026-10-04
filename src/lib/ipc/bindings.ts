@@ -153,6 +153,13 @@ export const commands = {
 	 *  narrower search still fills `limit`. The project's results come first.
 	 */
 	searchLibrary: (query: string, kinds: HitKind[] | null, limit: number | null, includeLibrary: boolean | null) => typedError<Hit[], AppError>(__TAURI_INVOKE("search_library", { query, kinds, limit, includeLibrary })),
+	/**  What removing a source would delete, for the dialog that asks first. */
+	sourceRemoval: (id: string) => typedError<SourceRemoval, AppError>(__TAURI_INVOKE("source_removal", { id })),
+	/**
+	 *  Remove a source from the library, with its files' records, marks and
+	 *  notes (M1b-4). The PDFs stay where they are.
+	 */
+	removeSource: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_source", { id })),
 	restoreDefaultLabels: () => typedError<number, AppError>(__TAURI_INVOKE("restore_default_labels")),
 	nameLabelsAfterColours: () => typedError<number, AppError>(__TAURI_INVOKE("name_labels_after_colours")),
 };
@@ -415,6 +422,22 @@ export type SourceNote = {
 	label_id: string | null,
 	created_at: string,
 	updated_at: string,
+};
+
+/**
+ *  What removing a work would take with it, for the dialog that asks first
+ *  (docs/ux.md UX-4).
+ */
+export type SourceRemoval = {
+	/**  Source notes, and page notes on its files. */
+	notes: number,
+	/**  Highlights and area snapshots on its files. */
+	highlights: number,
+	/**
+	 *  Everywhere its files have been seen, the work's own and every attached
+	 *  one's: any inside the project folder is read again by the next scan.
+	 */
+	paths: string[],
 };
 
 export type TexToolchain = {

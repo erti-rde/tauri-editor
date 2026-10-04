@@ -315,6 +315,44 @@ pub async fn set_metadata_override(
         .or_database()
 }
 
+/// What removing a source would delete, for the dialog that asks first.
+#[tauri::command]
+#[specta::specta]
+pub async fn source_removal(
+    state: State<'_, DbState>,
+    id: String,
+) -> Result<queries::SourceRemoval, AppError> {
+    queries::source_removal(&state.library().await?, &id)
+        .await
+        .or_database()
+}
+
+/// Remove a source from the library, with its files' records, marks and
+/// notes (M1b-4). The PDFs stay where they are.
+#[tauri::command]
+#[specta::specta]
+pub async fn remove_source(state: State<'_, DbState>, id: String) -> Result<(), AppError> {
+    remove_source_in(&state, &id).await
+}
+
+pub async fn remove_source_in(state: &DbState, id: &str) -> Result<(), AppError> {
+    // The toast says it can be restored from a backup, and the marks made
+    // since this morning's would otherwise be in none. No copy, no removal.
+    state.back_up_library().await.map_err(|e| {
+        AppError::new(
+            e.kind,
+            format!(
+                "Could not back up the library first, so nothing was removed: {}",
+                e.message
+            ),
+        )
+    })?;
+    let removed = queries::remove_source(&state.library().await?, id).await;
+    // Its passages, marks and notes had vectors, and the cascade took them.
+    state.invalidate_index();
+    removed.or_database()
+}
+
 /// Rank chunks against a piece of text the user is writing.
 ///
 /// Embedding and scoring both happen here; only the top results cross the IPC
