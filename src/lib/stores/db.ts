@@ -93,6 +93,13 @@ export const addToProject = (sha256: string) => run(commands.addToProject(sha256
 export const addSourceFromManuscript = (id: string, cslJson: string) =>
 	call(commands.addSourceFromManuscript(id, cslJson));
 
+/**
+ * Add a source entered by hand (M1b-5): a work with no file, in the library
+ * and this project. `id` is `erti:<uuid>`.
+ */
+export const addSourceByHand = (id: string, cslJson: string, zoteroType: string) =>
+	run(commands.addSourceByHand(id, cslJson, zoteroType));
+
 /** What removing a source would delete: its notes and highlights (UX-4). */
 export const sourceRemoval = (id: string) => call(commands.sourceRemoval(id));
 

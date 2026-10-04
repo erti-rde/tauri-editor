@@ -124,16 +124,40 @@ function textToValue(text: string, inputType: string | undefined, previous: unkn
 	return trimmed;
 }
 
+/**
+ * The fields the form shows for `type`: those with a CSL variable, one per
+ * variable. A journal article has both Series and Series Title for
+ * `collection-title`, and two boxes for one value meant an empty second one
+ * deleted what was typed in the first.
+ */
+export function formFields(type: AugmentedZoteroItemType): AugmentedZoteroItemType['fields'] {
+	const seen = new Set<string>();
+	return type.fields.filter((field) => {
+		if (!field.cslField || seen.has(field.cslField)) return false;
+		seen.add(field.cslField);
+		return true;
+	});
+}
+
+/** The roles the form offers for `type`: one per CSL name variable, for the same reason. */
+export function formRoles(type: AugmentedZoteroItemType): AugmentedZoteroItemType['creatorTypes'] {
+	const seen = new Set<string>();
+	return type.creatorTypes.filter((role) => {
+		if (!role.cslVariable || seen.has(role.cslVariable)) return false;
+		seen.add(role.cslVariable);
+		return true;
+	});
+}
+
 /** The item as the form for `type` shows it. */
 export function toForm(item: CslItem, type: AugmentedZoteroItemType): FormValues {
 	const fields: Record<string, string> = {};
-	for (const field of type.fields) {
-		if (!field.cslField) continue;
-		fields[field.field] = valueToText(item[field.cslField], field.inputType);
+	for (const field of formFields(type)) {
+		fields[field.field] = valueToText(item[field.cslField!], field.inputType);
 	}
 
 	const creators: FormCreator[] = [];
-	for (const role of type.creatorTypes) {
+	for (const role of formRoles(type)) {
 		if (!role.cslVariable) continue;
 		const names = item[role.cslVariable];
 		if (!Array.isArray(names)) continue;
@@ -164,7 +188,7 @@ export function fromForm(
 	if (type.cslType) item.type = type.cslType;
 	const shown = toForm(original, type);
 
-	for (const field of type.fields) {
+	for (const field of formFields(type)) {
 		if (!field.cslField) continue;
 		const text = form.fields[field.field] ?? '';
 		if (text === shown.fields[field.field] && field.cslField in original) continue;
@@ -174,7 +198,7 @@ export function fromForm(
 		else item[field.cslField] = value;
 	}
 
-	for (const role of type.creatorTypes) {
+	for (const role of formRoles(type)) {
 		if (!role.cslVariable) continue;
 		const names = form.creators
 			.filter((c) => c.creatorType === role.creatorType)

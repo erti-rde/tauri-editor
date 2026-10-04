@@ -156,6 +156,15 @@ export const commands = {
 	/**  What removing a source would delete, for the dialog that asks first. */
 	sourceRemoval: (id: string) => typedError<SourceRemoval, AppError>(__TAURI_INVOKE("source_removal", { id })),
 	/**
+	 *  Add a source the researcher entered by hand (M1b-5, UX-2): a work with no
+	 *  file, in the library and the open project.
+	 * 
+	 *  The id is made in the webview, as a mark's is (`crypto.randomUUID`), and
+	 *  checked here: it has to be one no hash can be, so a PDF found later never
+	 *  collides with it (ADR 003).
+	 */
+	addSourceByHand: (id: string, cslJson: string, zoteroType: string) => typedError<null, AppError>(__TAURI_INVOKE("add_source_by_hand", { id, cslJson, zoteroType })),
+	/**
 	 *  Remove a source from the library, with its files' records, marks and
 	 *  notes (M1b-4). The PDFs stay where they are.
 	 */

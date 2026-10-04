@@ -203,6 +203,9 @@ function buildCslToZoteroTypeMap(schema: OriginalZoteroSchema): Map<string, stri
 }
 
 function formatFieldName(fieldName: string): string {
+	// Zotero spells some acronyms in capitals (DOI, ISBN) and some not (url):
+	// spaced out letter by letter, or "Url", neither reads as a label.
+	if (/^[A-Z]+$/.test(fieldName) || fieldName === 'url') return fieldName.toUpperCase();
 	const result = fieldName.replace(/([A-Z])/g, ' $1');
 	return result.charAt(0).toUpperCase() + result.slice(1);
 }
@@ -280,8 +283,15 @@ export function augment(schema: OriginalZoteroSchema): AugmentedZoteroSchema {
 		// Augment fields for this item type
 		const augmentedFields: AugmentedZoteroField[] = itemTypeDef.fields.map((fieldDef) => {
 			const fieldName = fieldDef.field;
-			const potentialCslFields = reverseFieldMap.get(fieldName) || [];
-			const chosenCslField = chooseCslField(fieldName, itemTypeName, potentialCslFields);
+			// Zotero maps only base fields to CSL: a chapter's `bookTitle` is a
+			// `publicationTitle`, a thesis's `university` a `publisher`. Without
+			// this a chapter lost its book, and a report its institution, in every
+			// style (M1b-5 AC-3).
+			const mappedAs = reverseFieldMap.has(fieldName)
+				? fieldName
+				: (fieldDef.baseField ?? fieldName);
+			const potentialCslFields = reverseFieldMap.get(mappedAs) || [];
+			const chosenCslField = chooseCslField(mappedAs, itemTypeName, potentialCslFields);
 			const fieldLabel = formatFieldName(fieldName);
 			const inputType = chosenCslField && getInputType(chosenCslField);
 
@@ -297,7 +307,12 @@ export function augment(schema: OriginalZoteroSchema): AugmentedZoteroSchema {
 		const augmentedCreatorTypes: AugmentedZoteroCreatorType[] = itemTypeDef.creatorTypes.map(
 			(creatorDef) => {
 				const creatorTypeName = creatorDef.creatorType;
-				const cslVariable = reverseCreatorMap.get(creatorTypeName);
+				// A kind's primary creator is its CSL author when the schema maps
+				// it to nothing else, as Zotero's own export does: a presenter, a
+				// programmer or an artist is who a citation names first. Without
+				// this, names typed with those roles were dropped on saving.
+				const cslVariable =
+					reverseCreatorMap.get(creatorTypeName) ?? (creatorDef.primary ? 'author' : undefined);
 				const creatorLabel = formatFieldName(creatorTypeName);
 
 				return {

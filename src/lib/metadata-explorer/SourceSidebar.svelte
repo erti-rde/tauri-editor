@@ -1,126 +1,100 @@
 <script lang="ts">
-	import type { CitationItem } from '$lib/stores/citationStore';
-	import { Button, DateField, Select, Sidebar, TextField } from '$lib/ui';
-	import { CalendarDate } from '@internationalized/date';
+	import { describeError } from '$lib/ipc';
+	import { addSourceByHand, setMetadataOverride } from '$lib/stores/db';
+	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { Button, Sidebar } from '$lib/ui';
 
-	import RemoveSource from './RemoveSource.svelte';
-
-	import type { DateValue } from '@internationalized/date';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
-
-	interface Props {
-		source: CitationItem;
-		/** The row being edited: its id, what it’s called, and its metadata. */
-		record: { id: string; title: string; csl: object | null };
-		onclose: () => void;
-		onupdate: (sourceId: string, metadata: CitationItem) => void;
-		/** After it's been removed from the library. */
-		onremoved: () => void | Promise<void>;
-		augmentedSchema: AugmentedZoteroSchema;
-	}
-	const {
-		source = $bindable(),
-		record,
-		onclose,
-		augmentedSchema,
-		onupdate,
-		onremoved
-	}: Props = $props();
-
-	const currentFormFields = $derived.by(() => {
-		return (
-			augmentedSchema.itemTypes.filter((item) => {
-				return item.cslType && item.itemType === source.zotero_type;
-			})[0]?.fields || []
-		);
-	});
-
-	const itemTypesFields = $derived(augmentedSchema.typeFields);
-
-	/** CSL-JSON date fields look like `{ 'date-parts': [[yyyy, mm, dd]] }`. */
-	type CslDate = { 'date-parts'?: number[][] };
+	import { fromForm, toForm, type CslItem, type FormValues } from './cslForm';
+	import RemoveSource from './RemoveSource.svelte';
+	import SourceFields from './SourceFields.svelte';
+	import { itemTypeOf, missing, newSourceId } from './sourceForm';
 
 	/**
-	 * Only a complete [year, month, day] is usable. CSL dates are legitimately
-	 * partial — a year-only book is `{ 'date-parts': [[2021]] }` — and passing
-	 * the missing entries to CalendarDate yields undefined year/month/day, which
-	 * throws while rendering the sidebar.
+	 * A source's details, to correct (UX-3), or a new one's, to enter by hand
+	 * (M1b-5, UX-2). Without a `record` it's creating.
 	 */
-	function getDateParts(value: CitationItem[string]): [number, number, number] | undefined {
-		const parts = (value as CslDate | undefined)?.['date-parts'];
-		const first = Array.isArray(parts) ? parts[0] : undefined;
-
-		if (!Array.isArray(first) || first.length < 3) return undefined;
-		const [year, month, day] = first;
-		if (![year, month, day].every((n) => Number.isInteger(n))) return undefined;
-
-		return [year, month, day];
+	interface Props {
+		schema: AugmentedZoteroSchema;
+		record?: {
+			id: string;
+			/** What the researcher calls it: its title, or the file's name. */
+			title: string;
+			csl: CslItem | null;
+			zoteroType: string | null;
+		};
+		onclose: () => void;
+		onsaved: () => void;
+		onremoved: () => void | Promise<void>;
 	}
 
-	/** A field's value as text; anything that isn't one yet starts empty. */
-	function textOf(value: CitationItem[string]): string {
-		return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+	let { schema, record, onclose, onsaved, onremoved }: Props = $props();
+
+	const typeNamed = (itemType: string | undefined) =>
+		schema.itemTypes.find((t) => t.itemType === itemType && t.cslType);
+
+	/**
+	 * Everything typed so far, beyond what the form shows: switching kind and
+	 * back keeps every value, because what the new kind has no field for stays
+	 * here. For showing only: saving writes over the source as it was, so a
+	 * value typed under a kind that was then left isn't stored out of sight.
+	 */
+	// svelte-ignore state_referenced_locally
+	let draft: CslItem = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
+	// svelte-ignore state_referenced_locally
+	let type = $state(typeNamed(itemTypeOf(record?.zoteroType, record?.csl ?? null, schema)));
+	// svelte-ignore state_referenced_locally
+	let form: FormValues = $state(
+		type ? toForm(draft, type) : { itemType: '', fields: {}, creators: [] }
+	);
+	let tried = $state(false);
+	let saving = $state(false);
+	const errors = $derived(tried && type ? missing(form, type) : {});
+
+	function changeType(itemType: string) {
+		if (type) draft = fromForm(form, type, draft);
+		type = typeNamed(itemType);
+		if (type) form = toForm(draft, type);
 	}
 
-	function handleSave() {
-		onupdate(String(source.id), source);
-	}
-
-	function handleSourceTypeChange(value: string) {
-		source.zotero_type = value;
-		source.type = augmentedSchema.zoteroToCslTypeMap.get(value) || '';
-	}
-
-	function handleDateValueChange(fieldName: string, value: DateValue) {
-		if (value.year && value.month && value.day) {
-			let editedDate = [value.year, value.month, value.day];
-			const existing = source[fieldName] as CslDate | undefined;
-			source[fieldName] = existing
-				? { ...existing, 'date-parts': [editedDate] }
-				: { 'date-parts': [editedDate] };
+	async function save() {
+		tried = true;
+		if (!type || Object.keys(missing(form, type)).length) return;
+		const original = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
+		const item: CslItem = { ...fromForm(form, type, original), zotero_type: type.itemType };
+		saving = true;
+		try {
+			if (record) {
+				// A project-local correction: the library's copy, and every other
+				// project citing it, are left alone.
+				await setMetadataOverride(record.id, JSON.stringify(item));
+			} else {
+				const id = newSourceId();
+				await addSourceByHand(id, JSON.stringify({ ...item, id }), type.itemType);
+				successToast(`Added “${String(item.title)}” to your library and this project.`);
+			}
+			onsaved();
+		} catch (error) {
+			errorToast(`Could not save it: ${describeError(error)}`);
+		} finally {
+			saving = false;
 		}
 	}
 </script>
 
-<Sidebar title="Edit source" subtitle={record.title} {onclose}>
-	<div class="grid gap-3 p-3">
-		<Select
-			label="Source type"
-			placeholder="Choose a source type"
-			items={itemTypesFields}
-			value={source.zotero_type}
-			type="single"
-			onValueChange={handleSourceTypeChange}
-		/>
-		{#if currentFormFields.length}
-			{#each currentFormFields as { cslField, label, field, inputType } (field)}
-				{#if cslField}
-					{#if inputType === 'date'}
-						{@const dateValue = getDateParts(source[cslField])}
-						<DateField
-							{label}
-							value={dateValue
-								? new CalendarDate(dateValue[0], dateValue[1], dateValue[2])
-								: undefined}
-							onValueChange={(value) => value && handleDateValueChange(cslField, value)}
-						/>
-					{:else}
-						<!-- Text whatever the field: CSL's numbers are often ranges, "12–14". -->
-						<TextField
-							{label}
-							value={textOf(source[cslField])}
-							oninput={(event) => (source[cslField] = event.currentTarget.value)}
-						/>
-					{/if}
-				{/if}
-			{/each}
-		{:else}
-			<p class="text-small text-ink-muted">Choose a source type to see its fields.</p>
-		{/if}
-	</div>
+<Sidebar
+	title={record ? 'Edit source' : 'New source'}
+	subtitle={record?.title ?? 'Entered by hand, with no file'}
+	{onclose}
+>
+	<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
 	{#snippet footer()}
-		<RemoveSource id={record.id} title={record.title} csl={record.csl} {onremoved} />
+		{#if record}
+			<RemoveSource id={record.id} title={record.title} csl={record.csl} {onremoved} />
+		{/if}
 		<span class="flex-1"></span>
-		<Button variant="primary" onclick={handleSave}>Save</Button>
+		<Button variant="primary" loading={saving} disabled={!type} onclick={save}>
+			{record ? 'Save' : 'Add to library'}
+		</Button>
 	{/snippet}
 </Sidebar>
