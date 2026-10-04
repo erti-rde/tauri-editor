@@ -298,3 +298,26 @@ async fn opening_another_library_drops_the_index_of_the_last() {
         .unwrap();
     assert!(hits.is_empty(), "nothing from the last library");
 }
+
+#[tokio::test]
+async fn a_build_overtaken_by_a_drop_answers_its_query_but_is_not_kept() {
+    // The race `open_library` can lose: a search picks the library's pool,
+    // the library is swapped and the index dropped, and the search then builds
+    // from the pool it already had. That index is the old library's.
+    let (_dir, state, pool) = library("overtaken").await;
+    let index = erti_lib::db::index::IndexState::default();
+
+    let before = index.generation();
+    index.invalidate();
+    let built = index.get(&pool, before).await.unwrap();
+
+    assert!(
+        !built.is_empty(),
+        "the query it was built for is still answered"
+    );
+    assert!(!index.is_built(), "but it isn't kept for the next");
+
+    index.get(&pool, index.generation()).await.unwrap();
+    assert!(index.is_built());
+    drop(state);
+}
