@@ -111,11 +111,17 @@ fn normalise(v: &mut [f32]) {
 impl Index {
     /// Normalise and pack rows into one matrix. CPU work, for `spawn_blocking`.
     ///
-    /// The width is the first row's. A row of another width came from another
-    /// model; it's kept, as a zero vector, so it's still found by a filter and
-    /// scores 0, which is what comparing vectors of different lengths gave.
-    pub fn build(rows: Vec<Row>, model: Option<String>) -> Index {
-        let dims = rows.first().map_or(0, |r| r.embedding.len());
+    /// The width is the current model's (`embedding_meta`), or the first row's
+    /// when nothing records one. Not the first row's regardless: after a change
+    /// of model, a library can still hold vectors from the last one, and rows
+    /// come in no particular order. Taking an old row's width zeroed every
+    /// current one, so nothing ranked by meaning at all.
+    ///
+    /// A row of another width came from another model; it's kept, as a zero
+    /// vector, so it's still found by a filter and scores 0, which is what
+    /// comparing vectors of different lengths gave.
+    pub fn build(rows: Vec<Row>, model: Option<String>, dims: Option<usize>) -> Index {
+        let dims = dims.unwrap_or_else(|| rows.first().map_or(0, |r| r.embedding.len()));
         let mut vectors = Vec::with_capacity(rows.len() * dims);
         let mut keys = Vec::with_capacity(rows.len());
         let mut owner_of = Vec::with_capacity(rows.len());
@@ -239,11 +245,13 @@ impl Index {
 /// The read is async I/O; normalising and packing tens of thousands of rows is
 /// CPU work, so it runs on the blocking pool rather than an async worker.
 pub async fn load(library: &SqlitePool) -> Result<Index, String> {
-    let model = queries::embedding_meta(library)
-        .await?
-        .map(|(model, _)| model);
+    let meta = queries::embedding_meta(library).await?;
+    let dims = meta
+        .as_ref()
+        .and_then(|(_, dims)| usize::try_from(*dims).ok());
+    let model = meta.map(|(model, _)| model);
     let rows = queries::index_rows(library).await?;
-    tokio::task::spawn_blocking(move || Index::build(rows, model))
+    tokio::task::spawn_blocking(move || Index::build(rows, model, dims))
         .await
         .map_err(|e| e.to_string())
 }
@@ -277,6 +285,12 @@ impl IndexState {
         self.slot().index.is_some()
     }
 
+    /// How many times the index has been dropped. Read before choosing which
+    /// library to build from, and handed to `get`.
+    pub fn generation(&self) -> u64 {
+        self.slot().generation
+    }
+
     /// Forget the index. The next query builds a new one.
     pub fn invalidate(&self) {
         let mut slot = self.slot();
@@ -288,7 +302,12 @@ impl IndexState {
     ///
     /// A different model in `embedding_meta` than the index was built from
     /// means its vectors are from another space: it's rebuilt.
-    pub async fn get(&self, library: &SqlitePool) -> Result<Arc<Index>, String> {
+    ///
+    /// `generation` is `self.generation()` as it was before the caller picked
+    /// `library`. If anything was dropped since, `library` may be one that has
+    /// been closed (`open_library` swaps the pool, then invalidates), so what's
+    /// built from it serves this query only and isn't kept.
+    pub async fn get(&self, library: &SqlitePool, generation: u64) -> Result<Arc<Index>, String> {
         let model = queries::embedding_meta(library)
             .await?
             .map(|(model, _)| model);
@@ -308,7 +327,6 @@ impl IndexState {
             return Ok(index);
         }
 
-        let generation = self.slot().generation;
         let index = Arc::new(load(library).await?);
         let mut slot = self.slot();
         if slot.generation == generation {
@@ -347,6 +365,7 @@ mod tests {
                 row(Key::SourceNote("n1".into()), "a", &[0.0, 0.0]),
             ],
             Some("model".into()),
+            None,
         );
 
         assert_eq!(index.len(), 3);
@@ -364,7 +383,7 @@ mod tests {
     fn a_dot_product_on_the_index_is_cosine_similarity() {
         let a = [0.3, -1.2, 2.5];
         let b = [1.1, 0.4, -0.7];
-        let index = Index::build(vec![row(chunk("a", 0), "a", &a)], None);
+        let index = Index::build(vec![row(chunk("a", 0), "a", &a)], None, None);
         let project = HashSet::from(["a"]);
         let filter = Filter {
             kinds: &[],
@@ -393,6 +412,7 @@ mod tests {
                 row(chunk("mine", 1), "mine", &[0.0, 1.0]),
             ],
             None,
+            None,
         );
         let project = HashSet::from(["mine"]);
         let filter = Filter {
@@ -418,6 +438,7 @@ mod tests {
                 row(chunk("alias", 0), "alias", &[0.0, 1.0]),
             ],
             None,
+            None,
         );
         let project = HashSet::from(["work"]);
         let aliases = HashMap::from([("alias".to_string(), "work".to_string())]);
@@ -438,12 +459,42 @@ mod tests {
     }
 
     #[test]
+    fn the_width_is_the_current_models_not_whichever_row_came_first() {
+        // An old model's vector read first, as rows come in no order: taking
+        // its width zeroed every current row, and nothing ranked by meaning.
+        let index = Index::build(
+            vec![
+                row(chunk("old", 0), "a", &[1.0, 0.0, 0.0]),
+                row(chunk("a", 0), "a", &[0.0, 1.0]),
+                row(chunk("a", 1), "a", &[1.0, 0.0]),
+            ],
+            Some("current".into()),
+            Some(2),
+        );
+        let project = HashSet::from(["a"]);
+        let filter = Filter {
+            kinds: &[],
+            project: &project,
+            include_library: false,
+            aliases: &HashMap::new(),
+        };
+
+        let found = index.search(&[1.0, 0.0], &filter, 3);
+
+        assert_eq!(found[0].key, &chunk("a", 1));
+        assert!((found[0].similarity - 1.0).abs() < 1e-6);
+        let old = found.iter().find(|f| f.key == &chunk("old", 0)).unwrap();
+        assert_eq!(old.similarity, 0.0);
+    }
+
+    #[test]
     fn a_vector_of_another_width_scores_zero_rather_than_failing() {
         let index = Index::build(
             vec![
                 row(chunk("a", 0), "a", &[1.0, 0.0]),
                 row(chunk("a", 1), "a", &[1.0, 0.0, 0.0]),
             ],
+            None,
             None,
         );
         let project = HashSet::from(["a"]);

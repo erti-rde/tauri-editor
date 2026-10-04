@@ -285,8 +285,11 @@ impl DbState {
     /// or after something it holds changed.
     pub async fn index(&self) -> Result<std::sync::Arc<index::Index>, crate::ipc::AppError> {
         use crate::ipc::Classify;
+        // Before the pool: an `open_library` between the two would otherwise
+        // leave the old library's index kept as the new one's.
+        let generation = self.index.generation();
         let library = self.library().await?;
-        self.index.get(&library).await.or_database()
+        self.index.get(&library, generation).await.or_database()
     }
 
     /// Drop the index after a write it may not reflect. Every command that
