@@ -60,7 +60,7 @@
 	--success: 150 45% 33%;
 
 	--selection: 24 88% 48%;
-	--shadow-overlay: 0 0% 0% / 0.12;
+	--overlay-shadow: 0 0% 0% / 0.12;
 	/* A scrim has to dim in every theme. --surface-overlay is white in a light
 	   palette, so using it at partial alpha washed the page out instead. */
 	--backdrop: 220 20% 12% / 0.45;
@@ -103,7 +103,7 @@
 	--success: 150 40% 55%;
 
 	--selection: 24 90% 58%;
-	--shadow-overlay: 0 0% 0% / 0.5;
+	--overlay-shadow: 0 0% 0% / 0.5;
 	--backdrop: 220 20% 4% / 0.6;
 	--surface-hover: 220 12% 21%;
 	--surface-active: 220 12% 26%;
@@ -141,4 +141,22 @@
 [data-density='comfortable'] {
 	--row-height: 32px;
 	--gap: 10px;
+}
+
+/*
+ * Motion. Short, and one easing (`ease-standard`), so a change of state is
+ * followed rather than watched. Nothing that appears unasked animates
+ * (docs/ux.md principle 1). Used as `duration-(--duration)`.
+ */
+:root {
+	--duration-fast: 120ms;
+	--duration: 180ms;
+}
+
+/* Asked for less motion: none. Things still change, at once. */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--duration-fast: 0ms;
+		--duration: 0ms;
+	}
 }

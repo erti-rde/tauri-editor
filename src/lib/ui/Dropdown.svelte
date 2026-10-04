@@ -54,7 +54,7 @@
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Portal>
 		<DropdownMenu.Content
-			class="shadow-popover bg-surface-raised border-line-strong rounded-xl border px-1 py-1.5 outline-hidden focus-visible:outline-hidden"
+			class="shadow-overlay bg-surface-raised border-line-strong rounded-xl border px-1 py-1.5 outline-hidden focus-visible:outline-hidden"
 			{...contentProps}
 		>
 			<DropdownMenu.Group aria-label={ariaLabel}>
