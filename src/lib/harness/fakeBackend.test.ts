@@ -91,6 +91,7 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 		expect(listed[0]).toMatchObject({
 			sha256: 'erti:book',
 			path: `${ROOT}/papers/devlin-2019.pdf`,
+			file_sha256: SHA.devlin,
 			csl_json: '{"title":"Made on the PDF"}'
 		});
 	});

@@ -22,6 +22,10 @@ pub struct Source {
     pub sha256: String,
     pub file_name: String,
     pub path: Option<String>,
+    /// Whose file `path` is: the work's own hash, or the hash of a PDF attached
+    /// to it. Ingesting that file goes under this id, never under `sha256`, or
+    /// a PDF's chunks and extracted metadata would land on the work.
+    pub file_sha256: Option<String>,
     /// CSL-JSON, with any project-local override already applied.
     pub csl_json: Option<String>,
     pub zotero_type: Option<String>,
@@ -332,13 +336,15 @@ pub async fn project_sources(
 
     // An override made on an id that has since been merged into another work
     // still applies to that work, unless the work has one of its own. Newest
-    // first, so of two merged ids' overrides, the later correction wins.
+    // first, so of two merged ids' overrides, the later correction wins; the
+    // timestamp is to the second, so a tie goes to the lower id, not row order.
     let mut overrides: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-    for row in
-        sqlx::query("SELECT sha256, csl_json FROM metadata_overrides ORDER BY updated_at DESC")
-            .fetch_all(project)
-            .await
-            .map_err(|e| e.to_string())?
+    for row in sqlx::query(
+        "SELECT sha256, csl_json FROM metadata_overrides ORDER BY updated_at DESC, sha256",
+    )
+    .fetch_all(project)
+    .await
+    .map_err(|e| e.to_string())?
     {
         let id: String = row.get("sha256");
         let work = resolve(&aliases, &id).to_string();
@@ -365,7 +371,11 @@ pub async fn project_sources(
                 (SELECT path FROM locations l
                   WHERE l.sha256 = s.sha256
                      OR l.sha256 IN (SELECT alias FROM source_aliases WHERE canonical = s.sha256)
-                  ORDER BY l.sha256 IN (SELECT alias FROM source_aliases), last_seen DESC LIMIT 1) AS path
+                  ORDER BY l.sha256 IN (SELECT alias FROM source_aliases), last_seen DESC LIMIT 1) AS path,
+                (SELECT l.sha256 FROM locations l
+                  WHERE l.sha256 = s.sha256
+                     OR l.sha256 IN (SELECT alias FROM source_aliases WHERE canonical = s.sha256)
+                  ORDER BY l.sha256 IN (SELECT alias FROM source_aliases), last_seen DESC LIMIT 1) AS file_sha256
            FROM sources s
            LEFT JOIN ingest_status i ON i.sha256 = s.sha256
           WHERE s.sha256 IN ({placeholders})"
@@ -390,6 +400,7 @@ pub async fn project_sources(
             Source {
                 file_name: r.try_get("file_name").unwrap_or_default(),
                 path: r.get("path"),
+                file_sha256: r.get("file_sha256"),
                 csl_json,
                 zotero_type: r.get("zotero_type"),
                 doi: r.get("doi"),

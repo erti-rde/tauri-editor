@@ -322,6 +322,17 @@ describe('a work cited by any of its ids (ADR 003)', () => {
 		expect(citationStore.canonicalId('erti:book')).toBe('erti:book');
 	});
 
+	it('keeps the sources when the aliases cannot be read', async () => {
+		const fakeStore = { get: vi.fn(async () => undefined) };
+		(pluginStore.load as unknown as MockInstance).mockResolvedValue(fakeStore);
+		(projectSources as unknown as MockInstance).mockResolvedValue([work]);
+		(sourceAliases as unknown as MockInstance).mockRejectedValue(new Error('locked'));
+		await citationStore.initializeCitationStore();
+
+		expect(Object.keys(get(citationStore).citationSources)).toEqual(['erti:book']);
+		expect(citationStore.canonicalId('pdf')).toBe('pdf');
+	});
+
 	it('renders and previews a citation of the attached PDF as the work', () => {
 		const sources = { 'erti:book': { ...fakeCitationItem, id: 'erti:book' } };
 		setCitationStore({

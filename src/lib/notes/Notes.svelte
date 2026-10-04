@@ -13,7 +13,8 @@
 	import { showInPdf } from '$lib/pdfreader/showInPdf';
 	import { save } from '@tauri-apps/plugin-dialog';
 	import { writeTextFile } from '@tauri-apps/plugin-fs';
-	import { projectSources } from '$lib/stores/db';
+	import { projectSources, sourceAliases } from '$lib/stores/db';
+	import { canonical } from '$lib/citations/aliases';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { toMarkdown, toSidecar } from './export';
 	import { draftContext, draftMatches } from './draftContext';
@@ -175,14 +176,18 @@
 			if (format === 'json') {
 				contents = toSidecar(marks);
 			} else {
-				const sources = await projectSources().catch(() => []);
+				const [sources, aliases] = await Promise.all([
+					projectSources().catch(() => []),
+					sourceAliases().catch(() => ({}))
+				]);
 				contents = toMarkdown(
 					marks,
 					sources.map((source) => ({
 						sha256: source.sha256,
 						title: titleOf(source.csl_json) ?? source.file_name
 					})),
-					$annotationsStore.labels
+					$annotationsStore.labels,
+					(id) => canonical(aliases, id)
 				);
 			}
 

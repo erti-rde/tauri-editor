@@ -23,6 +23,7 @@ const db = vi.hoisted(() => ({
 	searchAnnotations: vi.fn<(...args: unknown[]) => Promise<unknown[]>>(async () => []),
 	embedPendingAnnotations: vi.fn<() => Promise<number>>(async () => 0),
 	projectSources: vi.fn<() => Promise<unknown[]>>(async () => []),
+	sourceAliases: vi.fn<() => Promise<Record<string, string>>>(async () => ({})),
 	annotationLabels: vi.fn<() => Promise<unknown[]>>(async () => [])
 }));
 vi.mock('$lib/stores/db', () => db);

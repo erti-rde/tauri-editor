@@ -105,7 +105,13 @@
 	async function add() {
 		if (!target) return;
 		busy = true;
-		const ids = parseCitationIds(target.dataset.id).filter((id) => citationStore.isAway(id));
+		// One per work: a citation naming two ids of a work the project lacks adds
+		// that work once (ADR 003).
+		const work = (id: string) => citationStore.canonicalId(id);
+		const ids = parseCitationIds(target.dataset.id).filter(
+			(id, i, all) =>
+				citationStore.isAway(id) && all.findIndex((other) => work(other) === work(id)) === i
+		);
 		const sources = citationStore.getAllSourcesAsJson();
 		try {
 			for (const id of ids) {

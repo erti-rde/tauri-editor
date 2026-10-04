@@ -349,6 +349,12 @@ export type Source = {
 	sha256: string,
 	file_name: string,
 	path: string | null,
+	/**
+	 *  Whose file `path` is: the work's own hash, or the hash of a PDF attached
+	 *  to it. Ingesting that file goes under this id, never under `sha256`, or
+	 *  a PDF's chunks and extracted metadata would land on the work.
+	 */
+	file_sha256: string | null,
 	/**  CSL-JSON, with any project-local override already applied. */
 	csl_json: string | null,
 	zotero_type: string | null,

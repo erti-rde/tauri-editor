@@ -270,6 +270,11 @@ async fn a_project_lists_a_work_once_whichever_ids_name_it() {
         "Open PDF on the work finds its attached file"
     );
     assert_eq!(sources[0].file_name, "book.pdf");
+    assert_eq!(
+        sources[0].file_sha256.as_deref(),
+        Some("pdf"),
+        "a retry ingests the file under its own hash, not the work's"
+    );
 
     // A project that names only the PDF still lists the work, by its own id.
     sqlx::query("DELETE FROM source_set WHERE sha256 = 'erti:book'")
@@ -304,6 +309,44 @@ async fn an_override_on_a_merged_id_still_corrects_the_work() {
         sources[0].csl_json.as_deref(),
         Some(r#"{"title":"Made on the work"}"#)
     );
+}
+
+// M1b-3 AC-1: source_set membership, when two merged ids were corrected in
+// the same second
+#[tokio::test]
+async fn two_merged_overrides_of_one_age_settle_the_same_way_every_time() {
+    let (_state, library, project) = attached("override-tie").await;
+    queries::register_source(&library, "another", "/papers/again.pdf", "again.pdf")
+        .await
+        .unwrap();
+    queries::alias_source(&library, "another", "erti:book")
+        .await
+        .unwrap();
+
+    // The timestamp is to the second; inserted in both orders, the same id wins.
+    for order in [["pdf", "another"], ["another", "pdf"]] {
+        sqlx::query("DELETE FROM metadata_overrides")
+            .execute(&project)
+            .await
+            .unwrap();
+        for id in order {
+            sqlx::query(
+                "INSERT INTO metadata_overrides (sha256, csl_json, updated_at)
+                 VALUES (?, ?, '2026-10-04 12:00:00')",
+            )
+            .bind(id)
+            .bind(format!(r#"{{"title":"Made on {id}"}}"#))
+            .execute(&project)
+            .await
+            .unwrap();
+        }
+        let sources = queries::project_sources(&library, &project).await.unwrap();
+        assert_eq!(
+            sources[0].csl_json.as_deref(),
+            Some(r#"{"title":"Made on another"}"#),
+            "inserted as {order:?}"
+        );
+    }
 }
 
 // M1b-3 AC-1: notes (the marks the Notes panel searches, and cites from)
@@ -368,5 +411,6 @@ async fn removing_the_work_leaves_its_pdf_in_the_project() {
     let sources = queries::project_sources(&library, &project).await.unwrap();
     assert_eq!(sources.len(), 1);
     assert_eq!(sources[0].sha256, "pdf");
+    assert_eq!(sources[0].file_sha256.as_deref(), Some("pdf"));
     assert!(queries::alias_map(&library).await.unwrap().is_empty());
 }
