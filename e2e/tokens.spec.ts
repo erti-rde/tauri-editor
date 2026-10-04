@@ -35,6 +35,17 @@ const duration = (page: Page, name: string) =>
 		return Math.round(seconds * 1000);
 	}, name);
 
+/** What a plain `transition-colors` utility lasts, in ms. */
+const utilityDuration = (page: Page) =>
+	page.evaluate(() => {
+		const probe = document.createElement('div');
+		probe.className = 'transition-colors';
+		document.body.append(probe);
+		const seconds = parseFloat(getComputedStyle(probe).transitionDuration);
+		probe.remove();
+		return Math.round(seconds * 1000);
+	});
+
 // M1c-1 AC-2
 test('the type scale follows the interface size set in Appearance', async ({ page }) => {
 	await launch(page);
@@ -71,15 +82,22 @@ test('motion is zero when less motion is asked for', async ({ page }) => {
 	expect(await duration(page, '--duration-fast')).toBe(120);
 	expect(await duration(page, '--duration')).toBe(180);
 
+	expect(await utilityDuration(page)).toBe(150);
+
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	expect(await duration(page, '--duration-fast')).toBe(0);
 	expect(await duration(page, '--duration')).toBe(0);
+	// And the transitions written before the tokens, on Tailwind's default.
+	expect(await utilityDuration(page)).toBe(0);
 });
 
 // M1c-1 AC-1, AC-4: the overlay shadow is real, and tinted by the palette.
 // `shadow-popover` wrapped an `hsla()` in another and drew nothing.
 test('an overlay casts the palette’s shadow', async ({ page }) => {
 	await launch(page);
+	// The layout applies the reader's appearance once its settings load, and
+	// would put its own theme back over one set before that.
+	await expect(page.locator('html')).toHaveAttribute('data-density', /.+/);
 	const shadow = () =>
 		page.evaluate(() => {
 			const probe = document.createElement('div');
