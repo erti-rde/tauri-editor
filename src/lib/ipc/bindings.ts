@@ -144,6 +144,15 @@ export const commands = {
 	 *  one ranked list would be quietly wrong in a way nobody could see.
 	 */
 	searchAnnotations: (query: string, limit: number | null, semantic: boolean | null) => typedError<ScoredAnnotation[], AppError>(__TAURI_INVOKE("search_annotations", { query, limit, semantic })),
+	/**
+	 *  Search everything in the library by meaning: passages, marks and source
+	 *  notes, in one ranked list, each result saying which it is (ADR 005).
+	 * 
+	 *  `kinds` narrows it (all three when left out), and only the open project's
+	 *  works count unless `include_library`. Both apply before scoring, so a
+	 *  narrower search still fills `limit`. The project's results come first.
+	 */
+	searchLibrary: (query: string, kinds: HitKind[] | null, limit: number | null, includeLibrary: boolean | null) => typedError<Hit[], AppError>(__TAURI_INVOKE("search_library", { query, kinds, limit, includeLibrary })),
 	restoreDefaultLabels: () => typedError<number, AppError>(__TAURI_INVOKE("restore_default_labels")),
 	nameLabelsAfterColours: () => typedError<number, AppError>(__TAURI_INVOKE("name_labels_after_colours")),
 };
@@ -256,6 +265,23 @@ export type FileItem = {
 };
 
 /**
+ *  One result from the index, whatever kind of row it is (ADR 005).
+ * 
+ *  `kind` says which, and `hit` holds the row as each kind's own search
+ *  returns it. Adjacent rather than flattened: a mark already has a field
+ *  called `kind` (highlight, area, page note).
+ */
+export type Hit = { kind: "chunk"; hit: ScoredChunk } | { kind: "annotation"; hit: ScoredAnnotation } | { kind: "source_note"; hit: ScoredSourceNote };
+
+/**
+ *  What a row of the index is.
+ * 
+ *  Kept apart in a result, never blended: a passage from a paper is quotable,
+ *  a mark or a note is a judgement already made (see `search_annotations`).
+ */
+export type HitKind = "chunk" | "annotation" | "source_note";
+
+/**
  *  An annotation on its way in. The id is chosen by the caller so the same
  *  record keeps its identity through an export and back.
  */
@@ -341,6 +367,15 @@ export type ScoredChunk = {
 	in_project: boolean,
 };
 
+/**  A source note, ranked against something the researcher is looking for. */
+export type ScoredSourceNote = {
+	similarity: number | null,
+	/**  The work the note is about, resolved (ADR 003). */
+	source_id: string,
+	/**  False when the work is outside the open project's source set. */
+	in_project: boolean,
+} & SourceNote;
+
 export type Source = {
 	/**
 	 *  The work's canonical id (ADR 003): a file's hash, or `erti:<uuid>` for
@@ -362,6 +397,24 @@ export type Source = {
 	resolved_via: string | null,
 	state: string,
 	last_error: string | null,
+};
+
+/**  A note about a work as a whole (ADR 004). */
+export type SourceNote = {
+	id: string,
+	/**
+	 *  The work's id. Always canonical when written (`alias_source` moves a
+	 *  work's notes with it).
+	 */
+	sha256: string,
+	/**  Markdown. Empty when the note is only the quote. */
+	body: string,
+	quote: string | null,
+	/**  The page as the paper prints it. */
+	page_label: string | null,
+	label_id: string | null,
+	created_at: string,
+	updated_at: string,
 };
 
 export type TexToolchain = {

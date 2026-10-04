@@ -156,6 +156,19 @@ describe('behaving like the database', () => {
 		});
 	});
 
+	it('searches passages and marks in one list, each saying which, as Rust does (M2-1)', async () => {
+		await openFixtureProject();
+		const everything = await call(commands.searchLibrary('eleven benchmarks', null, 50, true));
+		expect(new Set(everything.map((h) => h.kind))).toEqual(new Set(['chunk', 'annotation']));
+		// The project's first, across kinds.
+		const scope = everything.map((h) => h.hit.in_project);
+		expect(scope).toEqual([...scope].sort((a, b) => Number(b) - Number(a)));
+
+		const marks = await call(commands.searchLibrary('eleven benchmarks', ['annotation'], 1, null));
+		expect(marks).toHaveLength(1);
+		expect(marks[0]).toMatchObject({ kind: 'annotation', hit: { id: 'mark-3' } });
+	});
+
 	it('lists the project folder without its hidden files', async () => {
 		backend().files.set(`${ROOT}/.erti/project.db`, '');
 		const listing = await call(commands.readDirectory(ROOT));
