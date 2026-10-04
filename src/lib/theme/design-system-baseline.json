@@ -1,0 +1,165 @@
+{
+	"src/lib/consent/ConsentPrompt.svelte": {
+		"button": 2,
+		"radius": 3,
+		"shadow": 1
+	},
+	"src/lib/editor/AwayCitationTip.svelte": {
+		"button": 1,
+		"shadow": 1
+	},
+	"src/lib/editor/DocumentBar.svelte": {
+		"button": 2,
+		"input": 1
+	},
+	"src/lib/editor/extensions/BubbleMenu.svelte": {
+		"button": 1,
+		"radius": 1,
+		"shadow": 1
+	},
+	"src/lib/editor/extensions/citation/CitationSuggestion.svelte": {
+		"button": 1,
+		"textPx": 3,
+		"radius": 1,
+		"shadow": 3
+	},
+	"src/lib/editor/extensions/citation/Result.svelte": {
+		"button": 2,
+		"radius": 2
+	},
+	"src/lib/editor/extensions/LinkPopover.svelte": {
+		"button": 3,
+		"input": 1,
+		"radius": 1,
+		"shadow": 1
+	},
+	"src/lib/editor/extensions/TablePopover.svelte": {
+		"button": 1,
+		"radius": 2,
+		"shadow": 1
+	},
+	"src/lib/editor/extensions/ToolBar.svelte": {
+		"button": 2,
+		"textPx": 1,
+		"shadow": 1
+	},
+	"src/lib/editor/pagination/ZoomControl.svelte": {
+		"button": 3,
+		"textPx": 1
+	},
+	"src/lib/explorer/Tree.svelte": {
+		"radius": 1
+	},
+	"src/lib/landing/Landing.svelte": {
+		"button": 3,
+		"textPx": 3
+	},
+	"src/lib/metadata-explorer/MetadataEditor.svelte": {
+		"button": 4,
+		"input": 2,
+		"radius": 9,
+		"shadow": 1
+	},
+	"src/lib/metadata-explorer/SourceSidebar.svelte": {
+		"button": 2,
+		"input": 1,
+		"radius": 1,
+		"shadow": 1
+	},
+	"src/lib/notes/Notes.svelte": {
+		"button": 6,
+		"input": 2,
+		"textPx": 6
+	},
+	"src/lib/outline/Outline.svelte": {
+		"button": 1,
+		"textPx": 1
+	},
+	"src/lib/pdfreader/AdjustHandles.svelte": {
+		"button": 1
+	},
+	"src/lib/pdfreader/AnnotationPopup.svelte": {
+		"button": 2,
+		"textPx": 1,
+		"radius": 1,
+		"shadow": 1
+	},
+	"src/lib/pdfreader/AnnotationSidebar.svelte": {
+		"button": 6,
+		"textPx": 5,
+		"radius": 2
+	},
+	"src/lib/pdfreader/AppearanceMenu.svelte": {
+		"button": 5,
+		"radius": 1,
+		"shadow": 1
+	},
+	"src/lib/pdfreader/FieldEditor.svelte": {
+		"button": 2,
+		"input": 1,
+		"textPx": 3,
+		"shadow": 1
+	},
+	"src/lib/pdfreader/HighlightLayer.svelte": {
+		"button": 1
+	},
+	"src/lib/pdfreader/LabelPicker.svelte": {
+		"button": 4,
+		"input": 1,
+		"radius": 1,
+		"shadow": 1
+	},
+	"src/lib/pdfreader/MarkMenu.svelte": {
+		"button": 3,
+		"radius": 2,
+		"shadow": 1
+	},
+	"src/lib/pdfreader/PdfReader.svelte": {
+		"button": 2
+	},
+	"src/lib/pdfreader/PdfToolbar.svelte": {
+		"button": 13,
+		"input": 2
+	},
+	"src/lib/pdfreader/ReaderSidebar.svelte": {
+		"button": 3,
+		"textPx": 1,
+		"radius": 1
+	},
+	"src/lib/pdfreader/SelectionMenu.svelte": {
+		"button": 6,
+		"radius": 1,
+		"shadow": 1
+	},
+	"src/lib/side-panel/Panel.svelte": {
+		"button": 5
+	},
+	"src/lib/side-panel/settings/AppearanceSettings.svelte": {
+		"button": 1,
+		"input": 3,
+		"textPx": 8,
+		"radius": 2
+	},
+	"src/lib/side-panel/settings/LogSettings.svelte": {
+		"button": 1
+	},
+	"src/lib/side-panel/settings/PageSetupSettings.svelte": {
+		"button": 1,
+		"input": 3,
+		"textPx": 7
+	},
+	"src/lib/side-panel/settings/ReadingSettings.svelte": {
+		"button": 3,
+		"input": 4
+	},
+	"src/lib/side-panel/settings/Settings.svelte": {
+		"input": 5,
+		"radius": 5
+	},
+	"src/lib/statusFooter/StatusFooter.svelte": {
+		"textPx": 1
+	},
+	"src/lib/workspace/TabBar.svelte": {
+		"button": 2
+	}
+}
