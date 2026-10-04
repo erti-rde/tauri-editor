@@ -10,9 +10,11 @@ shadows and the manuscript as the one bright surface.
 ## Tokens
 
 All of them are defined in `src/lib/theme/tokens.css` (sizes, radii, motion) and
-`palettes.css` (colour, per palette), and exposed to Tailwind in `global.css` `@theme`. The type
-scale and the overlay shadow are derived there, from `--ui-size` and each palette's
-`--overlay-shadow`. Use the Tailwind names in components; never write a number or a colour.
+`palettes.css` (colour, per palette). Colours, the type scale, the overlay shadow and the easing
+are exposed to Tailwind in `global.css` `@theme`; the type scale and the overlay shadow are
+derived there, from `--ui-size` and each palette's `--overlay-shadow`. `--radius-lg` in
+`tokens.css` overrides Tailwind's own, which is how `rounded-lg` comes out at 6px. Use the
+Tailwind names in components; never write a number or a colour.
 
 **Colour: semantic roles only**
 
@@ -79,17 +81,48 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | Working                            | `Loader`, `ProgressLine`               | ProgressLine when the count is known ("214 of 380")                                      |
 | A row in any list                  | `Item`                                 | Meta line (`LabelChip` · source · page), body, optional quote, actions                   |
 | A label                            | `LabelChip`                            | The dot **and** the name, always                                                         |
+| A short fact beside something      | `Chip`                                 | "Book", "2 files"; `accent` for the one that should draw the eye                         |
+| A keyboard shortcut                | `Kbd`                                  | As the toolbar writes it: "Mod Shift Z"                                                  |
 
 ## Rules
 
 1. Build new UI only from primitives. If one is missing, add it to `src/lib/ui` with a
    catalogue entry first.
 2. No numbers in class names (`text-[11px]`, `rounded-[12px]`), no colours, and no shadows
-   outside overlays. The ratchet test enforces this.
+   outside overlays. `rawColours.test.ts` forbids raw colours outright, and the ratchet holds
+   the rest (below).
 3. Every interactive thing is reachable by keyboard and has a visible focus: the global ring,
    drawn inside with `focus-inset` for elements flush with a pane edge.
 4. Colour is never the only channel. State and kind are also in words or shape.
 5. Copy follows ux.md: say what happens, state facts not verdicts, British spelling.
+
+## The ratchet
+
+Most of the app predates the primitives, so it isn't migrated in one go (ADR 010). Instead
+`src/lib/theme/ratchet.test.ts` counts, in every file outside `src/lib/ui`:
+
+| Counted          | Instead                                                             |
+| ---------------- | ------------------------------------------------------------------- |
+| a raw `<button>` | `Button`, `IconButton`, or the trigger a primitive gives you        |
+| a raw `<input>`  | `TextField`, `SearchField`, `Checkbox`, `Switch`, `RadioGroup`…     |
+| `text-[Npx]`     | `text-caption` … `text-display`                                     |
+| any other radius | `rounded`, `rounded-full`, `rounded-none` (a side too: `rounded-t`) |
+| any shadow       | none: the layout is flat                                            |
+
+Overlays are primitives, so outside `src/lib/ui` their radius (`rounded-lg`) and shadow
+(`shadow-overlay`) count too: a menu built by hand is what should migrate. A primitive that
+lives elsewhere and is exported from `$lib/ui` (`Toast`, `Loader`) counts as part of the
+library. It reads class names: comments, and CSS in a `<style>` block, aren't counted.
+
+`src/lib/theme/design-system-baseline.json` records each file's counts.
+
+- A file above its baseline fails the test, which names the file and what to use instead.
+- **A file that isn't in the baseline starts at zero.** New UI is built from primitives.
+- When a count drops, the test passes and prints the whole baseline as it now stands. Paste
+  it over the file in the same PR. Touching a surface means migrating it and lowering its
+  line (CLAUDE.md).
+
+M6-8 sweeps what's left, and ends with the baseline empty or each remaining line justified.
 
 ## The catalogue
 
