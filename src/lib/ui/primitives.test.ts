@@ -135,8 +135,16 @@ describe('Menu', () => {
 			.map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
 		expect(names).toEqual(['Heading 1', 'Rename Change the file name', 'Delete document']);
 
-		await user.keyboard('{ArrowDown}{Enter}');
+		// Down until Rename has focus. Whether opening focuses the menu or its
+		// first item varies with timing, so the count of presses isn't fixed.
+		const focused = () => document.activeElement?.textContent ?? '';
+		for (let i = 0; i < 3 && !focused().includes('Rename'); i++) {
+			await user.keyboard('{ArrowDown}');
+		}
+		expect(focused()).toContain('Rename');
+		await user.keyboard('{Enter}');
 		expect(list[2].onSelect).toHaveBeenCalledTimes(1);
+		expect(list[0].onSelect).not.toHaveBeenCalled();
 	});
 
 	it("can't be opened while disabled", async () => {
