@@ -120,23 +120,21 @@ export const iconButtonNeedsALabel: ComponentProps<typeof IconButton>[] = [
 // below include hidden elements. The browser journeys open it for real.
 const anyVisibility = { hidden: true } as const;
 
-describe('Menu', () => {
-	const items = () => [
-		{ label: 'Heading 1', icon: Heading1, active: true, onSelect: vi.fn() },
-		{ label: 'Delete document', danger: true, onSelect: vi.fn() },
-		{ label: 'Rename', description: 'Change the file name', onSelect: vi.fn() }
-	];
-
-	// Focus bounces while bits-ui opens a menu: to the menu, back to the trigger,
-	// to the first item, then a frame later its focus scope moves it to the menu
-	// and an item once more. A key sent while the menu itself has focus chooses
-	// nothing, and the menu's text holds every item's, so checking focus by text
-	// can't tell. How many frames the bounce takes depends on load, so wait until
-	// an item has kept focus through two whole frames rather than for any one step.
-	const focusSettlesOnAnItem = () =>
-		vi.waitFor(async () => {
+/**
+ * Wait until focus has stopped moving and rests where `settled` says it should.
+ *
+ * Focus bounces while bits-ui opens a menu: to the content, back to the
+ * trigger, inward, then a frame later its focus scope moves it again. A key
+ * sent mid-bounce lands on the wrong element: Enter on the menu itself chooses
+ * nothing. How many frames the bounce takes depends on load, so this waits
+ * until focus has gone two frame callbacks without moving rather than for any
+ * one step. A loaded runner stretches each frame, hence the long timeout.
+ */
+const focusSettles = (settled: (focused: Element | null) => void) =>
+	vi.waitFor(
+		async () => {
 			const focused = document.activeElement;
-			expect(focused).toHaveAttribute('role', 'menuitem');
+			settled(focused);
 			let moved = false;
 			const onFocusIn = () => (moved = true);
 			document.addEventListener('focusin', onFocusIn);
@@ -149,7 +147,16 @@ describe('Menu', () => {
 			}
 			expect(moved).toBe(false);
 			expect(document.activeElement).toBe(focused);
-		});
+		},
+		{ timeout: 10_000 }
+	);
+
+describe('Menu', () => {
+	const items = () => [
+		{ label: 'Heading 1', icon: Heading1, active: true, onSelect: vi.fn() },
+		{ label: 'Delete document', danger: true, onSelect: vi.fn() },
+		{ label: 'Rename', description: 'Change the file name', onSelect: vi.fn() }
+	];
 
 	it('opens from the keyboard, moves with arrows and chooses with Enter', async () => {
 		const user = userEvent.setup();
@@ -163,7 +170,9 @@ describe('Menu', () => {
 			'true'
 		);
 		await screen.findByRole('menu', anyVisibility);
-		await focusSettlesOnAnItem();
+		// A key sent while the menu itself has focus chooses nothing, and the
+		// menu's text holds every item's, so focus is checked by role.
+		await focusSettles((focused) => expect(focused).toHaveAttribute('role', 'menuitem'));
 
 		// The danger item sits last, whatever order it was given in.
 		const menuItems = screen.getAllByRole('menuitem', anyVisibility);
@@ -413,8 +422,11 @@ describe('Select', () => {
 		trigger.focus();
 		await user.keyboard('{Enter}');
 		await screen.findByRole('listbox', anyVisibility);
+		// Focus stays on the trigger, which moves the highlight: opening lights
+		// the first option, one press from the second.
 		await user.keyboard('{ArrowDown}{Enter}');
-		expect(onValueChange).toHaveBeenCalled();
+		expect(onValueChange).toHaveBeenCalledTimes(1);
+		expect(onValueChange).toHaveBeenCalledWith('article');
 	});
 
 	it('is reached from its label, as the label it replaced was', () => {
