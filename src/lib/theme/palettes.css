@@ -70,7 +70,7 @@
 	--success: 183 74% 25.5%;
 
 	--selection: 266 85% 58%;
-	--shadow-overlay: 0 0% 0% / 0.12;
+	--overlay-shadow: 0 0% 0% / 0.12;
 
 	/* The manuscript in this palette's own colours, used when the reader turns
 	   the paper page off. */
@@ -106,7 +106,7 @@
 	--success: 96 44% 68%;
 
 	--selection: 20 79% 70%;
-	--shadow-overlay: 0 0% 0% / 0.5;
+	--overlay-shadow: 0 0% 0% / 0.5;
 
 	/* The manuscript in this palette's own colours, used when the reader turns
 	   the paper page off. */
@@ -142,7 +142,7 @@
 	--success: 105 48% 72%;
 
 	--selection: 21 86% 73%;
-	--shadow-overlay: 0 0% 0% / 0.5;
+	--overlay-shadow: 0 0% 0% / 0.5;
 
 	/* The manuscript in this palette's own colours, used when the reader turns
 	   the paper page off. */
@@ -178,7 +178,7 @@
 	--success: 115 54% 76%;
 
 	--selection: 23 92% 75%;
-	--shadow-overlay: 0 0% 0% / 0.5;
+	--overlay-shadow: 0 0% 0% / 0.5;
 
 	/* The manuscript in this palette's own colours, used when the reader turns
 	   the paper page off. */
@@ -214,7 +214,7 @@
 	--success: 84 62% 63%;
 
 	--selection: 14 90% 70%;
-	--shadow-overlay: 0 0% 0% / 0.5;
+	--overlay-shadow: 0 0% 0% / 0.5;
 
 	/* The manuscript in this palette's own colours, used when the reader turns
 	   the paper page off. */

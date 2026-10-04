@@ -5,8 +5,6 @@
 
 :root {
 	--footer-status-bar-height: theme('space.6');
-	--hover-color: hsl(var(--surface-raised));
-	--border-color: hsl(var(--line-strong));
 	--toolbar-l: theme('space.10');
 
 	--color-teal-50: #f0fdfa;
@@ -30,43 +28,10 @@
 	--color-orange-800: #964516;
 	--color-orange-900: #793a15;
 	--color-orange-950: #411c09;
-
-	--background: var(--color-orange-100);
-	--background-alt: var(--color-orange-100);
-	--foreground: hsl(0 0% 9%);
-	--foreground-alt: hsl(0 0% 32%);
-	--muted: hsl(240 5% 96%);
-	--muted-foreground: hsla(0 0% 9% / 0.4);
-	--border: hsl(240 6% 10%);
-	--border-input: hsla(240 6% 10% / 0.17);
-	--border-input-hover: hsla(240 6% 10% / 0.4);
-	--border-card: hsla(240 6% 10% / 0.1);
-	--dark: hsl(240 6% 10%);
-	--dark-10: hsla(240 6% 10% / 0.1);
-	--dark-40: hsla(240 6% 10% / 0.4);
-	--dark-04: hsla(240 6% 10% / 0.04);
-	/* Renamed from --accent/--line, which collided with the semantic tokens of
-	   the same name defined in theme/tokens.css. The import comes first, so at
-	   equal specificity these later declarations won — and `hsl(var(--accent))`
-	   became `hsl(#e1f3fe)`, which is not valid CSS, so every accent and every
-	   rule in the app resolved to nothing. */
-	--bits-accent: hsl(204 94% 94%);
-	--bits-accent-foreground: hsl(204 80% 16%);
-	--destructive: hsl(347 77% 50%);
-	--tertiary: hsl(37.7 92.1% 50.2%);
-	--bits-line: hsl(0 0% 100%);
-
-	/* black */
-	--contrast: hsl(0 0% 0%);
-
-	/* Shadows */
-	--shadow-mini: 0px 1px 0px 1px rgba(0, 0, 0, 0.04);
-	--shadow-mini-inset: 0px 1px 0px 0px rgba(0, 0, 0, 0.04) inset;
-	--shadow-popover: 0px 7px 12px 3px hsla(var(--dark-10));
-	--shadow-kbd: 0px 2px 0px 0px rgba(0, 0, 0, 0.07);
-	--shadow-btn: 0px 1px 0px 1px rgba(0, 0, 0, 0.03);
-	--shadow-card: 0px 2px 0px 1px rgba(0, 0, 0, 0.04);
-	--shadow-date-field-focus: 0px 0px 0px 3px rgba(24, 24, 27, 0.17);
+	/* The teal and orange above override Tailwind's own, and follow no palette.
+	   The manuscript's code, tables, links and quotes and the loader use them.
+	   Moving those to tokens changes how they look, so it's a migration of its
+	   own (ADR 010), not part of removing the starter template. */
 }
 @theme {
 	/*
@@ -103,156 +68,28 @@
 	--font-ui: var(--ui-font);
 	--font-mono: var(--mono-font);
 	--font-page: var(--page-font);
+}
 
-	--color-background: var(--background);
-	--color-background-alt: var(--background-alt);
-	--color-foreground: var(--foreground);
-	--color-foreground-alt: var(--foreground-alt);
-	--color-muted: var(--muted);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-border: var(--border-card);
-	--color-border-input: var(--border-input);
-	--color-border-input-hover: var(--border-input-hover);
-	--color-border-card: var(--border-card);
-	--color-dark: var(--dark);
-	--color-dark-10: var(--dark-10);
-	--color-dark-40: var(--dark-40);
-	--color-dark-04: var(--dark-04);
-	--color-bits-accent: var(--bits-accent);
-	--color-bits-accent-foreground: var(--bits-accent-foreground);
-	--color-destructive: var(--destructive);
-	--color-tertiary: var(--tertiary);
-	--color-contrast: var(--contrast);
+/*
+ * Type, elevation and motion, as names (ADR 010). Static, so every token is on
+ * the page whether or not a component uses it yet: the primitives in M1c-2
+ * onwards are built on these, and the tests read them.
+ */
+@theme static {
+	/* One scale, all from the interface size, so the Appearance setting moves
+	   every step together. The manuscript keeps --page-size. */
+	--text-caption: calc(var(--ui-size) - 2px);
+	--text-small: calc(var(--ui-size) - 1px);
+	--text-body: var(--ui-size);
+	--text-title: calc(var(--ui-size) + 2px);
+	--text-heading: calc(var(--ui-size) + 5px);
+	--text-display: calc(var(--ui-size) + 11px);
 
-	--shadow-mini: var(--shadow-mini);
-	--shadow-mini-inset: var(--shadow-mini-inset);
-	--shadow-popover: var(--shadow-popover);
-	--shadow-kbd: var(--shadow-kbd);
-	--shadow-btn: var(--shadow-btn);
-	--shadow-card: var(--shadow-card);
-	--shadow-date-field-focus: var(--shadow-date-field-focus);
+	/* Two levels. Everything in the layout is flat: rules, no shadow. Menus,
+	   popovers, dialogs and toasts float, with a shadow each palette tints. */
+	--shadow-overlay: 0 6px 18px hsl(var(--overlay-shadow));
 
-	--text-xxs: 10px;
-
-	--radius-card: 16px;
-	--radius-card-lg: 20px;
-	--radius-card-sm: 10px;
-	--radius-input: 9px;
-	--radius-button: 5px;
-	--radius-5px: 5px;
-	--radius-9px: 9px;
-	--radius-10px: 10px;
-	--radius-15px: 15px;
-
-	--spacing-input: 3rem;
-	--spacing-input-sm: 2.5rem;
-
-	--breakpoint-desktop: 1440px;
-
-	--animate-caret-blink: caret-blink 1s ease-out infinite;
-	--animate-scale-in: scale-in 0.2s ease;
-	--animate-scale-out: scale-out 0.15s ease;
-	--animate-fade-in: fade-in 0.2s ease;
-	--animate-fade-out: fade-out 0.15s ease;
-	--animate-enter-from-left: enter-from-left 0.2s ease;
-	--animate-enter-from-right: enter-from-right 0.2s ease;
-	--animate-exit-to-left: exit-to-left 0.2s ease;
-	--animate-exit-to-right: exit-to-right 0.2s ease;
-
-	@keyframes caret-blink {
-		0%,
-		70%,
-		100% {
-			opacity: 1;
-		}
-		20%,
-		50% {
-			opacity: 0;
-		}
-	}
-	@keyframes enter-from-right {
-		from {
-			opacity: 0;
-			transform: translateX(200px);
-		}
-		to {
-			opacity: 1;
-			transform: translateX(0);
-		}
-	}
-
-	@keyframes enter-from-left {
-		from {
-			opacity: 0;
-			transform: translateX(-200px);
-		}
-		to {
-			opacity: 1;
-			transform: translateX(0);
-		}
-	}
-
-	@keyframes exit-to-right {
-		from {
-			opacity: 1;
-			transform: translateX(0);
-		}
-		to {
-			opacity: 0;
-			transform: translateX(200px);
-		}
-	}
-
-	@keyframes exit-to-left {
-		from {
-			opacity: 1;
-			transform: translateX(0);
-		}
-		to {
-			opacity: 0;
-			transform: translateX(-200px);
-		}
-	}
-
-	@keyframes scale-in {
-		from {
-			opacity: 0;
-			transform: rotateX(-10deg) scale(0.9);
-		}
-		to {
-			opacity: 1;
-			transform: rotateX(0deg) scale(1);
-		}
-	}
-
-	@keyframes scale-out {
-		from {
-			opacity: 1;
-			transform: rotateX(0deg) scale(1);
-		}
-		to {
-			opacity: 0;
-			transform: rotateX(-10deg) scale(0.95);
-		}
-	}
-
-	@keyframes fade-in {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
-	}
-
-	@keyframes fade-out {
-		from {
-			opacity: 1;
-		}
-		to {
-			opacity: 0;
-		}
-	}
+	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 
 @layer components {

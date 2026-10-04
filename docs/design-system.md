@@ -10,8 +10,9 @@ shadows and the manuscript as the one bright surface.
 ## Tokens
 
 All of them are defined in `src/lib/theme/tokens.css` (sizes, radii, motion) and
-`palettes.css` (colour, per palette), and exposed to Tailwind in `global.css` `@theme`. Use the
-Tailwind names in components; never write a number or a colour.
+`palettes.css` (colour, per palette), and exposed to Tailwind in `global.css` `@theme`. The type
+scale and the overlay shadow are derived there, from `--ui-size` and each palette's
+`--overlay-shadow`. Use the Tailwind names in components; never write a number or a colour.
 
 **Colour: semantic roles only**
 
@@ -48,8 +49,9 @@ page they came from. Numbers that line up use `tabular-nums`.
   overlays; `rounded-full` only for switches, chips and dots.
 - Elevation: **flat** everywhere in the layout. `shadow-overlay` only on menus, popovers,
   dialogs and toasts.
-- Motion: `duration-fast` for hover and press, `duration` for overlays opening. Zero under
-  reduced motion. Anything that appears unasked doesn't animate.
+- Motion: `duration-(--duration-fast)` for hover and press, `duration-(--duration)` for
+  overlays opening, both with `ease-standard`. Zero under reduced motion. Anything that appears
+  unasked doesn't animate.
 
 ## Primitives (`src/lib/ui`)
 
