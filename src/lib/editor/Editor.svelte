@@ -121,7 +121,12 @@
 
 			// The sources cited, as they are now, go with the document (ADR 002):
 			// a co-author without the PDFs still sees real citations.
-			const sources = snapshotSources(citedIds(content), citationStore.getAllSourcesAsJson(), {});
+			const sources = snapshotSources(
+				citedIds(content),
+				citationStore.getAllSourcesAsJson(),
+				{},
+				citationStore.canonicalId
+			);
 			await manuscript.save(target.path, content, sources);
 		},
 		onStateChange: (next) => documentStatus.report({ save: next }),
@@ -381,7 +386,11 @@
 				return true;
 			});
 
-			const { bibtex, keys } = toBibliography(citationStore.getAllSourcesAsJson(), cited);
+			const { bibtex, keys } = toBibliography(
+				citationStore.getAllSourcesAsJson(),
+				cited,
+				citationStore.canonicalId
+			);
 
 			const dir = await pathJoin(currentDir, 'export');
 			await mkdir(dir, { recursive: true });
@@ -657,7 +666,9 @@
 	 * refused with something to do about it rather than a citation that renders
 	 * as removed.
 	 */
-	async function citeSource(sha256: string) {
+	async function citeSource(id: string) {
+		// The work, whichever of its ids the note was given (ADR 003).
+		const sha256 = citationStore.canonicalId(id);
 		try {
 			if (!citationStore.getAllSourcesAsJson()[sha256]) {
 				await addToProject(sha256);
@@ -709,7 +720,8 @@
 				return;
 			}
 
-			const worth = worthNudging(matches.sources, citedSources(paragraph));
+			const cited = new Set([...citedSources(paragraph)].map(citationStore.canonicalId));
+			const worth = worthNudging(matches.sources, cited);
 
 			showNudge(view, {
 				pos: worth.length > 0 ? resolved.before(resolved.depth) : null,

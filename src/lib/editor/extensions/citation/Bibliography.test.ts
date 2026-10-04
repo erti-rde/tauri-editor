@@ -19,7 +19,10 @@ import { Citation } from './Citation';
  */
 
 vi.mock('@tauri-apps/plugin-store', () => ({ load: vi.fn() }));
-vi.mock('$lib/stores/db', () => ({ projectSources: vi.fn() }));
+vi.mock('$lib/stores/db', () => ({
+	projectSources: vi.fn(),
+	sourceAliases: vi.fn(async () => ({}))
+}));
 
 const FIXTURES = resolve(process.cwd(), 'tests/fixtures/csl');
 // Memoised: the same style is read many times across a file, and the fixtures

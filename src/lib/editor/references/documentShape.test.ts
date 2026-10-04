@@ -7,7 +7,10 @@ import { Citation } from '../extensions/citation/Citation';
 import { countCitations, readDocumentShape } from './documentShape';
 
 vi.mock('@tauri-apps/plugin-store', () => ({ load: vi.fn() }));
-vi.mock('$lib/stores/db', () => ({ projectSources: vi.fn() }));
+vi.mock('$lib/stores/db', () => ({
+	projectSources: vi.fn(),
+	sourceAliases: vi.fn(async () => ({}))
+}));
 
 function docWith(content: JSONContent[]) {
 	return new Editor({

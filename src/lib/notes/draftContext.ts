@@ -84,6 +84,7 @@ export function paragraphAt(doc: ProseMirrorNode, pos: number): string {
 
 /** A paper a note points at, and how close that note was. */
 export interface DraftMatch {
+	/** The work, by its canonical id (ADR 003). */
 	sha256: string;
 	similarity: number;
 }

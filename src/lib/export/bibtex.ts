@@ -194,22 +194,31 @@ export interface BibliographyExport {
  */
 export function toBibliography(
 	sources: Record<string, CitationItem>,
-	citedIds: readonly string[]
+	citedIds: readonly string[],
+	resolve: (id: string) => string = (id) => id
 ): BibliographyExport {
 	const taken = new Set<string>();
-	const keys: Record<string, string> = {};
+	const byWork: Record<string, string> = {};
 	const entries: string[] = [];
 
-	// Deduplicated and in a stable order, so re-exporting an unchanged manuscript
-	// produces an identical file rather than a spurious diff.
-	for (const id of [...new Set(citedIds)].sort()) {
+	// One entry per work (ADR 003): a book and its attached PDF are one
+	// reference. Deduplicated and in a stable order, so re-exporting an
+	// unchanged manuscript produces an identical file rather than a spurious diff.
+	for (const id of [...new Set(citedIds.map(resolve))].sort()) {
 		const item = sources[id];
 		if (!item) continue;
 
 		const key = citationKey(item, taken);
 		taken.add(key);
-		keys[id] = key;
+		byWork[id] = key;
 		entries.push(formatBibEntry(toBibEntry(item, key)));
+	}
+
+	// Keyed by the id each citation names, which is what the LaTeX reads.
+	const keys: Record<string, string> = {};
+	for (const id of citedIds) {
+		const key = byWork[resolve(id)];
+		if (key) keys[id] = key;
 	}
 
 	return { bibtex: entries.join('\n\n') + (entries.length ? '\n' : ''), keys };

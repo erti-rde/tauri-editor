@@ -121,19 +121,24 @@ export function citedIds(doc: unknown): string[] {
 /**
  * The sources to save with the document: one for each cited id.
  *
- * The library's copy wins, since that's where corrections are made. A source
- * the library doesn't have keeps the snapshot the file arrived with, so a
- * co-author's citations survive being saved by someone without the paper.
- * An id neither knows is left out, and renders as missing, which it is.
+ * The library's copy wins, since that's where corrections are made. It's
+ * looked up by the cited id's work (ADR 003): after a merge, the id a chapter
+ * cites is an alias, and the library keeps the work's metadata. The snapshot is
+ * still filed under the id cited, which is the one a co-author's Erti will
+ * look for. A source the library doesn't have keeps the snapshot the file
+ * arrived with, so a co-author's citations survive being saved by someone
+ * without the paper. An id neither knows is left out, and renders as missing,
+ * which it is.
  */
 export function snapshotSources(
 	ids: readonly string[],
 	library: Record<string, unknown>,
-	carried: Record<string, CslItem>
+	carried: Record<string, CslItem>,
+	resolve: (id: string) => string = (id) => id
 ): Record<string, CslItem> {
 	const sources: Record<string, CslItem> = {};
 	for (const id of ids) {
-		const from = library[id] ?? carried[id];
+		const from = library[resolve(id)] ?? carried[id];
 		if (from === undefined) continue;
 		try {
 			// `id` is set to the key, so a snapshot can't claim to be another source.

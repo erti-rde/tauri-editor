@@ -153,4 +153,14 @@ describe('building a .bib', () => {
 	it('is empty for a manuscript that cites nothing', () => {
 		expect(toBibliography(sources, [])).toEqual({ bibtex: '', keys: {} });
 	});
+
+	// M1b-3 AC-1: citation rendering, as it leaves for LaTeX (ADR 003).
+	it('gives a work one entry, and its key to every id that cites it', () => {
+		const resolve = (id: string) => (id === 'sha-pdf' ? 'sha-smith' : id);
+		const { bibtex, keys } = toBibliography(sources, ['sha-pdf', 'sha-smith'], resolve);
+
+		expect(bibtex.match(/@article/g)).toHaveLength(1);
+		expect(keys['sha-pdf']).toBe(keys['sha-smith']);
+		expect(keys['sha-pdf']).toBeTruthy();
+	});
 });
