@@ -22,7 +22,9 @@
 	const id = $props.id();
 </script>
 
-<!-- Escape is handled for whatever has focus inside, as a dialog would. -->
+<!-- Escape is handled for whatever has focus inside, as a dialog would; the
+     aside itself never takes focus. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <aside
 	aria-labelledby={id}
 	class="border-line bg-surface flex h-full min-h-0 w-82 shrink-0 flex-col border-l"
