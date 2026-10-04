@@ -20,16 +20,32 @@
 	let { title, subtitle, onclose, header, children }: Props = $props();
 
 	const id = $props.id();
+	let aside = $state<HTMLElement>();
+
+	// Opened from something, usually a row: focus goes back to it on closing,
+	// rather than dropping to the page, so a keyboard reader keeps their place.
+	$effect(() => {
+		const opener = document.activeElement;
+		return () => {
+			const lost = !document.activeElement || document.activeElement === document.body;
+			const inside = aside?.contains(document.activeElement) ?? false;
+			if (opener instanceof HTMLElement && opener.isConnected && (lost || inside)) {
+				opener.focus();
+			}
+		};
+	});
 </script>
 
 <!-- Escape is handled for whatever has focus inside, as a dialog would; the
      aside itself never takes focus. -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <aside
+	bind:this={aside}
 	aria-labelledby={id}
 	class="border-line bg-surface flex h-full min-h-0 w-82 shrink-0 flex-col border-l"
 	onkeydown={(event) => {
-		if (event.key === 'Escape' && !event.defaultPrevented) {
+		// Not mid-composition: there Escape cancels what the input method holds.
+		if (event.key === 'Escape' && !event.defaultPrevented && !event.isComposing) {
 			event.preventDefault();
 			onclose();
 		}

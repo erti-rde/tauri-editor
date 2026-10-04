@@ -133,6 +133,26 @@ describe('ConfirmDialog', () => {
 		expect(await screen.findByRole('button', { name: 'Remove' })).toBeDisabled();
 		expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
 	});
+
+	it("while busy, Escape and the close button don't dismiss it either", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mount(ConfirmDialog, {
+			open: true,
+			onOpenChange,
+			title: 'Remove it?',
+			action: 'Remove',
+			consequences,
+			onConfirm: vi.fn(),
+			busy: true
+		});
+
+		const dialog = await screen.findByRole('dialog', { name: 'Remove it?' });
+		await user.keyboard('{Escape}');
+		expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
+		expect(dialog).toBeInTheDocument();
+		expect(onOpenChange).not.toHaveBeenCalled();
+	});
 });
 
 // M1c-3 AC-2: checked by `pnpm check`. Were either prop optional, its
@@ -237,6 +257,34 @@ describe('Sidebar', () => {
 		await user.keyboard('{Escape}');
 		await user.click(screen.getByRole('button', { name: 'Close Orality and Literacy' }));
 		expect(onclose).toHaveBeenCalledTimes(2);
+	});
+
+	it("leaves an Escape that's cancelling an input method's composition alone", async () => {
+		const onclose = vi.fn();
+		mount(Sidebar, { title: 'A note', onclose, children: html('<input aria-label="Note" />') });
+
+		const field = screen.getByRole('textbox', { name: 'Note' });
+		field.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'Escape', isComposing: true, bubbles: true })
+		);
+		expect(onclose).not.toHaveBeenCalled();
+	});
+
+	it('gives focus back to what opened it when it closes', async () => {
+		const opener = document.createElement('button');
+		opener.textContent = 'Orality and Literacy';
+		document.body.append(opener);
+		opener.focus();
+		const view = mount(Sidebar, {
+			title: 'Orality and Literacy',
+			onclose: vi.fn(),
+			children: html('<button>Edit details</button>')
+		});
+
+		screen.getByRole('button', { name: 'Edit details' }).focus();
+		view.unmount();
+		expect(opener).toHaveFocus();
+		opener.remove();
 	});
 });
 

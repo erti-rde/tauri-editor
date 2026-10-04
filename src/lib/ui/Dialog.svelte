@@ -1,8 +1,10 @@
 <script lang="ts" module>
 	import { variants } from './variants';
 
+	// Below the floating layer (z-50): a menu, select or tooltip opened inside a
+	// dialog draws over it, and so does a toast the dialog raises.
 	const surface = variants({
-		base: 'bg-surface-raised border-line-strong shadow-overlay fixed top-1/2 left-1/2 z-100 flex max-h-[90vh] max-w-[90%] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border outline-hidden',
+		base: 'bg-surface-raised border-line-strong shadow-overlay fixed top-1/2 left-1/2 z-40 flex max-h-[90vh] max-w-[90%] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border outline-hidden',
 		variants: {
 			size: {
 				// A decision: one question and its consequences.
@@ -41,6 +43,11 @@
 		children: Snippet;
 		/** Actions, right-aligned; the primary one last. */
 		footer?: Snippet;
+		/**
+		 * Whether Escape, a click outside and the close button dismiss it. Off
+		 * while something it started is under way.
+		 */
+		dismissible?: boolean;
 	}
 
 	let {
@@ -52,14 +59,19 @@
 		size,
 		flush = false,
 		children,
-		footer
+		footer,
+		dismissible = true
 	}: Props = $props();
 </script>
 
 <Dialog.Root bind:open {onOpenChange}>
 	<Dialog.Portal>
-		<Dialog.Overlay class="bg-backdrop fixed inset-0 z-100" />
-		<Dialog.Content class={surface({ size })}>
+		<Dialog.Overlay class="bg-backdrop fixed inset-0 z-40" />
+		<Dialog.Content
+			class={surface({ size })}
+			escapeKeydownBehavior={dismissible ? 'close' : 'ignore'}
+			interactOutsideBehavior={dismissible ? 'close' : 'ignore'}
+		>
 			<div class="border-line flex items-start justify-between gap-3 border-b px-5 py-3">
 				<div class="grid gap-0.5">
 					<Dialog.Title class="text-title text-ink font-semibold">{title}</Dialog.Title>
@@ -69,7 +81,8 @@
 				</div>
 				<Dialog.Close
 					aria-label={closeLabel}
-					class="text-ink-muted hover:bg-surface-hover hover:text-ink grid size-(--row-height) shrink-0 place-items-center rounded transition-colors duration-(--duration-fast)"
+					disabled={!dismissible}
+					class="text-ink-muted hover:bg-surface-hover hover:text-ink grid size-(--row-height) shrink-0 place-items-center rounded transition-colors duration-(--duration-fast) disabled:opacity-50"
 				>
 					<X class="size-4" aria-hidden="true" />
 				</Dialog.Close>

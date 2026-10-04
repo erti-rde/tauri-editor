@@ -37,7 +37,7 @@
 	<Popover.Trigger
 		aria-label={trigger ? label : undefined}
 		{disabled}
-		class={buttonClass({ variant: 'ghost', size: 'md' }, 'px-1')}
+		class={buttonClass({ variant: 'ghost', size: trigger ? 'tight' : 'md' })}
 	>
 		{#if trigger}
 			{@render trigger()}

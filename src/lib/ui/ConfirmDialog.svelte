@@ -40,7 +40,9 @@
 	}
 </script>
 
-<Dialog bind:open {onOpenChange} {title} size="sm">
+<!-- While busy, nothing closes it: the action it started is still under way,
+     and its outcome is said here. -->
+<Dialog bind:open {onOpenChange} {title} size="sm" dismissible={!busy}>
 	<div class="text-small text-ink grid gap-2">
 		{@render consequences()}
 	</div>
