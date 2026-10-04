@@ -60,6 +60,10 @@
 	--success: 150 45% 33%;
 
 	--selection: 24 88% 48%;
+	/* The overlay shadow's colour, as channels. Not named --shadow-overlay:
+	   Tailwind writes the shadow-overlay utility's whole value to that name, and
+	   this unlayered declaration would win over it, leaving a colour where a
+	   shadow belongs, the way --accent once collided with the starter's. */
 	--overlay-shadow: 0 0% 0% / 0.12;
 	/* A scrim has to dim in every theme. --surface-overlay is white in a light
 	   palette, so using it at partial alpha washed the page out instead. */
@@ -153,10 +157,13 @@
 	--duration: 180ms;
 }
 
-/* Asked for less motion: none. Things still change, at once. */
+/* Asked for less motion: none. Things still change, at once. Tailwind's own
+   default goes too, so every `transition-*` utility written before the tokens
+   stops as well. */
 @media (prefers-reduced-motion: reduce) {
 	:root {
 		--duration-fast: 0ms;
 		--duration: 0ms;
+		--default-transition-duration: 0ms;
 	}
 }

@@ -264,6 +264,27 @@ pub async fn project_sources(state: State<'_, DbState>) -> Result<Vec<queries::S
         .or_database()
 }
 
+/// Every alias in the library, alias → canonical (ADR 003).
+///
+/// The webview resolves the ids a manuscript cites with this, so a citation
+/// of a PDF's hash renders as the work the PDF was attached to.
+#[tauri::command]
+#[specta::specta]
+pub async fn source_aliases(
+    state: State<'_, DbState>,
+) -> Result<std::collections::HashMap<String, String>, AppError> {
+    source_aliases_in(&state).await
+}
+
+/// `source_aliases`, reachable from tests.
+pub async fn source_aliases_in(
+    state: &DbState,
+) -> Result<std::collections::HashMap<String, String>, AppError> {
+    queries::alias_map(&state.library().await?)
+        .await
+        .or_database()
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn add_to_project(state: State<'_, DbState>, sha256: String) -> Result<(), AppError> {

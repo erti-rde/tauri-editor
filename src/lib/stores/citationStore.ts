@@ -1,9 +1,10 @@
 import { writable, get } from 'svelte/store';
 import { readSetting } from '$lib/settings';
 import { BaseDirectory, readTextFile } from '@tauri-apps/plugin-fs';
-import { projectSources } from '$lib/stores/db';
+import { projectSources, sourceAliases } from '$lib/stores/db';
 import { CitationEngine } from '$lib/citations/engine';
 import { renderDocumentCitations, type CitationSite } from '$lib/citations/document';
+import { canonical, canonicalIds, type Aliases } from '$lib/citations/aliases';
 import {
 	fallbackLabel,
 	parseManifest,
@@ -47,6 +48,12 @@ export interface CitationItem {
 interface CitationState {
 	engine: CitationEngine | null;
 	citationSources: Record<string, CitationItem>; // Store citation items by their ID
+	/**
+	 * The library's aliases (ADR 003). `citationSources` is keyed by canonical
+	 * id only, so every id from a manuscript, a search or a note goes through
+	 * `canonicalId` before it's looked up there.
+	 */
+	aliases: Aliases;
 	/** Entries for the works cited by the most recent document render. */
 	bibliography: string[];
 	/** Cited ids with no source behind them, from the most recent render. */
@@ -70,6 +77,7 @@ function createCitationStore() {
 	const { subscribe, set, update } = writable<CitationState>({
 		engine: null,
 		citationSources: {},
+		aliases: {},
 		bibliography: [],
 		missingIds: [],
 		error: null,
@@ -90,8 +98,16 @@ function createCitationStore() {
 		update((state) => {
 			const sources = state.citationSources;
 			for (const id of state.awayIds ?? []) delete sources[id];
-			const awayIds = Object.keys(carried).filter((id) => !(id in sources));
-			for (const id of awayIds) sources[id] = { ...carried[id], id } as CitationItem;
+			// By work: a snapshot of a PDF's hash isn't away once the library has
+			// the book it was attached to. One the library lacks is filed under
+			// its work's id, which is where rendering looks.
+			const awayIds: string[] = [];
+			for (const [id, item] of Object.entries(carried)) {
+				const work = canonical(state.aliases ?? {}, id);
+				if (work in sources) continue;
+				sources[work] = { ...item, id: work } as CitationItem;
+				awayIds.push(work);
+			}
 			away = new Set(awayIds);
 			return { ...state, awayIds };
 		});
@@ -104,7 +120,12 @@ function createCitationStore() {
 	}
 
 	function isAway(id: string): boolean {
-		return away.has(id);
+		return away.has(canonicalId(id));
+	}
+
+	/** The id the work behind `id` is known by: the one to cite and look up. */
+	function canonicalId(id: string): string {
+		return canonical(get(citationStore).aliases ?? {}, id);
 	}
 
 	/**
@@ -140,9 +161,9 @@ function createCitationStore() {
 	 * render, which is what makes it correct.
 	 */
 	function previewCitation(ids: string[]): string {
-		const { engine, citationSources } = get(citationStore);
+		const { engine, citationSources, aliases } = get(citationStore);
 
-		const known = ids.filter((id) => citationSources[id]);
+		const known = canonicalIds(aliases ?? {}, ids).filter((id) => citationSources[id]);
 		if (known.length === 0) return '';
 		if (!engine) return fallbackLabel(known.map((id) => citationSources[id]));
 
@@ -164,14 +185,16 @@ function createCitationStore() {
 	 * re-renders with it.
 	 */
 	function renderDocument(sites: CitationSite[]) {
-		const { engine, citationSources } = get(citationStore);
+		const { engine, citationSources, aliases } = get(citationStore);
 		if (!engine) return null;
 
 		try {
 			const rendered = renderDocumentCitations(
 				sites,
 				engine,
-				new Set(Object.keys(citationSources))
+				new Set(Object.keys(citationSources)),
+				// The state read once above, not a store read per cited id.
+				(id) => canonical(aliases ?? {}, id)
 			);
 
 			update((state) => ({
@@ -194,6 +217,7 @@ function createCitationStore() {
 		previewCitation,
 		renderDocument,
 		getAllSourcesAsJson,
+		canonicalId,
 		setManuscriptSources,
 		isAway,
 		set
@@ -214,16 +238,26 @@ function bundledManifest(): Promise<BundledManifest> {
 }
 
 async function getInitialState(): Promise<CitationState> {
-	const empty = { bibliography: [], missingIds: [], awayIds: [] };
-
 	// Sources first, and independently of the style: if the style can't load,
 	// citations can still be labelled from the sources' own metadata.
 	let citationSources: Record<string, CitationItem> = {};
+	let aliases: Aliases = {};
 	try {
-		citationSources = await loadCitationSources();
+		[citationSources, aliases] = await Promise.all([
+			loadCitationSources(),
+			// Without the aliases only a citation of an attached PDF or a merged id
+			// goes missing; without the sources, every citation does. So a failure
+			// here costs the aliases alone.
+			sourceAliases().catch((error: unknown) => {
+				log.error('Could not load the library’s aliases', error);
+				return {};
+			})
+		]);
 	} catch (error) {
+		const empty = { bibliography: [], missingIds: [], awayIds: [], aliases };
 		return { ...empty, engine: null, citationSources, error: messageOf(error) };
 	}
+	const empty = { bibliography: [], missingIds: [], awayIds: [], aliases };
 
 	// Each failure carries its own remedy: a damaged install needs reinstalling,
 	// while a style citeproc rejects needs a different style.

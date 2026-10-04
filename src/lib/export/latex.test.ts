@@ -139,6 +139,21 @@ describe('citations', () => {
 		expect(out).toBe('\\cite{smith2020,okafor2019}');
 	});
 
+	// M1b-3: a work and its attached PDF share one key.
+	it('cites a work once when the citation names it and its PDF', () => {
+		const out = toLatexBody(
+			doc(
+				para({
+					type: 'citation',
+					attrs: { id: JSON.stringify(['erti:book', 'pdf']), label: '(Tanaka, 2021)' }
+				})
+			),
+			{ citationKeys: { 'erti:book': 'tanaka2021', pdf: 'tanaka2021' } }
+		);
+
+		expect(out).toBe('\\cite{tanaka2021}');
+	});
+
 	it('does not emit the rendered citation text', () => {
 		// Handing a journal frozen citation strings defeats the point of sending
 		// LaTeX: their class file expects to format them itself.

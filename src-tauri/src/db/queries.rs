@@ -17,9 +17,15 @@ use super::{pack_embedding, unpack_embedding};
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct Source {
+    /// The work's canonical id (ADR 003): a file's hash, or `erti:<uuid>` for
+    /// a work with no file of its own.
     pub sha256: String,
     pub file_name: String,
     pub path: Option<String>,
+    /// Whose file `path` is: the work's own hash, or the hash of a PDF attached
+    /// to it. Ingesting that file goes under this id, never under `sha256`, or
+    /// a PDF's chunks and extracted metadata would land on the work.
+    pub file_sha256: Option<String>,
     /// CSL-JSON, with any project-local override already applied.
     pub csl_json: Option<String>,
     pub zotero_type: Option<String>,
@@ -51,7 +57,12 @@ pub struct NewChunk {
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct ScoredChunk {
+    /// The file the passage is in, which "Show in PDF" opens. Not for citing:
+    /// a file attached to a work is an alias of it (ADR 003).
     pub sha256: String,
+    /// The work the passage belongs to: the id to cite, to add to a project
+    /// and to read metadata from.
+    pub source_id: String,
     /// Position of the chunk within its source. `(sha256, idx)` is the chunk's
     /// primary key, and the only stable identity a result has — two chunks from
     /// one PDF share a hash.
@@ -305,6 +316,12 @@ pub async fn add_to_project(project: &SqlitePool, sha256: &str) -> Result<(), St
 
 /// Sources belonging to the open project, with project-local metadata
 /// overrides applied on top of the library's copy.
+///
+/// One row per work (ADR 003). The `source_set` may name a work by any of its
+/// ids: a folder scan adds a PDF's own hash after it was attached to a work,
+/// and a manuscript adds whichever id it cites. Each is resolved here, on
+/// reading, rather than rewritten when stored, so a PDF whose work is removed
+/// (M1b-4) is back in the project as a work of its own.
 pub async fn project_sources(
     library: &SqlitePool,
     project: &SqlitePool,
@@ -314,33 +331,59 @@ pub async fn project_sources(
         return Ok(Vec::new());
     }
 
-    let overrides: std::collections::HashMap<String, String> =
-        sqlx::query("SELECT sha256, csl_json FROM metadata_overrides")
-            .fetch_all(project)
-            .await
-            .map_err(|e| e.to_string())?
-            .into_iter()
-            .map(|r| (r.get::<String, _>("sha256"), r.get::<String, _>("csl_json")))
-            .collect();
+    let aliases = alias_map(library).await?;
+    let ids = resolve_all(&aliases, &hashes);
 
-    let placeholders = std::iter::repeat_n("?", hashes.len())
+    // An override made on an id that has since been merged into another work
+    // still applies to that work, unless the work has one of its own. Newest
+    // first, so of two merged ids' overrides, the later correction wins; the
+    // timestamp is to the second, so a tie goes to the lower id, not row order.
+    let mut overrides: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for row in sqlx::query(
+        "SELECT sha256, csl_json FROM metadata_overrides ORDER BY updated_at DESC, sha256",
+    )
+    .fetch_all(project)
+    .await
+    .map_err(|e| e.to_string())?
+    {
+        let id: String = row.get("sha256");
+        let work = resolve(&aliases, &id).to_string();
+        if work == id {
+            overrides.insert(work, row.get("csl_json"));
+        } else {
+            overrides.entry(work).or_insert_with(|| row.get("csl_json"));
+        }
+    }
+
+    let placeholders = std::iter::repeat_n("?", ids.len())
         .collect::<Vec<_>>()
         .join(",");
+    // A work with no file of its own opens the PDF attached to it: `locations`
+    // is keyed by the file's hash, which is the alias. The work's own file
+    // comes first, and a work is never an alias, so that's the non-alias row.
     let sql = format!(
         "SELECT s.sha256, s.csl_json, s.zotero_type, s.doi, s.resolved_via,
                 COALESCE(i.state, 'pending') AS state, i.last_error,
-                (SELECT file_name FROM locations l WHERE l.sha256 = s.sha256
-                  ORDER BY last_seen DESC LIMIT 1) AS file_name,
-                (SELECT path FROM locations l WHERE l.sha256 = s.sha256
-                  ORDER BY last_seen DESC LIMIT 1) AS path
+                (SELECT file_name FROM locations l
+                  WHERE l.sha256 = s.sha256
+                     OR l.sha256 IN (SELECT alias FROM source_aliases WHERE canonical = s.sha256)
+                  ORDER BY l.sha256 IN (SELECT alias FROM source_aliases), last_seen DESC LIMIT 1) AS file_name,
+                (SELECT path FROM locations l
+                  WHERE l.sha256 = s.sha256
+                     OR l.sha256 IN (SELECT alias FROM source_aliases WHERE canonical = s.sha256)
+                  ORDER BY l.sha256 IN (SELECT alias FROM source_aliases), last_seen DESC LIMIT 1) AS path,
+                (SELECT l.sha256 FROM locations l
+                  WHERE l.sha256 = s.sha256
+                     OR l.sha256 IN (SELECT alias FROM source_aliases WHERE canonical = s.sha256)
+                  ORDER BY l.sha256 IN (SELECT alias FROM source_aliases), last_seen DESC LIMIT 1) AS file_sha256
            FROM sources s
            LEFT JOIN ingest_status i ON i.sha256 = s.sha256
           WHERE s.sha256 IN ({placeholders})"
     );
 
     let mut query = sqlx::query(&sql);
-    for hash in &hashes {
-        query = query.bind(hash);
+    for id in &ids {
+        query = query.bind(*id);
     }
 
     Ok(query
@@ -357,6 +400,7 @@ pub async fn project_sources(
             Source {
                 file_name: r.try_get("file_name").unwrap_or_default(),
                 path: r.get("path"),
+                file_sha256: r.get("file_sha256"),
                 csl_json,
                 zotero_type: r.get("zotero_type"),
                 doi: r.get("doi"),
@@ -387,6 +431,134 @@ pub async fn set_metadata_override(
     Ok(())
 }
 
+/// Every alias in the library, alias → canonical (ADR 003).
+///
+/// Read whole rather than id by id: a library has a handful of aliases, and
+/// the searches below resolve every row they score.
+pub async fn alias_map(
+    library: &SqlitePool,
+) -> Result<std::collections::HashMap<String, String>, String> {
+    Ok(
+        sqlx::query_as::<_, (String, String)>("SELECT alias, canonical FROM source_aliases")
+            .fetch_all(library)
+            .await
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .collect(),
+    )
+}
+
+/// The id a work is known by: the one to cite, to keep in a project's
+/// `source_set`, and to read metadata from.
+///
+/// One lookup, because `alias_source` never writes a chain. An id the library
+/// has never seen is its own canonical id, so a co-author's citation still
+/// finds the snapshot their manuscript carries.
+pub fn resolve<'a>(aliases: &'a std::collections::HashMap<String, String>, id: &'a str) -> &'a str {
+    aliases.get(id).map(String::as_str).unwrap_or(id)
+}
+
+/// Every id resolved, each work once, in the order first named: one citation
+/// that names a book and its PDF cites the book once.
+pub fn resolve_all<'a>(
+    aliases: &'a std::collections::HashMap<String, String>,
+    ids: &'a [String],
+) -> Vec<&'a str> {
+    let mut seen = std::collections::HashSet::new();
+    ids.iter()
+        .map(|id| resolve(aliases, id))
+        .filter(|id| seen.insert(*id))
+        .collect()
+}
+
+/// `resolve`, for one id, against the library.
+pub async fn canonical(library: &SqlitePool, id: &str) -> Result<String, String> {
+    let found: Option<String> =
+        sqlx::query_scalar("SELECT canonical FROM source_aliases WHERE alias = ?")
+            .bind(id)
+            .fetch_optional(library)
+            .await
+            .map_err(|e| e.to_string())?;
+    Ok(found.unwrap_or_else(|| id.to_string()))
+}
+
+/// Say that `alias` is the same work as `canonical` (ADR 003).
+///
+/// The only write to `source_aliases`, so the only place a chain could start.
+/// Attaching a PDF to a work and merging two duplicates are both this. A
+/// `canonical` that is itself an alias is resolved first, and whatever pointed
+/// at `alias` is re-pointed at the result, so every alias stays one step from
+/// its work. Naming one of a work's aliases as the canonical promotes it: its
+/// own alias row goes first. Refused: an id as an alias of itself, and an id
+/// the library doesn't have.
+///
+/// Source notes are kept on the canonical id (ADR 004), so `alias`'s notes
+/// move to the work it now belongs to. Left where they were, they would go
+/// with that id's row if it were removed.
+pub async fn alias_source(
+    library: &SqlitePool,
+    alias: &str,
+    canonical: &str,
+) -> Result<(), String> {
+    if alias == canonical {
+        return Err(format!("{alias} can't be an alias of itself."));
+    }
+    let mut tx = library.begin().await.map_err(|e| e.to_string())?;
+
+    for id in [alias, canonical] {
+        let known: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM sources WHERE sha256 = ?)")
+                .bind(id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        if !known {
+            return Err(format!("The library has no source {id}."));
+        }
+    }
+
+    sqlx::query("DELETE FROM source_aliases WHERE alias = ? AND canonical = ?")
+        .bind(canonical)
+        .bind(alias)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let target: String = sqlx::query_scalar(
+        "SELECT COALESCE((SELECT canonical FROM source_aliases WHERE alias = ?1), ?1)",
+    )
+    .bind(canonical)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    // Unreachable while the table has no chains: `canonical` would have to be
+    // an alias of `alias`, and that row was deleted above. Checked anyway,
+    // since the insert below would otherwise write the cycle.
+    if target == alias {
+        return Err(format!(
+            "{alias} is already the work {canonical} belongs to."
+        ));
+    }
+
+    for sql in [
+        "UPDATE source_aliases SET canonical = ?1 WHERE canonical = ?2",
+        "INSERT INTO source_aliases (alias, canonical) VALUES (?2, ?1)
+         ON CONFLICT(alias) DO UPDATE SET canonical = excluded.canonical",
+        "UPDATE source_notes SET sha256 = ?1 WHERE sha256 = ?2",
+    ] {
+        sqlx::query(sql)
+            .bind(&target)
+            .bind(alias)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Rank chunks against a query vector.
 ///
 /// Scoring happens here rather than in the webview: the old implementation
@@ -407,14 +579,20 @@ pub async fn search_similar(
         .await
         .map_err(|e| e.to_string())?;
 
-    let in_set: std::collections::HashSet<&str> =
-        project_hashes.iter().map(|s| s.as_str()).collect();
+    // Membership is by work on both sides: the project may name a work by a
+    // file's hash, and a chunk always comes from a file.
+    let aliases = alias_map(library).await?;
+    let in_set: std::collections::HashSet<&str> = project_hashes
+        .iter()
+        .map(|id| resolve(&aliases, id))
+        .collect();
 
     let mut scored: Vec<ScoredChunk> = rows
         .into_iter()
         .filter_map(|r| {
             let sha256: String = r.get("sha256");
-            let in_project = in_set.contains(sha256.as_str());
+            let source_id = resolve(&aliases, &sha256).to_string();
+            let in_project = in_set.contains(source_id.as_str());
             if !in_project && !include_library {
                 return None;
             }
@@ -427,6 +605,7 @@ pub async fn search_similar(
                 page_start: r.get("page_start"),
                 section: r.get("section"),
                 sha256,
+                source_id,
                 in_project,
             })
         })
@@ -964,6 +1143,9 @@ pub struct ScoredAnnotation {
     pub annotation: Annotation,
     /// Cosine similarity for a semantic search; 1.0 for a literal match.
     pub similarity: f32,
+    /// The work the mark's paper belongs to, for citing it (ADR 003). The
+    /// annotation's own `sha256` stays the file's, for "Show in PDF".
+    pub source_id: String,
     /// False when the mark is on a paper outside the open project's source set.
     pub in_project: bool,
     /// The paper's filename, so a result can name where it came from.
@@ -973,12 +1155,16 @@ pub struct ScoredAnnotation {
 fn scored_from(
     row: &sqlx::sqlite::SqliteRow,
     similarity: f32,
-    in_project: bool,
+    aliases: &std::collections::HashMap<String, String>,
+    in_set: &std::collections::HashSet<&str>,
 ) -> ScoredAnnotation {
+    let annotation = annotation_from(row);
+    let source_id = resolve(aliases, &annotation.sha256).to_string();
     ScoredAnnotation {
-        annotation: annotation_from(row),
+        in_project: in_set.contains(source_id.as_str()),
+        source_id,
+        annotation,
         similarity,
-        in_project,
         file_name: row.try_get("file_name").ok(),
     }
 }
@@ -1027,12 +1213,20 @@ pub async fn search_annotations_literally(
     limit: i64,
 ) -> Result<Vec<ScoredAnnotation>, String> {
     let pattern = format!("%{}%", query.replace('%', "\\%").replace('_', "\\_"));
-    let project = serde_json::to_string(project_hashes).map_err(|e| e.to_string())?;
+    let aliases = alias_map(pool).await?;
+    let in_set: std::collections::HashSet<&str> = project_hashes
+        .iter()
+        .map(|id| resolve(&aliases, id))
+        .collect();
+    let project = serde_json::to_string(&in_set).map_err(|e| e.to_string())?;
 
+    // Ordered by the work the mark's paper belongs to, as `in_project` is.
     let rows = sqlx::query(&format!(
         "{ANNOTATION_SEARCH_SELECT}
           WHERE ?3 OR a.quote LIKE ?1 ESCAPE '\\' OR a.note LIKE ?1 ESCAPE '\\'
-          ORDER BY a.sha256 IN (SELECT value FROM json_each(?4)) DESC, a.created_at DESC
+          ORDER BY COALESCE((SELECT canonical FROM source_aliases WHERE alias = a.sha256), a.sha256)
+                   IN (SELECT value FROM json_each(?4)) DESC,
+                   a.created_at DESC
           LIMIT ?2"
     ))
     .bind(&pattern)
@@ -1043,16 +1237,9 @@ pub async fn search_annotations_literally(
     .await
     .map_err(|e| e.to_string())?;
 
-    let in_set: std::collections::HashSet<&str> =
-        project_hashes.iter().map(|s| s.as_str()).collect();
-
     Ok(rows
         .iter()
-        .map(|row| {
-            let sha256: String = row.get("sha256");
-            let in_project = in_set.contains(sha256.as_str());
-            scored_from(row, 1.0, in_project)
-        })
+        .map(|row| scored_from(row, 1.0, &aliases, &in_set))
         .collect())
 }
 
@@ -1074,21 +1261,21 @@ pub async fn search_annotations_semantically(
         .await
         .map_err(|e| e.to_string())?;
 
-    let in_set: std::collections::HashSet<&str> =
-        project_hashes.iter().map(|s| s.as_str()).collect();
+    let aliases = alias_map(pool).await?;
+    let in_set: std::collections::HashSet<&str> = project_hashes
+        .iter()
+        .map(|id| resolve(&aliases, id))
+        .collect();
 
     let mut scored: Vec<ScoredAnnotation> = rows
         .iter()
         .map(|row| {
             let vector = unpack_embedding(row.get::<Vec<u8>, _>("embedding").as_slice());
-
-            let sha256: String = row.get("sha256");
-            let in_project = in_set.contains(sha256.as_str());
-
             scored_from(
                 row,
                 crate::commands::cosine_similarity(query_embedding, &vector),
-                in_project,
+                &aliases,
+                &in_set,
             )
         })
         .collect();

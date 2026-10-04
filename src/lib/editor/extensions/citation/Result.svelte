@@ -40,14 +40,16 @@
 
 		const citationSources = citationStore.getAllSourcesAsJson();
 
+		// Cited, added and described by its work (ADR 003). `sha256` stays the
+		// file's: the card's Show in PDF opens that, and the work may have none.
 		return chunks.map((chunk) => ({
 			...chunk,
 			sentence: chunk.text,
-			id: chunk.sha256,
+			id: chunk.source_id,
 			// A source found outside the project has no citation entry loaded yet;
 			// adding it to the project is what makes it citable.
-			metadata: citationSources[chunk.sha256] ?? {
-				id: chunk.sha256,
+			metadata: citationSources[chunk.source_id] ?? {
+				id: chunk.source_id,
 				type: 'article-journal',
 				title: 'Unknown Title'
 			}
@@ -73,8 +75,8 @@
 
 		try {
 			if (!match.in_project) {
-				adding = match.sha256;
-				await addToProject(match.sha256);
+				adding = match.source_id;
+				await addToProject(match.source_id);
 				// Reloaded so citeproc knows the source. Without this the citation
 				// inserts against an id the engine cannot resolve.
 				await citationStore.initializeCitationStore();
@@ -86,7 +88,7 @@
 			// citation in the manuscript that renders as a removed source — so the
 			// user is told what to do instead, and the source stays in the project
 			// where the metadata can be added.
-			if (!citationStore.getAllSourcesAsJson()[match.sha256]) {
+			if (!citationStore.getAllSourcesAsJson()[match.source_id]) {
 				errorToast(
 					`That source has no citation details yet, so it cannot be cited. It has been added to this project — open the metadata explorer to paste a DOI or enter the details.`
 				);
@@ -94,8 +96,8 @@
 			}
 
 			selectCitation({
-				id: JSON.stringify([match.sha256]),
-				inlineCitation: citationStore.previewCitation([match.sha256])
+				id: JSON.stringify([match.source_id]),
+				inlineCitation: citationStore.previewCitation([match.source_id])
 			});
 		} catch (error) {
 			log.error('Could not cite that source', error);
@@ -137,7 +139,7 @@
 				<ResultCard
 					sentenceMetadata={match}
 					oncite={() => cite(match)}
-					busy={adding === match.sha256}
+					busy={adding === match.source_id}
 				/>
 			{/each}
 		{:else}
