@@ -88,7 +88,9 @@ What migration 6 and the resolver (M1b-2, M1b-3) take from it:
 - **One write operation, no chains.** Making `a` an alias of `b` resolves `b` first, re-points
   every alias of `a` to the result, and refuses to make an id an alias of itself. Promoting an
   alias to be the work (the published version over the preprint) is the same operation the
-  other way round: its alias row is deleted first. Reads then need one lookup.
+  other way round: its alias row is deleted first. Reads then need one lookup. The same
+  transaction moves the new alias's source notes (ADR 004, keyed by the canonical id) to the
+  work it now points at; left behind, they would go if that file's row were removed.
 - **Boundaries the code shows, beyond the ones listed above:**
   - `project_sources` lists a work twice once a folder scan adds its PDF's hash to the
     `source_set`. The work's file path hangs off the alias row (`locations` is keyed by the
