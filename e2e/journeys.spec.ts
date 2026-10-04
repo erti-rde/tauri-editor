@@ -250,3 +250,26 @@ test('a new document after one from a newer Erti can be written in', async ({ pa
 	await page.keyboard.type('A fresh start.');
 	await expect(editor).toContainText('A fresh start.');
 });
+
+// M1c-2 AC-1, AC-3: the Menu primitive, open in a real browser. jsdom can't
+// position it, so its component test can't see it on screen.
+test('the text-style menu opens from the keyboard and makes a heading', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	// Whichever paragraph the cursor ends up in: under load the document can
+	// still be settling when the click lands, and the menu is what's tested.
+	const headings = page.locator('.ProseMirror h2');
+	await expect(headings).toHaveCount(1);
+	await page.locator('.ProseMirror p').first().click();
+	await page.getByRole('button', { name: 'Text style' }).focus();
+	await page.keyboard.press('Enter');
+	const menu = page.getByRole('menu');
+	await expect(menu).toBeVisible();
+	await expect(menu.getByRole('menuitem')).toHaveText(['Heading 1', 'Heading 2', 'Heading 3']);
+
+	await menu.getByRole('menuitem', { name: 'Heading 2' }).click();
+	await expect(menu).toBeHidden();
+	await expect(headings).toHaveCount(2);
+});

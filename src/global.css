@@ -697,7 +697,15 @@ body {
 :focus-visible {
 	outline: 2px solid hsl(var(--accent));
 	outline-offset: 1px;
-	border-radius: var(--radius);
+}
+
+/* The ring's corners, in the base layer so a control's own shape wins: out
+   here, at equal specificity, it squared a focused radio or switch, whose
+   `rounded-full` is a layered utility. */
+@layer base {
+	:focus-visible {
+		border-radius: var(--radius);
+	}
 }
 
 /*

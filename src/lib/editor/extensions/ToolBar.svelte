@@ -40,7 +40,7 @@
 	import Table from '~icons/lucide/table';
 	import Link from '~icons/lucide/link';
 
-	import Dropdown from '$lib/ui/Dropdown.svelte';
+	import Menu, { type MenuItem } from '$lib/ui/Menu.svelte';
 	import LinkPopover from './LinkPopover.svelte';
 	import TablePopover from './TablePopover.svelte';
 	import ZoomControl from '../pagination/ZoomControl.svelte';
@@ -64,6 +64,36 @@
 			editor.chain().focus().toggleHeading({ level }).run();
 		}
 	}
+
+	// Read the same way the buttons below read `isActive`: again each time the
+	// editor is handed in.
+	const headings: MenuItem[] = $derived(
+		[
+			{ label: 'Heading 1', icon: Heading1, level: 1 as const },
+			{ label: 'Heading 2', icon: Heading2, level: 2 as const },
+			{ label: 'Heading 3', icon: Heading3, level: 3 as const }
+		].map(({ label, icon, level }) => ({
+			label,
+			icon,
+			active: editor.isActive('heading', { level }),
+			onSelect: () => handleFormatSelect(`h${level}`)
+		}))
+	);
+
+	const lists: MenuItem[] = $derived([
+		{
+			label: 'Bullet List',
+			icon: ListUnordered,
+			active: editor.isActive('bulletList'),
+			onSelect: () => editor.chain().focus().toggleBulletList().run()
+		},
+		{
+			label: 'Ordered List',
+			icon: ListOrdered,
+			active: editor.isActive('orderedList'),
+			onSelect: () => editor.chain().focus().toggleOrderedList().run()
+		}
+	]);
 
 	async function addImage() {
 		const selectedFile = await open({
@@ -143,57 +173,21 @@
 
 		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
 
-		{#snippet defaultHeadingButton()}
-			<Heading class="ml-1" />
+		<!-- The trigger shows what the cursor is in, so the current style can be
+		     read without opening the menu. -->
+		{#snippet current(items: MenuItem[], Fallback: MenuItem['icon'])}
+			{@const active = items.find((item) => item.active)}
+			{@const Shown = active?.icon ?? Fallback}
+			<Shown class={['size-4', active && 'text-accent']} aria-hidden="true" />
 		{/snippet}
 
-		{#snippet defaultListButtons()}
-			<ListUnordered class="ml-1" />
-		{/snippet}
+		<Menu label="Text style" items={headings}>
+			{#snippet trigger()}{@render current(headings, Heading)}{/snippet}
+		</Menu>
 
-		<Dropdown
-			buttonText={defaultHeadingButton}
-			ariaLabel="Text style"
-			items={[
-				{
-					label: 'Heading 1',
-					icon: Heading1,
-					isActive: editor.isActive('heading', { level: 1 }),
-					callBack: () => handleFormatSelect('h1')
-				},
-				{
-					label: 'Heading 2',
-					icon: Heading2,
-					isActive: editor.isActive('heading', { level: 2 }),
-					callBack: () => handleFormatSelect('h2')
-				},
-				{
-					label: 'Heading 3',
-					icon: Heading3,
-					isActive: editor.isActive('heading', { level: 3 }),
-					callBack: () => handleFormatSelect('h3')
-				}
-			]}
-		/>
-
-		<Dropdown
-			buttonText={defaultListButtons}
-			ariaLabel="List style"
-			items={[
-				{
-					label: 'Bullet List',
-					icon: ListUnordered,
-					isActive: editor.isActive('bulletList'),
-					callBack: () => editor.chain().focus().toggleBulletList().run()
-				},
-				{
-					label: 'Ordered List',
-					icon: ListOrdered,
-					isActive: editor.isActive('orderedList'),
-					callBack: () => editor.chain().focus().toggleOrderedList().run()
-				}
-			]}
-		/>
+		<Menu label="List style" items={lists}>
+			{#snippet trigger()}{@render current(lists, ListUnordered)}{/snippet}
+		</Menu>
 
 		{@render toolBarButton({
 			onclick: () => editor.chain().focus().toggleBlockquote().run(),

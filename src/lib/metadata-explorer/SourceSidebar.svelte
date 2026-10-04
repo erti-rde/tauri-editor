@@ -2,8 +2,8 @@
 	import { fly } from 'svelte/transition';
 	import { Icon } from '$lib';
 	import type { CitationItem } from '$lib/stores/citationStore';
-	import Select from '$ui/form/Select.svelte';
-	import DateField from '$ui/form/DateField.svelte';
+	import Select from '$ui/Select.svelte';
+	import DateField from '$ui/DateField.svelte';
 	import { CalendarDate } from '@internationalized/date';
 
 	import type { DateValue } from '@internationalized/date';
@@ -93,16 +93,14 @@
 	</div>
 	<div class="p-4">
 		<div class="mb-4">
-			<label class="text-ink mb-1 block text-sm font-medium">
-				Source Type
-				<Select
-					placeholder="Select Source type"
-					items={itemTypesFields}
-					value={source.zotero_type}
-					type="single"
-					onValueChange={handleSourceTypeChange}
-				/>
-			</label>
+			<Select
+				label="Source type"
+				placeholder="Choose a source type"
+				items={itemTypesFields}
+				value={source.zotero_type}
+				type="single"
+				onValueChange={handleSourceTypeChange}
+			/>
 		</div>
 		{#if currentFormFields}
 			<!-- Render form fields based on selected type -->
@@ -114,7 +112,7 @@
 								{@const dateValue = getDateParts(source[cslField])}
 								<!-- Date input -->
 								<DateField
-									labelText={label}
+									{label}
 									value={dateValue
 										? new CalendarDate(dateValue[0], dateValue[1], dateValue[2])
 										: undefined}

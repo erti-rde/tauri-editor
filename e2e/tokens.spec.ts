@@ -112,3 +112,25 @@ test('an overlay casts the palette’s shadow', async ({ page }) => {
 	await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
 	expect(await shadow()).toContain('rgba(0, 0, 0, 0.5)');
 });
+
+// M1c-2: the focus ring follows a control's own shape. Unlayered, its corner
+// rule squared a focused radio or switch, whose rounded-full is a utility.
+test('a focused round control stays round', async ({ page }) => {
+	await launch(page);
+	await expect(page.locator('html')).toHaveAttribute('data-density', /.+/);
+	const radius = (className: string) =>
+		page.evaluate(async (name) => {
+			const probe = document.createElement('button');
+			probe.className = name;
+			document.body.append(probe);
+			probe.focus();
+			const value = getComputedStyle(probe).borderRadius;
+			probe.remove();
+			return value;
+		}, className);
+
+	await page.keyboard.press('Tab');
+	expect(await radius('rounded-full size-3.5')).not.toBe(await radius('size-3.5'));
+	// And a control with no shape of its own still gets the ring's corners.
+	expect(await radius('size-3.5')).not.toBe('0px');
+});
