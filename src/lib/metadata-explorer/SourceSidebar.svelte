@@ -20,13 +20,12 @@
 			id: string;
 			/** What the researcher calls it: its title, or the file's name. */
 			title: string;
-			path: string | null;
 			csl: CslItem | null;
 			zoteroType: string | null;
 		};
 		onclose: () => void;
 		onsaved: () => void;
-		onremoved: () => void;
+		onremoved: () => void | Promise<void>;
 	}
 
 	let { schema, record, onclose, onsaved, onremoved }: Props = $props();
@@ -88,7 +87,7 @@
 	<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
 	{#snippet footer()}
 		{#if record}
-			<RemoveSource id={record.id} title={record.title} path={record.path} {onremoved} />
+			<RemoveSource id={record.id} title={record.title} csl={record.csl} {onremoved} />
 		{/if}
 		<span class="flex-1"></span>
 		<Button variant="primary" loading={saving} disabled={!type} onclick={save}>

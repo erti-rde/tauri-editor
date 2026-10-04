@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Loaded } from '$lib/manuscript/io';
+import { format0Backup, type Loaded, type ManuscriptFiles } from '$lib/manuscript/io';
 
 import {
-	citationsInProject,
+	carryInto,
+	citationsIn,
 	citationsOf,
 	consequences,
 	filePlace,
+	readAll,
 	REMOVED,
 	removalTitle,
 	separator
@@ -38,20 +40,19 @@ describe('counting citations (M1b-4 AC-1)', () => {
 			'/p/Two.erti.json': doc(cite('other')),
 			'/p/Three.erti.json': doc(cite('pdf'))
 		};
-		const cited = await citationsInProject(
+		const read = await readAll(
 			[
 				{ title: 'One', path: '/p/One.erti.json' },
 				{ title: 'Two', path: '/p/Two.erti.json' },
 				{ title: 'Three', path: '/p/Three.erti.json' }
 			],
-			async (path) => loaded(files[path]),
-			isBook
+			async (path) => loaded(files[path])
 		);
-		expect(cited).toEqual({ count: 3, documents: ['One', 'Three'] });
+		expect(citationsIn(read, isBook)).toMatchObject({ count: 3, documents: ['One', 'Three'] });
 	});
 
 	it('carries on past a manuscript it cannot read', async () => {
-		const cited = await citationsInProject(
+		const read = await readAll(
 			[
 				{ title: 'Broken', path: '/p/Broken.erti.json' },
 				{ title: 'One', path: '/p/One.erti.json' }
@@ -59,10 +60,98 @@ describe('counting citations (M1b-4 AC-1)', () => {
 			async (path) => {
 				if (path.includes('Broken')) throw new Error('unreadable');
 				return loaded(doc(cite('book')));
-			},
-			isBook
+			}
 		);
-		expect(cited).toEqual({ count: 1, documents: ['One'] });
+		expect(citationsIn(read, isBook)).toMatchObject({ count: 1, documents: ['One'] });
+	});
+
+	// M1b-4 AC-3: a citation renders from the manuscript's own copy, so one
+	// without a copy has to be found before the library's goes.
+	it('finds the manuscripts that cite it without carrying a copy, and under which ids', () => {
+		const read = [
+			{
+				title: 'Saved',
+				path: '/p/Saved.erti.json',
+				loaded: { ...loaded(doc(cite('book'))), sources: { book: {} } }
+			},
+			{
+				title: 'Old',
+				path: '/p/Old.erti.json',
+				loaded: { ...loaded(doc(cite('pdf'), cite('other'))), format: 0 }
+			},
+			{
+				title: 'Half',
+				path: '/p/Half.erti.json',
+				loaded: { ...loaded(doc(cite('book'), cite('pdf'))), sources: { book: {} } }
+			},
+			{
+				title: 'Newer',
+				path: '/p/Newer.erti.json',
+				loaded: { ...loaded(doc(cite('book'))), status: 'newer' }
+			}
+		] as const;
+
+		expect(citationsIn(read as never, isBook).uncarried).toEqual([
+			{ path: '/p/Old.erti.json', ids: ['pdf'] },
+			{ path: '/p/Half.erti.json', ids: ['pdf'] }
+		]);
+	});
+});
+
+describe('carrying the work into the manuscripts that lack it (M1b-4 AC-3)', () => {
+	function memoryFiles(initial: Record<string, string>) {
+		const files = new Map(Object.entries(initial));
+		const fs: ManuscriptFiles = {
+			exists: async (path) => files.has(path),
+			read: async (path) => files.get(path)!,
+			write: async (path, text, options) => {
+				if (options?.createNew && files.has(path)) throw new Error('exists');
+				files.set(path, text);
+			}
+		};
+		return { files, fs };
+	}
+	const BOOK = { id: 'book', type: 'book', title: 'The Book', author: [{ family: 'Tanaka' }] };
+
+	it('files the work’s copy under the id each manuscript cites, keeping a pre-1.0 file’s backup', async () => {
+		const old = JSON.stringify(doc(cite('pdf')));
+		const { files, fs } = memoryFiles({ '/p/Old.erti.json': old });
+
+		await carryInto([{ path: '/p/Old.erti.json', ids: ['pdf'] }], { id: 'book', csl: BOOK }, fs);
+
+		const written = JSON.parse(files.get('/p/Old.erti.json')!);
+		expect(written.type).toBe('doc');
+		expect(written.erti.sources.pdf).toMatchObject({ id: 'pdf', title: 'The Book' });
+		expect(files.get(format0Backup('/p/Old.erti.json'))).toBe(old);
+	});
+
+	it('keeps the copies a manuscript already carries', async () => {
+		const { files, fs } = memoryFiles({
+			'/p/Half.erti.json': JSON.stringify({
+				...doc(cite('book'), cite('pdf'), cite('other')),
+				erti: {
+					format: 1,
+					savedWith: '1.0.0',
+					sources: { other: { id: 'other', type: 'book', title: 'Other' } }
+				}
+			})
+		});
+
+		await carryInto([{ path: '/p/Half.erti.json', ids: ['pdf'] }], { id: 'book', csl: BOOK }, fs);
+
+		const sources = JSON.parse(files.get('/p/Half.erti.json')!).erti.sources;
+		expect(Object.keys(sources).sort()).toEqual(['other', 'pdf']);
+	});
+
+	it('stops when a manuscript can’t be written, so nothing is removed', async () => {
+		const { fs } = memoryFiles({ '/p/Old.erti.json': JSON.stringify(doc(cite('pdf'))) });
+		fs.write = async () => {
+			throw new Error('read-only disk');
+		};
+
+		await expect(
+			carryInto([{ path: '/p/Old.erti.json', ids: ['pdf'] }], { id: 'book', csl: BOOK }, fs)
+		).rejects.toThrow('read-only disk');
 	});
 });
 
@@ -118,10 +207,28 @@ describe('what the dialog says (M1b-4 AC-1, UX-4)', () => {
 	});
 
 	it('tells a PDF in the project folder from one elsewhere', () => {
-		expect(filePlace('/home/me/thesis/papers/a.pdf', '/home/me/thesis')).toBe('in-project');
-		expect(filePlace('/home/me/thesis-old/a.pdf', '/home/me/thesis')).toBe('elsewhere');
-		expect(filePlace('/home/me/Downloads/a.pdf', '/home/me/thesis/')).toBe('elsewhere');
-		expect(filePlace(null, '/home/me/thesis')).toBe('none');
+		expect(filePlace(['/home/me/thesis/papers/a.pdf'], '/home/me/thesis')).toBe('in-project');
+		expect(filePlace(['/home/me/thesis-old/a.pdf'], '/home/me/thesis')).toBe('elsewhere');
+		expect(filePlace(['/home/me/Downloads/a.pdf'], '/home/me/thesis/')).toBe('elsewhere');
+		expect(filePlace([], '/home/me/thesis')).toBe('none');
+	});
+
+	it('counts a file attached to the work as much as the work’s own', () => {
+		expect(
+			filePlace(['/home/me/Downloads/book.pdf', '/home/me/thesis/chapter.pdf'], '/home/me/thesis')
+		).toBe('in-project');
+	});
+
+	it('reads Windows paths, whose separators and case vary', () => {
+		expect(filePlace(['C:\\Users\\a\\Thesis\\vaswani.pdf'], 'C:\\Users\\a\\Thesis')).toBe(
+			'in-project'
+		);
+		expect(filePlace(['c:/users/a/thesis/vaswani.pdf'], 'C:\\Users\\a\\Thesis\\')).toBe(
+			'in-project'
+		);
+		expect(filePlace(['C:\\Users\\a\\Thesis-old\\a.pdf'], 'C:\\Users\\a\\Thesis')).toBe(
+			'elsewhere'
+		);
 	});
 
 	it('lists manuscripts as a sentence does', () => {

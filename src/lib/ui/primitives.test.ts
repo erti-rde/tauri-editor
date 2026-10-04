@@ -120,6 +120,37 @@ export const iconButtonNeedsALabel: ComponentProps<typeof IconButton>[] = [
 // below include hidden elements. The browser journeys open it for real.
 const anyVisibility = { hidden: true } as const;
 
+/**
+ * Wait until focus has stopped moving and rests where `settled` says it should.
+ *
+ * Focus bounces while bits-ui opens a menu: to the content, back to the
+ * trigger, inward, then a frame later its focus scope moves it again. A key
+ * sent mid-bounce lands on the wrong element: Enter on the menu itself chooses
+ * nothing. How many frames the bounce takes depends on load, so this waits
+ * until focus has gone two frame callbacks without moving rather than for any
+ * one step. A loaded runner stretches each frame, hence the long timeout.
+ */
+const focusSettles = (settled: (focused: Element | null) => void) =>
+	vi.waitFor(
+		async () => {
+			const focused = document.activeElement;
+			settled(focused);
+			let moved = false;
+			const onFocusIn = () => (moved = true);
+			document.addEventListener('focusin', onFocusIn);
+			try {
+				for (let frame = 0; frame < 2; frame++) {
+					await new Promise(requestAnimationFrame);
+				}
+			} finally {
+				document.removeEventListener('focusin', onFocusIn);
+			}
+			expect(moved).toBe(false);
+			expect(document.activeElement).toBe(focused);
+		},
+		{ timeout: 10_000 }
+	);
+
 describe('Menu', () => {
 	const items = () => [
 		{ label: 'Heading 1', icon: Heading1, active: true, onSelect: vi.fn() },
@@ -138,27 +169,30 @@ describe('Menu', () => {
 			'aria-expanded',
 			'true'
 		);
-		const menu = await screen.findByRole('menu', anyVisibility);
-		// bits-ui moves focus into the menu after it opens; keys sent before that
-		// land on the trigger, which only shows under load.
-		await waitFor(() => expect(menu).toContainElement(document.activeElement as HTMLElement));
+		await screen.findByRole('menu', anyVisibility);
+		// A key sent while the menu itself has focus chooses nothing, and the
+		// menu's text holds every item's, so focus is checked by role.
+		await focusSettles((focused) => expect(focused).toHaveAttribute('role', 'menuitem'));
 
 		// The danger item sits last, whatever order it was given in.
-		const names = screen
-			.getAllByRole('menuitem', anyVisibility)
-			.map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+		const menuItems = screen.getAllByRole('menuitem', anyVisibility);
+		const names = menuItems.map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
 		expect(names).toEqual(['Heading 1', 'Rename Change the file name', 'Delete document']);
+		const [heading, rename] = menuItems;
 
-		// Down until Rename has focus. Whether opening focuses the menu or its
-		// first item varies with timing, so the count of presses isn't fixed.
-		const focused = () => document.activeElement?.textContent ?? '';
-		for (let i = 0; i < 3 && !focused().includes('Rename'); i++) {
-			await user.keyboard('{ArrowDown}');
-		}
-		expect(focused()).toContain('Rename');
+		// Opening from the keyboard lands on the first item, one press from Rename.
+		expect(document.activeElement).toBe(heading);
+		await user.keyboard('{ArrowDown}');
+		expect(document.activeElement).toBe(rename);
 		await user.keyboard('{Enter}');
 		expect(list[2].onSelect).toHaveBeenCalledTimes(1);
 		expect(list[0].onSelect).not.toHaveBeenCalled();
+		await waitFor(() =>
+			expect(screen.getByRole('button', { name: /^Document/ })).toHaveAttribute(
+				'aria-expanded',
+				'false'
+			)
+		);
 	});
 
 	it("can't be opened while disabled", async () => {
@@ -388,8 +422,11 @@ describe('Select', () => {
 		trigger.focus();
 		await user.keyboard('{Enter}');
 		await screen.findByRole('listbox', anyVisibility);
+		// Focus stays on the trigger, which moves the highlight: opening lights
+		// the first option, one press from the second.
 		await user.keyboard('{ArrowDown}{Enter}');
-		expect(onValueChange).toHaveBeenCalled();
+		expect(onValueChange).toHaveBeenCalledTimes(1);
+		expect(onValueChange).toHaveBeenCalledWith('article');
 	});
 
 	it('is reached from its label, as the label it replaced was', () => {

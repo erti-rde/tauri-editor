@@ -8,6 +8,7 @@
 use std::path::PathBuf;
 use tauri::State;
 
+use crate::db::index::HitKind;
 use crate::db::{queries, salvage, DbState};
 use crate::ipc::{AppError, Classify};
 
@@ -278,9 +279,18 @@ pub async fn store_chunks(
     sha256: String,
     chunks: Vec<queries::NewChunk>,
 ) -> Result<(), AppError> {
-    queries::store_chunks(&state.library().await?, &sha256, &chunks)
-        .await
-        .or_database()
+    store_chunks_in(&state, &sha256, &chunks).await
+}
+
+pub async fn store_chunks_in(
+    state: &DbState,
+    sha256: &str,
+    chunks: &[queries::NewChunk],
+) -> Result<(), AppError> {
+    let stored = queries::store_chunks(&state.library().await?, sha256, chunks).await;
+    // Whatever happened: a failed write may still have changed something.
+    state.invalidate_index();
+    stored.or_database()
 }
 
 #[tauri::command]
@@ -388,9 +398,21 @@ pub async fn remove_source(state: State<'_, DbState>, id: String) -> Result<(), 
 }
 
 pub async fn remove_source_in(state: &DbState, id: &str) -> Result<(), AppError> {
-    queries::remove_source(&state.library().await?, id)
-        .await
-        .or_database()
+    // The toast says it can be restored from a backup, and the marks made
+    // since this morning's would otherwise be in none. No copy, no removal.
+    state.back_up_library().await.map_err(|e| {
+        AppError::new(
+            e.kind,
+            format!(
+                "Could not back up the library first, so nothing was removed: {}",
+                e.message
+            ),
+        )
+    })?;
+    let removed = queries::remove_source(&state.library().await?, id).await;
+    // Its passages, marks and notes had vectors, and the cascade took them.
+    state.invalidate_index();
+    removed.or_database()
 }
 
 /// Rank chunks against a piece of text the user is writing.
@@ -405,31 +427,81 @@ pub async fn search_sources(
     limit: Option<u32>,
     include_library: Option<bool>,
 ) -> Result<Vec<queries::ScoredChunk>, AppError> {
-    // embed_texts is synchronous ONNX inference with no await points; running it
-    // on an async worker blocks that worker for the whole inference and can
-    // starve other commands.
-    let embedding =
-        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&[query], true))
-            .await
-            .or_internal()?
-            .or_model()?
-            .into_iter()
-            .next()
-            .ok_or_else(|| AppError::model("query produced no embedding"))?;
+    let embedding = embed_query(query).await?;
 
-    let library = state.library().await?;
-    let project_hashes = match state.project().await {
-        Ok(project) => queries::project_source_hashes(&project)
-            .await
-            .or_database()?,
-        Err(_) => Vec::new(),
-    };
+    let project_hashes = open_project_sources(&state).await?;
+    let (library, index) = state.index().await?;
 
-    queries::search_similar(
+    queries::search_chunks(
+        &index,
         &library,
         &embedding,
         &project_hashes,
         limit.unwrap_or(5) as usize,
+        include_library.unwrap_or(false),
+    )
+    .await
+    .or_database()
+}
+
+/// The open project's sources, or none when no project is open.
+async fn open_project_sources(state: &DbState) -> Result<Vec<String>, AppError> {
+    match state.project().await {
+        Ok(project) => queries::project_source_hashes(&project).await.or_database(),
+        Err(_) => Ok(Vec::new()),
+    }
+}
+
+/// Embed a piece of text for a search. Inference is synchronous ONNX with no
+/// await points, so it runs on the blocking pool, not an async worker.
+async fn embed_query(query: String) -> Result<Vec<f32>, AppError> {
+    tokio::task::spawn_blocking(move || crate::commands::embed_texts(&[query], true))
+        .await
+        .or_internal()?
+        .or_model()?
+        .into_iter()
+        .next()
+        .ok_or_else(|| AppError::model("the query produced no embedding"))
+}
+
+/// Search everything in the library by meaning: passages, marks and source
+/// notes, in one ranked list, each result saying which it is (ADR 005).
+///
+/// `kinds` narrows it (all three when left out), and only the open project's
+/// works count unless `include_library`. Both apply before scoring, so a
+/// narrower search still fills `limit`. The project's results come first.
+#[tauri::command]
+#[specta::specta]
+pub async fn search_library(
+    state: State<'_, DbState>,
+    query: String,
+    kinds: Option<Vec<HitKind>>,
+    limit: Option<u32>,
+    include_library: Option<bool>,
+) -> Result<Vec<queries::Hit>, AppError> {
+    let embedding = embed_query(query).await?;
+    search_library_in(&state, &embedding, kinds, limit, include_library).await
+}
+
+/// `search_library` from a vector already made, so tests can reach it without
+/// the model.
+pub async fn search_library_in(
+    state: &DbState,
+    embedding: &[f32],
+    kinds: Option<Vec<HitKind>>,
+    limit: Option<u32>,
+    include_library: Option<bool>,
+) -> Result<Vec<queries::Hit>, AppError> {
+    let project_hashes = open_project_sources(state).await?;
+    let (library, index) = state.index().await?;
+
+    queries::search_index(
+        &index,
+        &library,
+        embedding,
+        &project_hashes,
+        &kinds.unwrap_or_default(),
+        limit.unwrap_or(20) as usize,
         include_library.unwrap_or(false),
     )
     .await
@@ -454,9 +526,10 @@ pub async fn set_embedding_meta(
     model_id: String,
     dims: u32,
 ) -> Result<(), AppError> {
-    queries::set_embedding_meta(&state.library().await?, &model_id, dims.into())
-        .await
-        .or_database()
+    let set = queries::set_embedding_meta(&state.library().await?, &model_id, dims.into()).await;
+    // Vectors from another model are in another space (ADR 005).
+    state.invalidate_index();
+    set.or_database()
 }
 
 /// Import metadata from the pre-hybrid database, if one exists.
@@ -540,9 +613,9 @@ pub async fn all_annotations(
 #[tauri::command]
 #[specta::specta]
 pub async fn delete_annotation(state: State<'_, DbState>, id: String) -> Result<(), AppError> {
-    queries::delete_annotation(&state.library().await?, &id)
-        .await
-        .or_database()
+    let deleted = queries::delete_annotation(&state.library().await?, &id).await;
+    state.invalidate_index();
+    deleted.or_database()
 }
 
 #[tauri::command]
@@ -551,10 +624,9 @@ pub async fn delete_imported_annotations(
     state: State<'_, DbState>,
     sha256: String,
 ) -> Result<u32, AppError> {
-    queries::delete_imported_annotations(&state.library().await?, &sha256)
-        .await
-        .or_database()
-        .map(count)
+    let deleted = queries::delete_imported_annotations(&state.library().await?, &sha256).await;
+    state.invalidate_index();
+    deleted.or_database().map(count)
 }
 
 #[tauri::command]
@@ -717,9 +789,9 @@ pub async fn embed_annotation(
             .next()
             .ok_or_else(|| AppError::model("the mark produced no embedding"))?;
 
-    queries::save_annotation_embedding(&library, &id, &embedding, &hash)
-        .await
-        .or_database()?;
+    let saved = queries::save_annotation_embedding(&library, &id, &embedding, &hash).await;
+    state.invalidate_index();
+    saved.or_database()?;
 
     Ok(true)
 }
@@ -762,9 +834,9 @@ pub async fn embed_pending_annotations(state: State<'_, DbState>) -> Result<u32,
     for (id, embedding) in ids.iter().zip(embeddings.iter()) {
         // A hash of nothing: these are backfills, and the next real edit
         // re-embeds them under the hash of whatever it then says.
-        queries::save_annotation_embedding(&library, id, embedding, "backfilled")
-            .await
-            .or_database()?;
+        let saved = queries::save_annotation_embedding(&library, id, embedding, "backfilled").await;
+        state.invalidate_index();
+        saved.or_database()?;
         done += 1;
     }
 
@@ -787,13 +859,7 @@ pub async fn search_annotations(
     semantic: Option<bool>,
 ) -> Result<Vec<queries::ScoredAnnotation>, AppError> {
     let library = state.library().await?;
-
-    let project_hashes = match state.project().await {
-        Ok(project) => queries::project_source_hashes(&project)
-            .await
-            .or_database()?,
-        Err(_) => Vec::new(),
-    };
+    let project_hashes = open_project_sources(&state).await?;
 
     let limit = i64::from(limit.unwrap_or(50));
 
@@ -803,18 +869,18 @@ pub async fn search_annotations(
             .or_database();
     }
 
-    let embedding =
-        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&[query], true))
-            .await
-            .or_internal()?
-            .or_model()?
-            .into_iter()
-            .next()
-            .ok_or_else(|| AppError::model("the query produced no embedding"))?;
+    let embedding = embed_query(query).await?;
+    let (library, index) = state.index().await?;
 
-    queries::search_annotations_semantically(&library, &embedding, &project_hashes, limit as usize)
-        .await
-        .or_database()
+    queries::search_annotations_in(
+        &index,
+        &library,
+        &embedding,
+        &project_hashes,
+        limit as usize,
+    )
+    .await
+    .or_database()
 }
 
 #[tauri::command]

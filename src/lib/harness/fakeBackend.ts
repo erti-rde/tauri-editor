@@ -4,6 +4,8 @@ import type {
 	AnnotationLabel,
 	AppError,
 	ErrorKind,
+	Hit,
+	HitKind,
 	NewChunk,
 	ScoredAnnotation,
 	ScoredChunk,
@@ -199,6 +201,29 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		in_project: projectWorks().has(canon(m.sha256)),
 		file_name: fileName(m.sha256)
 	});
+	// Every passage, scored, inside the scope: what the index ranks.
+	const passages = (query: string, includeLibrary: boolean): ScoredChunk[] => {
+		const results: ScoredChunk[] = [];
+		const works = projectWorks();
+		for (const [sha256, chunks] of state.chunks) {
+			const source_id = canon(sha256);
+			const in_project = works.has(source_id);
+			if (!in_project && !includeLibrary) continue;
+			chunks.forEach((chunk, idx) =>
+				results.push({
+					sha256,
+					source_id,
+					idx,
+					text: chunk.text,
+					page_start: chunk.page_start ?? null,
+					section: chunk.section ?? null,
+					similarity: overlap(query, chunk.text),
+					in_project
+				})
+			);
+		}
+		return results;
+	};
 	const notFound = (path: string) => appError('NotFound', `${path} doesn't exist any more.`);
 
 	return {
@@ -387,26 +412,9 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 
 		searchSources(query, limit, includeLibrary) {
 			library();
-			const results: ScoredChunk[] = [];
-			const works = projectWorks();
-			for (const [sha256, chunks] of state.chunks) {
-				const source_id = canon(sha256);
-				const in_project = works.has(source_id);
-				if (!in_project && !includeLibrary) continue;
-				chunks.forEach((chunk, idx) =>
-					results.push({
-						sha256,
-						source_id,
-						idx,
-						text: chunk.text,
-						page_start: chunk.page_start ?? null,
-						section: chunk.section ?? null,
-						similarity: overlap(query, chunk.text),
-						in_project
-					})
-				);
-			}
-			return results.sort(projectFirst).slice(0, limit ?? 5);
+			return passages(query, !!includeLibrary)
+				.sort(projectFirst)
+				.slice(0, limit ?? 5);
 		},
 
 		embeddingMeta: () => (library(), state.embeddingMeta),
@@ -501,7 +509,8 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			// The fake keeps no source notes: nothing writes one until M1b-8.
 			return {
 				notes: marks.filter((m) => m.kind === 'page-note').length,
-				highlights: marks.filter((m) => m.kind !== 'page-note').length
+				highlights: marks.filter((m) => m.kind !== 'page-note').length,
+				paths: files.flatMap((sha) => state.library.get(sha)?.path ?? []).sort()
 			};
 		},
 
@@ -625,6 +634,25 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 				.map((m) => scored(m, overlap(query, state.embedded.get(m.id)!)))
 				.sort(projectFirst)
 				.slice(0, max);
+		},
+
+		searchLibrary(query, kinds, limit, includeLibrary) {
+			library();
+			const wanted = (kind: HitKind) => !kinds?.length || kinds.includes(kind);
+			const hits: Hit[] = [];
+			if (wanted('chunk')) {
+				for (const hit of passages(query, !!includeLibrary)) hits.push({ kind: 'chunk', hit });
+			}
+			if (wanted('annotation')) {
+				for (const m of state.marks.values()) {
+					const vector = state.embedded.get(m.id);
+					if (vector === undefined) continue;
+					const hit = scored(m, overlap(query, vector));
+					if (hit.in_project || includeLibrary) hits.push({ kind: 'annotation', hit });
+				}
+			}
+			// No source notes: nothing writes one until M1b-8.
+			return hits.sort((a, b) => projectFirst(a.hit, b.hit)).slice(0, limit ?? 20);
 		},
 
 		restoreDefaultLabels: () => (library(), 0),

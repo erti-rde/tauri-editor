@@ -348,7 +348,6 @@
 					? {
 							id: selected.id,
 							title: selected.metadata?.title || selected.file_name,
-							path: selected.path,
 							csl: selected.metadata,
 							zoteroType: selected.zotero_type
 						}

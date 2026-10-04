@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod index;
 pub mod queries;
 pub mod salvage;
 pub mod schema;
@@ -25,6 +26,8 @@ pub struct DbState {
     pub grants: std::sync::Arc<crate::scope::Grants>,
     /// The daily backup running in the background, if one was started.
     backup: std::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
+    /// The library's vectors in memory, for search by meaning (ADR 005).
+    index: index::IndexState,
 }
 
 /// Where a failed backup is reported. It never stops the library opening.
@@ -227,6 +230,9 @@ impl DbState {
         }
 
         *self.library.write().await = Some(pool);
+        // After the pool is swapped: a build of the old library that finishes
+        // now is from before this, and isn't kept.
+        self.index.invalidate();
         Ok(())
     }
 
@@ -236,6 +242,31 @@ impl DbState {
         if let Some(task) = task {
             let _ = task.await;
         }
+    }
+
+    /// Back the open library up now, under today's daily name (ADR 008).
+    ///
+    /// For before something that can't be undone: the copy a toast points to
+    /// has to hold what was there a moment ago, not at this morning's open. A
+    /// daily backup still running is waited for, since both write today's file.
+    pub async fn back_up_library(&self) -> Result<PathBuf, crate::ipc::AppError> {
+        use crate::ipc::Classify;
+        self.backups_settled().await;
+        let pool = self.library().await?;
+        let file: String =
+            sqlx::query_scalar("SELECT file FROM pragma_database_list WHERE name = 'main'")
+                .fetch_one(&pool)
+                .await
+                .map_err(|e| e.to_string())
+                .or_database()?;
+        backup::write(
+            &pool,
+            &backup::dir_for(Path::new(&file)),
+            SystemTime::now(),
+            None,
+        )
+        .await
+        .or_database()
     }
 
     /// Open `<root>/.erti/project.db`, creating it on first use.
@@ -273,6 +304,44 @@ impl DbState {
             .as_ref()
             .map(|p| p.pool.clone())
             .ok_or_else(no_project)
+    }
+
+    /// The open library and its index, built on the first search after it
+    /// opened or after something it holds changed.
+    ///
+    /// The two come from one read, so a search never scores one library's
+    /// index and reads the passages back from another's.
+    pub async fn index(
+        &self,
+    ) -> Result<(SqlitePool, std::sync::Arc<index::Index>), crate::ipc::AppError> {
+        use crate::ipc::Classify;
+        // A few tries: each one that finds the index dropped since it chose
+        // the library chooses again. Writes during an ingest drop it once a
+        // paper, so a query can lose a race, but not many in a row.
+        for _ in 0..3 {
+            // Before the pool: an `open_library` between the two would
+            // otherwise leave the old library's index kept as the new one's.
+            let generation = self.index.generation();
+            let library = self.library().await?;
+            if let Some(index) = self.index.get(&library, generation).await.or_database()? {
+                return Ok((library, index));
+            }
+        }
+        // Still racing: build for this query alone, from the pool it read.
+        let library = self.library().await?;
+        let index = index::load(&library).await.or_database()?;
+        Ok((library, std::sync::Arc::new(index)))
+    }
+
+    /// Drop the index after a write it may not reflect. Every command that
+    /// writes a vector, or removes a row that has one, calls this.
+    pub fn invalidate_index(&self) {
+        self.index.invalidate();
+    }
+
+    /// Whether the index is built. For tests: it's built lazily.
+    pub fn index_is_built(&self) -> bool {
+        self.index.is_built()
     }
 
     pub async fn project_root(&self) -> Result<PathBuf, crate::ipc::AppError> {

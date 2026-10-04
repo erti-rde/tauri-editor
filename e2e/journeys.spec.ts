@@ -187,19 +187,15 @@ test('removing a source asks first, and its citations then render from the manus
 	await openProject(page);
 	await openManuscript(page);
 
-	// Saved once by this Erti, so the chapter carries its own copy of what it cites.
-	await page.locator('.ProseMirror').click();
-	await page.keyboard.press('End');
-	await page.keyboard.type(' More.');
-	await expect
-		.poll(() =>
-			page.evaluate(() => {
-				const files = window.__ERTI_FAKE__!.files;
-				const path = [...files.keys()].find((p) => p.endsWith('Chapter 1.erti.json'))!;
-				return (files.get(path) as string).includes('"erti"');
-			})
-		)
-		.toBe(true);
+	// Chapter 1 is from before 1.0, so it carries no copy of what it cites:
+	// removal has to give it one first, or its citation turns into an error.
+	const chapter = () =>
+		page.evaluate(() => {
+			const files = window.__ERTI_FAKE__!.files;
+			const path = [...files.keys()].find((p) => p.endsWith('Chapter 1.erti.json'))!;
+			return { text: files.get(path) as string, backup: files.has(`${path}.format0.bak`) };
+		});
+	expect((await chapter()).text).not.toContain('"erti"');
 
 	await page.getByRole('button', { name: 'Sources' }).click();
 	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
@@ -226,7 +222,11 @@ test('removing a source asks first, and its citations then render from the manus
 	await page.getByRole('button', { name: 'Notes' }).click();
 	await expect(page.getByText('· vaswani-2017.pdf')).toHaveCount(0);
 
-	// M1b-4 AC-3: dotted, from the chapter's own copy, not an error.
+	// M1b-4 AC-3: dotted, from the chapter's own copy, not an error. The copy
+	// was written by the removal, with the pre-1.0 file kept beside it.
+	const carried = await chapter();
+	expect(JSON.parse(carried.text).erti.format).toBe(1);
+	expect(carried.backup).toBe(true);
 	// The chapter is still open in its tab, and is read again as the editor returns.
 	await page.getByRole('button', { name: 'Files' }).click();
 	await expect(page.locator('.ProseMirror')).toContainText('Attention in Low-Resource Translation');
