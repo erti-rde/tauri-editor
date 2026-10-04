@@ -185,13 +185,22 @@
 				<Specimen name="TextArea" state="rest" target="textarea">
 					<TextArea label="Note" placeholder="What does this passage do?" />
 				</Specimen>
+				<Specimen name="TextArea" state="hover" target="textarea">
+					<TextArea label="Note" value="Contradicts the RNN section." />
+				</Specimen>
 				<Specimen name="TextArea" state="focus" target="textarea">
 					<TextArea label="Note" value="Contradicts the RNN section." />
 				</Specimen>
 				<Specimen name="TextArea" state="error" target="textarea">
 					<TextArea label="Note" value="" error="Write a note, or close without saving" />
 				</Specimen>
+				<Specimen name="TextArea" state="disabled" target="textarea">
+					<TextArea label="Note" value="Contradicts the RNN section." disabled />
+				</Specimen>
 				<Specimen name="SearchField" state="rest" target="input">
+					<SearchField label="Search notes" hideLabel placeholder="Search notes" />
+				</Specimen>
+				<Specimen name="SearchField" state="hover" target="input">
 					<SearchField label="Search notes" hideLabel placeholder="Search notes" />
 				</Specimen>
 				<Specimen name="SearchField" state="filled" target="input">
@@ -199,6 +208,9 @@
 				</Specimen>
 				<Specimen name="SearchField" state="focus" target="input">
 					<SearchField label="Search notes" hideLabel value="attention" />
+				</Specimen>
+				<Specimen name="SearchField" state="disabled" target="input">
+					<SearchField label="Search notes" hideLabel value="attention" disabled />
 				</Specimen>
 			</div>
 		</section>
