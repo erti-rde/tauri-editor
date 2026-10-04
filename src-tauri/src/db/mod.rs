@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod index;
 pub mod queries;
 pub mod salvage;
 pub mod schema;
@@ -25,6 +26,8 @@ pub struct DbState {
     pub grants: std::sync::Arc<crate::scope::Grants>,
     /// The daily backup running in the background, if one was started.
     backup: std::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
+    /// The library's vectors in memory, for search by meaning (ADR 005).
+    index: index::IndexState,
 }
 
 /// Where a failed backup is reported. It never stops the library opening.
@@ -227,6 +230,9 @@ impl DbState {
         }
 
         *self.library.write().await = Some(pool);
+        // After the pool is swapped: a build of the old library that finishes
+        // now is from before this, and isn't kept.
+        self.index.invalidate();
         Ok(())
     }
 
@@ -273,6 +279,25 @@ impl DbState {
             .as_ref()
             .map(|p| p.pool.clone())
             .ok_or_else(no_project)
+    }
+
+    /// The open library's index, built on the first search after it opened
+    /// or after something it holds changed.
+    pub async fn index(&self) -> Result<std::sync::Arc<index::Index>, crate::ipc::AppError> {
+        use crate::ipc::Classify;
+        let library = self.library().await?;
+        self.index.get(&library).await.or_database()
+    }
+
+    /// Drop the index after a write it may not reflect. Every command that
+    /// writes a vector, or removes a row that has one, calls this.
+    pub fn invalidate_index(&self) {
+        self.index.invalidate();
+    }
+
+    /// Whether the index is built. For tests: it's built lazily.
+    pub fn index_is_built(&self) -> bool {
+        self.index.is_built()
     }
 
     pub async fn project_root(&self) -> Result<PathBuf, crate::ipc::AppError> {

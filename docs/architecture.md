@@ -18,11 +18,12 @@ planned item lands, it says so.
 │ lib/export            PURE: LaTeX, BibTeX              lib/theme      tokens, palettes, contrast│
 │ lib/ui                primitives (M1c grows these)     lib/stores     app state + IPC wrappers  │
 └───────────────────────────────────────┬───────────────────────────────────────────────────────┘
-                                        │ lib/ipc: 42 typed commands (ADR 011); only results cross, never vectors
+                                        │ lib/ipc: 46 typed commands (ADR 011); only results cross, never vectors
 ┌─────────────────────────────── Rust core (src-tauri/src) ─────────────────────────────────────┐
 │ lib.rs            plugins, managed state, the command list (generate_handler!)                │
 │ db_commands.rs    commands over the two databases        commands.rs   fs listing, embedding   │
-│ db/schema.rs      migrations (frozen)  db/queries.rs     every SQL statement, similarity       │
+│ db/schema.rs      migrations (frozen)  db/queries.rs     every SQL statement                   │
+│ db/index.rs       vectors in memory, search by meaning (ADR 005)                               │
 │ ml/mod.rs         ONNX session (all-MiniLM-L6-v2)        latex.rs      detect + compile TeX    │
 │ fs_errors.rs      human messages for OS errors                                                 │
 └───────────────┬──────────────────────────────────────┬────────────────────────────────────────┘
@@ -51,7 +52,8 @@ in the Tauri store `settings-store.json`.
   source ids. `stores/citationStore.ts` + `citations/document.ts` render **every** citation
   in the document together (disambiguation, ibid., note numbers). Output goes through
   `citations/sanitize.ts`.
-- **Finding sources.** Selection → `search_sources` (Rust embeds the text, scores chunks) →
+- **Finding sources.** Selection → `search_sources` (Rust embeds the text, scores chunks on the
+  library's in-memory index, `db/index.rs`) →
   `extensions/citation/Result.svelte`. A result, like a mark, carries two ids: `source_id`, the
   work to cite (ADR 003), and `sha256`, the file "Show in PDF" opens.
 - **Works and aliases.** `alias_source` in `db/queries.rs` is the only write to

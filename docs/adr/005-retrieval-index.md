@@ -1,6 +1,7 @@
 # ADR 005 — An in-memory vector index in Rust, rebuilt from SQLite
 
-**Status:** Accepted, 2026-09-24. Numbers are estimates until M2 measures them.
+**Status:** Accepted, 2026-09-24, **amended 2026-10-04** (see Amendment below). Numbers are
+estimates until M2 measures them.
 
 ## Context
 
@@ -44,3 +45,19 @@ change, and the Notes panel already follows the cursor.
 - Consistency is a property of the write commands, so each one gets a test asserting the index
   sees the write.
 - Normalising at load keeps stored vectors untouched, so no data migration is needed.
+
+## Amendment (2026-10-04): the work is resolved at query time
+
+Made while implementing M2-1, before the index shipped.
+
+- **An entry holds the row's owner, not its canonical id.** The owner is the `sha256` column:
+  a file's hash for a chunk or a mark, the work's id for a source note. It is resolved through
+  `source_aliases` on each query, once per file rather than once per row. Merging two works
+  then changes nothing in the index, so alias writes drop out of the list of writers that have
+  to keep it current. The cost is one read of the alias table per query, which the searches
+  already did.
+- **Until M2-2, a write drops the index rather than updating it.** The next query rebuilds it.
+  That's correct from the first commit. M2-2 replaces the drop with in-place updates, and
+  tests each writer against a full rebuild.
+- **`rayon` isn't added yet.** A single query is sequential, as decided above, and nothing
+  queries in batches. It comes with the first batch caller, if M2-4's measurements call for it.

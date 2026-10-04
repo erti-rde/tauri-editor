@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 
+use super::index::{Filter, HitKind, Index, Key, Row as IndexRow};
 use super::{pack_embedding, unpack_embedding};
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
@@ -561,12 +562,15 @@ pub async fn alias_source(
 
 /// Rank chunks against a query vector.
 ///
-/// Scoring happens here rather than in the webview: the old implementation
+/// Scoring happens in Rust rather than in the webview: the old implementation
 /// selected every chunk and embedding, sent them across the IPC boundary, and
 /// ran cosine in JS on the main thread. Only the top results cross now.
 ///
 /// Results carry `in_project` so the UI can list the project's own sources first
 /// while keeping the rest of the library one click away.
+///
+/// This builds an index for the one query. The app holds one per library
+/// instead (`DbState::index`) and calls `search_chunks`.
 pub async fn search_similar(
     library: &SqlitePool,
     query_embedding: &[f32],
@@ -574,11 +578,164 @@ pub async fn search_similar(
     limit: usize,
     include_library: bool,
 ) -> Result<Vec<ScoredChunk>, String> {
-    let rows = sqlx::query("SELECT sha256, idx, text, page_start, section, embedding FROM chunks")
+    let index = super::index::load(library).await?;
+    search_chunks(
+        &index,
+        library,
+        query_embedding,
+        project_hashes,
+        limit,
+        include_library,
+    )
+    .await
+}
+
+/// `search_similar` on an index already built.
+pub async fn search_chunks(
+    index: &Index,
+    library: &SqlitePool,
+    query_embedding: &[f32],
+    project_hashes: &[String],
+    limit: usize,
+    include_library: bool,
+) -> Result<Vec<ScoredChunk>, String> {
+    let hits = search_index(
+        index,
+        library,
+        query_embedding,
+        project_hashes,
+        &[HitKind::Chunk],
+        limit,
+        include_library,
+    )
+    .await?;
+    Ok(hits
+        .into_iter()
+        .filter_map(|hit| match hit {
+            Hit::Chunk(chunk) => Some(chunk),
+            _ => None,
+        })
+        .collect())
+}
+
+/// Every vector in the library, for the index: chunks, marks and source notes.
+///
+/// No order is asked for, so rows come back as the tables are laid out, which
+/// is the order the scan in `search_similar` read them in before the index.
+pub async fn index_rows(library: &SqlitePool) -> Result<Vec<IndexRow>, String> {
+    let mut rows = Vec::new();
+
+    for r in sqlx::query("SELECT sha256, idx, embedding FROM chunks")
         .fetch_all(library)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?
+    {
+        let sha256: String = r.get("sha256");
+        rows.push(IndexRow {
+            key: Key::Chunk {
+                sha256: sha256.clone(),
+                idx: r.get("idx"),
+            },
+            owner: sha256,
+            embedding: unpack_embedding(&r.get::<Vec<u8>, _>("embedding")),
+        });
+    }
 
+    for r in sqlx::query(
+        "SELECT a.id, a.sha256, e.embedding
+           FROM annotations a JOIN annotation_embeddings e ON e.id = a.id",
+    )
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?
+    {
+        rows.push(IndexRow {
+            key: Key::Annotation(r.get("id")),
+            owner: r.get("sha256"),
+            embedding: unpack_embedding(&r.get::<Vec<u8>, _>("embedding")),
+        });
+    }
+
+    for r in sqlx::query(
+        "SELECT n.id, n.sha256, e.embedding
+           FROM source_notes n JOIN source_note_embeddings e ON e.id = n.id",
+    )
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?
+    {
+        rows.push(IndexRow {
+            key: Key::SourceNote(r.get("id")),
+            owner: r.get("sha256"),
+            embedding: unpack_embedding(&r.get::<Vec<u8>, _>("embedding")),
+        });
+    }
+
+    Ok(rows)
+}
+
+/// A note about a work as a whole (ADR 004).
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+pub struct SourceNote {
+    pub id: String,
+    /// The work's id. Always canonical when written (`alias_source` moves a
+    /// work's notes with it).
+    pub sha256: String,
+    /// Markdown. Empty when the note is only the quote.
+    pub body: String,
+    pub quote: Option<String>,
+    /// The page as the paper prints it.
+    pub page_label: Option<String>,
+    pub label_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A source note, ranked against something the researcher is looking for.
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+pub struct ScoredSourceNote {
+    #[serde(flatten)]
+    pub note: SourceNote,
+    pub similarity: f32,
+    /// The work the note is about, resolved (ADR 003).
+    pub source_id: String,
+    /// False when the work is outside the open project's source set.
+    pub in_project: bool,
+}
+
+/// One result from the index, whatever kind of row it is (ADR 005).
+///
+/// `kind` says which, and `hit` holds the row as each kind's own search
+/// returns it. Adjacent rather than flattened: a mark already has a field
+/// called `kind` (highlight, area, page note).
+// A search returns a few dozen of these at most, so the size of the largest
+// variant costs nothing worth a `Box` in every match.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "kind", content = "hit", rename_all = "snake_case")]
+pub enum Hit {
+    Chunk(ScoredChunk),
+    Annotation(ScoredAnnotation),
+    SourceNote(ScoredSourceNote),
+}
+
+/// The best `limit` rows of the index for a query vector, read back in full.
+///
+/// `kinds` (empty for all) and the project scope are applied before scoring.
+/// The project's rows come first, then the closest, across kinds: a caller
+/// that shows kinds apart asks for one at a time, or splits by `kind`.
+///
+/// A row the index holds but the library no longer has is left out. It can
+/// only happen in the moment between a delete and the index being dropped.
+pub async fn search_index(
+    index: &Index,
+    library: &SqlitePool,
+    query_embedding: &[f32],
+    project_hashes: &[String],
+    kinds: &[HitKind],
+    limit: usize,
+    include_library: bool,
+) -> Result<Vec<Hit>, String> {
     // Membership is by work on both sides: the project may name a work by a
     // file's hash, and a chunk always comes from a file.
     let aliases = alias_map(library).await?;
@@ -586,42 +743,82 @@ pub async fn search_similar(
         .iter()
         .map(|id| resolve(&aliases, id))
         .collect();
+    let filter = Filter {
+        kinds,
+        project: &in_set,
+        include_library,
+        aliases: &aliases,
+    };
 
-    let mut scored: Vec<ScoredChunk> = rows
-        .into_iter()
-        .filter_map(|r| {
-            let sha256: String = r.get("sha256");
-            let source_id = resolve(&aliases, &sha256).to_string();
-            let in_project = in_set.contains(source_id.as_str());
-            if !in_project && !include_library {
-                return None;
+    let mut hits = Vec::new();
+    for found in index.search(query_embedding, &filter, limit) {
+        let source_id = found.source_id.to_string();
+        let hit = match found.key {
+            Key::Chunk { sha256, idx } => sqlx::query(
+                "SELECT text, page_start, section FROM chunks WHERE sha256 = ? AND idx = ?",
+            )
+            .bind(sha256)
+            .bind(idx)
+            .fetch_optional(library)
+            .await
+            .map_err(|e| e.to_string())?
+            .map(|r| {
+                Hit::Chunk(ScoredChunk {
+                    sha256: sha256.clone(),
+                    source_id,
+                    idx: *idx,
+                    text: r.get("text"),
+                    page_start: r.get("page_start"),
+                    section: r.get("section"),
+                    similarity: found.similarity,
+                    in_project: found.in_project,
+                })
+            }),
+            Key::Annotation(id) => {
+                sqlx::query(&format!("{ANNOTATION_SEARCH_SELECT} WHERE a.id = ?"))
+                    .bind(id)
+                    .fetch_optional(library)
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .map(|r| {
+                        Hit::Annotation(ScoredAnnotation {
+                            annotation: annotation_from(&r),
+                            similarity: found.similarity,
+                            source_id,
+                            in_project: found.in_project,
+                            file_name: r.try_get("file_name").ok(),
+                        })
+                    })
             }
-
-            let embedding = unpack_embedding(&r.get::<Vec<u8>, _>("embedding"));
-            Some(ScoredChunk {
-                similarity: crate::commands::cosine_similarity(query_embedding, &embedding),
-                idx: r.get("idx"),
-                text: r.get("text"),
-                page_start: r.get("page_start"),
-                section: r.get("section"),
-                sha256,
-                source_id,
-                in_project,
-            })
-        })
-        .collect();
-
-    scored.sort_by(|a, b| {
-        // Project sources first, then by similarity.
-        b.in_project.cmp(&a.in_project).then(
-            b.similarity
-                .partial_cmp(&a.similarity)
-                .unwrap_or(std::cmp::Ordering::Equal),
-        )
-    });
-    scored.truncate(limit);
-
-    Ok(scored)
+            Key::SourceNote(id) => sqlx::query(
+                "SELECT id, sha256, body, quote, page_label, label_id, created_at, updated_at
+                   FROM source_notes WHERE id = ?",
+            )
+            .bind(id)
+            .fetch_optional(library)
+            .await
+            .map_err(|e| e.to_string())?
+            .map(|r| {
+                Hit::SourceNote(ScoredSourceNote {
+                    note: SourceNote {
+                        id: r.get("id"),
+                        sha256: r.get("sha256"),
+                        body: r.get("body"),
+                        quote: r.get("quote"),
+                        page_label: r.get("page_label"),
+                        label_id: r.get("label_id"),
+                        created_at: r.get("created_at"),
+                        updated_at: r.get("updated_at"),
+                    },
+                    similarity: found.similarity,
+                    source_id,
+                    in_project: found.in_project,
+                })
+            }),
+        };
+        hits.extend(hit);
+    }
+    Ok(hits)
 }
 
 pub async fn set_embedding_meta(
@@ -1181,15 +1378,6 @@ const ANNOTATION_SEARCH_SELECT: &str = "SELECT a.id, a.sha256, a.kind, a.label_i
               ORDER BY l.last_seen DESC LIMIT 1) AS file_name
        FROM annotations a";
 
-/// The same columns, plus the vector, for the semantic search.
-const ANNOTATION_SEARCH_WITH_EMBEDDING: &str = "SELECT a.id, a.sha256, a.kind, a.label_id, a.page,
-            a.rects, a.quote, a.prefix, a.suffix, a.char_start, a.char_end, a.note, a.style,
-            a.page_label, a.origin, a.created_at, a.updated_at, e.embedding,
-            (SELECT l.file_name FROM locations l WHERE l.sha256 = a.sha256
-              ORDER BY l.last_seen DESC LIMIT 1) AS file_name
-       FROM annotations a
-       JOIN annotation_embeddings e ON e.id = a.id";
-
 /// Find marks by the words in them.
 ///
 /// `LIKE` rather than FTS5, deliberately. There is no full-text index anywhere
@@ -1247,49 +1435,46 @@ pub async fn search_annotations_literally(
 ///
 /// Scored in Rust over the whole set, the same way `search_similar` handles
 /// chunks: a mark's vector has no reason to cross the IPC boundary when only the
-/// ranking is wanted on the other side.
+/// ranking is wanted on the other side. Every mark is a candidate, the
+/// project's first, as in the literal search.
+///
+/// Like `search_similar`, this builds an index for the one query; the app
+/// calls `search_annotations_in` with the library's own.
 pub async fn search_annotations_semantically(
     pool: &SqlitePool,
     query_embedding: &[f32],
     project_hashes: &[String],
     limit: usize,
 ) -> Result<Vec<ScoredAnnotation>, String> {
-    // One query, joined: the mark and its vector come back together rather than
-    // being fetched separately and stitched by id.
-    let rows = sqlx::query(ANNOTATION_SEARCH_WITH_EMBEDDING)
-        .fetch_all(pool)
-        .await
-        .map_err(|e| e.to_string())?;
+    let index = super::index::load(pool).await?;
+    search_annotations_in(&index, pool, query_embedding, project_hashes, limit).await
+}
 
-    let aliases = alias_map(pool).await?;
-    let in_set: std::collections::HashSet<&str> = project_hashes
-        .iter()
-        .map(|id| resolve(&aliases, id))
-        .collect();
-
-    let mut scored: Vec<ScoredAnnotation> = rows
-        .iter()
-        .map(|row| {
-            let vector = unpack_embedding(row.get::<Vec<u8>, _>("embedding").as_slice());
-            scored_from(
-                row,
-                crate::commands::cosine_similarity(query_embedding, &vector),
-                &aliases,
-                &in_set,
-            )
+/// `search_annotations_semantically` on an index already built.
+pub async fn search_annotations_in(
+    index: &Index,
+    pool: &SqlitePool,
+    query_embedding: &[f32],
+    project_hashes: &[String],
+    limit: usize,
+) -> Result<Vec<ScoredAnnotation>, String> {
+    let hits = search_index(
+        index,
+        pool,
+        query_embedding,
+        project_hashes,
+        &[HitKind::Annotation],
+        limit,
+        true,
+    )
+    .await?;
+    Ok(hits
+        .into_iter()
+        .filter_map(|hit| match hit {
+            Hit::Annotation(mark) => Some(mark),
+            _ => None,
         })
-        .collect();
-
-    // Project first, then by similarity — the same ordering the chunk search
-    // uses, so the two surfaces behave alike.
-    scored.sort_by(|a, b| {
-        b.in_project
-            .cmp(&a.in_project)
-            .then(b.similarity.total_cmp(&a.similarity))
-    });
-    scored.truncate(limit);
-
-    Ok(scored)
+        .collect())
 }
 
 /// What a reader would call a colour, from its hue.
