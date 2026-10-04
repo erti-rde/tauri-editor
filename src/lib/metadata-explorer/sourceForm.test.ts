@@ -6,7 +6,7 @@ import { CitationEngine } from '$lib/citations/engine';
 import type { CitationItem } from '$lib/stores/citationStore';
 
 import { augment, type OriginalZoteroSchema } from './adapterCslZotero';
-import { fromForm, toForm, type FormCreator } from './cslForm';
+import { formFields, fromForm, toForm, type FormCreator } from './cslForm';
 import {
 	FIRST_TYPES,
 	isRequired,
@@ -176,6 +176,41 @@ describe('the form (M1b-5 AC-1)', () => {
 		expect(Object.keys(missing(form, type))).toEqual(['bookTitle']);
 	});
 
+	it('names an acronym as one in what it says', () => {
+		const type = typeNamed('webpage');
+		const form = toForm({}, type);
+		form.fields.title = 'A page';
+		expect(missing(form, type)).toEqual({ url: 'Enter the URL.' });
+		expect(type.fields.find((f) => f.field === 'url')?.label).toBe('URL');
+		expect(typeNamed('journalArticle').fields.find((f) => f.field === 'DOI')?.label).toBe('DOI');
+	});
+
+	it('shows one field for one CSL variable, so the second can’t erase the first', () => {
+		const type = typeNamed('journalArticle');
+		const series = formFields(type).filter((f) => f.cslField === 'collection-title');
+		expect(series.map((f) => f.field)).toEqual(['series']);
+
+		const form = toForm({}, type);
+		form.fields.title = 'A paper';
+		form.fields.series = 'Lecture Notes';
+		expect(fromForm(form, type)['collection-title']).toBe('Lecture Notes');
+	});
+
+	it('keeps the names of a kind whose first role is not called author', () => {
+		// A presentation's presenter is its CSL author, as Zotero exports it;
+		// with no mapping, the names typed were dropped on saving.
+		const type = typeNamed('presentation');
+		const form = toForm({}, type);
+		form.fields.title = 'A talk';
+		form.creators.push({ creatorType: 'presenter', family: 'Hall', given: 'Stuart' });
+
+		const item = fromForm(form, type);
+		expect(item.author).toEqual([{ family: 'Hall', given: 'Stuart' }]);
+		expect(toForm(item, type).creators).toEqual([
+			{ creatorType: 'presenter', family: 'Hall', given: 'Stuart' }
+		]);
+	});
+
 	it('makes ids no file hash can be', () => {
 		expect(newSourceId()).toMatch(
 			/^erti:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -187,6 +222,12 @@ describe('an existing source (M1b-5 AC-5)', () => {
 	it('shows its recorded kind', () => {
 		expect(itemTypeOf('conferencePaper', { type: 'paper-conference' }, schema)).toBe(
 			'conferencePaper'
+		);
+	});
+
+	it('opens as the kind a correction changed it to, not the one resolving guessed', () => {
+		expect(itemTypeOf('journalArticle', { type: 'book', zotero_type: 'book' }, schema)).toBe(
+			'book'
 		);
 	});
 

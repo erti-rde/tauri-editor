@@ -34,8 +34,10 @@
 		schema.itemTypes.find((t) => t.itemType === itemType && t.cslType);
 
 	/**
-	 * The item as it stands, beyond what the form shows: switching kind and back
-	 * keeps every value, because what the new kind has no field for stays here.
+	 * Everything typed so far, beyond what the form shows: switching kind and
+	 * back keeps every value, because what the new kind has no field for stays
+	 * here. For showing only: saving writes over the source as it was, so a
+	 * value typed under a kind that was then left isn't stored out of sight.
 	 */
 	// svelte-ignore state_referenced_locally
 	let draft: CslItem = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
@@ -58,7 +60,8 @@
 	async function save() {
 		tried = true;
 		if (!type || Object.keys(missing(form, type)).length) return;
-		const item: CslItem = { ...fromForm(form, type, draft), zotero_type: type.itemType };
+		const original = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
+		const item: CslItem = { ...fromForm(form, type, original), zotero_type: type.itemType };
 		saving = true;
 		try {
 			if (record) {

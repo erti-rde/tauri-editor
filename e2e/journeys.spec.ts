@@ -176,7 +176,7 @@ test('a book with no PDF can be entered by hand, and joins the project', async (
 		[...window.__ERTI_FAKE__!.state.library.values()].find((s) => s.csl_json?.includes('Orality'))
 	);
 	expect(added?.sha256).toMatch(/^erti:[0-9a-f-]{36}$/);
-	expect(added?.resolved_via).toBe('manual');
+	expect(added?.resolved_via).toBe('by-hand');
 });
 
 // M1b-4, UX-4

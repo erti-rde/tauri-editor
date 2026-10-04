@@ -274,13 +274,17 @@ pub async fn add_source_without_file(
 
 /// A source the researcher entered by hand (M1b-5): an `erti:<uuid>` work
 /// with no file, its details as typed. Resolves true when it was new.
+///
+/// Recorded as resolved `'by-hand'`, not `'manual'`: that already means a
+/// DOI typed by hand and its details fetched, which is a different source of
+/// truth (the schema's comment on the column predates both).
 pub async fn add_source_by_hand(
     pool: &SqlitePool,
     id: &str,
     csl_json: &str,
     zotero_type: &str,
 ) -> Result<bool, String> {
-    insert_source_without_file(pool, id, csl_json, Some(zotero_type), None, "manual").await
+    insert_source_without_file(pool, id, csl_json, Some(zotero_type), None, "by-hand").await
 }
 
 async fn insert_source_without_file(

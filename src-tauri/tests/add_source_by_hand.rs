@@ -37,7 +37,7 @@ async fn saving_adds_a_no_file_source_to_the_library_and_the_project() {
             .unwrap();
     assert_eq!(row.get::<String, _>("csl_json"), BOOK);
     assert_eq!(row.get::<String, _>("zotero_type"), "book");
-    assert_eq!(row.get::<String, _>("resolved_via"), "manual");
+    assert_eq!(row.get::<String, _>("resolved_via"), "by-hand");
 
     let project = state.project().await.unwrap();
     let listed = queries::project_sources(&library, &project).await.unwrap();
@@ -84,6 +84,31 @@ async fn a_source_needs_a_title_and_a_kind() {
         .await
         .unwrap_err();
     assert_eq!(untyped.kind, ErrorKind::InvalidInput);
+
+    // Nothing for citeproc to format it by.
+    let no_csl_type =
+        add_source_by_hand_in(&state, ID.into(), r#"{"title":"X"}"#.into(), "book".into())
+            .await
+            .unwrap_err();
+    assert_eq!(no_csl_type.kind, ErrorKind::InvalidInput);
+}
+
+#[tokio::test]
+async fn a_source_the_project_could_not_take_is_not_left_in_the_library() {
+    let state = opened("half").await;
+    state.project().await.unwrap().close().await;
+
+    add_source_by_hand_in(&state, ID.into(), BOOK.into(), "book".into())
+        .await
+        .unwrap_err();
+
+    let library = state.library().await.unwrap();
+    let left: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sources WHERE sha256 = ?")
+        .bind(ID)
+        .fetch_one(&library)
+        .await
+        .unwrap();
+    assert_eq!(left, 0, "no copy in no project for the next try to add to");
 }
 
 #[tokio::test]

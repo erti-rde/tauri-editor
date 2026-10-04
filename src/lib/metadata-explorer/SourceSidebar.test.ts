@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 
 import UiHarness from '$lib/ui/UiHarness.svelte';
@@ -26,7 +26,6 @@ const schema = augment(
 const CHAPTER = {
 	id: 'sha-chapter',
 	title: 'The Ethnographic Present',
-	path: '/papers/fabian.pdf',
 	csl: {
 		id: 'sha-chapter',
 		type: 'chapter',
@@ -107,5 +106,43 @@ describe('a new source (M1b-5 AC-1)', () => {
 		expect(screen.queryByRole('textbox')).toBeNull();
 		expect(screen.getByRole('button', { name: 'Add to library' })).toBeDisabled();
 		expect(screen.queryByRole('button', { name: 'Remove from library…' })).toBeNull();
+	});
+});
+
+describe('switching kind while entering one', () => {
+	it('saves only what the chosen kind shows, not what was typed under another', async () => {
+		const user = userEvent.setup();
+		const handlers = { onclose: vi.fn(), onsaved: vi.fn(), onremoved: vi.fn() };
+		render(UiHarness, { props: { component: SourceSidebar, schema, ...handlers } });
+		// From the keyboard, by its place among the common kinds (Book, Book
+		// Section, Journal Article…): jsdom can't point at an option.
+		const kind = async (name: string, place: number) => {
+			const trigger = screen.getByRole('button', { name: 'Kind of source' });
+			trigger.focus();
+			// jsdom leaves it marked open after a choice made by typing.
+			if (trigger.getAttribute('aria-expanded') !== 'true') await user.keyboard('{Enter}');
+			await screen.findByRole('listbox', { hidden: true });
+			await user.keyboard('{Home}' + '{ArrowDown}'.repeat(place) + '{Enter}');
+			await waitFor(() =>
+				expect(screen.getByRole('button', { name: 'Kind of source' })).toHaveTextContent(name)
+			);
+		};
+
+		await kind('Journal Article', 2);
+		await user.type(screen.getByRole('textbox', { name: 'Title (required)' }), 'Orality');
+		await user.type(
+			screen.getByRole('textbox', { name: 'Publication Title (required)' }),
+			'Nature'
+		);
+		await kind('Book', 0);
+		// Kept for showing: the title carries over.
+		expect(screen.getByRole('textbox', { name: 'Title (required)' })).toHaveValue('Orality');
+		await user.click(screen.getByRole('button', { name: 'Add to library' }));
+
+		expect(db.addSourceByHand).toHaveBeenCalledTimes(1);
+		const [, json] = db.addSourceByHand.mock.calls[0] as unknown as [string, string, string];
+		const item = JSON.parse(json);
+		expect(item).toMatchObject({ type: 'book', title: 'Orality' });
+		expect(item).not.toHaveProperty('container-title');
 	});
 });

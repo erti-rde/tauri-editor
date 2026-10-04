@@ -1,5 +1,5 @@
 import type { AugmentedZoteroItemType, AugmentedZoteroSchema } from './adapterCslZotero';
-import type { CslItem, FormValues } from './cslForm';
+import { formFields, type CslItem, type FormValues } from './cslForm';
 
 /**
  * The source form's decisions (M1b-5, docs/ux.md UX-2): which kinds come
@@ -10,16 +10,15 @@ import type { CslItem, FormValues } from './cslForm';
 /** What people add by hand most, first; the rest of Zotero's after, A to Z (UX-2). */
 export const FIRST_TYPES = ['book', 'bookSection', 'journalArticle', 'webpage', 'report', 'thesis'];
 
-/** The kinds the form offers: those with a CSL type to render as. */
+/** The kinds the form offers: the schema's, those with a CSL type to render as, in UX-2's order. */
 export function typeChoices(schema: AugmentedZoteroSchema): { value: string; label: string }[] {
-	const offered = schema.itemTypes.filter((t) => t.cslType);
-	const rank = (t: AugmentedZoteroItemType) => {
-		const i = FIRST_TYPES.indexOf(t.itemType);
+	const rank = (value: string) => {
+		const i = FIRST_TYPES.indexOf(value);
 		return i === -1 ? FIRST_TYPES.length : i;
 	};
-	return [...offered]
-		.sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label))
-		.map((t) => ({ value: t.itemType, label: t.label }));
+	return [...schema.typeFields].sort(
+		(a, b) => rank(a.value) - rank(b.value) || a.label.localeCompare(b.label)
+	);
 }
 
 /**
@@ -42,19 +41,31 @@ export function isRequired(itemType: string, field: string): boolean {
 /** The required fields left empty, by Zotero field, with what to say about each. */
 export function missing(form: FormValues, type: AugmentedZoteroItemType): Record<string, string> {
 	const out: Record<string, string> = {};
-	for (const field of type.fields) {
-		if (!field.cslField || !isRequired(type.itemType, field.field)) continue;
+	for (const field of formFields(type)) {
+		if (!isRequired(type.itemType, field.field)) continue;
 		if (!(form.fields[field.field] ?? '').trim()) {
-			out[field.field] = `Enter the ${field.label.toLowerCase()}.`;
+			out[field.field] = `Enter the ${inSentence(field.label)}.`;
 		}
 	}
 	return out;
 }
 
+/** A Title Case label mid-sentence: "Book Title" is "book title", but URL stays URL. */
+function inSentence(label: string): string {
+	return label
+		.split(' ')
+		.map((word) => (/^[A-Z0-9]{2,}$/.test(word) ? word : word.toLowerCase()))
+		.join(' ');
+}
+
 /**
- * The kind to show a source as. Its recorded Zotero type when it has one;
- * otherwise, for a source resolved before `zotero_type` was kept, the kind its
- * CSL type maps to (M1b-5 AC-5). Undefined when neither says.
+ * The kind to show a source as: the one a correction saved, then its recorded
+ * Zotero type; otherwise, for a source resolved before `zotero_type` was
+ * kept, the kind its CSL type maps to (M1b-5 AC-5). Undefined when none says.
+ *
+ * The correction first, since it's the researcher's choice: the library's
+ * recorded kind is what resolving guessed, and a kind changed and saved must
+ * open as what it was changed to.
  */
 export function itemTypeOf(
 	recorded: string | null | undefined,
@@ -66,8 +77,8 @@ export function itemTypeOf(
 			? itemType
 			: undefined;
 	return (
-		known(recorded) ??
 		known(typeof csl?.zotero_type === 'string' ? csl.zotero_type : undefined) ??
+		known(recorded) ??
 		known(typeof csl?.type === 'string' ? schema.cslToZoteroTypeMap.get(csl.type) : undefined)
 	);
 }

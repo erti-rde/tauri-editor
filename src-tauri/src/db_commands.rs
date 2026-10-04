@@ -182,7 +182,13 @@ pub async fn add_source_by_hand_in(
     if !titled {
         return Err(invalid("Give the source a title."));
     }
-    if zotero_type.is_empty() || zotero_type.len() > 64 {
+    // A CSL type too: citeproc formats by it, and without one the source is
+    // stored ready to cite but can't be.
+    let typed = csl
+        .get("type")
+        .and_then(|v| v.as_str())
+        .is_some_and(|t| !t.is_empty());
+    if !typed || zotero_type.is_empty() || zotero_type.len() > 64 {
         return Err(invalid("Choose what kind of source it is."));
     }
 
@@ -197,7 +203,13 @@ pub async fn add_source_by_hand_in(
         ));
     }
     if let Ok(project) = state.project().await {
-        queries::add_to_project(&project, &id).await.or_database()?;
+        // Two databases, so no one transaction: a source the project failed to
+        // take is taken back out of the library, or "Add" again would leave a
+        // copy in no project for each try.
+        if let Err(e) = queries::add_to_project(&project, &id).await {
+            let _ = queries::remove_source(&library, &id).await;
+            return Err(AppError::database(e));
+        }
     }
     Ok(())
 }

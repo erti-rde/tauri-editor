@@ -494,7 +494,7 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 				csl_json: cslJson,
 				zotero_type: zoteroType,
 				doi: null,
-				resolved_via: 'manual',
+				resolved_via: 'by-hand',
 				state: 'ready',
 				last_error: null
 			});

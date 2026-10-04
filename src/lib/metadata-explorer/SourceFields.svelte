@@ -4,7 +4,7 @@
 	import { Button, IconButton, Select, TextField } from '$lib/ui';
 
 	import type { AugmentedZoteroItemType, AugmentedZoteroSchema } from './adapterCslZotero';
-	import type { FormValues } from './cslForm';
+	import { formFields, formRoles, type FormValues } from './cslForm';
 	import { isRequired, typeChoices } from './sourceForm';
 
 	/**
@@ -25,14 +25,15 @@
 	let { schema, type, form = $bindable(), errors = {}, onTypeChange }: Props = $props();
 
 	const choices = $derived(typeChoices(schema));
-	const fields = $derived(type?.fields.filter((f) => f.cslField) ?? []);
+	const fields = $derived(type ? formFields(type) : []);
 	const roles = $derived(
-		(type?.creatorTypes ?? [])
-			.filter((r) => r.cslVariable)
-			.map((r) => ({ value: r.creatorType, label: r.label }))
+		(type ? formRoles(type) : []).map((r) => ({ value: r.creatorType, label: r.label }))
 	);
+	// The primary role, which always has a CSL variable now (it's the author
+	// when nothing else claims it), or failing that the first offered.
 	const firstRole = $derived(
-		type?.creatorTypes.find((r) => r.primary)?.creatorType ?? roles[0]?.value
+		roles.find((r) => type?.creatorTypes.find((c) => c.primary)?.creatorType === r.value)?.value ??
+			roles[0]?.value
 	);
 
 	const labelOf = (field: { field: string; label: string }) =>
