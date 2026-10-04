@@ -64,6 +64,13 @@ export const commands = {
 	setSourceMetadata: (sha256: string, cslJson: string, zoteroType: string | null, doi: string | null, resolvedVia: string) => typedError<null, AppError>(__TAURI_INVOKE("set_source_metadata", { sha256, cslJson, zoteroType, doi, resolvedVia })),
 	/**  Sources in the open project, with project-local metadata overrides applied. */
 	projectSources: () => typedError<Source[], AppError>(__TAURI_INVOKE("project_sources")),
+	/**
+	 *  Every alias in the library, alias → canonical (ADR 003).
+	 * 
+	 *  The webview resolves the ids a manuscript cites with this, so a citation
+	 *  of a PDF's hash renders as the work the PDF was attached to.
+	 */
+	sourceAliases: () => typedError<{ [key in string]: string }, AppError>(__TAURI_INVOKE("source_aliases")),
 	addToProject: (sha256: string) => typedError<null, AppError>(__TAURI_INVOKE("add_to_project", { sha256 })),
 	setMetadataOverride: (sha256: string, cslJson: string) => typedError<null, AppError>(__TAURI_INVOKE("set_metadata_override", { sha256, cslJson })),
 	/**
@@ -298,6 +305,11 @@ export type SalvageReport = {
 export type ScoredAnnotation = {
 	/**  Cosine similarity for a semantic search; 1.0 for a literal match. */
 	similarity: number | null,
+	/**
+	 *  The work the mark's paper belongs to, for citing it (ADR 003). The
+	 *  annotation's own `sha256` stays the file's, for "Show in PDF".
+	 */
+	source_id: string,
 	/**  False when the mark is on a paper outside the open project's source set. */
 	in_project: boolean,
 	/**  The paper's filename, so a result can name where it came from. */
@@ -305,7 +317,16 @@ export type ScoredAnnotation = {
 } & Annotation;
 
 export type ScoredChunk = {
+	/**
+	 *  The file the passage is in, which "Show in PDF" opens. Not for citing:
+	 *  a file attached to a work is an alias of it (ADR 003).
+	 */
 	sha256: string,
+	/**
+	 *  The work the passage belongs to: the id to cite, to add to a project
+	 *  and to read metadata from.
+	 */
+	source_id: string,
 	/**
 	 *  Position of the chunk within its source. `(sha256, idx)` is the chunk's
 	 *  primary key, and the only stable identity a result has — two chunks from
@@ -321,6 +342,10 @@ export type ScoredChunk = {
 };
 
 export type Source = {
+	/**
+	 *  The work's canonical id (ADR 003): a file's hash, or `erti:<uuid>` for
+	 *  a work with no file of its own.
+	 */
 	sha256: string,
 	file_name: string,
 	path: string | null,

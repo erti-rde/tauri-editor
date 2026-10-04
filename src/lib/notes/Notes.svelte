@@ -116,7 +116,8 @@
 			if (context && !asked) {
 				draftMatches.set({
 					paragraph: context,
-					sources: results.map((row) => ({ sha256: row.sha256, similarity: row.similarity }))
+					// By work, which is what the paragraph's citations resolve to.
+					sources: results.map((row) => ({ sha256: row.source_id, similarity: row.similarity }))
 				});
 			}
 		} catch (thrown) {
@@ -410,14 +411,15 @@
 
 								<!--
 									Offered only when a manuscript is open, because a citation
-									needs somewhere to go. A note carries its paper's hash and
-									its page, so this is the same insertion the citation panel
-									makes from a search result.
+									needs somewhere to go. A note carries the work its paper
+									belongs to, so this is the same insertion the citation panel
+									makes from a search result. Show in PDF, above, keeps the
+									file's own hash: the work may be a book with no file.
 								-->
 								{#if $draftContext.cite}
 									<button
 										class="text-ink-muted hover:text-accent flex items-center gap-1 text-[11px]"
-										onclick={() => void $draftContext.cite?.(row.sha256)}
+										onclick={() => void $draftContext.cite?.(row.source_id)}
 									>
 										<Icon icon="Quote" size="s" />
 										Cite

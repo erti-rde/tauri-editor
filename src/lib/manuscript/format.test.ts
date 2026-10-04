@@ -16,7 +16,10 @@ import {
 } from './io';
 
 vi.mock('@tauri-apps/plugin-store', () => ({ load: vi.fn() }));
-vi.mock('$lib/stores/db', () => ({ projectSources: vi.fn() }));
+vi.mock('$lib/stores/db', () => ({
+	projectSources: vi.fn(),
+	sourceAliases: vi.fn(async () => ({}))
+}));
 
 const cite = (...ids: string[]) => ({
 	type: 'citation',

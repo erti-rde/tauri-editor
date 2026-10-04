@@ -20,6 +20,8 @@ export interface Fixture {
 	libraryPath: string;
 	/** Sources in the library, all in the project. */
 	sources: Source[];
+	/** Alias → the work it belongs to (ADR 003). None by default. */
+	aliases?: Record<string, string>;
 	labels: AnnotationLabel[];
 	marks: Annotation[];
 	/**

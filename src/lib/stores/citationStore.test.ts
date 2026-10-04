@@ -3,7 +3,7 @@ import { citationStore } from './citationStore';
 import { CitationEngine } from '$lib/citations/engine';
 import { get } from 'svelte/store';
 import * as pluginStore from '@tauri-apps/plugin-store';
-import { projectSources } from '$lib/stores/db';
+import { projectSources, sourceAliases } from '$lib/stores/db';
 import type { CitationItem } from './citationStore';
 
 // Mock dependencies
@@ -12,7 +12,8 @@ vi.mock('@tauri-apps/plugin-store', () => ({
 }));
 
 vi.mock('$lib/stores/db', () => ({
-	projectSources: vi.fn()
+	projectSources: vi.fn(),
+	sourceAliases: vi.fn(async () => ({}))
 }));
 
 // The store now drives citeproc through CitationEngine, which replaces the
@@ -294,6 +295,56 @@ describe('sources the manuscript carries', () => {
 		]);
 		expect(get(citationStore).awayIds).toEqual([]);
 		expect(get(citationStore).citationSources.hash2.title).toBe('A book I don’t have');
+		citationStore.setManuscriptSources({});
+	});
+});
+
+// M1b-3 AC-1: citation rendering, through the store the editor renders with.
+describe('a work cited by any of its ids (ADR 003)', () => {
+	const work = {
+		sha256: 'erti:book',
+		file_name: 'book.pdf',
+		csl_json: JSON.stringify(fakeCitationItem),
+		state: 'ready'
+	};
+
+	async function initialise(aliases: Record<string, string>) {
+		const fakeStore = { get: vi.fn(async () => undefined) };
+		(pluginStore.load as unknown as MockInstance).mockResolvedValue(fakeStore);
+		(projectSources as unknown as MockInstance).mockResolvedValue([work]);
+		(sourceAliases as unknown as MockInstance).mockResolvedValue(aliases);
+		await citationStore.initializeCitationStore();
+	}
+
+	it("loads the library's aliases with its sources", async () => {
+		await initialise({ pdf: 'erti:book' });
+		expect(citationStore.canonicalId('pdf')).toBe('erti:book');
+		expect(citationStore.canonicalId('erti:book')).toBe('erti:book');
+	});
+
+	it('renders and previews a citation of the attached PDF as the work', () => {
+		const sources = { 'erti:book': { ...fakeCitationItem, id: 'erti:book' } };
+		setCitationStore({
+			engine: engineWith(sources),
+			citationSources: sources,
+			aliases: { pdf: 'erti:book' },
+			bibliography: [],
+			missingIds: []
+		} as CitationState);
+
+		expect(citationStore.previewCitation(['pdf'])).toBe('(Smith, 2020)');
+		const rendered = citationStore.renderDocument([{ pos: 0, itemIds: ['pdf', 'erti:book'] }]);
+		expect(rendered?.missingIds).toEqual([]);
+		expect(rendered?.sites[0].label).toBe('(Smith, 2020)');
+	});
+
+	it("isn't away when the manuscript carries the PDF's id and the library has the work", async () => {
+		await initialise({ pdf: 'erti:book' });
+		citationStore.setManuscriptSources({ pdf: { id: 'pdf', type: 'book', title: 'Snapshot' } });
+
+		expect(citationStore.isAway('pdf')).toBe(false);
+		expect(get(citationStore).awayIds).toEqual([]);
+		expect(get(citationStore).citationSources).not.toHaveProperty('pdf');
 		citationStore.setManuscriptSources({});
 	});
 });

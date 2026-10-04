@@ -110,7 +110,8 @@
 		try {
 			for (const id of ids) {
 				// Checked as CSL before it goes anywhere: the snapshot came in a file.
-				const csl = { ...guardCslItem(sources[id]), id };
+				// Filed under its work's id (ADR 003), and added under the id cited.
+				const csl = { ...guardCslItem(sources[citationStore.canonicalId(id)]), id };
 				await addSourceFromManuscript(id, JSON.stringify(csl));
 			}
 			await citationStore.initializeCitationStore();

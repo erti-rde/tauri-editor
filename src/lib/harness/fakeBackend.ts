@@ -97,6 +97,8 @@ export interface FakeState {
 	project: Set<string>;
 	/** Project-local metadata corrections. */
 	overrides: Map<string, string>;
+	/** Alias → canonical id, as `source_aliases` holds them. Never chained. */
+	aliases: Map<string, string>;
 	chunks: Map<string, NewChunk[]>;
 	marks: Map<string, Annotation>;
 	/** Marks with a vector, and the text it was made from. */
@@ -115,6 +117,7 @@ export function stateFrom(fixture: Fixture): FakeState {
 		library,
 		project: new Set(library.keys()),
 		overrides: new Map(),
+		aliases: new Map(Object.entries(fixture.aliases ?? {})),
 		// Each ready source can be found by its own title and its marked passages,
 		// which is enough for the suggestions panel to have something to show.
 		chunks: new Map(
@@ -160,10 +163,22 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		if (state.root === null) throw NOT_OPEN_PROJECT;
 		return state.root;
 	};
-	const effective = (s: Source): Source => ({
-		...s,
-		csl_json: state.overrides.get(s.sha256) ?? s.csl_json
-	});
+	// As `queries::resolve`: one lookup, and an unknown id is its own.
+	const canon = (id: string) => state.aliases.get(id) ?? id;
+	const projectWorks = () => new Set([...state.project].map(canon));
+	// An override made on an alias still corrects the work, unless the work has
+	// its own. A work with no file opens its alias's.
+	const effective = (s: Source): Source => {
+		const aliases = [...state.aliases].filter(([, work]) => work === s.sha256).map(([a]) => a);
+		const override = [s.sha256, ...aliases].map((id) => state.overrides.get(id)).find(Boolean);
+		const file = s.path ? s : aliases.map((a) => state.library.get(a)).find((f) => f?.path);
+		return {
+			...s,
+			csl_json: override ?? s.csl_json,
+			path: file?.path ?? null,
+			file_name: file?.file_name ?? s.file_name
+		};
+	};
 	const newestFirst = () =>
 		[...state.marks.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
 	// Project first, then by score: the order both Rust searches use.
@@ -173,7 +188,8 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 	const scored = (m: Annotation, similarity: number): ScoredAnnotation => ({
 		...m,
 		similarity,
-		in_project: state.project.has(m.sha256),
+		source_id: canon(m.sha256),
+		in_project: projectWorks().has(canon(m.sha256)),
 		file_name: fileName(m.sha256)
 	});
 	const notFound = (path: string) => appError('NotFound', `${path} doesn't exist any more.`);
@@ -316,9 +332,14 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 
 		projectSources() {
 			root();
-			return [...state.project]
+			return [...projectWorks()]
 				.map((sha) => effective(state.library.get(sha)!))
 				.sort((a, b) => a.file_name.localeCompare(b.file_name));
+		},
+
+		sourceAliases() {
+			library();
+			return Object.fromEntries(state.aliases);
 		},
 
 		addSourceFromManuscript(id, cslJson) {
@@ -356,12 +377,15 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		searchSources(query, limit, includeLibrary) {
 			library();
 			const results: ScoredChunk[] = [];
+			const works = projectWorks();
 			for (const [sha256, chunks] of state.chunks) {
-				const in_project = state.project.has(sha256);
+				const source_id = canon(sha256);
+				const in_project = works.has(source_id);
 				if (!in_project && !includeLibrary) continue;
 				chunks.forEach((chunk, idx) =>
 					results.push({
 						sha256,
+						source_id,
 						idx,
 						text: chunk.text,
 						page_start: chunk.page_start ?? null,

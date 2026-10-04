@@ -1,0 +1,144 @@
+{
+	"about": "M1b-3 AC-2. One alias table, read by the Rust and the TS suites, which must agree on every id it resolves. ADR 003: a work is known by one id; its other ids are aliases of it, never of each other.",
+	"sources": [
+		"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+		"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+		"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+		"b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+		"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02",
+		"c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+	],
+	"aliases": {
+		"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+		"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+		"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+	},
+	"resolve": [
+		{
+			"why": "a PDF attached to a book with no file",
+			"id": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+			"canonical": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01"
+		},
+		{
+			"why": "a second file of the same book",
+			"id": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+			"canonical": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01"
+		},
+		{
+			"why": "a work is its own canonical id",
+			"id": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+			"canonical": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01"
+		},
+		{
+			"why": "a hand-made entry merged into the PDF of the same paper",
+			"id": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02",
+			"canonical": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+		},
+		{
+			"why": "a source with no aliases",
+			"id": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+			"canonical": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+		},
+		{
+			"why": "an id this library has never seen, cited in a co-author's manuscript",
+			"id": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+			"canonical": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1"
+		}
+	],
+	"sets": [
+		{
+			"why": "one citation naming a book, its PDF and its other PDF cites the book once",
+			"ids": [
+				"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+			],
+			"canonical": ["erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01"]
+		},
+		{
+			"why": "two works stay two, in the order first cited",
+			"ids": [
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02",
+				"c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+				"b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+			],
+			"canonical": [
+				"b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+				"c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
+			]
+		}
+	],
+	"writes": [
+		{
+			"why": "a new PDF of a work becomes one more alias of it",
+			"alias": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+			"canonical": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+			"aliases": {
+				"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+			}
+		},
+		{
+			"why": "aliasing to an alias would chain; it points at that alias's work instead",
+			"alias": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+			"canonical": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+			"aliases": {
+				"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+			}
+		},
+		{
+			"why": "merging a work that has aliases takes its aliases along, rather than chaining them",
+			"alias": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+			"canonical": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+			"aliases": {
+				"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+				"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+			}
+		},
+		{
+			"why": "promoting an alias to be the work: the published version over the preprint",
+			"alias": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+			"canonical": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+			"aliases": {
+				"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+			}
+		},
+		{
+			"why": "an alias already of that work: nothing changes",
+			"alias": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+			"canonical": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+			"aliases": {
+				"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2": "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01",
+				"erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a02": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+			}
+		},
+		{
+			"why": "an id can't be an alias of itself",
+			"alias": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+			"canonical": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+			"rejected": true
+		},
+		{
+			"why": "an id the library doesn't have",
+			"alias": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+			"canonical": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+			"rejected": true
+		},
+		{
+			"why": "a work the library doesn't have",
+			"alias": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+			"canonical": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+			"rejected": true
+		}
+	]
+}
