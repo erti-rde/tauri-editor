@@ -280,8 +280,15 @@ export function augment(schema: OriginalZoteroSchema): AugmentedZoteroSchema {
 		// Augment fields for this item type
 		const augmentedFields: AugmentedZoteroField[] = itemTypeDef.fields.map((fieldDef) => {
 			const fieldName = fieldDef.field;
-			const potentialCslFields = reverseFieldMap.get(fieldName) || [];
-			const chosenCslField = chooseCslField(fieldName, itemTypeName, potentialCslFields);
+			// Zotero maps only base fields to CSL: a chapter's `bookTitle` is a
+			// `publicationTitle`, a thesis's `university` a `publisher`. Without
+			// this a chapter lost its book, and a report its institution, in every
+			// style (M1b-5 AC-3).
+			const mappedAs = reverseFieldMap.has(fieldName)
+				? fieldName
+				: (fieldDef.baseField ?? fieldName);
+			const potentialCslFields = reverseFieldMap.get(mappedAs) || [];
+			const chosenCslField = chooseCslField(mappedAs, itemTypeName, potentialCslFields);
 			const fieldLabel = formatFieldName(fieldName);
 			const inputType = chosenCslField && getInputType(chosenCslField);
 
