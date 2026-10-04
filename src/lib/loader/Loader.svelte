@@ -1,4 +1,6 @@
-<span class="loader"></span>
+<!-- Working, with no count to show (for one, `ProgressLine`). Drawn in the
+     palette's accent and rule, so it follows the theme like everything else. -->
+<span class="loader" aria-hidden="true"></span>
 
 <style>
 	.loader {
@@ -15,13 +17,22 @@
 		position: absolute;
 		inset: 0px;
 		border-radius: 50%;
-		border: 5px solid var(--color-teal-700);
+		border: 5px solid hsl(var(--accent));
 		animation: prixClipFix 2s linear infinite;
 	}
 	.loader::after {
 		inset: 8px;
 		transform: rotate3d(90, 90, 0, 180deg);
-		border-color: var(--color-orange-500);
+		border-color: hsl(var(--line-strong));
+	}
+
+	/* Less motion: still turning, so it still says "working", but slowly. */
+	@media (prefers-reduced-motion: reduce) {
+		.loader,
+		.loader::before,
+		.loader::after {
+			animation-duration: 4s;
+		}
 	}
 
 	@keyframes rotate {

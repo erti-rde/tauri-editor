@@ -61,16 +61,16 @@
 			     palettes whose accent takes dark ink — Latte, Frappé, Night Owl —
 			     rendered near-black text on near-black. -->
 			<div
-				class="bg-surface-overlay text-ink border-line rounded-lg border shadow-md"
+				class="bg-surface-raised text-ink border-line-strong shadow-overlay rounded border"
 				in:fly={{ x: 20, duration: 300 }}
 				out:fade={{ duration: 200 }}
 				animate:flip={{ duration: 200 }}
 			>
 				<div
-					class="relative flex w-[24rem] max-w-[calc(100vw-2rem)] items-center justify-between gap-4 p-5"
+					class="text-small relative flex w-96 max-w-[calc(100vw-2rem)] items-center justify-between gap-3 px-3 py-2.5"
 				>
-					<div>
-						<h3 class="flex items-center gap-2 font-semibold">
+					<div class="grid gap-0.5">
+						<h3 class="text-small flex items-center gap-2 font-semibold">
 							{toast.title}
 							<span class="size-1.5 rounded-full {toast.color}"></span>
 						</h3>
@@ -81,9 +81,9 @@
 					<button
 						onclick={() => removeToast(toast.id as string)}
 						aria-label="dismiss alert"
-						class="transition-opacity hover:opacity-70"
+						class="text-ink-muted hover:bg-surface-hover hover:text-ink grid size-(--row-height) shrink-0 place-items-center rounded transition-colors duration-(--duration-fast)"
 					>
-						<Icon icon="X" size="m" />
+						<Icon icon="X" size="s" />
 					</button>
 				</div>
 			</div>

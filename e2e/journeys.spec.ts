@@ -273,3 +273,27 @@ test('the text-style menu opens from the keyboard and makes a heading', async ({
 	await expect(menu).toBeHidden();
 	await expect(headings).toHaveCount(2);
 });
+
+// M1c-3 AC-2, AC-3: Settings on the Dialog primitive. The trap measures what's
+// tabbable, which only a browser with layout can show.
+test('Settings keeps focus inside, and Escape gives it back to the Settings button', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+
+	const opener = page.getByRole('button', { name: 'Settings' });
+	await opener.click();
+	const dialog = page.getByRole('dialog', { name: 'Settings' });
+	await expect(dialog).toBeVisible();
+
+	for (let i = 0; i < 40; i++) {
+		await page.keyboard.press('Tab');
+		const inside = await dialog.evaluate((node) => node.contains(document.activeElement));
+		expect(inside, `Tab ${i + 1} left the dialog`).toBe(true);
+	}
+
+	await page.keyboard.press('Escape');
+	await expect(dialog).toBeHidden();
+	await expect(opener).toBeFocused();
+});

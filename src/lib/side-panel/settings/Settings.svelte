@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Dialog, Tabs } from 'bits-ui';
+	import { Button, Dialog, Tabs } from '$lib/ui';
 
 	import AppearanceSettings from './AppearanceSettings.svelte';
 	import PageSetupSettings from './PageSetupSettings.svelte';
@@ -9,7 +9,6 @@
 	import { onMount } from 'svelte';
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { readSetting, writeSetting } from '$lib/settings';
-	import { Icon } from '$lib';
 	import { getConsent, getMailto, setConsent, setMailto } from '$lib/stores/consent';
 	import { errorToast } from '$lib/toast/Toast.svelte';
 	import {
@@ -32,6 +31,14 @@
 	let selectedLocale = $state('');
 	let citationStyles: { name: string; download_url: string }[] = $state([]);
 	let locales: { [key: string]: string[] } = $state({});
+	const SECTIONS = [
+		{ value: 'general', label: 'General' },
+		{ value: 'citations', label: 'Citations' },
+		{ value: 'reading', label: 'Reading' },
+		{ value: 'page', label: 'Page setup' },
+		{ value: 'appearance', label: 'Appearance' }
+	];
+
 	let activeTab = $state('general');
 	let styleFilter = $state('');
 
@@ -296,272 +303,221 @@
 </script>
 
 <!--
-	The dialog and its tabs come from bits-ui rather than being hand-rolled.
+	The Dialog and Tabs primitives (ADR 010), on bits-ui rather than hand-rolled.
 	What that buys is not styling — it is the behaviour a modal has to have and
 	this one did not: Escape closes it, focus is trapped inside and restored to
 	whatever opened it, the page behind is inert and does not scroll, and screen
 	readers are told it is a dialog rather than reading a div.
 	The tabs likewise gain arrow-key navigation and the roles that make them tabs.
 -->
-<Dialog.Root bind:open={() => isOpen, (v) => !v && closeSettings()}>
-	<Dialog.Portal>
-		<Dialog.Overlay class="bg-backdrop fixed inset-0 z-100" />
+<Dialog
+	open={isOpen}
+	onOpenChange={(open) => !open && closeSettings()}
+	title="Settings"
+	closeLabel="Close settings"
+	size="lg"
+	flush
+>
+	<Tabs label="Settings sections" tabs={SECTIONS} bind:value={activeTab} orientation="vertical">
+		{#snippet panel(tab)}
+			{#if tab === 'general'}
+				<div class="mb-8">
+					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
+						General Settings
+					</h3>
 
-		<Dialog.Content
-			class="bg-surface-raised border-line fixed top-1/2 left-1/2 z-100 flex h-[550px] max-h-[90vh] w-[800px] max-w-[90%] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border shadow-xl"
-		>
-			<!-- Header -->
-			<div class="border-line flex items-center justify-between border-b px-5 py-4">
-				<Dialog.Title class="text-ink text-xl font-semibold">Settings</Dialog.Title>
-				<Dialog.Close
-					class="text-ink-muted hover:bg-surface-hover hover:text-ink rounded-full p-1 transition-colors"
-					aria-label="Close settings"
-				>
-					<Icon icon="X" />
-				</Dialog.Close>
-			</div>
-
-			<Tabs.Root bind:value={activeTab} orientation="vertical" class="flex flex-1 overflow-hidden">
-				<Tabs.List class="border-line bg-surface-sunken w-48 shrink-0 border-r">
-					{#each [{ id: 'general', label: 'General' }, { id: 'citations', label: 'Citations' }, { id: 'reading', label: 'Reading' }, { id: 'page', label: 'Page setup' }, { id: 'appearance', label: 'Appearance' }] as tab (tab.id)}
-						<Tabs.Trigger
-							value={tab.id}
-							class="hover:bg-surface-hover data-[state=active]:border-accent data-[state=active]:bg-surface-raised w-full border-l-2 border-transparent px-4 py-3 text-left transition-colors data-[state=active]:font-medium"
-						>
-							{tab.label}
-						</Tabs.Trigger>
-					{/each}
-				</Tabs.List>
-
-				<!-- Settings panels -->
-				<div class="bg-surface-raised relative flex-1">
-					<!-- General Settings -->
-					<Tabs.Content value="general" class="absolute inset-0 overflow-y-auto p-5">
-						<div class="mb-8">
-							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
-								General Settings
-							</h3>
-
-							<div class="mb-6">
-								<label for="word-count" class="text-ink mb-2 block font-medium">
-									Word Count Target
-								</label>
-								<div class="relative">
-									<input
-										id="word-count"
-										type="number"
-										bind:value={wordCount}
-										min="0"
-										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
-									/>
-								</div>
-								<p class="text-ink-muted mt-1 text-sm">Set your target word count for documents</p>
-							</div>
-
-							<div class="mb-6">
-								<label class="flex items-start gap-3">
-									<input
-										type="checkbox"
-										bind:checked={allowNetwork}
-										class="accent-accent mt-1 h-4 w-4"
-									/>
-									<span>
-										<span class="text-ink block font-medium">Look up citation details online</span>
-										<span class="text-ink-muted mt-1 block text-sm">
-											Sends a paper's identifier — or its title and the opening of its first page —
-											to doi.org and crossref.org, and allows citation styles to be downloaded. With
-											this off, Erti reads the identifier printed in each paper and nothing leaves
-											your machine.
-										</span>
-									</span>
-								</label>
-							</div>
-
-							{#if allowNetwork}
-								<div class="mb-6">
-									<label for="crossref-mailto" class="text-ink mb-2 block font-medium">
-										Contact address for Crossref (optional)
-									</label>
-									<input
-										id="crossref-mailto"
-										type="email"
-										bind:value={crossrefMailto}
-										placeholder="you@university.edu"
-										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
-									/>
-									<p class="text-ink-muted mt-1 text-sm">
-										Crossref asks API users to identify themselves and gives those requests better
-										service. Yours to provide or leave blank.
-									</p>
-								</div>
-							{/if}
-
-							<LogSettings />
+					<div class="mb-6">
+						<label for="word-count" class="text-ink mb-2 block font-medium">
+							Word Count Target
+						</label>
+						<div class="relative">
+							<input
+								id="word-count"
+								type="number"
+								bind:value={wordCount}
+								min="0"
+								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
+							/>
 						</div>
-					</Tabs.Content>
+						<p class="text-ink-muted mt-1 text-sm">Set your target word count for documents</p>
+					</div>
 
-					<!-- Citation Settings -->
-					<Tabs.Content value="citations" class="absolute inset-0 overflow-y-auto p-5">
-						<div class="mb-8">
-							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
-								Citation Settings
-							</h3>
-
-							<label class="mb-6 flex items-start gap-3">
-								<input
-									type="checkbox"
-									class="accent-accent mt-1 h-4 w-4"
-									checked={$autoReferences}
-									onchange={(e) => void autoReferences.update(e.currentTarget.checked)}
-								/>
-								<span>
-									<span class="text-ink block font-medium">Add a reference list automatically</span>
-									<span class="text-ink-muted mt-1 block text-sm">
-										The first citation in a document brings a works-cited list with it. Delete the
-										list and it stays deleted — this only ever adds the first one.
-									</span>
+					<div class="mb-6">
+						<label class="flex items-start gap-3">
+							<input
+								type="checkbox"
+								bind:checked={allowNetwork}
+								class="accent-accent mt-1 h-4 w-4"
+							/>
+							<span>
+								<span class="text-ink block font-medium">Look up citation details online</span>
+								<span class="text-ink-muted mt-1 block text-sm">
+									Sends a paper's identifier — or its title and the opening of its first page — to
+									doi.org and crossref.org, and allows citation styles to be downloaded. With this
+									off, Erti reads the identifier printed in each paper and nothing leaves your
+									machine.
 								</span>
+							</span>
+						</label>
+					</div>
+
+					{#if allowNetwork}
+						<div class="mb-6">
+							<label for="crossref-mailto" class="text-ink mb-2 block font-medium">
+								Contact address for Crossref (optional)
 							</label>
-
-							<div class="mb-6">
-								<label for="citation-style" class="text-ink mb-2 block font-medium">
-									Citation Style
-								</label>
-								<input
-									type="search"
-									bind:value={styleFilter}
-									aria-label="Filter citation styles"
-									placeholder="Search styles"
-									class="border-line-strong bg-surface-raised text-ink mb-2 w-full rounded-md border px-4 py-2 transition-colors"
-								/>
-								<div class="relative">
-									<select
-										id="citation-style"
-										bind:value={selectedStyle}
-										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
-									>
-										<option value="" disabled>Select a style</option>
-										{#if visibleBundled.length > 0}
-											<optgroup label="Included with Erti">
-												{#each visibleBundled as style (style.id)}
-													<option value={style.name}>{style.label}</option>
-												{/each}
-											</optgroup>
-										{/if}
-										<optgroup label={allowNetwork ? 'Download' : 'Download (needs lookups on)'}>
-											{#each visibleStyles as style (style.download_url)}
-												<option value={style.name}>{style.name}</option>
-											{/each}
-										</optgroup>
-									</select>
-									<div
-										class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
-									>
-										<svg
-											class="text-ink-muted h-5 w-5"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M19 9l-7 7-7-7"
-											></path>
-										</svg>
-									</div>
-								</div>
-								<p class="text-ink-muted mt-1 text-sm">
-									{#if styleFilter.trim()}
-										{matchingBundled.length + matchingStyles.length} of {(bundled?.styles.length ??
-											0) + onlineStyles.length} styles match "{styleFilter.trim()}"
-									{:else}
-										Choose your preferred citation style for references ({(bundled?.styles.length ??
-											0) + onlineStyles.length}
-										available)
-									{/if}
-								</p>
-							</div>
-							<div class="mb-6">
-								<label for="language" class="text-ink mb-2 block font-medium">
-									Citation Language
-								</label>
-								<div class="relative">
-									<select
-										id="language"
-										bind:value={selectedLocale}
-										class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
-									>
-										{#each Object.entries(locales) as [code, [native]] (code)}
-											<option value={code}>{native}</option>
-										{/each}
-									</select>
-									<div
-										class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
-									>
-										<svg
-											class="text-ink-muted h-5 w-5"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M19 9l-7 7-7-7"
-											></path>
-										</svg>
-									</div>
-								</div>
-								<p class="text-ink-muted mt-1 text-sm">Set the language for the citation</p>
-							</div>
+							<input
+								id="crossref-mailto"
+								type="email"
+								bind:value={crossrefMailto}
+								placeholder="you@university.edu"
+								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
+							/>
+							<p class="text-ink-muted mt-1 text-sm">
+								Crossref asks API users to identify themselves and gives those requests better
+								service. Yours to provide or leave blank.
+							</p>
 						</div>
-					</Tabs.Content>
+					{/if}
 
-					<!-- Appearance Settings -->
-					<Tabs.Content value="reading" class="absolute inset-0 overflow-y-auto p-5">
-						<div class="mb-8">
-							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
-								Highlight labels
-							</h3>
-
-							<ReadingSettings />
-						</div>
-					</Tabs.Content>
-
-					<Tabs.Content value="page" class="absolute inset-0 overflow-y-auto p-5">
-						<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Page setup</h3>
-						<PageSetupSettings />
-					</Tabs.Content>
-
-					<Tabs.Content value="appearance" class="absolute inset-0 overflow-y-auto p-5">
-						<div class="mb-8">
-							<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
-								Appearance
-							</h3>
-
-							<AppearanceSettings />
-						</div>
-					</Tabs.Content>
+					<LogSettings />
 				</div>
-			</Tabs.Root>
+			{:else if tab === 'citations'}
+				<div class="mb-8">
+					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
+						Citation Settings
+					</h3>
 
-			<!-- Footer -->
-			<div class="border-line bg-surface-sunken flex justify-end space-x-3 border-t px-5 py-4">
-				<Dialog.Close
-					class="border-line-strong text-ink hover:bg-surface-hover rounded border px-4 py-2 transition-colors"
-				>
-					Cancel
-				</Dialog.Close>
-				<button
-					class="border-accent bg-accent text-accent-ink hover:bg-accent-hover rounded border px-4 py-2 transition-colors"
-					onclick={saveSettings}
-				>
-					Save changes
-				</button>
-			</div>
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+					<label class="mb-6 flex items-start gap-3">
+						<input
+							type="checkbox"
+							class="accent-accent mt-1 h-4 w-4"
+							checked={$autoReferences}
+							onchange={(e) => void autoReferences.update(e.currentTarget.checked)}
+						/>
+						<span>
+							<span class="text-ink block font-medium">Add a reference list automatically</span>
+							<span class="text-ink-muted mt-1 block text-sm">
+								The first citation in a document brings a works-cited list with it. Delete the list
+								and it stays deleted — this only ever adds the first one.
+							</span>
+						</span>
+					</label>
+
+					<div class="mb-6">
+						<label for="citation-style" class="text-ink mb-2 block font-medium">
+							Citation Style
+						</label>
+						<input
+							type="search"
+							bind:value={styleFilter}
+							aria-label="Filter citation styles"
+							placeholder="Search styles"
+							class="border-line-strong bg-surface-raised text-ink mb-2 w-full rounded-md border px-4 py-2 transition-colors"
+						/>
+						<div class="relative">
+							<select
+								id="citation-style"
+								bind:value={selectedStyle}
+								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
+							>
+								<option value="" disabled>Select a style</option>
+								{#if visibleBundled.length > 0}
+									<optgroup label="Included with Erti">
+										{#each visibleBundled as style (style.id)}
+											<option value={style.name}>{style.label}</option>
+										{/each}
+									</optgroup>
+								{/if}
+								<optgroup label={allowNetwork ? 'Download' : 'Download (needs lookups on)'}>
+									{#each visibleStyles as style (style.download_url)}
+										<option value={style.name}>{style.name}</option>
+									{/each}
+								</optgroup>
+							</select>
+							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+								<svg
+									class="text-ink-muted h-5 w-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M19 9l-7 7-7-7"
+									></path>
+								</svg>
+							</div>
+						</div>
+						<p class="text-ink-muted mt-1 text-sm">
+							{#if styleFilter.trim()}
+								{matchingBundled.length + matchingStyles.length} of {(bundled?.styles.length ?? 0) +
+									onlineStyles.length} styles match "{styleFilter.trim()}"
+							{:else}
+								Choose your preferred citation style for references ({(bundled?.styles.length ??
+									0) + onlineStyles.length}
+								available)
+							{/if}
+						</p>
+					</div>
+					<div class="mb-6">
+						<label for="language" class="text-ink mb-2 block font-medium">
+							Citation Language
+						</label>
+						<div class="relative">
+							<select
+								id="language"
+								bind:value={selectedLocale}
+								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
+							>
+								{#each Object.entries(locales) as [code, [native]] (code)}
+									<option value={code}>{native}</option>
+								{/each}
+							</select>
+							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+								<svg
+									class="text-ink-muted h-5 w-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M19 9l-7 7-7-7"
+									></path>
+								</svg>
+							</div>
+						</div>
+						<p class="text-ink-muted mt-1 text-sm">Set the language for the citation</p>
+					</div>
+				</div>
+			{:else if tab === 'reading'}
+				<div class="mb-8">
+					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
+						Highlight labels
+					</h3>
+
+					<ReadingSettings />
+				</div>
+			{:else if tab === 'page'}
+				<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Page setup</h3>
+				<PageSetupSettings />
+			{:else if tab === 'appearance'}
+				<div class="mb-8">
+					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Appearance</h3>
+
+					<AppearanceSettings />
+				</div>
+			{/if}
+		{/snippet}
+	</Tabs>
+
+	{#snippet footer()}
+		<Button onclick={closeSettings}>Cancel</Button>
+		<Button variant="primary" onclick={saveSettings}>Save changes</Button>
+	{/snippet}
+</Dialog>
