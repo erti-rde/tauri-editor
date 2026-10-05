@@ -133,6 +133,36 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 		expect(gone.found).toBe(false);
 	});
 
+	// M1b-6: the same rules as `add_source_from_doi.rs`.
+	it('finds a DOI as Rust does: any case, the work not its file, and never twice', async () => {
+		await openFixtureProject();
+		const { state } = backend();
+		const paper = JSON.stringify({
+			type: 'article-journal',
+			title: 'Deep learning',
+			DOI: '10.1038/nature14539'
+		});
+		const id = 'erti:7a2d4b63-9e1f-4d2c-8b8f-3c6e5a4f2b02';
+
+		await db.addSourceFromDoi(id, paper, 'journalArticle');
+		expect(state.library.get(id)).toMatchObject({
+			doi: '10.1038/nature14539',
+			resolved_via: 'manual'
+		});
+		expect(await db.sourceForDoi(' 10.1038/NATURE14539 ')).toBe(id);
+		expect(await db.sourceForDoi('10.1038/other')).toBeNull();
+
+		const again = await db
+			.addSourceByHand('erti:8b3e5c74-0f2a-4e3d-9c9a-4d7f6b5a3c03', paper, 'journalArticle')
+			.catch((e) => e);
+		expect((again as IpcError).kind).toBe('Conflict');
+
+		// A DOI read from a PDF attached to a work finds the work.
+		state.library.get(SHA.devlin)!.doi = '10.18653/v1/N19-1423';
+		state.aliases.set(SHA.devlin, id);
+		expect(await db.sourceForDoi('10.18653/v1/n19-1423')).toBe(id);
+	});
+
 	it('fails with a kind, as Rust does', async () => {
 		const failure = await db.projectRoot().catch((e: unknown) => e);
 		expect(failure).toBeInstanceOf(IpcError);

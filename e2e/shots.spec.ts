@@ -89,4 +89,12 @@ test('shots', async ({ page }) => {
 	await expect(page.getByRole('button', { name: 'Show in folder' })).toBeVisible();
 	// Finished, not mid-way through the tab's 120ms change of colour.
 	await page.screenshot({ ...shot('14-source-files'), animations: 'disabled' });
+
+	// From a DOI, with lookups off (UX-2): it says so, and offers the details.
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /From a DOI…/ }).click();
+	const fromDoi = page.getByRole('dialog', { name: 'Add from a DOI' });
+	await fromDoi.getByRole('textbox', { name: 'DOI' }).fill('10.1038/nature14539');
+	await expect(fromDoi.getByRole('button', { name: 'Enter details' })).toBeEnabled();
+	await page.screenshot({ ...shot('15-from-doi'), animations: 'disabled' });
 });

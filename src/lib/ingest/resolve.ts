@@ -178,6 +178,23 @@ async function fromCrossrefSearch(
 const viaFor = (hit: IdentifierHit): ResolvedVia => (hit.kind === 'doi' ? 'pdf-doi' : 'pdf-arxiv');
 
 /**
+ * The details for a DOI someone typed, or null when doi.org has none.
+ *
+ * Only the DOI is asked about. `resolveMetadata` goes on to a Crossref search
+ * when the DOI finds nothing, which for a PDF is worth a try; for a typed DOI
+ * it would search on the DOI's own characters and could return another paper.
+ * The caller checks consent: this always makes the request.
+ */
+export async function lookupDoi(
+	doi: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<ResolvedMetadata | null> {
+	const csl = await fromDoi(doi, fetchImpl);
+	if (!csl || !hasTitle(csl)) return null;
+	return { csl, via: 'manual', doi: typeof csl.DOI === 'string' ? csl.DOI : doi };
+}
+
+/**
  * Resolve a document's metadata, or return null.
  *
  * Null means "not resolved", which is recorded against the source so it can be

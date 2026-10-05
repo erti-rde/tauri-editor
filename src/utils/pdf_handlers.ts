@@ -32,7 +32,7 @@ import type { CitationItem } from '$lib/stores/citationStore';
 import { extractPages, pagesToText, type ExtractedPage } from '$lib/ingest/extract';
 import { chunkPages } from '$lib/ingest/chunk';
 import { commitIngest, selectSourcesToIngest } from '$lib/ingest/pipeline';
-import { resolveMetadata, type ResolvedVia } from '$lib/ingest/resolve';
+import { lookupDoi, resolveMetadata, type ResolvedVia } from '$lib/ingest/resolve';
 import { findDoi } from '$lib/ingest/identifiers';
 import { getMailto, networkAllowed } from '$lib/stores/consent';
 import { log } from '$lib/log';
@@ -346,11 +346,9 @@ export async function retryIngest(source: {
 export async function applyManualDoi(sha256: string, doi: string): Promise<CitationItem> {
 	const cleaned = findDoi(doi) ?? doi.trim();
 
-	const { resolved } = await resolveMetadata({
-		text: cleaned,
-		allowNetwork: await networkAllowed(),
-		mailto: await getMailto()
-	});
+	// The DOI alone: a search on its characters could fill the row with another
+	// paper's details.
+	const resolved = (await networkAllowed()) ? await lookupDoi(cleaned) : null;
 
 	if (!resolved) {
 		throw new Error(

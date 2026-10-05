@@ -24,6 +24,8 @@
 			csl: CslItem | null;
 			zoteroType: string | null;
 		};
+		/** Creating: details to start from, such as the DOI it was asked for by (M1b-6). */
+		initial?: CslItem;
 		onclose: () => void;
 		onsaved: () => void;
 		onremoved: () => void | Promise<void>;
@@ -38,6 +40,7 @@
 	let {
 		schema,
 		record,
+		initial,
 		onclose,
 		onsaved,
 		onremoved,
@@ -59,7 +62,7 @@
 	 * value typed under a kind that was then left isn't stored out of sight.
 	 */
 	// svelte-ignore state_referenced_locally
-	let draft: CslItem = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
+	let draft: CslItem = structuredClone($state.snapshot(record?.csl ?? initial ?? {})) as CslItem;
 	// svelte-ignore state_referenced_locally
 	let type = $state(typeNamed(itemTypeOf(record?.zoteroType, record?.csl ?? null, schema)));
 	// svelte-ignore state_referenced_locally
@@ -79,7 +82,9 @@
 	async function save() {
 		tried = true;
 		if (!type || Object.keys(missing(form, type)).length) return;
-		const original = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
+		// Creating, the initial details are kept whether or not the kind chosen
+		// shows them: a book's form has no DOI field, but its DOI is still its.
+		const original = structuredClone($state.snapshot(record?.csl ?? initial ?? {})) as CslItem;
 		const item: CslItem = { ...fromForm(form, type, original), zotero_type: type.itemType };
 		saving = true;
 		try {
@@ -103,7 +108,8 @@
 
 <Sidebar
 	title={record ? 'Edit source' : 'New source'}
-	subtitle={record?.title ?? 'Entered by hand, with no file'}
+	subtitle={record?.title ??
+		(initial?.DOI ? `DOI ${initial.DOI}, with no file` : 'Entered by hand, with no file')}
 	{onclose}
 >
 	{#if record}
