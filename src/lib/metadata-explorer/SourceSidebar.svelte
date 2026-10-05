@@ -31,6 +31,8 @@
 		onfileschanged?: () => void | Promise<void>;
 		/** A file was opened in a tab. */
 		onopen?: () => void;
+		/** Goes up each time the table lists its sources again (see `SourceFiles`). */
+		revision?: number;
 	}
 
 	let {
@@ -40,8 +42,12 @@
 		onsaved,
 		onremoved,
 		onfileschanged = () => {},
-		onopen = () => {}
+		onopen = () => {},
+		revision = 0
 	}: Props = $props();
+
+	/** Which tab shows. The files are listed when theirs is chosen, not on opening. */
+	let tab = $state('details');
 
 	const typeNamed = (itemType: string | undefined) =>
 		schema.itemTypes.find((t) => t.itemType === itemType && t.cslType);
@@ -106,16 +112,17 @@
 		<div class="flex h-full flex-col">
 			<Tabs
 				label="Source"
+				bind:value={tab}
 				tabs={[
 					{ value: 'details', label: 'Details' },
 					{ value: 'file', label: 'File' }
 				]}
 			>
-				{#snippet panel(tab)}
-					{#if tab === 'details'}
+				{#snippet panel(panelFor)}
+					{#if panelFor === 'details'}
 						<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
-					{:else}
-						<SourceFiles {id} onchange={onfileschanged} {onopen} />
+					{:else if tab === 'file'}
+						<SourceFiles {id} onchange={onfileschanged} {onopen} {revision} />
 					{/if}
 				{/snippet}
 			</Tabs>

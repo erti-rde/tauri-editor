@@ -73,6 +73,9 @@
 		}
 	}
 
+	/** Counts each listing, so an open File tab lists its files again too. */
+	let revision = $state(0);
+
 	async function loadSources() {
 		sources = (await projectSources()).map((source) => {
 			// Unresolved sources have no CSL-JSON yet; the row still lists so the
@@ -91,6 +94,7 @@
 				unresolved: metadata === null
 			};
 		});
+		revision++;
 	}
 
 	/**
@@ -414,6 +418,7 @@
 				onremoved={afterChange}
 				onfileschanged={loadSources}
 				{onopen}
+				{revision}
 			/>
 		{/key}
 	{/if}

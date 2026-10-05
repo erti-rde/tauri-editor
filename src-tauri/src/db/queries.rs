@@ -626,15 +626,23 @@ async fn alias_source_on(
 #[derive(Debug, PartialEq, Eq)]
 pub enum Attach {
     /// Attached. `needs_ingest` when the file hasn't been read yet, or failed;
-    /// `merged` names the work the file was until now, when it was one in its
-    /// own right with details of its own, since its citations now render as
-    /// this work.
+    /// `merged` names the source the file was until now, when the library had
+    /// it as one of its own: its citations, and its row in any project, now
+    /// show this work. By its title, or its file's name when it has none.
     Attached {
         needs_ingest: bool,
         merged: Option<String>,
     },
-    /// The file already is the work, or one of its files.
+    /// The file already is the work, or one of its files, and was known at
+    /// that path already.
     AlreadyIts,
+    /// The file already is one of the work's, found somewhere new: the place
+    /// is recorded, so a file the File tab reported missing can be found again.
+    /// `needs_ingest` when it hasn't been read, or failed.
+    FoundAgain { needs_ingest: bool },
+    /// The file is a work with files of its own. Attaching it would move them
+    /// all to this work, which is merging two sources, not attaching a file.
+    HasFiles(Option<String>),
     /// The file belongs to another work, named by its title when it has one.
     /// Moving it between works silently would change what that work's
     /// citations open, so it's refused.
@@ -692,21 +700,50 @@ pub async fn attach_file(
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
-    match owner {
-        _ if sha256 == work => return Ok(Attach::AlreadyIts),
-        Some(owner) if owner == work => return Ok(Attach::AlreadyIts),
-        Some(owner) => {
-            drop(tx);
-            return Ok(Attach::Elsewhere(title(owner).await?));
+    if let Some(owner) = owner.as_ref().filter(|owner| **owner != work) {
+        let owner = owner.clone();
+        drop(tx);
+        return Ok(Attach::Elsewhere(title(owner).await?));
+    }
+    // Already the work's. Picked again from somewhere it wasn't known to be,
+    // which is how a file the File tab reports missing is found: keep the place.
+    if owner.is_some() || sha256 == work {
+        let seen: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM locations WHERE sha256 = ? AND path = ?)",
+        )
+        .bind(sha256)
+        .bind(path)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+        if seen {
+            return Ok(Attach::AlreadyIts);
         }
-        None => {}
+        register_source_on(&mut tx, sha256, path, file_name).await?;
+        let needs_ingest = needs_ingest_on(&mut tx, sha256).await?;
+        tx.commit().await.map_err(|e| e.to_string())?;
+        return Ok(Attach::FoundAgain { needs_ingest });
     }
 
-    // A file already in the library as a work of its own, resolved to details
-    // of its own, becomes this work: the merge ADR 003 describes.
+    // A work with files attached to it isn't a file to attach: the alias
+    // would carry its files across too, and change what they open as in
+    // every project, as moving a file from another work would.
+    let has_files: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM source_aliases WHERE canonical = ?)")
+            .bind(sha256)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    if has_files {
+        drop(tx);
+        return Ok(Attach::HasFiles(title(sha256.to_string()).await?));
+    }
+
+    // A file the library already has is a source of its own, in whichever
+    // project found it: it becomes this work, the merge ADR 003 describes,
+    // and is said whether or not it was ever resolved to details.
     let merged: Option<String> = sqlx::query_scalar(
-        "SELECT COALESCE(json_extract(csl_json, '$.title'), '') FROM sources
-          WHERE sha256 = ? AND csl_json IS NOT NULL",
+        "SELECT COALESCE(json_extract(csl_json, '$.title'), '') FROM sources WHERE sha256 = ?",
     )
     .bind(sha256)
     .fetch_optional(&mut *tx)
@@ -715,15 +752,7 @@ pub async fn attach_file(
 
     register_source_on(&mut tx, sha256, path, file_name).await?;
     alias_source_on(&mut tx, sha256, &work).await?;
-
-    let needs_ingest: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM ingest_status
-                        WHERE sha256 = ? AND state IN ('pending', 'failed'))",
-    )
-    .bind(sha256)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(|e| e.to_string())?;
+    let needs_ingest = needs_ingest_on(&mut tx, sha256).await?;
 
     tx.commit().await.map_err(|e| e.to_string())?;
     Ok(Attach::Attached {
@@ -736,6 +765,18 @@ pub async fn attach_file(
             }
         }),
     })
+}
+
+/// Whether the file `sha256` is still to be read: never read, or failed.
+async fn needs_ingest_on(tx: &mut SqliteConnection, sha256: &str) -> Result<bool, String> {
+    sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM ingest_status
+                        WHERE sha256 = ? AND state IN ('pending', 'failed'))",
+    )
+    .bind(sha256)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// One file of a work, for its sidebar's File tab (M1b-7 AC-3).

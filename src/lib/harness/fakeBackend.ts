@@ -520,8 +520,21 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			if (!state.library.has(target)) {
 				throw appError('NotFound', 'That source is no longer in the library.');
 			}
+			const file_name = path.split('/').pop() ?? path;
 			if (sha256 === target || state.aliases.get(sha256) === target) {
-				throw appError('Conflict', 'That PDF is already attached to this source.');
+				// Picked again from a new place: found, as Rust records it.
+				const file = state.library.get(sha256)!;
+				if (file.path === path) {
+					throw appError('Conflict', 'That PDF is already attached to this source.');
+				}
+				file.path = path;
+				return {
+					sha256,
+					file_name,
+					needs_ingest: file.state !== 'ready',
+					merged: null,
+					found_again: true
+				};
 			}
 			const owner = state.aliases.get(sha256);
 			if (owner) {
@@ -533,9 +546,15 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 						: 'That PDF is already attached to another source.'
 				);
 			}
-			const file_name = path.split('/').pop() ?? path;
+			if ([...state.aliases.values()].includes(sha256)) {
+				const title = titleOf(sha256);
+				throw appError(
+					'Conflict',
+					`That PDF is ${title ? `“${title}”` : 'a source'}, which has files of its own, so it can't be another source's file.`
+				);
+			}
 			const existing = state.library.get(sha256);
-			const merged = existing?.csl_json ? (titleOf(sha256) ?? file_name) : null;
+			const merged = existing ? (titleOf(sha256) ?? file_name) : null;
 			if (existing) existing.path = path;
 			else {
 				state.library.set(sha256, {
@@ -550,14 +569,14 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 					last_error: null
 				});
 			}
-			for (const [alias, w] of state.aliases) if (w === sha256) state.aliases.set(alias, target);
 			state.aliases.set(sha256, target);
 			const file = state.library.get(sha256)!;
 			return {
 				sha256,
 				file_name,
 				needs_ingest: file.state !== 'ready',
-				merged
+				merged,
+				found_again: false
 			};
 		},
 

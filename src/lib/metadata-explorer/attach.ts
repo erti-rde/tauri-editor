@@ -37,8 +37,13 @@ export async function attachPdf(
 	// and so are its citations. Said, because it changes what they render as.
 	if (attached.merged) {
 		successToast(
-			`${attached.file_name} was “${attached.merged}” in your library. It’s now this source’s file, and its citations show this source.`
+			attached.merged === attached.file_name
+				? `${attached.file_name} was a source of its own in your library. It’s now this source’s file, and its citations show this source.`
+				: `${attached.file_name} was “${attached.merged}” in your library. It’s now this source’s file, and its citations show this source.`
 		);
+	} else if (attached.found_again) {
+		// Picked where it is now, after it moved: Open and Show in folder use it.
+		successToast(`Found ${attached.file_name}. Erti will open it from here.`);
 	} else if (!attached.needs_ingest) {
 		successToast(`Attached ${attached.file_name}.`);
 	}
