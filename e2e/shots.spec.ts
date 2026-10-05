@@ -68,4 +68,25 @@ test('shots', async ({ page }) => {
 	await page.getByRole('button', { name: 'Kind of source' }).click();
 	await page.getByRole('option', { name: 'Book Section', exact: true }).click();
 	await page.screenshot(shot('12-new-source'));
+
+	// No file, and the action that attaches one on hover (UX-2).
+	const form = page.getByRole('complementary', { name: 'New source' });
+	await form
+		.getByRole('textbox', { name: 'Title (required)', exact: true })
+		.fill('The Ethnographic Present');
+	await form.getByRole('textbox', { name: 'Book Title (required)' }).fill('Writing Culture');
+	await form.getByRole('button', { name: 'Add to library' }).click();
+	await page.getByRole('button', { name: /^Chapter The Ethnographic Present/ }).hover();
+	await expect(
+		page.getByRole('button', { name: 'Attach PDF to The Ethnographic Present' })
+	).toBeVisible();
+	await page.screenshot(shot('13-attach-pdf'));
+
+	// A source's files, where each lives (UX-3).
+	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
+	await page.getByRole('tab', { name: 'File' }).click();
+	await expect(page.getByRole('tab', { name: 'File' })).toHaveAttribute('aria-selected', 'true');
+	await expect(page.getByRole('button', { name: 'Show in folder' })).toBeVisible();
+	// Finished, not mid-way through the tab's 120ms change of colour.
+	await page.screenshot({ ...shot('14-source-files'), animations: 'disabled' });
 });

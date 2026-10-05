@@ -167,16 +167,96 @@ test('a book with no PDF can be entered by hand, and joins the project', async (
 		page.getByText('Added “Orality and Literacy” to your library and this project.')
 	).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
-	const row = page.getByRole('button', { name: /Orality and Literacy/ });
+	const row = page.getByRole('button', { name: /^Book Orality and Literacy/ });
 	await expect(row).toContainText('Ong, Walter J.');
-	// M1b-5 AC-4
-	await expect(row).toContainText('No file');
+	// M1b-5 AC-4: beside the row, with the action that gives it one.
+	await expect(page.getByText('No file')).toBeVisible();
+	await expect(
+		page.getByRole('button', { name: 'Attach PDF to Orality and Literacy' })
+	).toBeAttached();
 
 	const added = await page.evaluate(() =>
 		[...window.__ERTI_FAKE__!.state.library.values()].find((s) => s.csl_json?.includes('Orality'))
 	);
 	expect(added?.sha256).toMatch(/^erti:[0-9a-f-]{36}$/);
 	expect(added?.resolved_via).toBe('by-hand');
+});
+
+// M1b-7, UX-2 and UX-3
+test('a PDF attached to a source is read, and its File tab says where it lives', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	// A book entered by hand, and two PDFs of it outside the project folder.
+	await page.evaluate(() => {
+		const fake = window.__ERTI_FAKE__!;
+		fake.state.library.set('erti:ong', {
+			sha256: 'erti:ong',
+			file_name: '',
+			path: null,
+			csl_json: JSON.stringify({
+				type: 'book',
+				title: 'Orality and Literacy',
+				author: [{ family: 'Ong', given: 'Walter J.' }]
+			}),
+			zotero_type: 'book',
+			doi: null,
+			resolved_via: 'by-hand',
+			state: 'ready',
+			last_error: null
+		});
+		fake.state.project.add('erti:ong');
+		const paper = [...fake.files.keys()].find((p) => p.endsWith('vaswani-2017.pdf'))!;
+		for (const name of ['ong-orality.pdf', 'ong-1982-scan.pdf']) {
+			fake.files.set(`/fake/home/Downloads/${name}`, fake.files.get(paper)!);
+		}
+		fake.dialogAnswers.push(
+			'/fake/home/Downloads/ong-orality.pdf',
+			'/fake/home/Downloads/ong-1982-scan.pdf'
+		);
+	});
+
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+
+	// M1b-7 AC-1: from the row, read as a scan reads it, and the row follows.
+	await page.getByRole('button', { name: /^Book Orality and Literacy/ }).hover();
+	await page.getByRole('button', { name: 'Attach PDF to Orality and Literacy' }).click();
+	await expect(page.getByText('ong-orality.pdf processed successfully')).toBeVisible();
+	await expect(page.getByText('ong-orality.pdf', { exact: true })).toBeVisible();
+	await expect(page.getByText('· Reading…')).toHaveCount(0);
+	// The file is the book, not a fifth source.
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+	const aliases = await page.evaluate(() =>
+		Object.fromEntries(window.__ERTI_FAKE__!.state.aliases)
+	);
+	expect(Object.values(aliases)).toContain('erti:ong');
+
+	// M1b-7 AC-3: where it lives, with Show in folder.
+	await page.getByRole('button', { name: /^Book Orality and Literacy/ }).click();
+	const sidebar = page.getByRole('complementary', { name: 'Edit source' });
+	await sidebar.getByRole('tab', { name: 'File' }).click();
+	await expect(sidebar.getByText('/fake/home/Downloads/ong-orality.pdf')).toBeVisible();
+	await sidebar.getByRole('button', { name: 'Show in folder' }).click();
+	await expect
+		.poll(() => page.evaluate(() => window.__ERTI_FAKE__!.opened))
+		.toContain('/fake/home/Downloads/ong-orality.pdf');
+
+	// M1b-7 AC-2: a second file of the same work.
+	await sidebar.getByRole('button', { name: 'Attach another…' }).click();
+	await expect(sidebar.getByText('/fake/home/Downloads/ong-1982-scan.pdf')).toBeVisible();
+	await expect(sidebar.getByRole('button', { name: 'Open' })).toHaveCount(2);
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+
+	// M1b-7 AC-3: Open shows it in a tab, leaving the Sources view.
+	await sidebar
+		.getByRole('listitem')
+		.filter({ hasText: 'ong-orality.pdf' })
+		.getByRole('button', { name: 'Open' })
+		.click();
+	await expect(page.getByRole('heading', { name: /Sources/ })).toHaveCount(0);
+	await expect(page.getByRole('tab', { name: /ong-orality\.pdf/ })).toBeVisible();
 });
 
 // M1b-4, UX-4

@@ -10,6 +10,7 @@
 	import { Banner, Button, EmptyState, Loader, Menu, SearchField, TextField } from '$lib/ui';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { augmentSchema } from './adapterCslZotero';
+	import { attachPdf } from './attach';
 	import { describeAuthors, describeType } from './sourceRows';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 	import { log } from '$lib/log';
@@ -24,11 +25,22 @@
 		metadata: CitationItem | null;
 		/** The Zotero kind, when it was recorded; older sources have none (M1b-5 AC-5). */
 		zotero_type: string | null;
+		/**
+		 * How reading its file went, or the work's own state when it has none: a
+		 * work entered by hand is citable while the PDF attached to it is read.
+		 */
 		state: 'pending' | 'ready' | 'failed';
 		last_error: string | null;
 		/** True when ingest succeeded but nothing could be resolved to cite. */
 		unresolved: boolean;
 	};
+
+	interface Props {
+		/** A PDF was opened in a tab, which this view hides. */
+		onopen?: () => void;
+	}
+
+	let { onopen = () => {} }: Props = $props();
 
 	let sources: Source[] = $state([]);
 
@@ -74,8 +86,8 @@
 				file_sha256: source.file_sha256,
 				metadata,
 				zotero_type: source.zotero_type ?? null,
-				state: source.state,
-				last_error: source.last_error,
+				state: source.file_state ?? source.state,
+				last_error: source.file_state ? source.file_error : source.last_error,
 				unresolved: metadata === null
 			};
 		});
@@ -147,6 +159,18 @@
 
 	function closeSidebar() {
 		sidebar = null;
+	}
+
+	/** The row's id while a PDF is being attached to it. */
+	let attachingTo: string | null = $state(null);
+
+	async function attach(source: Source) {
+		attachingTo = source.id;
+		try {
+			await attachPdf(source.id, loadSources);
+		} finally {
+			attachingTo = null;
+		}
 	}
 
 	async function afterChange() {
@@ -224,15 +248,19 @@
 										>
 											{busyWith === source.id ? 'Working…' : 'Retry'}
 										</Button>
-										<Button
-											size="sm"
-											onclick={() => {
-												doiFor = doiFor === source.id ? null : source.id;
-												doiInput = '';
-											}}
-										>
-											Enter DOI
-										</Button>
+										<!-- A source with details whose PDF couldn't be read needs
+										     the file looked at, not a DOI. -->
+										{#if source.unresolved}
+											<Button
+												size="sm"
+												onclick={() => {
+													doiFor = doiFor === source.id ? null : source.id;
+													doiInput = '';
+												}}
+											>
+												Enter DOI
+											</Button>
+										{/if}
 									</div>
 								</div>
 
@@ -299,42 +327,71 @@
 					<!--
 						A button rather than a div with a click handler: the row is the
 						control, so it has to be reachable by keyboard and announced as
-						something that can be activated. `text-left` and `w-full` keep the
-						grid looking as it did.
+						something that can be activated. The File cell sits beside it, not
+						in it, since Attach PDF… is a button of its own.
 					-->
-					<button
-						type="button"
-						class="hover:bg-surface-hover text-small grid w-full cursor-pointer grid-cols-12 gap-3 px-3 py-3 text-left transition-colors"
+					<div
+						class="group hover:bg-surface-hover text-small grid grid-cols-12 gap-3 px-3 transition-colors"
 						class:bg-accent-quiet={selectedSourceId === source.id}
-						aria-current={selectedSourceId === source.id ? 'true' : undefined}
-						onclick={() => handleSourceSelect(source.id)}
 					>
-						<div class="col-span-2 flex items-center">
-							<span class="text-caption text-ink-muted truncate"
-								>{describeType(source.metadata)}</span
-							>
-						</div>
-
-						<div class="col-span-4 flex items-center">
-							<div class="truncate">
-								<span class="text-ink font-medium"
-									>{source.metadata?.title || source.file_name}</span
+						<button
+							type="button"
+							class="col-span-9 grid cursor-pointer grid-cols-9 gap-3 py-3 text-left"
+							aria-current={selectedSourceId === source.id ? 'true' : undefined}
+							onclick={() => handleSourceSelect(source.id)}
+						>
+							<div class="col-span-2 flex items-center">
+								<span class="text-caption text-ink-muted truncate"
+									>{describeType(source.metadata)}</span
 								>
-								{#if !source.metadata?.title}
-									<FileWarning class="text-warning ml-1 inline size-3.5" aria-label="No title" />
-								{/if}
 							</div>
-						</div>
 
-						<div class="text-ink-muted col-span-3 flex items-center">
-							<span class="truncate">{describeAuthors(source.metadata) || 'No author'}</span>
-						</div>
+							<div class="col-span-4 flex items-center">
+								<div class="truncate">
+									<span class="text-ink font-medium"
+										>{source.metadata?.title || source.file_name}</span
+									>
+									{#if !source.metadata?.title}
+										<FileWarning class="text-warning ml-1 inline size-3.5" aria-label="No title" />
+									{/if}
+								</div>
+							</div>
 
-						<!-- M1b-5 AC-4. Attaching one is M1b-7. -->
-						<div class="text-caption text-ink-muted col-span-3 flex items-center">
-							<span class="truncate">{source.path ? source.file_name : 'No file'}</span>
+							<div class="text-ink-muted col-span-3 flex items-center">
+								<span class="truncate">{describeAuthors(source.metadata) || 'No author'}</span>
+							</div>
+						</button>
+
+						<!-- M1b-5 AC-4, M1b-7 AC-1. The action shows on hover and focus (UX-2). -->
+						<div class="text-caption text-ink-muted col-span-3 flex min-w-0 items-center gap-2">
+							{#if source.path}
+								<span class="truncate">{source.file_name}</span>
+								{#if source.state === 'pending'}
+									<span class="shrink-0">· Reading…</span>
+								{:else if source.state === 'failed'}
+									<span class="text-warning shrink-0">· Couldn’t read</span>
+								{/if}
+							{:else}
+								<span class="shrink-0">No file</span>
+								<span
+									class={[
+										'group-hover:opacity-100 focus-within:opacity-100',
+										attachingTo === source.id ? 'opacity-100' : 'opacity-0'
+									]}
+								>
+									<Button
+										size="sm"
+										variant="ghost"
+										loading={attachingTo === source.id}
+										aria-label="Attach PDF to {source.metadata?.title || source.file_name}"
+										onclick={() => attach(source)}
+									>
+										Attach PDF…
+									</Button>
+								</span>
+							{/if}
 						</div>
-					</button>
+					</div>
 				{/each}
 			</div>
 		{/if}
@@ -355,6 +412,8 @@
 				onclose={closeSidebar}
 				onsaved={afterChange}
 				onremoved={afterChange}
+				onfileschanged={loadSources}
+				{onopen}
 			/>
 		{/key}
 	{/if}

@@ -17,7 +17,7 @@ import paperUrl from '../../../tests/fixtures/harness/sample.pdf?url';
  * A source as the library stores it. Which file a work opens, and so
  * `file_sha256`, is worked out when the project's sources are listed.
  */
-export type LibrarySource = Omit<Source, 'file_sha256'>;
+export type LibrarySource = Omit<Source, 'file_sha256' | 'file_state' | 'file_error'>;
 
 export interface Fixture {
 	/** The project folder. */
