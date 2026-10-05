@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	import { describeError, IpcError } from '$lib/ipc';
 	import { log } from '$lib/log';
@@ -81,6 +81,24 @@
 	}
 
 	onMount(loadNotes);
+	// Again whenever the table lists its sources: a PDF attached in the File
+	// tab brings its marks with it, and the count says so.
+	// svelte-ignore state_referenced_locally
+	let listed = revision;
+	$effect(() => {
+		if (revision === listed) return;
+		listed = revision;
+		void untrack(loadNotes);
+	});
+	/**
+	 * Once its tab has been chosen, the Notes panel stays mounted: going to
+	 * Details to check a year and back must find a half-written note where it
+	 * was left.
+	 */
+	let notesSeen = $state(false);
+	$effect(() => {
+		if (tab === 'notes') notesSeen = true;
+	});
 
 	const typeNamed = (itemType: string | undefined) =>
 		schema.itemTypes.find((t) => t.itemType === itemType && t.cslType);
@@ -167,7 +185,7 @@
 				{#snippet panel(panelFor)}
 					{#if panelFor === 'details'}
 						<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
-					{:else if panelFor === 'notes' && tab === 'notes'}
+					{:else if panelFor === 'notes' && notesSeen}
 						<SourceNotes {id} {notes} onchange={loadNotes} />
 					{:else if panelFor === 'file' && tab === 'file'}
 						<SourceFiles {id} onchange={onfileschanged} {onopen} {revision} />

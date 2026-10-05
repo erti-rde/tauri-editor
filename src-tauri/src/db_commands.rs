@@ -899,7 +899,9 @@ pub async fn save_source_note_in(
             .filter(|v| !v.is_empty())
     };
     let note = queries::NewSourceNote {
-        body: note.body.trim().to_string(),
+        // Only the end: Markdown's leading spaces are meaning (an indented
+        // code block, a nested item), and are kept as written.
+        body: note.body.trim_end().to_string(),
         quote: given(note.quote),
         page_label: given(note.page_label),
         label_id: given(note.label_id),
@@ -908,7 +910,7 @@ pub async fn save_source_note_in(
     if note.id.is_empty() || note.id.len() > 200 {
         return Err(invalid("That isn't a note id."));
     }
-    if note.body.is_empty() && note.quote.is_none() {
+    if note.body.trim().is_empty() && note.quote.is_none() {
         return Err(invalid("Write a note, or the words you're quoting."));
     }
     // The same ceilings the guard puts on a long field and a short one (M1b-10).

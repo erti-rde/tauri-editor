@@ -63,7 +63,8 @@ const NOTES: WorkNotes = {
 		note({ id: 'whole', body: 'The contrast I need for §3.\nAdditive, not subordinative.' }),
 		note({ id: 'p12', quote: 'Primary orality: no knowledge of writing.', page_label: '12' })
 	],
-	marks: [mark('m1', 3, 'Writing restructures consciousness.'), mark('m2', 9, 'Sound exists.')]
+	marks: [mark('m1', 3, 'Writing restructures consciousness.'), mark('m2', 9, 'Sound exists.')],
+	files: [{ sha256: PDF, file_name: 'ong.pdf' }]
 };
 
 function show(notes: WorkNotes | null = NOTES) {
@@ -111,7 +112,7 @@ describe('the Notes tab (M1b-8, UX-3)', () => {
 	});
 
 	it('says when there’s nothing yet', () => {
-		show({ notes: [], marks: [] });
+		show({ notes: [], marks: [], files: [] });
 		expect(screen.getByText('No notes on this source yet.')).toBeInTheDocument();
 		expect(screen.queryByRole('region', { name: 'Marked in the PDF' })).toBeNull();
 	});
@@ -119,7 +120,7 @@ describe('the Notes tab (M1b-8, UX-3)', () => {
 	// M1b-8 AC-2
 	it('writes a new note, quote, page and label included, saved with ⌘↩', async () => {
 		const user = userEvent.setup();
-		const { onchange } = show({ notes: [], marks: [] });
+		const { onchange } = show({ notes: [], marks: [], files: [] });
 
 		await user.click(screen.getByRole('button', { name: 'New note' }));
 		const body = screen.getByRole('textbox', { name: /^Note/ });
@@ -156,7 +157,7 @@ describe('the Notes tab (M1b-8, UX-3)', () => {
 	// M1b-8 AC-2
 	it('won’t save a note with nothing in it, and Escape leaves it', async () => {
 		const user = userEvent.setup();
-		show({ notes: [], marks: [] });
+		show({ notes: [], marks: [], files: [] });
 
 		await user.click(screen.getByRole('button', { name: 'New note' }));
 		await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -166,6 +167,60 @@ describe('the Notes tab (M1b-8, UX-3)', () => {
 		await user.type(screen.getByRole('textbox', { name: /^Note/ }), 'x{Escape}');
 		expect(screen.queryByRole('form', { name: 'New note' })).toBeNull();
 		expect(db.saveSourceNote).not.toHaveBeenCalled();
+	});
+
+	// Left to bubble, Escape reached the sidebar too, which closed on it.
+	it('keeps its Escape to itself, so the sidebar around it stays open', async () => {
+		const user = userEvent.setup();
+		show({ notes: [], marks: [], files: [] });
+		const seen: boolean[] = [];
+		const listen = (e: KeyboardEvent) => e.key === 'Escape' && seen.push(e.defaultPrevented);
+		document.addEventListener('keydown', listen);
+
+		await user.click(screen.getByRole('button', { name: 'New note' }));
+		await user.type(screen.getByRole('textbox', { name: /^Note/ }), '{Escape}');
+
+		document.removeEventListener('keydown', listen);
+		expect(seen).toEqual([true]);
+	});
+
+	it('offers no new note while one is being changed, which would drop the changes', async () => {
+		const user = userEvent.setup();
+		show();
+		await screen.findByText('Claim');
+
+		await user.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+
+		expect(screen.queryByRole('button', { name: 'New note' })).toBeNull();
+	});
+
+	it('lists marks file by file, each named, when they’re on more than one', async () => {
+		const preprint = 'a'.repeat(64);
+		show({
+			notes: [],
+			marks: [
+				{ ...mark('p1', 3, 'From the preprint.'), sha256: preprint },
+				mark('s1', 3, 'From the scan.')
+			],
+			files: [
+				{ sha256: preprint, file_name: 'ong-preprint.pdf' },
+				{ sha256: PDF, file_name: 'ong.pdf' }
+			]
+		});
+		await screen.findAllByText('Evidence');
+
+		const region = screen.getByRole('region', { name: 'Marked in the PDF' });
+		expect(within(region).getByText('ong-preprint.pdf')).toBeInTheDocument();
+		expect(within(region).getByText('ong.pdf')).toBeInTheDocument();
+	});
+
+	it('says what an area mark is when its note was cleared', async () => {
+		show({
+			notes: [],
+			marks: [{ ...mark('a1', 2, ''), kind: 'area', quote: null, note: '' }],
+			files: [{ sha256: PDF, file_name: 'ong.pdf' }]
+		});
+		expect(await screen.findByText('An area of the page')).toBeInTheDocument();
 	});
 
 	// M1b-8 AC-2

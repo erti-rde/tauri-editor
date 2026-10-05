@@ -1585,8 +1585,18 @@ pub struct NewSourceNote {
 pub struct WorkNotes {
     /// In the order they were first written.
     pub notes: Vec<SourceNote>,
-    /// By page, as a file's own marks are.
+    /// File by file, in the order of `files`, and by page within each: sheet 3
+    /// of a scan and sheet 3 of a preprint aren't the same page.
     pub marks: Vec<Annotation>,
+    /// The files the marks are on: the work's own first, then by name.
+    pub files: Vec<NotedFile>,
+}
+
+/// A file a work's marks are on, named as it was last seen.
+#[derive(Debug, Serialize, Deserialize, specta::Type, PartialEq, Eq)]
+pub struct NotedFile {
+    pub sha256: String,
+    pub file_name: String,
 }
 
 const SOURCE_NOTE_COLUMNS: &str =
@@ -1616,7 +1626,31 @@ pub async fn work_notes(library: &SqlitePool, id: &str) -> Result<WorkNotes, Str
     .fetch_all(library)
     .await
     .map_err(|e| e.to_string())?;
-    let marks = sqlx::query(&format!(
+    // The work's own file, then each attached file by name.
+    let files: Vec<NotedFile> = sqlx::query_as::<_, (String, String)>(
+        "SELECT f.sha256,
+                (SELECT file_name FROM locations l WHERE l.sha256 = f.sha256
+                  ORDER BY last_seen DESC LIMIT 1) AS file_name
+           FROM (SELECT ?1 AS sha256
+                 UNION SELECT alias FROM source_aliases WHERE canonical = ?1) f
+          WHERE EXISTS (SELECT 1 FROM locations l WHERE l.sha256 = f.sha256)
+          ORDER BY f.sha256 <> ?1, file_name, f.sha256",
+    )
+    .bind(&work)
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?
+    .into_iter()
+    .map(|(sha256, file_name)| NotedFile { sha256, file_name })
+    .collect();
+    let rank = |sha: &str| {
+        files
+            .iter()
+            .position(|f| f.sha256 == sha)
+            .unwrap_or(files.len())
+    };
+
+    let mut marks: Vec<Annotation> = sqlx::query(&format!(
         "SELECT {ANNOTATION_COLUMNS} FROM annotations
           WHERE sha256 = ?1
              OR sha256 IN (SELECT alias FROM source_aliases WHERE canonical = ?1)
@@ -1625,10 +1659,17 @@ pub async fn work_notes(library: &SqlitePool, id: &str) -> Result<WorkNotes, Str
     .bind(&work)
     .fetch_all(library)
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| e.to_string())?
+    .iter()
+    .map(annotation_from)
+    .collect();
+    // Stable, so each file's marks stay in page order.
+    marks.sort_by_key(|m| rank(&m.sha256));
+
     Ok(WorkNotes {
         notes: notes.iter().map(source_note_from).collect(),
-        marks: marks.iter().map(annotation_from).collect(),
+        marks,
+        files,
     })
 }
 
@@ -1638,10 +1679,13 @@ pub async fn work_notes(library: &SqlitePool, id: &str) -> Result<WorkNotes, Str
 /// Kept under the work's canonical id, which `alias_source` keeps true from
 /// then on. Editing a note leaves it on the work it was written on.
 pub async fn save_source_note(library: &SqlitePool, note: &NewSourceNote) -> Result<bool, String> {
-    let work = canonical(library, &note.sha256).await?;
+    // The work is found in the same statement that writes the note: looked up
+    // first, an alias recorded in between would leave the note on an id that
+    // had just stopped being a work, where no Notes tab reads.
     let saved = sqlx::query(
         "INSERT INTO source_notes (id, sha256, body, quote, page_label, label_id)
-         SELECT ?, sha256, ?, ?, ?, ? FROM sources WHERE sha256 = ?
+         SELECT ?, sha256, ?, ?, ?, ? FROM sources
+          WHERE sha256 = COALESCE((SELECT canonical FROM source_aliases WHERE alias = ?6), ?6)
          ON CONFLICT(id) DO UPDATE SET
             body       = excluded.body,
             quote      = excluded.quote,
@@ -1654,7 +1698,7 @@ pub async fn save_source_note(library: &SqlitePool, note: &NewSourceNote) -> Res
     .bind(&note.quote)
     .bind(&note.page_label)
     .bind(&note.label_id)
-    .bind(&work)
+    .bind(&note.sha256)
     .execute(library)
     .await
     .map_err(|e| e.to_string())?;

@@ -179,6 +179,59 @@ async fn the_work_lists_its_notes_then_the_marks_on_its_files_by_page() {
     }
 }
 
+// M1b-8 AC-1: sheet 3 of a scan and sheet 3 of a preprint aren't one page,
+// so each file's marks are listed together, and the file named.
+#[tokio::test]
+async fn marks_on_two_files_are_listed_file_by_file() {
+    let state = opened("two-files").await;
+    attach_pdf(&state).await;
+    let library = state.library().await.unwrap();
+    let preprint = "abad1dea".repeat(8);
+    queries::register_source(
+        &library,
+        &preprint,
+        "/papers/a-preprint.pdf",
+        "a-preprint.pdf",
+    )
+    .await
+    .unwrap();
+    queries::alias_source(&library, &preprint, BOOK)
+        .await
+        .unwrap();
+    mark(&state, "scan-9", 9).await;
+    let early: queries::NewAnnotation = serde_json::from_value(serde_json::json!({
+        "id": "pre-3", "sha256": preprint, "kind": "highlight", "page": 3, "quote": "q"
+    }))
+    .unwrap();
+    queries::save_annotation(&library, &early).await.unwrap();
+    mark(&state, "scan-2", 2).await;
+
+    let listed = work_notes_in(&state, BOOK.into()).await.unwrap();
+    let names: Vec<&str> = listed.files.iter().map(|f| f.file_name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["a-preprint.pdf", "ong.pdf"],
+        "attached files by name"
+    );
+    let marks: Vec<&str> = listed.marks.iter().map(|m| m.id.as_str()).collect();
+    assert_eq!(marks, ["pre-3", "scan-2", "scan-9"]);
+}
+
+// M1b-8 AC-2: Markdown's leading spaces are meaning.
+#[tokio::test]
+async fn a_note_keeps_its_leading_indentation() {
+    let state = opened("indent").await;
+    save_source_note_in(
+        &state,
+        note(NOTE, BOOK, "    for x in xs:\n        print(x)\n\n"),
+    )
+    .await
+    .unwrap();
+
+    let kept = work_notes_in(&state, BOOK.into()).await.unwrap();
+    assert_eq!(kept.notes[0].body, "    for x in xs:\n        print(x)");
+}
+
 // M1b-8 AC-2
 #[tokio::test]
 async fn a_deleted_note_is_gone() {

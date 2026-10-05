@@ -12,10 +12,15 @@ export function notesInPageOrder(notes: readonly SourceNote[]): SourceNote[] {
 
 type Key = [rank: number, value: number, text: string];
 
+/** i to lxxxix: roman numerals as front matter is numbered. */
+const FRONT_MATTER = /^(?=[ivxl])(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/i;
+
 function pageKey(label: string | null): Key {
 	const page = label?.trim() ?? '';
 	if (!page) return [0, 0, ''];
-	if (/^[ivxlcdm]+$/i.test(page)) return [1, roman(page), ''];
+	// Only a well-formed numeral of the size front matter runs to: a plate
+	// "C", an appendix "D" or a word like "mid" isn't page 100, 500 or 1499.
+	if (FRONT_MATTER.test(page)) return [1, roman(page), ''];
 	const number = /^\d+/.exec(page);
 	if (number) return [2, Number(number[0]), page];
 	return [3, 0, page.toLowerCase()];

@@ -43,6 +43,20 @@
 	const uid = $props.id();
 
 	const ordered = $derived(notesInPageOrder(notes?.notes ?? []));
+	/** The marks file by file, as Rust orders them, each file named. */
+	const byFile = $derived.by(() => {
+		const groups: { sha256: string; fileName: string; marks: WorkNotes['marks'] }[] = [];
+		for (const mark of notes?.marks ?? []) {
+			let group = groups.at(-1);
+			if (group?.sha256 !== mark.sha256) {
+				const file = notes?.files.find((f) => f.sha256 === mark.sha256);
+				group = { sha256: mark.sha256, fileName: file?.file_name ?? 'A PDF', marks: [] };
+				groups.push(group);
+			}
+			group.marks.push(mark);
+		}
+		return groups;
+	});
 
 	onMount(async () => {
 		try {
@@ -91,7 +105,9 @@
 <div class="grid gap-3">
 	{#if editing === 'new'}
 		<NoteForm {labels} onsave={(fields) => save(fields)} oncancel={() => (editing = null)} />
-	{:else}
+	{:else if editing === null}
+		<!-- Not while a note is being changed: starting another would drop
+		     the changes without a word. -->
 		<div>
 			<Button size="sm" onclick={() => (editing = 'new')}>New note</Button>
 		</div>
@@ -126,8 +142,8 @@
 							{/if}
 						{/snippet}
 						{#snippet body()}
-							<!-- Markdown, shown as written: its line breaks kept. -->
-							{#if note.body}<p class="whitespace-pre-line">{note.body}</p>{/if}
+							<!-- Markdown, shown as written: its line breaks and indentation kept. -->
+							{#if note.body}<p class="whitespace-pre-wrap">{note.body}</p>{/if}
 						{/snippet}
 						{#snippet actions()}
 							<Button variant="ghost" size="sm" onclick={() => (editing = note.id)}>Edit</Button>
@@ -141,24 +157,31 @@
 	{#if notes && notes.marks.length > 0}
 		<section aria-labelledby="{uid}-marks">
 			<h3 id="{uid}-marks" class="text-caption text-ink-muted font-medium">Marked in the PDF</h3>
-			<ul>
-				{#each notes.marks as mark (mark.id)}
-					<li>
-						<Item
-							quote={mark.quote ?? undefined}
-							text={mark.note ?? (mark.kind === 'area' ? 'An area of the page' : undefined)}
-							clamp
-						>
-							{#snippet meta()}
-								{@render labelled(mark.label_id)}
-								<span class="shrink-0"
-									>{labelOf(mark.label_id) ? '· ' : ''}p. {pageLabelOf(mark)}</span
-								>
-							{/snippet}
-						</Item>
-					</li>
-				{/each}
-			</ul>
+			{#each byFile as group (group.sha256)}
+				<!-- Named when there's more than one: sheet 3 of a scan and of a
+				     preprint aren't the same page. -->
+				{#if byFile.length > 1}
+					<h4 class="text-caption text-ink-muted mt-2 break-all">{group.fileName}</h4>
+				{/if}
+				<ul>
+					{#each group.marks as mark (mark.id)}
+						<li>
+							<Item
+								quote={mark.quote ?? undefined}
+								text={mark.note || (mark.kind === 'area' ? 'An area of the page' : undefined)}
+								clamp
+							>
+								{#snippet meta()}
+									{@render labelled(mark.label_id)}
+									<span class="shrink-0"
+										>{labelOf(mark.label_id) ? '· ' : ''}p. {pageLabelOf(mark)}</span
+									>
+								{/snippet}
+							</Item>
+						</li>
+					{/each}
+				</ul>
+			{/each}
 		</section>
 	{/if}
 </div>

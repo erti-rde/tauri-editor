@@ -14,7 +14,7 @@ const db = vi.hoisted(() => ({
 	addSourceByHand: vi.fn(async () => {}),
 	setMetadataOverride: vi.fn(async () => {}),
 	sourceFiles: vi.fn(async () => []),
-	workNotes: vi.fn(async () => ({ notes: [], marks: [] }) as unknown),
+	workNotes: vi.fn(async () => ({ notes: [], marks: [], files: [] }) as unknown),
 	annotationLabels: vi.fn(async () => []),
 	saveSourceNote: vi.fn(async () => {}),
 	deleteSourceNote: vi.fn(async () => {}),
@@ -269,5 +269,33 @@ describe('the sidebar’s tabs (M1b-7 AC-3, UX-3)', () => {
 			}
 		});
 		expect(screen.queryAllByRole('tab')).toHaveLength(0);
+	});
+});
+
+describe('the Notes tab in the sidebar (M1b-8)', () => {
+	it('keeps a half-written note when going to Details and back', async () => {
+		const user = userEvent.setup();
+		open();
+
+		await user.click(screen.getByRole('tab', { name: /^Notes/ }));
+		await user.click(await screen.findByRole('button', { name: 'New note' }));
+		await user.type(screen.getByRole('textbox', { name: /^Note/ }), 'Half a thought');
+		await user.click(screen.getByRole('tab', { name: 'Details' }));
+		await user.click(screen.getByRole('tab', { name: /^Notes/ }));
+
+		expect(screen.getByRole('textbox', { name: /^Note/ })).toHaveValue('Half a thought');
+	});
+
+	it('counts again when the table lists its sources again, as after an attach', async () => {
+		const handlers = { onclose: vi.fn(), onsaved: vi.fn(), onremoved: vi.fn() };
+		const props = { component: SourceSidebar, schema, record: CHAPTER, ...handlers };
+		const view = render(UiHarness, { props: { ...props, revision: 1 } });
+		await waitFor(() => expect(db.workNotes).toHaveBeenCalledTimes(1));
+
+		db.workNotes.mockResolvedValueOnce({ notes: [], marks: [{ id: 'm1' }], files: [] });
+		await view.rerender({ ...props, revision: 2 });
+
+		await waitFor(() => expect(screen.getByRole('tab', { name: 'Notes (1)' })).toBeInTheDocument());
+		expect(db.workNotes).toHaveBeenCalledTimes(2);
 	});
 });

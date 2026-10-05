@@ -155,7 +155,7 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 				expect.objectContaining({
 					id: 'n1',
 					sha256: SHA.vaswani,
-					body: 'On the paper',
+					body: '  On the paper',
 					quote: null,
 					page_label: '12',
 					label_id: null

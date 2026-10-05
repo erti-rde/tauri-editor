@@ -384,6 +384,12 @@ export type NewSourceNote = {
 	label_id?: string | null,
 };
 
+/**  A file a work's marks are on, named as it was last seen. */
+export type NotedFile = {
+	sha256: string,
+	file_name: string,
+};
+
 export type SalvageReport = {
 	/**  Rows carried forward. */
 	imported: number,
@@ -546,8 +552,13 @@ export type TexToolchain = {
 export type WorkNotes = {
 	/**  In the order they were first written. */
 	notes: SourceNote[],
-	/**  By page, as a file's own marks are. */
+	/**
+	 *  File by file, in the order of `files`, and by page within each: sheet 3
+	 *  of a scan and sheet 3 of a preprint aren't the same page.
+	 */
 	marks: Annotation[],
+	/**  The files the marks are on: the work's own first, then by name. */
+	files: NotedFile[],
 };
 
 /* Tauri Specta runtime */

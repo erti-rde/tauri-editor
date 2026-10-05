@@ -51,7 +51,10 @@
 		if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
 			e.preventDefault();
 			void save();
-		} else if (e.key === 'Escape') {
+		} else if (e.key === 'Escape' && !e.isComposing) {
+			// Handled here: left to bubble, the sidebar would close on it too,
+			// and take any unsaved details with it.
+			e.preventDefault();
 			oncancel();
 		}
 	}

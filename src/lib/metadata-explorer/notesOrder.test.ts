@@ -38,4 +38,15 @@ describe('notesInPageOrder', () => {
 			'second'
 		]);
 	});
+
+	it('takes only front matter’s numerals for roman, not a plate C or a word', () => {
+		const order = notesInPageOrder([
+			note('plate-c', 'C'),
+			note('mid', 'mid'),
+			note('p2', '2'),
+			note('xl', 'xl')
+		]).map((n) => n.id);
+
+		expect(order).toEqual(['xl', 'p2', 'plate-c', 'mid']);
+	});
 });
