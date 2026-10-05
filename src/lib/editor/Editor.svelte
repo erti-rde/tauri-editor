@@ -82,6 +82,12 @@
 	 */
 	let unlistenClose: (() => void) | undefined;
 	let stopWaiting: (() => void) | undefined;
+	/**
+	 * The manuscript this editor holds, fixed when it's read: the cursor is
+	 * remembered under it, not under whatever the store says is current by
+	 * the time the writer moves it.
+	 */
+	let loadedPath: string | undefined;
 	/** Set on teardown: onMount awaits, and must not finish on an editor that's gone. */
 	let destroyed = false;
 
@@ -186,6 +192,7 @@
 		// is an update. It isn't the author adding a citation, so it mustn't
 		// bring a reference list into a manuscript that had none.
 		loadingContent = true;
+		loadedPath = $documentsStore.current?.path;
 		editor = createEditor({
 			editorProps: {
 				attributes: {
@@ -202,9 +209,9 @@
 			},
 			// Where the writer left off, if this manuscript was open before: the
 			// editor is built afresh each time it's shown (M1b-8).
-			autofocus: cursorMemory.recall($documentsStore.current?.path) ?? 'end',
+			autofocus: cursorMemory.recall(loadedPath) ?? 'end',
 			extensions: paginatedExtensions(setup),
-			content: await getDocumentData(),
+			content: await getDocumentData(loadedPath),
 
 			onUpdate: ({ editor }) => {
 				documentStatus.report({ words: countDocument(editor.state.doc) });
@@ -228,8 +235,9 @@
 			onSelectionUpdate: ({ editor }) => {
 				publishOutline(editor);
 				publishDraftContext(editor);
-				const path = get(documentsStore).current?.path;
-				if (path) cursorMemory.remember(path, cursorPosition(editor.state.selection));
+				// Under the manuscript this editor shows, which the store's current
+				// one needn't be: another pane may have opened a different one.
+				if (loadedPath) cursorMemory.remember(loadedPath, cursorPosition(editor.state.selection));
 			}
 		});
 
@@ -549,6 +557,7 @@
 		if (token !== transition) return;
 
 		documentsStore.open(next);
+		loadedPath = next.path;
 		loadingContent = true;
 		$editor.commands.setContent(content);
 		// Where the writer left off in this one, as on opening the editor: a
