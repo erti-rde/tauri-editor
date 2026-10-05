@@ -285,11 +285,25 @@ pub async fn add_source_without_file(
     zotero_type: Option<&str>,
     doi: Option<&str>,
 ) -> Result<bool, String> {
-    insert_source_without_file(pool, id, csl_json, zotero_type, doi, "manuscript").await
+    let added =
+        insert_source_without_file(pool, id, csl_json, zotero_type, doi, "manuscript", false)
+            .await?;
+    Ok(added == Added::Yes)
+}
+
+/// What became of a work added without a file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Added {
+    Yes,
+    /// The library has a source with that id already.
+    IdTaken,
+    /// The library has a source with that DOI already (M1b-6 AC-3).
+    DoiTaken,
 }
 
 /// A source the researcher entered by hand (M1b-5): an `erti:<uuid>` work
-/// with no file, its details as typed. Resolves true when it was new.
+/// with no file, its details as typed. A DOI the library has already is
+/// refused, so citations aren't split between two copies.
 ///
 /// Recorded as resolved `'by-hand'`, not `'manual'`: that already means a
 /// DOI typed by hand and its details fetched, which is a different source of
@@ -300,8 +314,8 @@ pub async fn add_source_by_hand(
     csl_json: &str,
     zotero_type: &str,
     doi: Option<&str>,
-) -> Result<bool, String> {
-    insert_source_without_file(pool, id, csl_json, Some(zotero_type), doi, "by-hand").await
+) -> Result<Added, String> {
+    insert_source_without_file(pool, id, csl_json, Some(zotero_type), doi, "by-hand", true).await
 }
 
 /// A source whose details were fetched for a DOI the researcher typed (M1b-6):
@@ -313,8 +327,17 @@ pub async fn add_source_from_doi(
     csl_json: &str,
     zotero_type: &str,
     doi: &str,
-) -> Result<bool, String> {
-    insert_source_without_file(pool, id, csl_json, Some(zotero_type), Some(doi), "manual").await
+) -> Result<Added, String> {
+    insert_source_without_file(
+        pool,
+        id,
+        csl_json,
+        Some(zotero_type),
+        Some(doi),
+        "manual",
+        true,
+    )
+    .await
 }
 
 /// The work in the library with this DOI, if any (M1b-6 AC-3): its canonical
@@ -323,7 +346,10 @@ pub async fn add_source_from_doi(
 /// DOIs are case-insensitive, and Crossref and doi.org don't agree on case.
 /// The column is read first, then the details' own `DOI`, since a source added
 /// from a manuscript or by hand may have only the latter.
-pub async fn source_for_doi(pool: &SqlitePool, doi: &str) -> Result<Option<String>, String> {
+pub async fn source_for_doi(
+    db: impl sqlx::SqliteExecutor<'_>,
+    doi: &str,
+) -> Result<Option<String>, String> {
     let doi = doi.trim();
     if doi.is_empty() {
         return Ok(None);
@@ -339,7 +365,7 @@ pub async fn source_for_doi(pool: &SqlitePool, doi: &str) -> Result<Option<Strin
           LIMIT 1",
     )
     .bind(doi)
-    .fetch_optional(pool)
+    .fetch_optional(db)
     .await
     .map_err(|e| e.to_string())
 }
@@ -351,10 +377,61 @@ async fn insert_source_without_file(
     zotero_type: Option<&str>,
     doi: Option<&str>,
     resolved_via: &str,
-) -> Result<bool, String> {
+    one_per_doi: bool,
+) -> Result<Added, String> {
     // One transaction, as in `register_source`: a source left without its
     // ingest status would never get one, since the next try finds it present.
-    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    //
+    // BEGIN IMMEDIATE, not sqlx's deferred BEGIN: the write lock is taken
+    // before the DOI is checked, so two adds of one DOI at once queue and the
+    // second finds the first. Deferred, both could find it free (WAL keeps
+    // each reader's snapshot), and the second would fail as busy, not as a
+    // duplicate. sqlx 0.8.2 can't begin one itself, so the connection isn't
+    // returned to the pool: one dropped mid-transaction mustn't be reused.
+    let mut conn = pool.acquire().await.map_err(|e| e.to_string())?;
+    conn.close_on_drop();
+    sqlx::query("BEGIN IMMEDIATE")
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?;
+    let added = insert_without_file_on(
+        &mut conn,
+        id,
+        csl_json,
+        zotero_type,
+        doi,
+        resolved_via,
+        one_per_doi,
+    )
+    .await;
+    let end = if added == Ok(Added::Yes) {
+        "COMMIT"
+    } else {
+        "ROLLBACK"
+    };
+    sqlx::query(end)
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?;
+    added
+}
+
+async fn insert_without_file_on(
+    conn: &mut sqlx::SqliteConnection,
+    id: &str,
+    csl_json: &str,
+    zotero_type: Option<&str>,
+    doi: Option<&str>,
+    resolved_via: &str,
+    one_per_doi: bool,
+) -> Result<Added, String> {
+    if one_per_doi {
+        if let Some(doi) = doi {
+            if source_for_doi(&mut *conn, doi).await?.is_some() {
+                return Ok(Added::DoiTaken);
+            }
+        }
+    }
 
     let inserted = sqlx::query(
         "INSERT OR IGNORE INTO sources (sha256, csl_json, zotero_type, doi, resolved_via, resolved_at)
@@ -365,22 +442,21 @@ async fn insert_source_without_file(
     .bind(zotero_type)
     .bind(doi)
     .bind(resolved_via)
-    .execute(&mut *tx)
+    .execute(&mut *conn)
     .await
     .map_err(|e| e.to_string())?
     .rows_affected()
         > 0;
-
-    if inserted {
-        sqlx::query("INSERT OR IGNORE INTO ingest_status (sha256, state) VALUES (?, 'ready')")
-            .bind(id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+    if !inserted {
+        return Ok(Added::IdTaken);
     }
 
-    tx.commit().await.map_err(|e| e.to_string())?;
-    Ok(inserted)
+    sqlx::query("INSERT OR IGNORE INTO ingest_status (sha256, state) VALUES (?, 'ready')")
+        .bind(id)
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(Added::Yes)
 }
 
 pub async fn project_source_hashes(project: &SqlitePool) -> Result<Vec<String>, String> {

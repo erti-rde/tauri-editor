@@ -218,3 +218,31 @@ async fn a_second_source_with_the_same_doi_is_refused_and_not_kept() {
         .unwrap();
     assert_eq!(kept, 0);
 }
+
+// M1b-6 AC-3
+#[tokio::test(flavor = "multi_thread")]
+async fn the_same_doi_added_four_times_at_once_is_kept_once() {
+    let state = opened("at-once").await;
+    let add = |n: u8| {
+        let id = format!("erti:7a2d4b63-9e1f-4d2c-8b8f-3c6e5a4f2b1{n}");
+        add_source_from_doi_in(&state, id, PAPER.into(), "journalArticle".into())
+    };
+
+    let (a, b, c, d) = tokio::join!(add(0), add(1), add(2), add(3));
+
+    let results = [a, b, c, d];
+    assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
+    for refused in results.iter().filter_map(|r| r.as_ref().err()) {
+        assert_eq!(refused.kind, ErrorKind::Conflict);
+        assert_eq!(
+            refused.message,
+            "A source with that DOI is already in the library."
+        );
+    }
+    let library = state.library().await.unwrap();
+    let kept: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sources")
+        .fetch_one(&library)
+        .await
+        .unwrap();
+    assert_eq!(kept, 1);
+}
