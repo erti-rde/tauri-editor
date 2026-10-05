@@ -22,6 +22,8 @@ export interface CitationSite {
 	pos: number;
 	/** Source ids cited at this point. */
 	itemIds: string[];
+	/** The page cited in each, as printed, by the id cited (M1b-8). */
+	locators?: Record<string, string>;
 }
 
 export interface RenderedSite {
@@ -89,10 +91,18 @@ export function renderDocumentCitations(
 			if (!knownIds.has(id)) missing.add(id);
 		}
 
+		// A page goes with the work it was cited from, whichever of its ids that was.
+		const locators: Record<string, string> = {};
+		for (const [id, locator] of Object.entries(site.locators ?? {})) {
+			const work = resolve(id);
+			if (present.includes(work)) locators[work] ??= locator;
+		}
+
 		return {
 			site,
 			clusterId: `c${i}`,
 			present,
+			locators,
 			missingIds: ids.filter((id) => !knownIds.has(id))
 		};
 	});
@@ -102,7 +112,7 @@ export function renderDocumentCitations(
 	// still consume a note number, so the notes after it would be misnumbered.
 	const clusters: CitationCluster[] = perSite
 		.filter((entry) => entry.present.length > 0)
-		.map((entry) => ({ id: entry.clusterId, itemIds: entry.present }));
+		.map((entry) => ({ id: entry.clusterId, itemIds: entry.present, locators: entry.locators }));
 
 	const rendered = new Map(clusters.length > 0 ? renderOrEmpty(engine, clusters) : []);
 	const noteStyle = engine.isNoteStyle;
@@ -183,4 +193,20 @@ export function parseCitationIds(attr: unknown): string[] {
 		// An older document stored a bare id rather than an array.
 		return [attr];
 	}
+}
+
+/**
+ * Read a citation node's `locators` attribute: the page cited in each work, as
+ * printed, keyed by the id in `id` (M1b-8). Anything that isn't a page is
+ * passed over, as `parseCitationIds` passes over a broken id: one bad node
+ * mustn't stop the document rendering.
+ */
+export function parseCitationLocators(attr: unknown): Record<string, string> {
+	if (typeof attr !== 'object' || attr === null || Array.isArray(attr)) return {};
+	const out: Record<string, string> = {};
+	for (const [id, locator] of Object.entries(attr)) {
+		if (typeof locator !== 'string' || !locator.trim()) continue;
+		out[id] = locator.trim();
+	}
+	return out;
 }

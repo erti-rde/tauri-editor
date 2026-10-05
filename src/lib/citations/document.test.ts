@@ -8,6 +8,7 @@ import { CitationEngine } from './engine';
 import {
 	MISSING_SOURCE_LABEL,
 	parseCitationIds,
+	parseCitationLocators,
 	renderDocumentCitations,
 	type CitationSite
 } from './document';
@@ -130,6 +131,52 @@ describe('rendering a document', () => {
 	});
 });
 
+describe('a page cited (M1b-8)', () => {
+	// M1b-8 AC-3
+	it('puts the page in the citation, in the style’s own words', () => {
+		const { sites } = renderDocumentCitations(
+			[
+				{ pos: 0, itemIds: ['okafor-2019'], locators: { 'okafor-2019': '78' } },
+				{
+					pos: 10,
+					itemIds: ['smith-2020-a', 'tanaka-2021-book'],
+					locators: { 'tanaka-2021-book': 'xiv' }
+				}
+			],
+			engineFor(apa),
+			known
+		);
+
+		expect(plain(sites[0].label)).toMatch(/Okafor.*2019, p\. 78\)$/);
+		// Only the work it was given for: each work in a citation has its own page.
+		expect(plain(sites[1].label)).toMatch(/Smith, 2020[^;]*; Tanaka.*2021, p\. xiv\)$/);
+	});
+
+	// M1b-8 AC-3
+	it('puts the page in the note, for a note style', () => {
+		const { sites } = renderDocumentCitations(
+			[{ pos: 0, itemIds: ['okafor-2019'], locators: { 'okafor-2019': '78' } }],
+			engineFor(chicagoNotes),
+			known
+		);
+
+		expect(sites[0].label).toBe('1');
+		expect(plain(sites[0].note)).toContain('(June 2019): 78,');
+	});
+
+	// M1b-8 AC-3
+	it('keeps the page when the citation names the work by one of its files', () => {
+		const { sites } = renderDocumentCitations(
+			[{ pos: 0, itemIds: ['okafor-pdf'], locators: { 'okafor-pdf': '78' } }],
+			engineFor(apa),
+			known,
+			(id) => (id === 'okafor-pdf' ? 'okafor-2019' : id)
+		);
+
+		expect(plain(sites[0].label)).toMatch(/p\. 78\)$/);
+	});
+});
+
 describe('a source that no longer exists', () => {
 	it('does not blank the rest of the document', () => {
 		// Handing citeproc an unresolvable id throws inside the processor, which
@@ -216,5 +263,19 @@ describe('reading a citation node', () => {
 		expect(parseCitationIds('')).toEqual([]);
 		expect(parseCitationIds(JSON.stringify({ id: 'x' }))).toEqual([]);
 		expect(parseCitationIds(JSON.stringify([1, 'a', null]))).toEqual(['a']);
+	});
+});
+
+describe('reading the pages a citation node cites (M1b-8)', () => {
+	it('reads each id’s page', () => {
+		expect(parseCitationLocators({ a: '78', b: ' xiv ' })).toEqual({ a: '78', b: 'xiv' });
+	});
+
+	it('passes over what isn’t a page, rather than failing the document', () => {
+		expect(parseCitationLocators(null)).toEqual({});
+		expect(parseCitationLocators('78')).toEqual({});
+		expect(parseCitationLocators(['78'])).toEqual({});
+		expect(parseCitationLocators({ a: 78, b: '', c: '  ', d: null, e: '12' })).toEqual({ e: '12' });
+		expect(parseCitationLocators({ __proto__: { x: '1' } })).toEqual({});
 	});
 });

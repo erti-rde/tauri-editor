@@ -13,6 +13,7 @@
 	import { get } from 'svelte/store';
 
 	import { createAutosave } from './autosave';
+	import { cursorMemory, waitingCite } from './citeLater';
 	import { createManuscriptSession } from '$lib/manuscript/io';
 	import { citedIds, snapshotSources } from '$lib/manuscript/format';
 	import AwayCitationTip from './AwayCitationTip.svelte';
@@ -80,6 +81,7 @@
 	 * there. The logic now lives in ./autosave with tests for that race.
 	 */
 	let unlistenClose: (() => void) | undefined;
+	let stopWaiting: (() => void) | undefined;
 	/**
 	 * Loads and saves manuscripts, and refuses to save over one it couldn't read
 	 * (`$lib/manuscript/io`).
@@ -180,7 +182,9 @@
 					class: 'manuscript border border-line cursor-text'
 				}
 			},
-			autofocus: 'end',
+			// Where the writer left off, if this manuscript was open before: the
+			// editor is built afresh each time it's shown (M1b-8).
+			autofocus: cursorMemory.recall($documentsStore.current?.path) ?? 'end',
 			extensions: paginatedExtensions(setup),
 			content: await getDocumentData(),
 
@@ -206,6 +210,8 @@
 			onSelectionUpdate: ({ editor }) => {
 				publishOutline(editor);
 				publishDraftContext(editor);
+				const path = get(documentsStore).current?.path;
+				if (path) cursorMemory.remember(path, editor.state.selection.head);
 			}
 		});
 
@@ -228,6 +234,14 @@
 		citationsSeen = countCitations($editor.state.doc);
 		loadingContent = false;
 		applyEditable();
+
+		// A citation asked for while the editor was away (the Sources view, M1b-8),
+		// or while it's here: either way it goes in at the cursor.
+		stopWaiting = waitingCite.subscribe((cite) => {
+			if (!cite) return;
+			waitingCite.take();
+			void citeSource(cite.id, cite.locator ?? undefined);
+		});
 
 		// Closing the window is the last chance to write, and `beforeunload` cannot
 		// take it: the browser does not await a promise, so the webview can go away
@@ -338,6 +352,7 @@
 		// from a document while the app stays open.
 		void autosave.flush();
 		unlistenClose?.();
+		stopWaiting?.();
 		autosave.destroy();
 	});
 
@@ -664,9 +679,9 @@
 	 * the source joins the project if it was not in it, the engine is reloaded
 	 * before the citation is inserted, and a source with no resolved metadata is
 	 * refused with something to do about it rather than a citation that renders
-	 * as removed.
+	 * as removed. `locator` is the page cited, as printed (M1b-8).
 	 */
-	async function citeSource(id: string) {
+	async function citeSource(id: string, locator?: string) {
 		// The work, whichever of its ids the note was given (ADR 003).
 		const sha256 = citationStore.canonicalId(id);
 		try {
@@ -682,9 +697,12 @@
 				return;
 			}
 
+			// The page, as printed, goes with the work (M1b-8).
+			const locators = locator ? { [sha256]: locator } : null;
 			$editor.commands.insertCitation({
 				id: JSON.stringify([sha256]),
-				label: citationStore.previewCitation([sha256])
+				label: citationStore.previewCitation([sha256], locators ?? {}),
+				locators
 			});
 		} catch (failure) {
 			log.error('Could not cite that paper', failure);

@@ -31,9 +31,11 @@
 		notes: WorkNotes | null;
 		/** A note was saved or deleted: read them again. */
 		onchange: () => Promise<void>;
+		/** Cite the work at a note's page (AC-3). Absent with no manuscript to cite into. */
+		oncite?: (locator: string) => void;
 	}
 
-	let { id, notes, onchange }: Props = $props();
+	let { id, notes, onchange, oncite }: Props = $props();
 
 	let labels: AnnotationLabel[] = $state([]);
 	/** The form showing: a new note's, or the id of the note being changed. */
@@ -146,6 +148,12 @@
 							{#if note.body}<p class="whitespace-pre-wrap">{note.body}</p>{/if}
 						{/snippet}
 						{#snippet actions()}
+							{#if oncite && note.page_label}
+								{@const page = note.page_label}
+								<Button variant="ghost" size="sm" onclick={() => oncite(page)}>
+									Cite with p. {page}
+								</Button>
+							{/if}
 							<Button variant="ghost" size="sm" onclick={() => (editing = note.id)}>Edit</Button>
 						{/snippet}
 					</Item>

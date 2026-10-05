@@ -109,4 +109,15 @@ test('shots', async ({ page }) => {
 		.fill('dispensing with recurrence and convolutions entirely');
 	await page.getByRole('textbox', { name: /^Page/ }).fill('1');
 	await page.screenshot({ ...shot('16-source-notes'), animations: 'disabled' });
+
+	// Saved, it offers to cite the paper at its page (M1b-8 AC-3)…
+	await page.getByRole('textbox', { name: /^Page/ }).press('ControlOrMeta+Enter');
+	const citeIt = page.getByRole('button', { name: 'Cite with p. 1' });
+	await expect(citeIt).toBeVisible();
+	await page.screenshot({ ...shot('17-cite-with-page'), animations: 'disabled' });
+
+	// …which goes in where the writer left off in the manuscript.
+	await citeIt.click();
+	await expect(page.locator('.ProseMirror')).toContainText('(Vaswani, 2017, p. 1)');
+	await page.screenshot({ ...shot('18-cited-at-page'), animations: 'disabled' });
 });

@@ -67,9 +67,9 @@ const NOTES: WorkNotes = {
 	files: [{ sha256: PDF, file_name: 'ong.pdf' }]
 };
 
-function show(notes: WorkNotes | null = NOTES) {
+function show(notes: WorkNotes | null = NOTES, oncite?: (locator: string) => void) {
 	const onchange = vi.fn(async () => {});
-	render(UiHarness, { props: { component: SourceNotes, id: BOOK, notes, onchange } });
+	render(UiHarness, { props: { component: SourceNotes, id: BOOK, notes, onchange, oncite } });
 	return { onchange };
 }
 
@@ -265,5 +265,34 @@ describe('the Notes tab (M1b-8, UX-3)', () => {
 
 		await waitFor(() => expect(db.deleteSourceNote).toHaveBeenCalledWith('whole'));
 		expect(onchange).toHaveBeenCalled();
+	});
+
+	// M1b-8 AC-3
+	it('offers Cite with p. N on a note with a page, which cites the work there', async () => {
+		const user = userEvent.setup();
+		const oncite = vi.fn();
+		show(NOTES, oncite);
+		await screen.findByText('Claim');
+
+		const notes = within(screen.getByRole('list', { name: 'Notes' })).getAllByRole('listitem');
+		// Not on the note about the whole work, nor on a mark: those are cited elsewhere.
+		expect(within(notes[0]).queryByRole('button', { name: /^Cite/ })).toBeNull();
+		expect(
+			within(screen.getByRole('region', { name: 'Marked in the PDF' })).queryByRole('button', {
+				name: /^Cite/
+			})
+		).toBeNull();
+
+		await user.click(within(notes[2]).getByRole('button', { name: 'Cite with p. 78' }));
+		expect(oncite).toHaveBeenCalledWith('78');
+		await user.click(within(notes[1]).getByRole('button', { name: 'Cite with p. 12' }));
+		expect(oncite).toHaveBeenLastCalledWith('12');
+	});
+
+	// M1b-8 AC-3
+	it('offers no citing with no manuscript to cite into', async () => {
+		show();
+		await screen.findByText('Claim');
+		expect(screen.queryByRole('button', { name: /^Cite/ })).toBeNull();
 	});
 });
