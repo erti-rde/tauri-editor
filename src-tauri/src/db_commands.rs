@@ -163,6 +163,58 @@ pub async fn add_source_by_hand_in(
     csl_json: String,
     zotero_type: String,
 ) -> Result<(), AppError> {
+    add_work_in(state, id, csl_json, zotero_type, false).await
+}
+
+/// Add a source whose details were looked up for a DOI (M1b-6, UX-2): as
+/// `add_source_by_hand`, but recorded as resolved from the DOI it carries.
+#[tauri::command]
+#[specta::specta]
+pub async fn add_source_from_doi(
+    state: State<'_, DbState>,
+    id: String,
+    csl_json: String,
+    zotero_type: String,
+) -> Result<(), AppError> {
+    add_source_from_doi_in(&state, id, csl_json, zotero_type).await
+}
+
+pub async fn add_source_from_doi_in(
+    state: &DbState,
+    id: String,
+    csl_json: String,
+    zotero_type: String,
+) -> Result<(), AppError> {
+    add_work_in(state, id, csl_json, zotero_type, true).await
+}
+
+/// The work in the library with this DOI, if there is one (M1b-6 AC-3), so
+/// adding it again opens it instead.
+#[tauri::command]
+#[specta::specta]
+pub async fn source_for_doi(
+    state: State<'_, DbState>,
+    doi: String,
+) -> Result<Option<String>, AppError> {
+    source_for_doi_in(&state, doi).await
+}
+
+pub async fn source_for_doi_in(state: &DbState, doi: String) -> Result<Option<String>, AppError> {
+    let library = state.library().await?;
+    queries::source_for_doi(&library, &doi).await.or_database()
+}
+
+/// A work with no file, by hand or from a DOI. The DOI is read from the
+/// details either way, so that a DOI typed into the form is found later too,
+/// and a work the library has under it already is refused: the second copy
+/// would split the citations between them.
+async fn add_work_in(
+    state: &DbState,
+    id: String,
+    csl_json: String,
+    zotero_type: String,
+    from_doi: bool,
+) -> Result<(), AppError> {
     let invalid = |message: &str| AppError::new(crate::ipc::ErrorKind::InvalidInput, message);
     let uuid = id.strip_prefix("erti:").unwrap_or_default();
     let shaped = uuid.len() == 36
@@ -191,16 +243,41 @@ pub async fn add_source_by_hand_in(
     if !typed || zotero_type.is_empty() || zotero_type.len() > 64 {
         return Err(invalid("Choose what kind of source it is."));
     }
+    // Stored as the library compares it, so a DOI typed as a link is found by
+    // the bare one, and finds it.
+    let doi = csl
+        .get("DOI")
+        .and_then(|v| v.as_str())
+        .and_then(queries::normalise_doi);
+    let doi = doi.as_deref();
+    if from_doi && doi.is_none() {
+        return Err(invalid("Those details have no DOI."));
+    }
 
     let library = state.library().await?;
-    let added = queries::add_source_by_hand(&library, &id, &csl_json, &zotero_type)
-        .await
-        .or_database()?;
-    if !added {
-        return Err(AppError::new(
-            crate::ipc::ErrorKind::Conflict,
-            "A source with that id is already in the library.",
-        ));
+    // The DOI is checked in the same transaction as the insert (queries.rs),
+    // so two adds of one DOI at once can't both find it free.
+    let added = match (from_doi, doi) {
+        (true, Some(doi)) => {
+            queries::add_source_from_doi(&library, &id, &csl_json, &zotero_type, doi).await
+        }
+        _ => queries::add_source_by_hand(&library, &id, &csl_json, &zotero_type, doi).await,
+    }
+    .or_database()?;
+    match added {
+        queries::Added::Yes => {}
+        queries::Added::IdTaken => {
+            return Err(AppError::new(
+                crate::ipc::ErrorKind::Conflict,
+                "A source with that id is already in the library.",
+            ))
+        }
+        queries::Added::DoiTaken => {
+            return Err(AppError::new(
+                crate::ipc::ErrorKind::Conflict,
+                "A source with that DOI is already in the library.",
+            ))
+        }
     }
     if let Ok(project) = state.project().await {
         // Two databases, so no one transaction: a source the project failed to

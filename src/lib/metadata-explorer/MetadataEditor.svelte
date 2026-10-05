@@ -8,9 +8,11 @@
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { Banner, Button, EmptyState, Loader, Menu, SearchField, TextField } from '$lib/ui';
+	import AddFromDoi from './AddFromDoi.svelte';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { augmentSchema } from './adapterCslZotero';
 	import { attachPdf } from './attach';
+	import type { FromDoi } from './fromDoi';
 	import { describeAuthors, describeType } from './sourceRows';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 	import { log } from '$lib/log';
@@ -46,8 +48,12 @@
 
 	let loading = $state(true);
 	let searchQuery = $state('');
-	/** The row being edited, or `new` while a source is being entered by hand. */
-	let sidebar = $state<{ mode: 'edit'; id: string } | { mode: 'new' } | null>(null);
+	/**
+	 * The row being edited, or `new` while a source is being entered by hand,
+	 * from the DOI it was asked for by when there is one (M1b-6 AC-2).
+	 */
+	let sidebar = $state<{ mode: 'edit'; id: string } | { mode: 'new'; doi?: string } | null>(null);
+	let addingFromDoi = $state(false);
 	const selectedSourceId = $derived(sidebar?.mode === 'edit' ? sidebar.id : null);
 	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
@@ -177,6 +183,24 @@
 		}
 	}
 
+	/** Added from its DOI, or found in the library already (M1b-6 AC-1, AC-3). */
+	async function openFromDoi(found: Extract<FromDoi, { kind: 'added' | 'existing' }>) {
+		const wasHere = sources.some((s) => s.id === found.id);
+		await loadSources();
+		sidebar = { mode: 'edit', id: found.id };
+		if (found.kind === 'added') {
+			successToast(`Added “${found.title}” to your library and this project.`);
+			return;
+		}
+		const source = sources.find((s) => s.id === found.id);
+		const title = source?.metadata?.title || source?.file_name || 'That source';
+		successToast(
+			wasHere
+				? `“${title}” is in this project already.`
+				: `“${title}” was in your library already. It’s now in this project too.`
+		);
+	}
+
 	async function afterChange() {
 		sidebar = null;
 		await loadSources();
@@ -205,6 +229,11 @@
 						label: 'Enter details…',
 						description: 'A book, chapter or page with no PDF',
 						onSelect: () => (sidebar = { mode: 'new' })
+					},
+					{
+						label: 'From a DOI…',
+						description: 'Looks it up if lookups are on',
+						onSelect: () => (addingFromDoi = true)
 					}
 				]}
 			/>
@@ -402,9 +431,11 @@
 	</div>
 
 	{#if sidebar && augmentedSchema && (sidebar.mode === 'new' || selected)}
-		{#key sidebar.mode === 'new' ? 'new' : sidebar.id}
+		{#key sidebar.mode === 'new' ? `new:${sidebar.doi ?? ''}` : sidebar.id}
 			<SourceSidebar
 				schema={augmentedSchema}
+				initial={sidebar.mode === 'new' && sidebar.doi ? { DOI: sidebar.doi } : undefined}
+				onexisting={(id) => openFromDoi({ kind: 'existing', id })}
 				record={selected && sidebar.mode === 'edit'
 					? {
 							id: selected.id,
@@ -423,3 +454,12 @@
 		{/key}
 	{/if}
 </div>
+
+{#if augmentedSchema}
+	<AddFromDoi
+		bind:open={addingFromDoi}
+		schema={augmentedSchema}
+		onsource={openFromDoi}
+		onbyhand={(doi) => (sidebar = { mode: 'new', doi })}
+	/>
+{/if}

@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { describeError } from '$lib/ipc';
+	import { describeError, IpcError } from '$lib/ipc';
 	import { log } from '$lib/log';
-	import { addSourceByHand, setMetadataOverride, workNotes, type WorkNotes } from '$lib/stores/db';
+	import {
+		addSourceByHand,
+		setMetadataOverride,
+		sourceForDoi,
+		workNotes,
+		type WorkNotes
+	} from '$lib/stores/db';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { Button, Sidebar, Tabs } from '$lib/ui';
 
@@ -28,6 +34,13 @@
 			csl: CslItem | null;
 			zoteroType: string | null;
 		};
+		/** Creating: details to start from, such as the DOI it was asked for by (M1b-6). */
+		initial?: CslItem;
+		/**
+		 * Creating, the DOI typed is one the library has: that source, to open
+		 * in place of a second copy (M1b-6 AC-3).
+		 */
+		onexisting?: (id: string) => void | Promise<void>;
 		onclose: () => void;
 		onsaved: () => void;
 		onremoved: () => void | Promise<void>;
@@ -42,6 +55,8 @@
 	let {
 		schema,
 		record,
+		initial,
+		onexisting,
 		onclose,
 		onsaved,
 		onremoved,
@@ -77,7 +92,7 @@
 	 * value typed under a kind that was then left isn't stored out of sight.
 	 */
 	// svelte-ignore state_referenced_locally
-	let draft: CslItem = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
+	let draft: CslItem = structuredClone($state.snapshot(record?.csl ?? initial ?? {})) as CslItem;
 	// svelte-ignore state_referenced_locally
 	let type = $state(typeNamed(itemTypeOf(record?.zoteroType, record?.csl ?? null, schema)));
 	// svelte-ignore state_referenced_locally
@@ -97,7 +112,9 @@
 	async function save() {
 		tried = true;
 		if (!type || Object.keys(missing(form, type)).length) return;
-		const original = structuredClone($state.snapshot(record?.csl ?? {})) as CslItem;
+		// Creating, the initial details are kept whether or not the kind chosen
+		// shows them: a book's form has no DOI field, but its DOI is still its.
+		const original = structuredClone($state.snapshot(record?.csl ?? initial ?? {})) as CslItem;
 		const item: CslItem = { ...fromForm(form, type, original), zotero_type: type.itemType };
 		saving = true;
 		try {
@@ -112,7 +129,15 @@
 			}
 			onsaved();
 		} catch (error) {
-			errorToast(`Could not save it: ${describeError(error)}`);
+			// A DOI the library has already: that source is opened, as From a
+			// DOI… opens it, rather than leaving the details stuck here.
+			const doi = typeof item.DOI === 'string' ? item.DOI : null;
+			const existing =
+				!record && doi && error instanceof IpcError && error.kind === 'Conflict'
+					? await sourceForDoi(doi).catch(() => null)
+					: null;
+			if (existing && onexisting) await onexisting(existing);
+			else errorToast(`Could not save it: ${describeError(error)}`);
 		} finally {
 			saving = false;
 		}
@@ -121,7 +146,8 @@
 
 <Sidebar
 	title={record ? 'Edit source' : 'New source'}
-	subtitle={record?.title ?? 'Entered by hand, with no file'}
+	subtitle={record?.title ??
+		(initial?.DOI ? `DOI ${initial.DOI}, with no file` : 'Entered by hand, with no file')}
 	{onclose}
 >
 	{#if record}

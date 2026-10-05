@@ -171,6 +171,73 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 	};
 	// As `queries::resolve`: one lookup, and an unknown id is its own.
 	const canon = (id: string) => state.aliases.get(id) ?? id;
+
+	/** As `queries::normalise_doi`: lowercase, bare of a resolver's prefix. */
+	function normaliseDoi(doi: unknown): string | null {
+		if (typeof doi !== 'string') return null;
+		const lower = doi.trim().toLowerCase();
+		const prefix = [
+			'https://doi.org/',
+			'http://doi.org/',
+			'https://dx.doi.org/',
+			'http://dx.doi.org/',
+			'doi:'
+		].find((p) => lower.startsWith(p));
+		const bare = (prefix ? lower.slice(prefix.length) : lower).trim();
+		return bare || null;
+	}
+
+	/** As `queries::source_for_doi`: the column, else the details' own DOI, normalised. */
+	function doiOwner(doi: string): string | null {
+		const wanted = normaliseDoi(doi);
+		if (!wanted) return null;
+		for (const s of state.library.values()) {
+			let own: unknown = s.doi;
+			if (own === null) {
+				try {
+					own = (JSON.parse(s.csl_json ?? '') as { DOI?: unknown }).DOI ?? null;
+				} catch {
+					own = null;
+				}
+			}
+			// Rust compares whatever's stored as text; a DOI that isn't a string
+			// (a number in imported details) is no match, never an error.
+			if (normaliseDoi(own) === wanted) return canon(s.sha256);
+		}
+		return null;
+	}
+
+	/** As `add_work_in`: by hand, or from a DOI, and never a DOI twice. */
+	function addWork(id: string, cslJson: string, zoteroType: string, fromDoi: boolean) {
+		library();
+		if (!/^erti:[0-9a-f-]{36}$/i.test(id)) {
+			throw appError('InvalidInput', "That isn't an id for a source entered by hand.");
+		}
+		const csl = JSON.parse(cslJson) as { title?: unknown; DOI?: unknown };
+		if (typeof csl.title !== 'string' || !csl.title.trim()) {
+			throw appError('InvalidInput', 'Give the source a title.');
+		}
+		const doi = normaliseDoi(csl.DOI);
+		if (fromDoi && !doi) throw appError('InvalidInput', 'Those details have no DOI.');
+		if (doi && doiOwner(doi)) {
+			throw appError('Conflict', 'A source with that DOI is already in the library.');
+		}
+		if (state.library.has(id)) {
+			throw appError('Conflict', 'A source with that id is already in the library.');
+		}
+		state.library.set(id, {
+			sha256: id,
+			file_name: '',
+			path: null,
+			csl_json: cslJson,
+			zotero_type: zoteroType,
+			doi,
+			resolved_via: fromDoi ? 'manual' : 'by-hand',
+			state: 'ready',
+			last_error: null
+		});
+		if (state.root !== null) state.project.add(id);
+	}
 	const projectWorks = () => new Set([...state.project].map(canon));
 	// As `queries::work_and_files`: the work, then every file attached to it.
 	const workAndFiles = (id: string) => {
@@ -487,30 +554,16 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		},
 
 		addSourceByHand(id, cslJson, zoteroType) {
-			library();
-			if (!/^erti:[0-9a-f-]{36}$/i.test(id)) {
-				throw appError('InvalidInput', "That isn't an id for a source entered by hand.");
-			}
-			const title = (JSON.parse(cslJson) as { title?: unknown }).title;
-			if (typeof title !== 'string' || !title.trim()) {
-				throw appError('InvalidInput', 'Give the source a title.');
-			}
-			if (state.library.has(id)) {
-				throw appError('Conflict', 'A source with that id is already in the library.');
-			}
-			state.library.set(id, {
-				sha256: id,
-				file_name: '',
-				path: null,
-				csl_json: cslJson,
-				zotero_type: zoteroType,
-				doi: null,
-				resolved_via: 'by-hand',
-				state: 'ready',
-				last_error: null
-			});
-			if (state.root !== null) state.project.add(id);
+			addWork(id, cslJson, zoteroType, false);
 			return null;
+		},
+		addSourceFromDoi(id, cslJson, zoteroType) {
+			addWork(id, cslJson, zoteroType, true);
+			return null;
+		},
+		sourceForDoi(doi) {
+			library();
+			return doiOwner(doi);
 		},
 
 		// As `queries::attach_file`: the file keeps its own row, and an alias

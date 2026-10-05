@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { resolveMetadata } from './resolve';
+import { lookupDoi, resolveMetadata, tidyRecord } from './resolve';
 
 const APA_PAPER = {
 	title: 'Deep Residual Learning for Image Recognition',
@@ -220,5 +220,39 @@ describe('the placeholder can never come back', () => {
 				expect(JSON.stringify(resolved.csl)).not.toBe('{}');
 			}
 		}
+	});
+});
+
+// M1b-6 AC-1
+describe('a DOI typed in', () => {
+	it('is looked up at doi.org for its details', async () => {
+		const { impl, calls } = stubFetch({ 'doi.org/10.1109/cvpr.2016.90': APA_PAPER });
+
+		const found = await lookupDoi('10.1109/cvpr.2016.90', impl);
+
+		expect(found).toEqual({ csl: APA_PAPER, via: 'manual', doi: APA_PAPER.DOI });
+		expect(calls).toEqual(['https://doi.org/10.1109/cvpr.2016.90']);
+	});
+
+	it('is never searched for, so a DOI doi.org lacks finds no other paper', async () => {
+		const { impl, calls } = stubFetch({ 'api.crossref.org': { message: { items: [] } } });
+
+		expect(await lookupDoi('10.1000/missing', impl)).toBeNull();
+		expect(calls.every((url) => url.startsWith('https://doi.org/'))).toBe(true);
+	});
+
+	it('finds nothing in a record with no title', async () => {
+		const { impl } = stubFetch({ 'doi.org': { type: 'article-journal' } });
+		expect(await lookupDoi('10.1000/untitled', impl)).toBeNull();
+	});
+});
+
+describe('a record as the library keeps it', () => {
+	it('drops the reference list, and makes the title text', () => {
+		expect(tidyRecord({ title: ['Deep learning', 'x'], reference: [{}] }, 'fallback')).toEqual({
+			title: 'Deep learning'
+		});
+		expect(tidyRecord({ title: 42 }, 'fallback')).toEqual({ title: 'fallback' });
+		expect(tidyRecord({ title: 'Kept' }, 'fallback')).toEqual({ title: 'Kept' });
 	});
 });

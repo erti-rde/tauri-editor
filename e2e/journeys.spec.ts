@@ -182,6 +182,109 @@ test('a book with no PDF can be entered by hand, and joins the project', async (
 	expect(added?.resolved_via).toBe('by-hand');
 });
 
+// M1b-6, UX-2
+test('a DOI is looked up and added, and one in the library already opens it', async ({ page }) => {
+	// doi.org answered here: nothing leaves the machine, and nothing else is asked.
+	const asked: string[] = [];
+	await page.route(/^https:\/\/(doi\.org|api\.crossref\.org)\//, (route) => {
+		const url = route.request().url();
+		asked.push(url);
+		// Anything else, such as the project's unread scan searched for now that
+		// lookups are on, finds nothing citable.
+		if (url !== 'https://doi.org/10.1038/nature14539') {
+			return route.fulfill({
+				headers: { 'access-control-allow-origin': '*' },
+				json: { message: { items: [] } }
+			});
+		}
+		return route.fulfill({
+			headers: { 'access-control-allow-origin': '*' },
+			json: {
+				type: 'article-journal',
+				title: 'Deep learning',
+				DOI: '10.1038/nature14539',
+				author: [{ family: 'LeCun', given: 'Yann' }],
+				issued: { 'date-parts': [[2015]] },
+				reference: [{ key: 'ref1' }]
+			}
+		});
+	});
+	await launch(page, '?consent=granted');
+	await openProject(page);
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await expect(page.getByRole('heading', { name: 'Sources (3)' })).toBeVisible();
+
+	// M1b-6 AC-1: looked up at doi.org, then in the library and this project.
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /From a DOI…/ }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add from a DOI' });
+	await dialog.getByRole('textbox', { name: 'DOI' }).fill('https://doi.org/10.1038/nature14539');
+	await dialog.getByRole('button', { name: 'Look up' }).click();
+
+	await expect(
+		page.getByText('Added “Deep learning” to your library and this project.')
+	).toBeVisible();
+	await expect(dialog).toBeHidden();
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Paper Deep learning/ })).toContainText('LeCun');
+	await expect(page.getByRole('complementary', { name: 'Edit source' })).toBeVisible();
+	const added = await page.evaluate(() =>
+		[...window.__ERTI_FAKE__!.state.library.values()].find((s) => s.doi?.includes('nature'))
+	);
+	expect(added).toMatchObject({ doi: '10.1038/nature14539', resolved_via: 'manual' });
+	expect(added?.sha256).toMatch(/^erti:[0-9a-f-]{36}$/);
+	expect(JSON.parse(added!.csl_json!)).not.toHaveProperty('reference');
+	expect(asked.filter((url) => url.includes('nature14539'))).toHaveLength(1);
+
+	// M1b-6 AC-3: the same DOI, in another case, opens it instead of adding it.
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /From a DOI…/ }).click();
+	await dialog.getByRole('textbox', { name: 'DOI' }).fill('10.1038/NATURE14539');
+	await dialog.getByRole('textbox', { name: 'DOI' }).press('Enter');
+	await expect(page.getByText('“Deep learning” is in this project already.')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+	expect(asked.filter((url) => url.includes('nature14539'))).toHaveLength(1);
+});
+
+// M1b-6 AC-2, UX-2
+test('with lookups off, a DOI is entered by hand, filled in', async ({ page }) => {
+	const asked: string[] = [];
+	page.on('request', (request) => {
+		if (/doi\.org|crossref/.test(request.url())) asked.push(request.url());
+	});
+	await launch(page);
+	await openProject(page);
+	await page.getByRole('button', { name: 'Sources' }).click();
+
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /From a DOI…/ }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add from a DOI' });
+	await expect(dialog).toContainText('Online lookups are off.');
+	await expect(dialog.getByRole('button', { name: 'Look up' })).toHaveCount(0);
+	await dialog.getByRole('textbox', { name: 'DOI' }).fill('doi:10.1038/nature14539');
+	await dialog.getByRole('button', { name: 'Enter details' }).click();
+
+	const sidebar = page.getByRole('complementary', { name: 'New source' });
+	await expect(sidebar).toContainText('DOI 10.1038/nature14539, with no file');
+	await sidebar.getByRole('button', { name: 'Kind of source' }).click();
+	await page.getByRole('option', { name: 'Journal Article', exact: true }).click();
+	await expect(sidebar.getByRole('textbox', { name: 'DOI', exact: true })).toHaveValue(
+		'10.1038/nature14539'
+	);
+	await sidebar
+		.getByRole('textbox', { name: 'Title (required)', exact: true })
+		.fill('Deep learning');
+	await sidebar.getByRole('textbox', { name: 'Publication Title (required)' }).fill('Nature');
+	await sidebar.getByRole('button', { name: 'Add to library' }).click();
+
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+	const added = await page.evaluate(() =>
+		[...window.__ERTI_FAKE__!.state.library.values()].find((s) => s.doi?.includes('nature'))
+	);
+	expect(added).toMatchObject({ doi: '10.1038/nature14539', resolved_via: 'by-hand' });
+	expect(asked).toEqual([]);
+});
+
 // M1b-7, UX-2 and UX-3
 test('a PDF attached to a source is read, and its File tab says where it lives', async ({
 	page
