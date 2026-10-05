@@ -1305,26 +1305,16 @@ pub async fn search_index(
                         })
                     })
             }
-            Key::SourceNote(id) => sqlx::query(
-                "SELECT id, sha256, body, quote, page_label, label_id, created_at, updated_at
-                   FROM source_notes WHERE id = ?",
-            )
+            Key::SourceNote(id) => sqlx::query(&format!(
+                "SELECT {SOURCE_NOTE_COLUMNS} FROM source_notes WHERE id = ?"
+            ))
             .bind(id)
             .fetch_optional(library)
             .await
             .map_err(|e| e.to_string())?
             .map(|r| {
                 Hit::SourceNote(ScoredSourceNote {
-                    note: SourceNote {
-                        id: r.get("id"),
-                        sha256: r.get("sha256"),
-                        body: r.get("body"),
-                        quote: r.get("quote"),
-                        page_label: r.get("page_label"),
-                        label_id: r.get("label_id"),
-                        created_at: r.get("created_at"),
-                        updated_at: r.get("updated_at"),
-                    },
+                    note: source_note_from(&r),
                     similarity: found.similarity,
                     source_id,
                     in_project: found.in_project,
@@ -1565,6 +1555,163 @@ pub async fn delete_annotation(pool: &SqlitePool, id: &str) -> Result<(), String
         .await
         .map_err(|e| e.to_string())?;
 
+    Ok(())
+}
+
+/* ------------------------------------------------------------ source notes */
+
+/// A source note on its way in (M1b-8, ADR 004). The id is the caller's, as a
+/// mark's is, so a note keeps it through an export and back.
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+pub struct NewSourceNote {
+    pub id: String,
+    /// Any of the work's ids: the note is kept under the work's own.
+    pub sha256: String,
+    /// Markdown. May be empty when there's a quote.
+    pub body: String,
+    #[specta(optional)]
+    pub quote: Option<String>,
+    /// The page as the paper prints it.
+    #[specta(optional)]
+    pub page_label: Option<String>,
+    #[specta(optional)]
+    pub label_id: Option<String>,
+}
+
+/// Everything noted on a work (UX-3's Notes tab): its own notes, and the marks
+/// on each of its files (ADR 003), so a book's tab shows the highlights made in
+/// the PDF attached to it.
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+pub struct WorkNotes {
+    /// In the order they were first written.
+    pub notes: Vec<SourceNote>,
+    /// File by file, in the order of `files`, and by page within each: sheet 3
+    /// of a scan and sheet 3 of a preprint aren't the same page.
+    pub marks: Vec<Annotation>,
+    /// The files the marks are on: the work's own first, then by name.
+    pub files: Vec<NotedFile>,
+}
+
+/// A file a work's marks are on, named as it was last seen.
+#[derive(Debug, Serialize, Deserialize, specta::Type, PartialEq, Eq)]
+pub struct NotedFile {
+    pub sha256: String,
+    pub file_name: String,
+}
+
+const SOURCE_NOTE_COLUMNS: &str =
+    "id, sha256, body, quote, page_label, label_id, created_at, updated_at";
+
+fn source_note_from(row: &sqlx::sqlite::SqliteRow) -> SourceNote {
+    SourceNote {
+        id: row.get("id"),
+        sha256: row.get("sha256"),
+        body: row.get("body"),
+        quote: row.get("quote"),
+        page_label: row.get("page_label"),
+        label_id: row.get("label_id"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+    }
+}
+
+/// The notes and marks on a work, by any of its ids.
+pub async fn work_notes(library: &SqlitePool, id: &str) -> Result<WorkNotes, String> {
+    let work = canonical(library, id).await?;
+    let notes = sqlx::query(&format!(
+        "SELECT {SOURCE_NOTE_COLUMNS} FROM source_notes
+          WHERE sha256 = ? ORDER BY created_at, rowid"
+    ))
+    .bind(&work)
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?;
+    // The work's own file, then each attached file by name.
+    let files: Vec<NotedFile> = sqlx::query_as::<_, (String, String)>(
+        "SELECT f.sha256,
+                (SELECT file_name FROM locations l WHERE l.sha256 = f.sha256
+                  ORDER BY last_seen DESC LIMIT 1) AS file_name
+           FROM (SELECT ?1 AS sha256
+                 UNION SELECT alias FROM source_aliases WHERE canonical = ?1) f
+          WHERE EXISTS (SELECT 1 FROM locations l WHERE l.sha256 = f.sha256)
+          ORDER BY f.sha256 <> ?1, file_name, f.sha256",
+    )
+    .bind(&work)
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?
+    .into_iter()
+    .map(|(sha256, file_name)| NotedFile { sha256, file_name })
+    .collect();
+    let rank = |sha: &str| {
+        files
+            .iter()
+            .position(|f| f.sha256 == sha)
+            .unwrap_or(files.len())
+    };
+
+    let mut marks: Vec<Annotation> = sqlx::query(&format!(
+        "SELECT {ANNOTATION_COLUMNS} FROM annotations
+          WHERE sha256 = ?1
+             OR sha256 IN (SELECT alias FROM source_aliases WHERE canonical = ?1)
+          ORDER BY page, created_at"
+    ))
+    .bind(&work)
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?
+    .iter()
+    .map(annotation_from)
+    .collect();
+    // Stable, so each file's marks stay in page order.
+    marks.sort_by_key(|m| rank(&m.sha256));
+
+    Ok(WorkNotes {
+        notes: notes.iter().map(source_note_from).collect(),
+        marks,
+        files,
+    })
+}
+
+/// Save a source note, or replace one. Resolves false when the library has no
+/// such work.
+///
+/// Kept under the work's canonical id, which `alias_source` keeps true from
+/// then on. Editing a note leaves it on the work it was written on.
+pub async fn save_source_note(library: &SqlitePool, note: &NewSourceNote) -> Result<bool, String> {
+    // The work is found in the same statement that writes the note: looked up
+    // first, an alias recorded in between would leave the note on an id that
+    // had just stopped being a work, where no Notes tab reads.
+    let saved = sqlx::query(
+        "INSERT INTO source_notes (id, sha256, body, quote, page_label, label_id)
+         SELECT ?, sha256, ?, ?, ?, ? FROM sources
+          WHERE sha256 = COALESCE((SELECT canonical FROM source_aliases WHERE alias = ?6), ?6)
+         ON CONFLICT(id) DO UPDATE SET
+            body       = excluded.body,
+            quote      = excluded.quote,
+            page_label = excluded.page_label,
+            label_id   = excluded.label_id,
+            updated_at = CURRENT_TIMESTAMP",
+    )
+    .bind(&note.id)
+    .bind(&note.body)
+    .bind(&note.quote)
+    .bind(&note.page_label)
+    .bind(&note.label_id)
+    .bind(&note.sha256)
+    .execute(library)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(saved.rows_affected() > 0)
+}
+
+/// Delete a source note, and its embedding with it (the foreign key cascades).
+pub async fn delete_source_note(library: &SqlitePool, id: &str) -> Result<(), String> {
+    sqlx::query("DELETE FROM source_notes WHERE id = ?")
+        .bind(id)
+        .execute(library)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 

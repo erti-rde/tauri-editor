@@ -9,7 +9,8 @@ import type {
 	NewChunk,
 	ScoredAnnotation,
 	ScoredChunk,
-	Source
+	Source,
+	SourceNote
 } from '$lib/ipc';
 
 import type { Fixture, LibrarySource } from './fixture';
@@ -103,6 +104,8 @@ export interface FakeState {
 	aliases: Map<string, string>;
 	chunks: Map<string, NewChunk[]>;
 	marks: Map<string, Annotation>;
+	/** Notes on a work (ADR 004), by id, in the order first written. */
+	sourceNotes: Map<string, SourceNote>;
 	/** Marks with a vector, and the text it was made from. */
 	embedded: Map<string, string>;
 	labels: AnnotationLabel[];
@@ -136,6 +139,7 @@ export function stateFrom(fixture: Fixture): FakeState {
 				])
 		),
 		marks: new Map(fixture.marks.map((m) => [m.id, structuredClone(m)])),
+		sourceNotes: new Map((fixture.notes ?? []).map((n) => [n.id, structuredClone(n)])),
 		embedded: new Map(fixture.marks.map((m) => [m.id, `${m.quote ?? ''}\n${m.note ?? ''}`])),
 		labels: structuredClone(fixture.labels),
 		images: new Map(),
@@ -623,6 +627,8 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 				});
 			}
 			state.aliases.set(sha256, target);
+			// As `alias_source`: the file's own notes move to the work.
+			for (const n of state.sourceNotes.values()) if (n.sha256 === sha256) n.sha256 = target;
 			const file = state.library.get(sha256)!;
 			return {
 				sha256,
@@ -662,9 +668,9 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			library();
 			const files = workAndFiles(id);
 			const marks = [...state.marks.values()].filter((m) => files.includes(m.sha256));
-			// The fake keeps no source notes: nothing writes one until M1b-8.
+			const notes = [...state.sourceNotes.values()].filter((n) => files.includes(n.sha256));
 			return {
-				notes: marks.filter((m) => m.kind === 'page-note').length,
+				notes: notes.length + marks.filter((m) => m.kind === 'page-note').length,
 				highlights: marks.filter((m) => m.kind !== 'page-note').length,
 				paths: files.flatMap((sha) => state.library.get(sha)?.path ?? []).sort()
 			};
@@ -684,9 +690,89 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 				state.embedded.delete(markId);
 				state.images.delete(markId);
 			}
+			for (const [noteId, n] of state.sourceNotes) {
+				if (files.includes(n.sha256)) state.sourceNotes.delete(noteId);
+			}
 			for (const [alias, work] of state.aliases) {
 				if (files.includes(alias) || files.includes(work)) state.aliases.delete(alias);
 			}
+			return null;
+		},
+
+		workNotes(id) {
+			library();
+			const group = workAndFiles(id);
+			// As Rust: the work's own file, then attached ones by name; marks file
+			// by file, by page within each.
+			const files = group
+				.flatMap((sha256) => {
+					const file = state.library.get(sha256);
+					return file?.path ? [{ sha256, file_name: file.file_name }] : [];
+				})
+				.sort(
+					(a, b) =>
+						Number(a.sha256 !== group[0]) - Number(b.sha256 !== group[0]) ||
+						a.file_name.localeCompare(b.file_name)
+				);
+			const rank = (sha: string) => {
+				const i = files.findIndex((f) => f.sha256 === sha);
+				return i === -1 ? files.length : i;
+			};
+			return {
+				notes: [...state.sourceNotes.values()].filter((n) => n.sha256 === group[0]),
+				marks: [...state.marks.values()]
+					.filter((m) => group.includes(m.sha256))
+					.sort(
+						(a, b) =>
+							rank(a.sha256) - rank(b.sha256) ||
+							a.page - b.page ||
+							a.created_at.localeCompare(b.created_at)
+					),
+				files
+			};
+		},
+
+		// As `save_source_note_in`: trimmed (the body at its end only), blanks
+		// absent, kept on the work.
+		saveSourceNote(input) {
+			library();
+			const given = (value: string | null | undefined) => value?.trim() || null;
+			const body = input.body.trimEnd();
+			const quote = given(input.quote);
+			const page_label = given(input.page_label);
+			if (!input.id || input.id.length > 200) {
+				throw appError('InvalidInput', "That isn't a note id.");
+			}
+			if (!body.trim() && !quote) {
+				throw appError('InvalidInput', "Write a note, or the words you're quoting.");
+			}
+			if ([...body].length > 200_000 || [...(quote ?? '')].length > 200_000) {
+				throw appError('InvalidInput', 'That note is too long to keep.');
+			}
+			if (page_label && [...page_label].length > 100) {
+				throw appError('InvalidInput', 'A page is a number or a short label, such as 853 or xiv.');
+			}
+			const work = canon(input.sha256);
+			if (!state.library.has(work)) {
+				throw appError('NotFound', "That source isn't in the library any more.");
+			}
+			const previous = state.sourceNotes.get(input.id);
+			state.sourceNotes.set(input.id, {
+				id: input.id,
+				sha256: previous?.sha256 ?? work,
+				body,
+				quote,
+				page_label,
+				label_id: given(input.label_id),
+				created_at: previous?.created_at ?? now(),
+				updated_at: now()
+			});
+			return null;
+		},
+
+		deleteSourceNote(id) {
+			library();
+			state.sourceNotes.delete(id);
 			return null;
 		},
 

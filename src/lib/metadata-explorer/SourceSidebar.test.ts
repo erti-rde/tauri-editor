@@ -14,6 +14,10 @@ const db = vi.hoisted(() => ({
 	addSourceByHand: vi.fn(async () => {}),
 	setMetadataOverride: vi.fn(async () => {}),
 	sourceFiles: vi.fn(async () => []),
+	workNotes: vi.fn(async () => ({ notes: [], marks: [], files: [] }) as unknown),
+	annotationLabels: vi.fn(async () => []),
+	saveSourceNote: vi.fn(async () => {}),
+	deleteSourceNote: vi.fn(async () => {}),
 	sourceForDoi: vi.fn(async (): Promise<string | null> => null)
 }));
 vi.mock('$lib/stores/db', () => db);
@@ -214,11 +218,35 @@ describe('a new source from a DOI (M1b-6 AC-2)', () => {
 });
 
 describe('the sidebar’s tabs (M1b-7 AC-3, UX-3)', () => {
-	it('shows a source’s details and its files in tabs', () => {
+	// M1b-8 AC-1
+	it('shows a source’s details, its notes with their count, and its files in tabs', async () => {
+		db.workNotes.mockResolvedValueOnce({
+			notes: [{ id: 'n1' }, { id: 'n2' }],
+			marks: [{ id: 'm1' }]
+		});
 		open();
-		const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent?.trim());
-		expect(tabs).toEqual(['Details', 'File']);
+		expect(db.workNotes).toHaveBeenCalledWith('sha-chapter');
+		await waitFor(() =>
+			expect(screen.getAllByRole('tab').map((tab) => tab.textContent?.trim())).toEqual([
+				'Details',
+				'Notes (3)',
+				'File'
+			])
+		);
 		expect(screen.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'true');
+	});
+
+	// M1b-8 AC-2
+	it('saves the details from their own tab: a note has its own Save', async () => {
+		const user = userEvent.setup();
+		open();
+		expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+
+		await user.click(screen.getByRole('tab', { name: /^Notes/ }));
+
+		expect(await screen.findByRole('button', { name: 'New note' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Remove from library…' })).toBeInTheDocument();
 	});
 
 	it('lists the files when their tab is chosen, not on opening', async () => {
@@ -241,5 +269,33 @@ describe('the sidebar’s tabs (M1b-7 AC-3, UX-3)', () => {
 			}
 		});
 		expect(screen.queryAllByRole('tab')).toHaveLength(0);
+	});
+});
+
+describe('the Notes tab in the sidebar (M1b-8)', () => {
+	it('keeps a half-written note when going to Details and back', async () => {
+		const user = userEvent.setup();
+		open();
+
+		await user.click(screen.getByRole('tab', { name: /^Notes/ }));
+		await user.click(await screen.findByRole('button', { name: 'New note' }));
+		await user.type(screen.getByRole('textbox', { name: /^Note/ }), 'Half a thought');
+		await user.click(screen.getByRole('tab', { name: 'Details' }));
+		await user.click(screen.getByRole('tab', { name: /^Notes/ }));
+
+		expect(screen.getByRole('textbox', { name: /^Note/ })).toHaveValue('Half a thought');
+	});
+
+	it('counts again when the table lists its sources again, as after an attach', async () => {
+		const handlers = { onclose: vi.fn(), onsaved: vi.fn(), onremoved: vi.fn() };
+		const props = { component: SourceSidebar, schema, record: CHAPTER, ...handlers };
+		const view = render(UiHarness, { props: { ...props, revision: 1 } });
+		await waitFor(() => expect(db.workNotes).toHaveBeenCalledTimes(1));
+
+		db.workNotes.mockResolvedValueOnce({ notes: [], marks: [{ id: 'm1' }], files: [] });
+		await view.rerender({ ...props, revision: 2 });
+
+		await waitFor(() => expect(screen.getByRole('tab', { name: 'Notes (1)' })).toBeInTheDocument());
+		expect(db.workNotes).toHaveBeenCalledTimes(2);
 	});
 });

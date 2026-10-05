@@ -858,6 +858,105 @@ pub async fn delete_annotation(state: State<'_, DbState>, id: String) -> Result<
     deleted.or_database()
 }
 
+/* ------------------------------------------------------------ source notes */
+
+/// A work's notes and the marks on its files, for its Notes tab (M1b-8, UX-3).
+#[tauri::command]
+#[specta::specta]
+pub async fn work_notes(
+    state: State<'_, DbState>,
+    id: String,
+) -> Result<queries::WorkNotes, AppError> {
+    work_notes_in(&state, id).await
+}
+
+pub async fn work_notes_in(state: &DbState, id: String) -> Result<queries::WorkNotes, AppError> {
+    queries::work_notes(&state.library().await?, &id)
+        .await
+        .or_database()
+}
+
+/// Write a note on a work, or rewrite one (M1b-8 AC-2, ADR 004).
+#[tauri::command]
+#[specta::specta]
+pub async fn save_source_note(
+    state: State<'_, DbState>,
+    note: queries::NewSourceNote,
+) -> Result<(), AppError> {
+    save_source_note_in(&state, note).await
+}
+
+pub async fn save_source_note_in(
+    state: &DbState,
+    note: queries::NewSourceNote,
+) -> Result<(), AppError> {
+    let invalid = |message: &str| AppError::new(crate::ipc::ErrorKind::InvalidInput, message);
+    // Blank optional fields are absent, not empty: a page of "" would offer
+    // to cite p. nothing.
+    let given = |value: Option<String>| {
+        value
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+    };
+    let note = queries::NewSourceNote {
+        // Only the end: Markdown's leading spaces are meaning (an indented
+        // code block, a nested item), and are kept as written.
+        body: note.body.trim_end().to_string(),
+        quote: given(note.quote),
+        page_label: given(note.page_label),
+        label_id: given(note.label_id),
+        ..note
+    };
+    if note.id.is_empty() || note.id.len() > 200 {
+        return Err(invalid("That isn't a note id."));
+    }
+    if note.body.trim().is_empty() && note.quote.is_none() {
+        return Err(invalid("Write a note, or the words you're quoting."));
+    }
+    // The same ceilings the guard puts on a long field and a short one (M1b-10).
+    if note.body.chars().count() > 200_000
+        || note
+            .quote
+            .as_ref()
+            .is_some_and(|q| q.chars().count() > 200_000)
+    {
+        return Err(invalid("That note is too long to keep."));
+    }
+    if note
+        .page_label
+        .as_ref()
+        .is_some_and(|p| p.chars().count() > 100)
+    {
+        return Err(invalid(
+            "A page is a number or a short label, such as 853 or xiv.",
+        ));
+    }
+
+    let library = state.library().await?;
+    let saved = queries::save_source_note(&library, &note).await;
+    // The note's words may have changed, and the index holds what they were.
+    state.invalidate_index();
+    if !saved.or_database()? {
+        return Err(AppError::new(
+            crate::ipc::ErrorKind::NotFound,
+            "That source isn't in the library any more.",
+        ));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_source_note(state: State<'_, DbState>, id: String) -> Result<(), AppError> {
+    delete_source_note_in(&state, id).await
+}
+
+pub async fn delete_source_note_in(state: &DbState, id: String) -> Result<(), AppError> {
+    let deleted = queries::delete_source_note(&state.library().await?, &id).await;
+    state.invalidate_index();
+    deleted.or_database()
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn delete_imported_annotations(

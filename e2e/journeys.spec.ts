@@ -602,3 +602,60 @@ test('Settings keeps focus inside, and Escape gives it back to the Settings butt
 	await expect(dialog).toBeHidden();
 	await expect(opener).toBeFocused();
 });
+
+test('a note on a source is written in its Notes tab, beside the marks on its PDF', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
+	const sidebar = page.getByRole('complementary', { name: 'Edit source' });
+
+	// M1b-8 AC-1: the marks made in its PDF are counted and listed.
+	await sidebar.getByRole('tab', { name: 'Notes (2)' }).click();
+	const marks = sidebar.getByRole('region', { name: 'Marked in the PDF' });
+	await expect(marks.getByRole('listitem')).toHaveCount(2);
+
+	// M1b-8 AC-2: note, quote, page and label, saved with ⌘↩.
+	await sidebar.getByRole('button', { name: 'New note' }).click();
+	const form = sidebar.getByRole('form', { name: 'New note' });
+	await form.getByRole('textbox', { name: /^Note/ }).fill('Attention replaces recurrence.');
+	await form
+		.getByRole('textbox', { name: /^Quote/ })
+		.fill('dispensing with recurrence and convolutions entirely');
+	await form.getByRole('textbox', { name: /^Page/ }).fill('1');
+	await form.getByRole('button', { name: 'Label' }).click();
+	await page.getByRole('option', { name: 'Evidence' }).click();
+	await form.getByRole('textbox', { name: /^Page/ }).press('ControlOrMeta+Enter');
+
+	await expect(form).toHaveCount(0);
+	await expect(sidebar.getByRole('tab', { name: 'Notes (3)' })).toBeVisible();
+	const note = sidebar.getByRole('list', { name: 'Notes' }).getByRole('listitem');
+	await expect(note).toContainText('Evidence');
+	await expect(note).toContainText('p. 1');
+	await expect(note).toContainText('Attention replaces recurrence.');
+	const kept = await page.evaluate(() => [...window.__ERTI_FAKE__!.state.sourceNotes.values()]);
+	expect(kept).toEqual([
+		expect.objectContaining({
+			body: 'Attention replaces recurrence.',
+			quote: 'dispensing with recurrence and convolutions entirely',
+			page_label: '1',
+			label_id: 'evidence'
+		})
+	]);
+
+	// Changed, then deleted once asked.
+	await note.getByRole('button', { name: 'Edit' }).click();
+	const editing = sidebar.getByRole('form', { name: 'Change the note' });
+	await editing.getByRole('textbox', { name: /^Note/ }).fill('Recurrence, gone.');
+	await editing.getByRole('button', { name: 'Save' }).click();
+	await expect(note).toContainText('Recurrence, gone.');
+	await note.getByRole('button', { name: 'Edit' }).click();
+	await sidebar.getByRole('button', { name: 'Delete' }).click();
+	await page
+		.getByRole('dialog', { name: 'Delete this note?' })
+		.getByRole('button', { name: 'Delete' })
+		.click();
+	await expect(sidebar.getByRole('tab', { name: 'Notes (2)' })).toBeVisible();
+});
