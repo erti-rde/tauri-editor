@@ -82,6 +82,49 @@ describe('papers can be anywhere', () => {
 	});
 });
 
+describe('closing what has gone from the library', () => {
+	// Removing a source (M1b-4) deletes its rows. A reader left open on its PDF
+	// would go on offering to save marks that the library can no longer take.
+	it('closes a matching paper in every pane, and leaves the rest', () => {
+		workspaceStore.open(doc('chapter-1'));
+		workspaceStore.open(pdf('smith-2020'));
+		workspaceStore.open(pdf('jones-2019'));
+		workspaceStore.split();
+		const [left, right] = get(workspaceStore).panes.map((p) => p.id);
+		workspaceStore.open(pdf('smith-2020'), right);
+
+		workspaceStore.closeWhere((tab) => tab.id === pdf('jones-2019').id);
+
+		const ws = get(workspaceStore);
+		expect(paneById(ws, left)!.tabs).toEqual([doc('chapter-1').id, pdf('smith-2020').id]);
+		expect(paneById(ws, right)!.tabs).toEqual([pdf('smith-2020').id]);
+		expect(ws.tabs[pdf('jones-2019').id]).toBeUndefined();
+	});
+
+	it('drops a pane it empties, as closing its last tab by hand does', () => {
+		workspaceStore.open(doc('chapter-1'));
+		workspaceStore.split();
+		const [left] = get(workspaceStore).panes.map((p) => p.id);
+		workspaceStore.open(pdf('smith-2020'));
+
+		workspaceStore.closeWhere((tab) => tab.id === pdf('smith-2020').id);
+
+		const ws = get(workspaceStore);
+		expect(ws.panes.map((p) => p.id)).toEqual([left]);
+		expect(ws.focused).toBe(left);
+		expect(activeTab(ws, left)?.id).toBe(doc('chapter-1').id);
+	});
+
+	it('changes nothing when nothing matches', () => {
+		workspaceStore.open(pdf('smith-2020'));
+		const before = get(workspaceStore);
+
+		workspaceStore.closeWhere(() => false);
+
+		expect(get(workspaceStore)).toBe(before);
+	});
+});
+
 describe('starting over', () => {
 	it('clears everything when a different project opens', () => {
 		workspaceStore.open(doc('chapter-1'));

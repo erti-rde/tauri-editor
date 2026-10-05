@@ -234,6 +234,35 @@ test('removing a source asks first, and its citations then render from the manus
 	await expect(away).toContainText('Vaswani');
 });
 
+// After M1b-4 (#222): a reader left open on a removed source would go on
+// offering to save marks the library can no longer take.
+test('removing a source closes its PDF, and leaves the manuscript open', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	await page.getByText('papers', { exact: true }).click();
+	await page.getByText('vaswani-2017.pdf').click();
+	await expect(page.getByText('Sample Paper for the Erti Harness').first()).toBeVisible();
+	const tabs = page.getByRole('tablist', { name: 'Open files' });
+	await expect(tabs.getByRole('tab', { name: /^vaswani-2017/ })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
+	await page.getByRole('button', { name: 'Remove from library…' }).click();
+	await page
+		.getByRole('dialog', { name: /^Remove “Attention/ })
+		.getByRole('button', { name: 'Remove' })
+		.click();
+	await expect(page.getByRole('heading', { name: 'Sources (2)' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Files' }).click();
+	await expect(tabs.getByRole('tab', { name: /^vaswani-2017/ })).toHaveCount(0);
+	await expect(page.getByText('Sample Paper for the Erti Harness')).toHaveCount(0);
+	await expect(tabs.getByRole('tab', { name: /Chapter 1/ })).toBeVisible();
+	await expect(page.locator('.ProseMirror')).toContainText('Attention in Low-Resource Translation');
+});
+
 // M1a-8 AC-1, AC-7
 test('saving a chapter from before 1.0 upgrades it, and keeps the old file beside it', async ({
 	page

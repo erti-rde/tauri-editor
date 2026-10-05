@@ -5,10 +5,12 @@
 	import { listDocuments } from '$lib/editor/documents';
 	import { describeError } from '$lib/ipc';
 	import { loadManuscript, tauriFiles } from '$lib/manuscript/io';
+	import { annotationsStore } from '$lib/stores/annotations.svelte';
 	import { removeSource, sourceAliases, sourceRemoval } from '$lib/stores/db';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { Button, ConfirmDialog } from '$lib/ui';
+	import { workspaceStore } from '$lib/workspace/workspaceStore';
 
 	import {
 		carryInto,
@@ -18,6 +20,7 @@
 		readAll,
 		REMOVED,
 		removalTitle,
+		removedFile,
 		separator,
 		type CitedIn,
 		type Consequences
@@ -55,6 +58,8 @@
 		work: string;
 		csl: object | null;
 		cited: CitedIn;
+		/** Every file that goes with it, the work's own and each attached one's. */
+		paths: string[];
 	} | null = $state(null);
 
 	/** Counted when asked, not before: reading every manuscript is for this dialog only. */
@@ -70,7 +75,7 @@
 			]);
 			const work = canonical(aliases, target.id);
 			const cited = citationsIn(manuscripts, (cited) => canonical(aliases, cited) === work);
-			asked = { ...target, work, cited };
+			asked = { ...target, work, cited, paths: removal.paths };
 			said = describe({
 				cited,
 				notes: removal.notes,
@@ -87,6 +92,7 @@
 
 	async function remove() {
 		if (!asked) return;
+		const gone = removedFile(asked.paths);
 		busy = true;
 		try {
 			await carryInto(asked.cited.uncarried, { id: asked.work, csl: asked.csl }, tauriFiles);
@@ -98,6 +104,10 @@
 			busy = false;
 		}
 		open = false;
+		// A reader left open on one of its files would draw marks that are gone,
+		// and saving a new one would fail on the source it belongs to (#222).
+		workspaceStore.closeWhere((tab) => tab.kind === 'pdf' && gone(tab.id));
+		annotationsStore.dropIf(gone);
 		successToast(REMOVED);
 		try {
 			await onremoved();

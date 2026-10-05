@@ -11,6 +11,7 @@ import {
 	readAll,
 	REMOVED,
 	removalTitle,
+	removedFile,
 	separator
 } from './removal';
 
@@ -244,5 +245,28 @@ describe('afterwards (M1b-4 AC-4)', () => {
 		expect(REMOVED).toBe(
 			'Removed. You can restore it from a library backup in Settings › Library.'
 		);
+	});
+});
+
+describe('the files that went with it', () => {
+	it('knows each removed file by its path', () => {
+		const gone = removedFile(['/home/me/thesis/papers/a.pdf', '/home/me/Downloads/a-v2.pdf']);
+
+		expect(gone('/home/me/thesis/papers/a.pdf')).toBe(true);
+		expect(gone('/home/me/Downloads/a-v2.pdf')).toBe(true);
+		expect(gone('/home/me/thesis/papers/b.pdf')).toBe(false);
+		// A path that only starts like one is another file.
+		expect(gone('/home/me/thesis/papers/a.pdf.bak')).toBe(false);
+	});
+
+	it('knows a Windows path however its case and slashes are written', () => {
+		const gone = removedFile(['C:\\Users\\a\\Thesis\\vaswani.pdf']);
+
+		expect(gone('c:/users/a/thesis/vaswani.pdf')).toBe(true);
+		expect(gone('C:\\Users\\a\\Thesis\\devlin.pdf')).toBe(false);
+	});
+
+	it('knows nothing when the source had no file', () => {
+		expect(removedFile([])('/home/me/thesis/papers/a.pdf')).toBe(false);
 	});
 });

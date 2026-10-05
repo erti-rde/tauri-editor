@@ -1,27 +1,32 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 
-const { db, toast } = vi.hoisted(() => ({
+const { db, toast, annotations } = vi.hoisted(() => ({
 	db: {
 		sourceAliases: vi.fn(async () => ({})),
 		sourceRemoval: vi.fn(),
 		removeSource: vi.fn(async () => {})
 	},
-	toast: { errorToast: vi.fn(), successToast: vi.fn() }
+	toast: { errorToast: vi.fn(), successToast: vi.fn() },
+	annotations: { dropIf: vi.fn() }
 }));
 
 vi.mock('$lib/stores/db', () => db);
 vi.mock('$lib/toast/Toast.svelte', () => toast);
+vi.mock('$lib/stores/annotations.svelte', () => ({ annotationsStore: annotations }));
 vi.mock('$lib/stores/fileSystem.svelte', () => ({
 	fileSystemStore: writable({ items: [], currentPath: '/thesis' })
 }));
+
+import { workspaceStore } from '$lib/workspace/workspaceStore';
 
 import RemoveSource from './RemoveSource.svelte';
 
 afterEach(() => {
 	cleanup();
 	vi.clearAllMocks();
+	workspaceStore.reset();
 });
 
 const counts = { notes: 0, highlights: 1, paths: [] };
@@ -65,5 +70,55 @@ describe('RemoveSource (M1b-4)', () => {
 			)
 		);
 		expect(toast.successToast).toHaveBeenCalled();
+	});
+
+	describe('a PDF left open on it (after #222)', () => {
+		// The work's own file, a preprint attached to it, and another paper.
+		const own = '/thesis/papers/a.pdf';
+		const attached = '/home/me/Downloads/a-preprint.pdf';
+		const other = '/thesis/papers/b.pdf';
+		const pdf = (path: string) => ({ id: path, kind: 'pdf' as const, title: path });
+
+		async function removeA() {
+			const view = render(RemoveSource, {
+				props: { id: 'a', title: 'Paper A', csl: null, onremoved: vi.fn() }
+			});
+			await fireEvent.click(view.getByRole('button', { name: 'Remove from library…' }));
+			const dialog = await view.findByRole('dialog');
+			await fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+		}
+
+		it('closes every tab on the work’s files, in either pane, and drops their marks', async () => {
+			db.sourceRemoval.mockResolvedValue({ ...counts, paths: [own, attached] });
+			workspaceStore.open(pdf(own));
+			workspaceStore.open(pdf(other));
+			workspaceStore.open(pdf(attached));
+			workspaceStore.split();
+			const [, right] = get(workspaceStore).panes.map((p) => p.id);
+			workspaceStore.open(pdf(own), right);
+
+			await removeA();
+
+			await waitFor(() => expect(toast.successToast).toHaveBeenCalled());
+			const ws = get(workspaceStore);
+			expect(Object.keys(ws.tabs)).toEqual([other]);
+			// The right pane held only the removed files, so it went too.
+			expect(ws.panes).toHaveLength(1);
+			expect(annotations.dropIf).toHaveBeenCalledOnce();
+			const gone = annotations.dropIf.mock.calls[0][0] as (path: string) => boolean;
+			expect([own, attached, other].map(gone)).toEqual([true, true, false]);
+		});
+
+		it('leaves them open when the removal fails', async () => {
+			db.sourceRemoval.mockResolvedValue({ ...counts, paths: [own] });
+			db.removeSource.mockRejectedValueOnce(new Error('the library is locked'));
+			workspaceStore.open(pdf(own));
+
+			await removeA();
+
+			await waitFor(() => expect(toast.errorToast).toHaveBeenCalled());
+			expect(Object.keys(get(workspaceStore).tabs)).toEqual([own]);
+			expect(annotations.dropIf).not.toHaveBeenCalled();
+		});
 	});
 });

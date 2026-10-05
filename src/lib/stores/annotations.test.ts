@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 
 import { annotationsStore, colourFor } from './annotations.svelte';
-import { annotationLabels, annotationsForSource, sourceForPath, type AnnotationLabel } from './db';
+import {
+	annotationLabels,
+	annotationsForSource,
+	saveAnnotation,
+	sourceForPath,
+	type AnnotationLabel
+} from './db';
 
 /**
  * The store behind the reading marks.
@@ -98,6 +104,62 @@ describe('opening a paper', () => {
 		await annotationsStore.openPath('/papers/one.pdf');
 
 		expect(get(annotationsStore).labels).toEqual([]);
+	});
+});
+
+describe('a paper removed from the library', () => {
+	// Removing a source (M1b-4) deletes its marks' rows. What the store still
+	// holds would draw marks that are gone, and an undo would write into a
+	// source the library no longer has.
+	const one = '/papers/one.pdf';
+
+	it('drops the open paper’s marks, and what Ctrl+Z would undo', async () => {
+		vi.mocked(annotationsForSource).mockResolvedValue([
+			{ id: 'a1', sha256: 'sha-1', page: 4 } as never
+		]);
+		await annotationsStore.openPath(one);
+		await annotationsStore.remove('a1', 'that deletion');
+
+		annotationsStore.dropIf((path) => path === one);
+
+		const state = get(annotationsStore);
+		expect(state.sha256).toBeNull();
+		expect(state.annotations).toEqual([]);
+		expect(state.undoable).toBeNull();
+		expect(await annotationsStore.undo()).toBeNull();
+		expect(saveAnnotation).not.toHaveBeenCalled();
+		// The labels belong to the library, not to the paper.
+		expect(state.labels).toEqual(labels);
+	});
+
+	it('keeps the marks of a paper that is still there', async () => {
+		vi.mocked(annotationsForSource).mockResolvedValue([
+			{ id: 'a1', sha256: 'sha-1', page: 4 } as never
+		]);
+		await annotationsStore.openPath(one);
+
+		annotationsStore.dropIf((path) => path === '/papers/two.pdf');
+
+		expect(get(annotationsStore).sha256).toBe('sha-1');
+		expect(get(annotationsStore).annotations).toHaveLength(1);
+	});
+
+	it('does not let a load still under way bring them back', async () => {
+		let found: (sha: string | null) => void = () => {};
+		vi.mocked(sourceForPath).mockReturnValue(new Promise((resolve) => (found = resolve)));
+		vi.mocked(annotationsForSource).mockResolvedValue([
+			{ id: 'a1', sha256: 'sha-1', page: 4 } as never
+		]);
+		const opening = annotationsStore.openPath(one);
+		await vi.waitFor(() => expect(sourceForPath).toHaveBeenCalled());
+
+		annotationsStore.dropIf((path) => path === one);
+		found('sha-1');
+		await opening;
+
+		expect(get(annotationsStore).sha256).toBeNull();
+		expect(get(annotationsStore).annotations).toEqual([]);
+		expect(get(annotationsStore).loading).toBe(false);
 	});
 });
 
