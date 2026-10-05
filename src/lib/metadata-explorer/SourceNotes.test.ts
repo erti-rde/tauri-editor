@@ -289,6 +289,16 @@ describe('the Notes tab (M1b-8, UX-3)', () => {
 		expect(oncite).toHaveBeenLastCalledWith('12');
 	});
 
+	// As the citation and the LaTeX export will print it: a range is pages.
+	it('says pp. for a range of pages', async () => {
+		show(
+			{ ...NOTES, notes: [note({ id: 'r', body: 'A run of pages.', page_label: '80–82' })] },
+			vi.fn()
+		);
+
+		expect(await screen.findByRole('button', { name: 'Cite with pp. 80–82' })).toBeInTheDocument();
+	});
+
 	// M1b-8 AC-3
 	it('offers no citing with no manuscript to cite into', async () => {
 		show();

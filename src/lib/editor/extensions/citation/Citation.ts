@@ -55,7 +55,8 @@ function citationSignature(doc: ProsemirrorNode): string {
 	const parts: string[] = [];
 	doc.descendants((node) => {
 		if (node.type.name === 'citation') {
-			const pages = JSON.stringify(parseCitationLocators(node.attrs.locators));
+			// The attribute as stored, not parsed: this runs on every keystroke.
+			const pages = node.attrs.locators ? JSON.stringify(node.attrs.locators) : '';
 			parts.push(`${parseCitationIds(node.attrs.id).join(',')}${pages}`);
 		}
 		// Adding or removing the references section changes what has to be

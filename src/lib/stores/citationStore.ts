@@ -3,7 +3,11 @@ import { readSetting } from '$lib/settings';
 import { BaseDirectory, readTextFile } from '@tauri-apps/plugin-fs';
 import { projectSources, sourceAliases } from '$lib/stores/db';
 import { CitationEngine } from '$lib/citations/engine';
-import { renderDocumentCitations, type CitationSite } from '$lib/citations/document';
+import {
+	locatorsByWork,
+	renderDocumentCitations,
+	type CitationSite
+} from '$lib/citations/document';
 import { canonical, canonicalIds, type Aliases } from '$lib/citations/aliases';
 import {
 	fallbackLabel,
@@ -169,10 +173,7 @@ function createCitationStore() {
 		if (!engine) return fallbackLabel(known.map((id) => citationSources[id]));
 
 		// Each page goes with its work, whichever of the work's ids it was given by.
-		const pages: Record<string, string> = {};
-		for (const [id, locator] of Object.entries(locators)) {
-			pages[canonical(aliases ?? {}, id)] ??= locator;
-		}
+		const pages = locatorsByWork(locators, (id) => canonical(aliases ?? {}, id));
 
 		try {
 			return engine.render([{ id: 'preview', itemIds: known, locators: pages }])[0]?.text ?? '';

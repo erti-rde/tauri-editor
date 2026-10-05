@@ -1,6 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 
-import { parseCitationIds, parseCitationLocators } from '$lib/citations/document';
+import { pageAbbreviation, parseCitationIds, parseCitationLocators } from '$lib/citations/document';
 import { BIBLIOGRAPHY_NODE } from '$lib/editor/extensions/citation/Bibliography';
 import { NOTES_NODE } from '$lib/editor/extensions/citation/Notes';
 import { PAGE_BREAK_NODE } from '$lib/editor/extensions/PageBreak';
@@ -178,7 +178,9 @@ function serialize(node: JSONContent, options: LatexOptions): string {
 				return `\\cite{${[...pages.keys()].join(',')}}`;
 			return [...pages]
 				.map(([key, page]) =>
-					page ? `\\cite[${pagePrefix(page)}~{${escapeLatex(page)}}]{${key}}` : `\\cite{${key}}`
+					page
+						? `\\cite[${pageAbbreviation(page)}~{${escapeLatex(page)}}]{${key}}`
+						: `\\cite{${key}}`
 				)
 				.join(', ');
 		}
@@ -200,11 +202,6 @@ function serialize(node: JSONContent, options: LatexOptions): string {
 		default:
 			return children();
 	}
-}
-
-/** "pp." for a range or a list of pages, as a reference reads them. */
-function pagePrefix(page: string): string {
-	return /[-–,&]/.test(page) ? 'pp.' : 'p.';
 }
 
 function textOf(node: JSONContent): string {

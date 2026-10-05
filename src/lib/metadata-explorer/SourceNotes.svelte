@@ -16,6 +16,8 @@
 	import { errorToast } from '$lib/toast/Toast.svelte';
 	import { Button, ConfirmDialog, EmptyState, Item, LabelChip } from '$lib/ui';
 
+	import { pageAbbreviation } from '$lib/citations/document';
+
 	import NoteForm from './NoteForm.svelte';
 	import { notesInPageOrder } from './notesOrder';
 
@@ -151,7 +153,8 @@
 							{#if oncite && note.page_label}
 								{@const page = note.page_label}
 								<Button variant="ghost" size="sm" onclick={() => oncite(page)}>
-									Cite with p. {page}
+									Cite with {pageAbbreviation(page)}
+									{page}
 								</Button>
 							{/if}
 							<Button variant="ghost" size="sm" onclick={() => (editing = note.id)}>Edit</Button>

@@ -92,11 +92,7 @@ export function renderDocumentCitations(
 		}
 
 		// A page goes with the work it was cited from, whichever of its ids that was.
-		const locators: Record<string, string> = {};
-		for (const [id, locator] of Object.entries(site.locators ?? {})) {
-			const work = resolve(id);
-			if (present.includes(work)) locators[work] ??= locator;
-		}
+		const locators = locatorsByWork(site.locators ?? {}, resolve, present);
 
 		return {
 			site,
@@ -209,4 +205,27 @@ export function parseCitationLocators(attr: unknown): Record<string, string> {
 		out[id] = locator.trim();
 	}
 	return out;
+}
+
+/**
+ * Each page with the work it was cited from, whichever of the work's ids that
+ * was (ADR 003): the first given for a work wins. Only works in `present`
+ * when that's given, so a page never outlives its work in a citation.
+ */
+export function locatorsByWork(
+	locators: Record<string, string>,
+	resolve: (id: string) => string,
+	present?: readonly string[]
+): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const [id, locator] of Object.entries(locators)) {
+		const work = resolve(id);
+		if (!present || present.includes(work)) out[work] ??= locator;
+	}
+	return out;
+}
+
+/** "pp." for a range or a list of pages, as a reference reads them; "p." for one. */
+export function pageAbbreviation(page: string): 'p.' | 'pp.' {
+	return /[-–,&]/.test(page) ? 'pp.' : 'p.';
 }

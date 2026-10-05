@@ -686,6 +686,10 @@ test('a note with a page cites its source at that page, where the writer left of
 
 	await expect(opening).toContainText('(Vaswani, 2017, p. 3) Sequence models built on recurrence');
 	await expect(page.getByRole('heading', { name: /^Sources/ })).toHaveCount(0);
+	// And the cursor after it, so the next words follow the citation: the
+	// editor's own focus, a tick after it opens, once put the cursor back.
+	await page.keyboard.type('Next.');
+	await expect(opening).toContainText('(Vaswani, 2017, p. 3) Next.');
 
 	// Kept in the file as the page, beside the work, not only as the words shown.
 	const cited = () =>

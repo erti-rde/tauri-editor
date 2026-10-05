@@ -1,3 +1,4 @@
+import { Selection, TextSelection } from '@tiptap/pm/state';
 import { get, writable } from 'svelte/store';
 
 /**
@@ -15,25 +16,37 @@ export interface WaitingCite {
 	locator: string | null;
 }
 
-function createWaitingCite() {
-	const store = writable<WaitingCite | null>(null);
+/**
+ * How long a citation waits. Leaving the Sources view mounts the editor at
+ * once; one that never got there (it failed to open) mustn't put the
+ * citation in, unasked, the next time a manuscript opens, maybe another one.
+ */
+export const WAIT_MS = 15_000;
+
+function createWaitingCite(now: () => number = Date.now) {
+	const store = writable<(WaitingCite & { at: number }) | null>(null);
 
 	return {
 		subscribe: store.subscribe,
 
 		/** Ask for a citation. A second ask before the editor is back replaces the first. */
 		request(cite: WaitingCite) {
-			store.set(cite);
+			store.set({ ...cite, at: now() });
 		},
 
-		/** The citation asked for, once: taking it clears it. */
+		/** The citation asked for, once: taking it clears it. Null once it's waited too long. */
 		take(): WaitingCite | null {
 			const cite = get(store);
-			if (cite) store.set(null);
-			return cite;
+			if (!cite) return null;
+			store.set(null);
+			if (now() - cite.at > WAIT_MS) return null;
+			return { id: cite.id, locator: cite.locator };
 		}
 	};
 }
+
+/** For tests, with a clock of their own. */
+export const createWaitingCiteForTest = createWaitingCite;
 
 export const waitingCite = createWaitingCite();
 
@@ -65,3 +78,13 @@ function createCursorMemory() {
 }
 
 export const cursorMemory = createCursorMemory();
+
+/**
+ * Where a selection's cursor is, as a place text can go: a picked image or
+ * page break has its head between blocks, and a citation put there would
+ * open a paragraph of its own.
+ */
+export function cursorPosition(selection: Selection): number {
+	if (selection instanceof TextSelection) return selection.head;
+	return Selection.near(selection.$head).head;
+}
