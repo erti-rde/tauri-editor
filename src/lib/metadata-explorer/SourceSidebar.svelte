@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { describeError } from '$lib/ipc';
-	import { addSourceByHand, setMetadataOverride } from '$lib/stores/db';
+	import { describeError, IpcError } from '$lib/ipc';
+	import { addSourceByHand, setMetadataOverride, sourceForDoi } from '$lib/stores/db';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { Button, Sidebar, Tabs } from '$lib/ui';
 
@@ -26,6 +26,11 @@
 		};
 		/** Creating: details to start from, such as the DOI it was asked for by (M1b-6). */
 		initial?: CslItem;
+		/**
+		 * Creating, the DOI typed is one the library has: that source, to open
+		 * in place of a second copy (M1b-6 AC-3).
+		 */
+		onexisting?: (id: string) => void | Promise<void>;
 		onclose: () => void;
 		onsaved: () => void;
 		onremoved: () => void | Promise<void>;
@@ -41,6 +46,7 @@
 		schema,
 		record,
 		initial,
+		onexisting,
 		onclose,
 		onsaved,
 		onremoved,
@@ -99,7 +105,15 @@
 			}
 			onsaved();
 		} catch (error) {
-			errorToast(`Could not save it: ${describeError(error)}`);
+			// A DOI the library has already: that source is opened, as From a
+			// DOI… opens it, rather than leaving the details stuck here.
+			const doi = typeof item.DOI === 'string' ? item.DOI : null;
+			const existing =
+				!record && doi && error instanceof IpcError && error.kind === 'Conflict'
+					? await sourceForDoi(doi).catch(() => null)
+					: null;
+			if (existing && onexisting) await onexisting(existing);
+			else errorToast(`Could not save it: ${describeError(error)}`);
 		} finally {
 			saving = false;
 		}

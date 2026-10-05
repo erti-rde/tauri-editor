@@ -340,28 +340,64 @@ pub async fn add_source_from_doi(
     .await
 }
 
+/// A DOI as the library compares it: lowercase, without a resolver's prefix
+/// (`https://doi.org/`, `doi:`), trimmed. None when nothing is left.
+///
+/// DOIs are case-insensitive, and are written as links as often as not; a
+/// DOI typed as one must still be found by, and find, the bare one.
+pub fn normalise_doi(doi: &str) -> Option<String> {
+    let lower = doi.trim().to_lowercase();
+    let bare = [
+        "https://doi.org/",
+        "http://doi.org/",
+        "https://dx.doi.org/",
+        "http://dx.doi.org/",
+        "doi:",
+    ]
+    .iter()
+    .find_map(|prefix| lower.strip_prefix(prefix))
+    .unwrap_or(&lower)
+    .trim();
+    (!bare.is_empty()).then(|| bare.to_string())
+}
+
 /// The work in the library with this DOI, if any (M1b-6 AC-3): its canonical
 /// id, so a PDF attached to a work finds the work (ADR 003).
 ///
-/// DOIs are case-insensitive, and Crossref and doi.org don't agree on case.
-/// The column is read first, then the details' own `DOI`, since a source added
-/// from a manuscript or by hand may have only the latter.
+/// Compared as `normalise_doi` writes it, on both sides: rows stored before
+/// DOIs were normalised, or with only the details' own `DOI`, may hold any
+/// case or a link. The column is read first, then the details' `DOI`, since a
+/// source added from a manuscript may have only the latter.
 pub async fn source_for_doi(
     db: impl sqlx::SqliteExecutor<'_>,
     doi: &str,
 ) -> Result<Option<String>, String> {
-    let doi = doi.trim();
-    if doi.is_empty() {
+    let Some(doi) = normalise_doi(doi) else {
         return Ok(None);
-    }
+    };
     sqlx::query_scalar(
-        "SELECT COALESCE(a.canonical, s.sha256)
-           FROM sources s
-           LEFT JOIN source_aliases a ON a.alias = s.sha256
-          WHERE lower(trim(COALESCE(s.doi,
-                  CASE WHEN json_valid(s.csl_json) THEN json_extract(s.csl_json, '$.DOI') END)))
-                = lower(?)
-          ORDER BY s.created_at, s.sha256
+        "WITH stored AS (
+           SELECT sha256, created_at,
+                  lower(trim(COALESCE(doi,
+                    CASE WHEN json_valid(csl_json) THEN json_extract(csl_json, '$.DOI') END))) AS v
+             FROM sources
+         ), bare AS (
+           SELECT sha256, created_at,
+                  trim(CASE
+                    WHEN v LIKE 'https://doi.org/%' THEN substr(v, 17)
+                    WHEN v LIKE 'http://doi.org/%' THEN substr(v, 16)
+                    WHEN v LIKE 'https://dx.doi.org/%' THEN substr(v, 20)
+                    WHEN v LIKE 'http://dx.doi.org/%' THEN substr(v, 19)
+                    WHEN v LIKE 'doi:%' THEN substr(v, 5)
+                    ELSE v
+                  END) AS doi
+             FROM stored WHERE v IS NOT NULL
+         )
+         SELECT COALESCE(a.canonical, b.sha256)
+           FROM bare b
+           LEFT JOIN source_aliases a ON a.alias = b.sha256
+          WHERE b.doi = ?
+          ORDER BY b.created_at, b.sha256
           LIMIT 1",
     )
     .bind(doi)
@@ -404,15 +440,16 @@ async fn insert_source_without_file(
         one_per_doi,
     )
     .await;
-    let end = if added == Ok(Added::Yes) {
-        "COMMIT"
+    if added == Ok(Added::Yes) {
+        sqlx::query("COMMIT")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
     } else {
-        "ROLLBACK"
-    };
-    sqlx::query(end)
-        .execute(&mut *conn)
-        .await
-        .map_err(|e| e.to_string())?;
+        // An insert that failed may have rolled back on its own (SQLITE_FULL
+        // does), and then this fails too: what's said is why the insert did.
+        let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+    }
     added
 }
 

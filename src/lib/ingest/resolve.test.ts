@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { lookupDoi, resolveMetadata } from './resolve';
+import { lookupDoi, resolveMetadata, tidyRecord } from './resolve';
 
 const APA_PAPER = {
 	title: 'Deep Residual Learning for Image Recognition',
@@ -244,5 +244,15 @@ describe('a DOI typed in', () => {
 	it('finds nothing in a record with no title', async () => {
 		const { impl } = stubFetch({ 'doi.org': { type: 'article-journal' } });
 		expect(await lookupDoi('10.1000/untitled', impl)).toBeNull();
+	});
+});
+
+describe('a record as the library keeps it', () => {
+	it('drops the reference list, and makes the title text', () => {
+		expect(tidyRecord({ title: ['Deep learning', 'x'], reference: [{}] }, 'fallback')).toEqual({
+			title: 'Deep learning'
+		});
+		expect(tidyRecord({ title: 42 }, 'fallback')).toEqual({ title: 'fallback' });
+		expect(tidyRecord({ title: 'Kept' }, 'fallback')).toEqual({ title: 'Kept' });
 	});
 });

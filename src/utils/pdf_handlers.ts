@@ -32,7 +32,7 @@ import type { CitationItem } from '$lib/stores/citationStore';
 import { extractPages, pagesToText, type ExtractedPage } from '$lib/ingest/extract';
 import { chunkPages } from '$lib/ingest/chunk';
 import { commitIngest, selectSourcesToIngest } from '$lib/ingest/pipeline';
-import { lookupDoi, resolveMetadata, type ResolvedVia } from '$lib/ingest/resolve';
+import { lookupDoi, resolveMetadata, tidyRecord, type ResolvedVia } from '$lib/ingest/resolve';
 import { findDoi } from '$lib/ingest/identifiers';
 import { getMailto, networkAllowed } from '$lib/stores/consent';
 import { log } from '$lib/log';
@@ -155,18 +155,8 @@ async function getPdfMetadata(
 		// once lookups are allowed.
 		if (!resolved) return undefined;
 
-		const metadata = resolved.csl as CitationItem;
+		const metadata = tidyRecord(resolved.csl as CitationItem, fileName);
 		metadata.id = sha256;
-
-		// A non-string title breaks citeproc downstream.
-		if (typeof metadata.title !== 'string') {
-			metadata.title = Array.isArray(metadata.title)
-				? ((metadata.title as unknown[])[0]?.toString() ?? fileName)
-				: fileName;
-		}
-
-		// The reference list is large and never read back.
-		if (metadata.reference) delete metadata.reference;
 
 		return { metadata: await withZoteroType(metadata), via: resolved.via, doi: resolved.doi };
 	} catch (error) {
@@ -344,28 +334,31 @@ export async function retryIngest(source: {
  * dead end into a few seconds' work.
  */
 export async function applyManualDoi(sha256: string, doi: string): Promise<CitationItem> {
-	const cleaned = findDoi(doi) ?? doi.trim();
+	const found = findDoi(doi);
+	const cleaned = found ?? doi.trim();
+	const allowNetwork = await networkAllowed();
 
-	// The DOI alone: a search on its characters could fill the row with another
-	// paper's details.
-	const resolved = (await networkAllowed()) ? await lookupDoi(cleaned) : null;
+	// A DOI is asked about alone: a search on its characters could fill the row
+	// with another paper's details. Anything else (an arXiv id is what people
+	// paste here) is read as a PDF's text is, as this always has: sent to
+	// doi.org as a DOI, it would only come back not found.
+	const resolved = !allowNetwork
+		? null
+		: found
+			? await lookupDoi(found)
+			: (await resolveMetadata({ text: cleaned, allowNetwork, mailto: await getMailto() }))
+					.resolved;
 
 	if (!resolved) {
 		throw new Error(
-			(await networkAllowed())
+			allowNetwork
 				? `Could not resolve ${cleaned}. Check the DOI, or enter the details by hand.`
 				: 'Online lookups are turned off. Enable them in Settings, or enter the details by hand.'
 		);
 	}
 
-	const metadata = resolved.csl as CitationItem;
+	const metadata = tidyRecord(resolved.csl as CitationItem, cleaned);
 	metadata.id = sha256;
-	if (typeof metadata.title !== 'string') {
-		metadata.title = Array.isArray(metadata.title)
-			? ((metadata.title as unknown[])[0]?.toString() ?? cleaned)
-			: cleaned;
-	}
-	if (metadata.reference) delete metadata.reference;
 
 	const withType = await withZoteroType(metadata);
 	await setSourceMetadata({

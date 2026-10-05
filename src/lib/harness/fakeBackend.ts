@@ -168,20 +168,37 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 	// As `queries::resolve`: one lookup, and an unknown id is its own.
 	const canon = (id: string) => state.aliases.get(id) ?? id;
 
-	/** As `queries::source_for_doi`: the column, else the details' own DOI, any case. */
+	/** As `queries::normalise_doi`: lowercase, bare of a resolver's prefix. */
+	function normaliseDoi(doi: unknown): string | null {
+		if (typeof doi !== 'string') return null;
+		const lower = doi.trim().toLowerCase();
+		const prefix = [
+			'https://doi.org/',
+			'http://doi.org/',
+			'https://dx.doi.org/',
+			'http://dx.doi.org/',
+			'doi:'
+		].find((p) => lower.startsWith(p));
+		const bare = (prefix ? lower.slice(prefix.length) : lower).trim();
+		return bare || null;
+	}
+
+	/** As `queries::source_for_doi`: the column, else the details' own DOI, normalised. */
 	function doiOwner(doi: string): string | null {
-		const wanted = doi.trim().toLowerCase();
+		const wanted = normaliseDoi(doi);
 		if (!wanted) return null;
 		for (const s of state.library.values()) {
-			let own = s.doi;
+			let own: unknown = s.doi;
 			if (own === null) {
 				try {
-					own = (JSON.parse(s.csl_json ?? '') as { DOI?: string }).DOI ?? null;
+					own = (JSON.parse(s.csl_json ?? '') as { DOI?: unknown }).DOI ?? null;
 				} catch {
 					own = null;
 				}
 			}
-			if (own?.trim().toLowerCase() === wanted) return canon(s.sha256);
+			// Rust compares whatever's stored as text; a DOI that isn't a string
+			// (a number in imported details) is no match, never an error.
+			if (normaliseDoi(own) === wanted) return canon(s.sha256);
 		}
 		return null;
 	}
@@ -196,7 +213,7 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		if (typeof csl.title !== 'string' || !csl.title.trim()) {
 			throw appError('InvalidInput', 'Give the source a title.');
 		}
-		const doi = typeof csl.DOI === 'string' && csl.DOI.trim() ? csl.DOI.trim() : null;
+		const doi = normaliseDoi(csl.DOI);
 		if (fromDoi && !doi) throw appError('InvalidInput', 'Those details have no DOI.');
 		if (doi && doiOwner(doi)) {
 			throw appError('Conflict', 'A source with that DOI is already in the library.');

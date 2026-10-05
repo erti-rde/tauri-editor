@@ -161,6 +161,16 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 		state.library.get(SHA.devlin)!.doi = '10.18653/v1/N19-1423';
 		state.aliases.set(SHA.devlin, id);
 		expect(await db.sourceForDoi('10.18653/v1/n19-1423')).toBe(id);
+
+		// Written as a link, found bare, and the other way round.
+		expect(await db.sourceForDoi('https://doi.org/10.1038/Nature14539')).toBe(id);
+		state.library.get(SHA.devlin)!.doi = 'doi:10.18653/v1/N19-1423';
+		expect(await db.sourceForDoi('10.18653/v1/n19-1423')).toBe(id);
+
+		// A DOI that isn't text, in imported details, is no match and no error.
+		state.library.get(SHA.vaswani)!.doi = null;
+		state.library.get(SHA.vaswani)!.csl_json = JSON.stringify({ title: 'x', DOI: 123 });
+		expect(await db.sourceForDoi('10.1/none')).toBeNull();
 	});
 
 	it('fails with a kind, as Rust does', async () => {

@@ -1,5 +1,5 @@
 import { findDoi } from '$lib/ingest/identifiers';
-import { lookupDoi } from '$lib/ingest/resolve';
+import { lookupDoi, tidyRecord } from '$lib/ingest/resolve';
 import { networkAllowed } from '$lib/stores/consent';
 import { addSourceFromDoi, addToProject, sourceForDoi } from '$lib/stores/db';
 
@@ -50,11 +50,7 @@ export async function addFromDoi(
 	}
 
 	const id = newSourceId();
-	const csl: Record<string, unknown> = { ...resolved.csl, id, DOI: registered };
-	// Crossref's reference list is every work the paper cites: kilobytes the
-	// library would carry for no citation.
-	delete csl.reference;
-	if (Array.isArray(csl.title)) csl.title = String(csl.title[0]);
+	const csl = tidyRecord({ ...resolved.csl, id, DOI: registered } as Record<string, unknown>, doi);
 	// A kind the form knows, so the sidebar shows its fields; a record of some
 	// other kind is kept as a document rather than refused.
 	let zoteroType = schema.cslToZoteroTypeMap.get(String(csl.type ?? ''));

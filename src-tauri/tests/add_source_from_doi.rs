@@ -96,6 +96,78 @@ async fn a_doi_in_the_library_is_found_whatever_its_case() {
     assert_eq!(source_for_doi_in(&state, "".into()).await.unwrap(), None);
 }
 
+// M1b-6 AC-3: a DOI is written as a link as often as not. Typed into the
+// form that way, it was stored as the link, and the bare DOI never found it.
+#[tokio::test]
+async fn a_doi_written_as_a_link_finds_and_is_found_by_the_bare_one() {
+    let state = opened("links").await;
+    add_source_by_hand_in(
+        &state,
+        ID.into(),
+        r#"{"type":"article-journal","title":"Deep learning","DOI":"https://doi.org/10.1038/Nature14539"}"#.into(),
+        "journalArticle".into(),
+    )
+    .await
+    .unwrap();
+
+    for doi in [
+        "10.1038/nature14539",
+        "doi:10.1038/nature14539",
+        "http://dx.doi.org/10.1038/NATURE14539",
+    ] {
+        assert_eq!(
+            source_for_doi_in(&state, doi.into())
+                .await
+                .unwrap()
+                .as_deref(),
+            Some(ID),
+            "{doi}"
+        );
+    }
+    let err = add_source_from_doi_in(&state, OTHER.into(), PAPER.into(), "journalArticle".into())
+        .await
+        .unwrap_err();
+    assert_eq!(err.kind, ErrorKind::Conflict, "the one-per-DOI rule holds");
+}
+
+#[tokio::test]
+async fn a_link_stored_before_dois_were_normalised_is_found() {
+    // An older row, its DOI only in the details, as a link.
+    let state = opened("old-link").await;
+    let library = state.library().await.unwrap();
+    queries::add_source_without_file(
+        &library,
+        ID,
+        r#"{"type":"book","title":"Old","DOI":"https://doi.org/10.5555/OLD"}"#,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        source_for_doi_in(&state, "10.5555/old".into())
+            .await
+            .unwrap()
+            .as_deref(),
+        Some(ID)
+    );
+}
+
+#[test]
+fn a_doi_is_compared_bare_and_in_lowercase() {
+    assert_eq!(
+        queries::normalise_doi(" https://doi.org/10.1038/X ").as_deref(),
+        Some("10.1038/x")
+    );
+    assert_eq!(
+        queries::normalise_doi("DOI:10.1/a").as_deref(),
+        Some("10.1/a")
+    );
+    assert_eq!(queries::normalise_doi("https://doi.org/"), None);
+    assert_eq!(queries::normalise_doi("  "), None);
+}
+
 // M1b-6 AC-3
 #[tokio::test]
 async fn a_doi_only_in_the_details_is_found_too() {

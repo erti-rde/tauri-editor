@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 
+import { IpcError } from '$lib/ipc';
 import UiHarness from '$lib/ui/UiHarness.svelte';
 
 import { augment, type OriginalZoteroSchema } from './adapterCslZotero';
@@ -12,7 +13,8 @@ import SourceSidebar from './SourceSidebar.svelte';
 const db = vi.hoisted(() => ({
 	addSourceByHand: vi.fn(async () => {}),
 	setMetadataOverride: vi.fn(async () => {}),
-	sourceFiles: vi.fn(async () => [])
+	sourceFiles: vi.fn(async () => []),
+	sourceForDoi: vi.fn(async (): Promise<string | null> => null)
 }));
 vi.mock('$lib/stores/db', () => db);
 vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
@@ -177,6 +179,37 @@ describe('a new source from a DOI (M1b-6 AC-2)', () => {
 
 		const [, json] = db.addSourceByHand.mock.calls[0] as unknown as [string, string, string];
 		expect(JSON.parse(json)).toMatchObject({ type: 'book', DOI: '10.1038/nature14539' });
+	});
+
+	// M1b-6 AC-3: a DOI the library has opens that source, from the form too.
+	it('opens the source the library has under the DOI, rather than a dead end', async () => {
+		const user = userEvent.setup();
+		db.addSourceByHand.mockRejectedValueOnce(
+			new IpcError({
+				kind: 'Conflict',
+				message: 'A source with that DOI is already in the library.'
+			})
+		);
+		db.sourceForDoi.mockResolvedValueOnce('erti:already');
+		const onexisting = vi.fn();
+		render(UiHarness, {
+			props: {
+				component: SourceSidebar,
+				schema,
+				initial: { DOI: '10.1038/nature14539' },
+				onexisting,
+				onclose: vi.fn(),
+				onsaved: vi.fn(),
+				onremoved: vi.fn()
+			}
+		});
+
+		await kindChooser(user)('Book', 0);
+		await user.type(screen.getByRole('textbox', { name: 'Title (required)' }), 'Deep learning');
+		await user.click(screen.getByRole('button', { name: 'Add to library' }));
+
+		await waitFor(() => expect(onexisting).toHaveBeenCalledWith('erti:already'));
+		expect(db.sourceForDoi).toHaveBeenCalledWith('10.1038/nature14539');
 	});
 });
 
