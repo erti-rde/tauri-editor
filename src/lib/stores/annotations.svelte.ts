@@ -194,9 +194,9 @@ function createAnnotationsStore() {
 
 				const sha256 = await sourceForPath(path);
 				if (mine !== generation) return;
-				current = sha256;
 
 				if (!sha256) {
+					current = null;
 					update((state) => ({ ...state, sha256: null, annotations: [], loading: false }));
 					return;
 				}
@@ -204,6 +204,10 @@ function createAnnotationsStore() {
 				const loaded = await annotationsForSource(sha256);
 				if (mine !== generation) return;
 				const annotations = Array.isArray(loaded) ? loaded : [];
+				// With the state, once nothing can overtake it: set earlier, a load
+				// overtaken by a later one that failed left writes going to one
+				// paper while the store showed another.
+				current = sha256;
 				update((state) => ({ ...state, sha256, annotations, loading: false }));
 			} catch (failure) {
 				log.error('Could not load the annotations for this paper', failure);
@@ -375,10 +379,12 @@ function createAnnotationsStore() {
 		 *
 		 * Removing a source deletes its marks' rows (M1b-4). Kept here, they would
 		 * still be drawn, and an undo would write into a source that no longer
-		 * exists, which the library refuses.
+		 * exists, which the library refuses. Whether it let go.
 		 */
-		dropIf(gone: (path: string) => boolean) {
-			if (openedPath !== null && gone(openedPath)) this.clear();
+		dropIf(gone: (path: string) => boolean): boolean {
+			if (openedPath === null || !gone(openedPath)) return false;
+			this.clear();
+			return true;
 		},
 
 		reset() {

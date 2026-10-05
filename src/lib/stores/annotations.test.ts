@@ -161,6 +161,29 @@ describe('a paper removed from the library', () => {
 		expect(get(annotationsStore).annotations).toEqual([]);
 		expect(get(annotationsStore).loading).toBe(false);
 	});
+
+	it('leaves no paper behind a load that a later, failed one overtook', async () => {
+		// Writes go to the paper the store shows, or to none: a load overtaken
+		// once it knew its paper used to leave saves reloading that one.
+		let marks: (loaded: never[]) => void = () => {};
+		vi.mocked(sourceForPath).mockResolvedValueOnce('sha-a');
+		vi.mocked(annotationsForSource).mockReturnValueOnce(
+			new Promise((resolve) => (marks = resolve))
+		);
+		const first = annotationsStore.openPath('/papers/a.pdf');
+		await vi.waitFor(() => expect(annotationsForSource).toHaveBeenCalledWith('sha-a'));
+
+		vi.mocked(sourceForPath).mockRejectedValueOnce(new Error('the library is busy'));
+		await annotationsStore.openPath('/papers/b.pdf');
+		marks([]);
+		await first;
+		vi.mocked(annotationsForSource).mockClear();
+
+		await annotationsStore.save({ id: 'm1', sha256: 'sha-b', page: 1 } as never);
+
+		expect(get(annotationsStore).sha256).toBeNull();
+		expect(annotationsForSource).not.toHaveBeenCalledWith('sha-a');
+	});
 });
 
 describe('the colour a mark is drawn in', () => {

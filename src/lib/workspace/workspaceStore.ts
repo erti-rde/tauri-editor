@@ -97,13 +97,13 @@ function createWorkspaceStore() {
 		 */
 		closeWhere(match: (tab: Tab) => boolean) {
 			update((workspace) => {
-				const gone = Object.values(workspace.tabs).filter(match);
-				if (gone.length === 0) return workspace;
-
-				return workspace.panes.reduce(
-					(next, pane) => gone.reduce((after, tab) => closeTab(after, pane.id, tab.id), next),
-					workspace
-				);
+				let next = workspace;
+				for (const pane of workspace.panes) {
+					for (const id of pane.tabs) {
+						if (match(workspace.tabs[id])) next = closeTab(next, pane.id, id);
+					}
+				}
+				return next;
 			});
 		},
 

@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { get } from 'svelte/store';
 
 	import { canonical } from '$lib/citations/aliases';
 	import { listDocuments } from '$lib/editor/documents';
 	import { describeError } from '$lib/ipc';
 	import { loadManuscript, tauriFiles } from '$lib/manuscript/io';
+	import { readerStore } from '$lib/pdfreader/readerStore';
 	import { annotationsStore } from '$lib/stores/annotations.svelte';
 	import { removeSource, sourceAliases, sourceRemoval } from '$lib/stores/db';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
@@ -92,10 +94,13 @@
 
 	async function remove() {
 		if (!asked) return;
-		const gone = removedFile(asked.paths);
+		let gone = removedFile(asked.paths);
 		busy = true;
 		try {
 			await carryInto(asked.cited.uncarried, { id: asked.work, csl: asked.csl }, tauriFiles);
+			// Listed again now, not when the dialog opened: a file found somewhere
+			// new since (M1b-7) goes with the rest, and its tab must close too.
+			gone = removedFile((await sourceRemoval(asked.id)).paths);
 			await removeSource(asked.id);
 		} catch (error) {
 			errorToast(`Could not remove it: ${describeError(error)}`);
@@ -107,7 +112,14 @@
 		// A reader left open on one of its files would draw marks that are gone,
 		// and saving a new one would fail on the source it belongs to (#222).
 		workspaceStore.closeWhere((tab) => tab.kind === 'pdf' && gone(tab.id));
-		annotationsStore.dropIf(gone);
+		if (annotationsStore.dropIf(gone)) {
+			// The store holds one paper, the one opened last. A reader still open
+			// in the other pane is left without it, so its marks are loaded back:
+			// otherwise it draws none, and a new one is saved to no paper at all.
+			await tick();
+			const still = Object.values(get(readerStore)).find((reader) => !gone(reader.path));
+			if (still) void annotationsStore.openPath(still.path);
+		}
 		successToast(REMOVED);
 		try {
 			await onremoved();

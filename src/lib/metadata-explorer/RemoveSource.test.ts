@@ -9,7 +9,7 @@ const { db, toast, annotations } = vi.hoisted(() => ({
 		removeSource: vi.fn(async () => {})
 	},
 	toast: { errorToast: vi.fn(), successToast: vi.fn() },
-	annotations: { dropIf: vi.fn() }
+	annotations: { dropIf: vi.fn(() => false), openPath: vi.fn(async () => {}) }
 }));
 
 vi.mock('$lib/stores/db', () => db);
@@ -19,6 +19,7 @@ vi.mock('$lib/stores/fileSystem.svelte', () => ({
 	fileSystemStore: writable({ items: [], currentPath: '/thesis' })
 }));
 
+import { readerStore } from '$lib/pdfreader/readerStore';
 import { workspaceStore } from '$lib/workspace/workspaceStore';
 
 import RemoveSource from './RemoveSource.svelte';
@@ -119,6 +120,32 @@ describe('RemoveSource (M1b-4)', () => {
 			await waitFor(() => expect(toast.errorToast).toHaveBeenCalled());
 			expect(Object.keys(get(workspaceStore).tabs)).toEqual([own]);
 			expect(annotations.dropIf).not.toHaveBeenCalled();
+		});
+		it('closes a file found somewhere new after the dialog opened', async () => {
+			// Counted with one place; by the time Remove is pressed, M1b-7 has
+			// found the file somewhere else too.
+			db.sourceRemoval
+				.mockResolvedValueOnce({ ...counts, paths: [own] })
+				.mockResolvedValueOnce({ ...counts, paths: [own, attached] });
+			workspaceStore.open(pdf(attached));
+
+			await removeA();
+
+			await waitFor(() => expect(toast.successToast).toHaveBeenCalled());
+			expect(Object.keys(get(workspaceStore).tabs)).toEqual([]);
+		});
+
+		it('gives the marks back to a reader still open in the other pane', async () => {
+			// The store held the removed paper, opened last; the other pane's
+			// reader would otherwise draw no marks and save new ones to no paper.
+			db.sourceRemoval.mockResolvedValue({ ...counts, paths: [own] });
+			annotations.dropIf.mockReturnValueOnce(true);
+			const reader = readerStore.register({ paneId: 'pane-2', path: other, navigate: vi.fn() });
+
+			await removeA();
+
+			await waitFor(() => expect(annotations.openPath).toHaveBeenCalledWith(other));
+			reader.release();
 		});
 	});
 });
