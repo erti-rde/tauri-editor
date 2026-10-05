@@ -178,7 +178,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M1b-3** One canonical-id resolver (#214)
 - [x] **M1b-4** Remove a source (UX-4) (#222)
 - [x] **M1b-5** Add a source by hand (UX-2) (#224, #226)
-- [ ] **M1b-6** Add from a DOI; ISBN deferred
+- [x] **M1b-6** Add from a DOI; ISBN deferred (#228)
 - [x] **M1b-7** Attach a PDF to a source (UX-3 File tab) (#226)
 - [ ] **M1b-8** Notes on a source (ADR-4, UX-3)
 - [ ] **M1b-9** Import a bibliography, with preview (ADR-9, UX-6)
