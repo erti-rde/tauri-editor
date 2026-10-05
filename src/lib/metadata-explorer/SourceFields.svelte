@@ -49,7 +49,7 @@
 	}
 </script>
 
-<div class="grid gap-3 p-3">
+<div class="grid gap-3">
 	<Select
 		label="Kind of source"
 		placeholder="Choose what it is"

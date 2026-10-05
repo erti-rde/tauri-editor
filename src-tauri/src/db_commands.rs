@@ -427,6 +427,157 @@ pub async fn remove_source_in(state: &DbState, id: &str) -> Result<(), AppError>
     removed.or_database()
 }
 
+/// A file attached to a work, and what's left to do with it (M1b-7).
+#[derive(Debug, serde::Serialize, serde::Deserialize, specta::Type, PartialEq, Eq)]
+pub struct AttachedFile {
+    /// The file's own hash, which reading it goes under.
+    pub sha256: String,
+    pub file_name: String,
+    /// False when the library has read it already, for another project.
+    pub needs_ingest: bool,
+    /// The source this file was until now, by title or file name, when the
+    /// library had it as one of its own: its citations now render as the work
+    /// it joined, and its row in any project is that work's.
+    pub merged: Option<String>,
+    /// It was already this source's file, found somewhere new: the place is
+    /// recorded, and Open and Show in folder use it.
+    pub found_again: bool,
+}
+
+/// Attach the PDF at `path` to the work `work` (M1b-7, ADR 003).
+#[tauri::command]
+#[specta::specta]
+pub async fn attach_file(
+    state: State<'_, DbState>,
+    work: String,
+    path: String,
+) -> Result<AttachedFile, AppError> {
+    attach_file_in(&state, &work, path).await
+}
+
+/// `attach_file`, scoped (M1a-3): the path is one the user picked, and is
+/// recorded as a location, which `scope::authorise` then accepts.
+pub async fn attach_file_in(
+    state: &DbState,
+    work: &str,
+    path: String,
+) -> Result<AttachedFile, AppError> {
+    use crate::ipc::ErrorKind;
+
+    crate::scope::authorise(state, &path).await?;
+    let sha256 = crate::db::hash_file(&PathBuf::from(&path)).await?;
+    // A PDF, and only a PDF: its place is recorded, and a recorded place is
+    // one `scope::authorise` accepts in later sessions too. Anything else
+    // would turn a grant meant for this session into a lasting one. After
+    // hashing, so a file that's gone is said as such.
+    if !is_pdf(&path).await {
+        return Err(AppError::new(
+            ErrorKind::InvalidInput,
+            "That file isn't a PDF.",
+        ));
+    }
+    let file_name = PathBuf::from(&path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.clone());
+
+    let attached = queries::attach_file(&state.library().await?, work, &sha256, &path, &file_name)
+        .await
+        .or_database()?;
+    match attached {
+        queries::Attach::Attached {
+            needs_ingest,
+            merged,
+        } => Ok(AttachedFile {
+            sha256,
+            file_name,
+            needs_ingest,
+            merged,
+            found_again: false,
+        }),
+        queries::Attach::FoundAgain { needs_ingest } => Ok(AttachedFile {
+            sha256,
+            file_name,
+            needs_ingest,
+            merged: None,
+            found_again: true,
+        }),
+        queries::Attach::HasFiles(title) => {
+            Err(AppError::new(
+                ErrorKind::Conflict,
+                format!(
+                "That PDF is {}, which has files of its own, so it can't be another source's file.",
+                title.map_or_else(|| "a source".to_string(), |t| format!("\u{201c}{t}\u{201d}"))
+            ),
+            ))
+        }
+        queries::Attach::AlreadyIts => Err(AppError::new(
+            ErrorKind::Conflict,
+            "That PDF is already attached to this source.",
+        )),
+        queries::Attach::Elsewhere(title) => Err(AppError::new(
+            ErrorKind::Conflict,
+            match title {
+                Some(title) => format!("That PDF is already attached to \u{201c}{title}\u{201d}."),
+                None => "That PDF is already attached to another source.".to_string(),
+            },
+        )),
+        queries::Attach::NoWork => Err(AppError::new(
+            ErrorKind::NotFound,
+            "That source is no longer in the library.",
+        )),
+    }
+}
+
+/// Whether the file at `path` starts as a PDF does. Read, not trusted from
+/// the name: the picker filters by extension, but the command can be called
+/// with any path.
+async fn is_pdf(path: &str) -> bool {
+    use tokio::io::AsyncReadExt;
+    let mut head = [0u8; 4];
+    match tokio::fs::File::open(path).await {
+        Ok(mut file) => file.read_exact(&mut head).await.is_ok() && &head == b"%PDF",
+        Err(_) => false,
+    }
+}
+
+/// A work's files, for its sidebar's File tab (M1b-7 AC-3).
+#[tauri::command]
+#[specta::specta]
+pub async fn source_files(
+    state: State<'_, DbState>,
+    id: String,
+) -> Result<Vec<queries::SourceFile>, AppError> {
+    source_files_in(&state, &id).await
+}
+
+/// `source_files`, reachable from tests.
+///
+/// Each file is shown where it can still be found, newest first, so a PDF
+/// moved within the project folder and seen again by a scan isn't reported
+/// missing for the place it left.
+pub async fn source_files_in(
+    state: &DbState,
+    id: &str,
+) -> Result<Vec<queries::SourceFile>, AppError> {
+    let files = queries::source_file_locations(&state.library().await?, id)
+        .await
+        .or_database()?;
+    let mut out = Vec::with_capacity(files.len());
+    for (mut file, seen) in files {
+        for (path, file_name) in seen {
+            if tokio::fs::try_exists(&path).await.unwrap_or(false) {
+                file.path = path;
+                file.file_name = file_name;
+                file.found = true;
+                break;
+            }
+        }
+        out.push(file);
+    }
+    Ok(out)
+}
+
 /// Rank chunks against a piece of text the user is writing.
 ///
 /// Embedding and scoring both happen here; only the top results cross the IPC

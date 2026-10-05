@@ -142,7 +142,8 @@
 
 			<div class="min-w-0 grow">
 				{#if panelName == 'metadataExplorer'}
-					<MetadataEditor />
+					<!-- A PDF opened from a source's File tab shows in the workspace. -->
+					<MetadataEditor onopen={() => (panelName = 'fileExplorer')} />
 				{:else}
 					<!-- Panes and tabs, rather than one slot switched by a mode flag.
 					     Opening a paper used to replace the manuscript; now it sits

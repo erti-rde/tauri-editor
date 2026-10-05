@@ -169,6 +169,10 @@ export const commands = {
 	 *  notes (M1b-4). The PDFs stay where they are.
 	 */
 	removeSource: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_source", { id })),
+	/**  Attach the PDF at `path` to the work `work` (M1b-7, ADR 003). */
+	attachFile: (work: string, path: string) => typedError<AttachedFile, AppError>(__TAURI_INVOKE("attach_file", { work, path })),
+	/**  A work's files, for its sidebar's File tab (M1b-7 AC-3). */
+	sourceFiles: (id: string) => typedError<SourceFile[], AppError>(__TAURI_INVOKE("source_files", { id })),
 	restoreDefaultLabels: () => typedError<number, AppError>(__TAURI_INVOKE("restore_default_labels")),
 	nameLabelsAfterColours: () => typedError<number, AppError>(__TAURI_INVOKE("name_labels_after_colours")),
 };
@@ -228,6 +232,26 @@ export type AppError = {
 	kind: ErrorKind,
 	/**  A sentence a person can read, already saying what to do where possible. */
 	message: string,
+};
+
+/**  A file attached to a work, and what's left to do with it (M1b-7). */
+export type AttachedFile = {
+	/**  The file's own hash, which reading it goes under. */
+	sha256: string,
+	file_name: string,
+	/**  False when the library has read it already, for another project. */
+	needs_ingest: boolean,
+	/**
+	 *  The source this file was until now, by title or file name, when the
+	 *  library had it as one of its own: its citations now render as the work
+	 *  it joined, and its row in any project is that work's.
+	 */
+	merged: string | null,
+	/**
+	 *  It was already this source's file, found somewhere new: the place is
+	 *  recorded, and Open and Show in folder use it.
+	 */
+	found_again: boolean,
 };
 
 export type CompileResult = {
@@ -411,6 +435,33 @@ export type Source = {
 	zotero_type: string | null,
 	doi: string | null,
 	resolved_via: string | null,
+	/**
+	 *  The work's own state: whether it can be cited. A work entered by hand
+	 *  is `ready` while a PDF attached to it is still being read.
+	 */
+	state: string,
+	last_error: string | null,
+	/**
+	 *  The ingest state of the file at `path`, which for an attached PDF is
+	 *  not the work's (M1b-7 AC-1). None when the work has no file.
+	 */
+	file_state: string | null,
+	file_error: string | null,
+};
+
+/**  One file of a work, for its sidebar's File tab (M1b-7 AC-3). */
+export type SourceFile = {
+	/**  The file's own hash: the work's id, or an attached file's. */
+	sha256: string,
+	file_name: string,
+	/**
+	 *  Where it was last found, or where it was last seen when it can't be
+	 *  found anywhere now.
+	 */
+	path: string,
+	/**  False when no place it was seen still has a file. */
+	found: boolean,
+	/**  Its ingest state: whether it has been read yet, or failed. */
 	state: string,
 	last_error: string | null,
 };

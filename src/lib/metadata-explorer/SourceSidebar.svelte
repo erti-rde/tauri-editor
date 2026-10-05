@@ -2,12 +2,13 @@
 	import { describeError } from '$lib/ipc';
 	import { addSourceByHand, setMetadataOverride } from '$lib/stores/db';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
-	import { Button, Sidebar } from '$lib/ui';
+	import { Button, Sidebar, Tabs } from '$lib/ui';
 
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 	import { fromForm, toForm, type CslItem, type FormValues } from './cslForm';
 	import RemoveSource from './RemoveSource.svelte';
 	import SourceFields from './SourceFields.svelte';
+	import SourceFiles from './SourceFiles.svelte';
 	import { itemTypeOf, missing, newSourceId } from './sourceForm';
 
 	/**
@@ -26,9 +27,27 @@
 		onclose: () => void;
 		onsaved: () => void;
 		onremoved: () => void | Promise<void>;
+		/** A file was attached or read: the table lists it again (M1b-7). */
+		onfileschanged?: () => void | Promise<void>;
+		/** A file was opened in a tab. */
+		onopen?: () => void;
+		/** Goes up each time the table lists its sources again (see `SourceFiles`). */
+		revision?: number;
 	}
 
-	let { schema, record, onclose, onsaved, onremoved }: Props = $props();
+	let {
+		schema,
+		record,
+		onclose,
+		onsaved,
+		onremoved,
+		onfileschanged = () => {},
+		onopen = () => {},
+		revision = 0
+	}: Props = $props();
+
+	/** Which tab shows. The files are listed when theirs is chosen, not on opening. */
+	let tab = $state('details');
 
 	const typeNamed = (itemType: string | undefined) =>
 		schema.itemTypes.find((t) => t.itemType === itemType && t.cslType);
@@ -87,7 +106,33 @@
 	subtitle={record?.title ?? 'Entered by hand, with no file'}
 	{onclose}
 >
-	<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
+	{#if record}
+		{@const id = record.id}
+		<!-- Notes (M1b-8) joins these. A column, so the panel fills the sidebar. -->
+		<div class="flex h-full flex-col">
+			<Tabs
+				label="Source"
+				bind:value={tab}
+				tabs={[
+					{ value: 'details', label: 'Details' },
+					{ value: 'file', label: 'File' }
+				]}
+			>
+				{#snippet panel(panelFor)}
+					{#if panelFor === 'details'}
+						<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
+					{:else if tab === 'file'}
+						<SourceFiles {id} onchange={onfileschanged} {onopen} {revision} />
+					{/if}
+				{/snippet}
+			</Tabs>
+		</div>
+	{:else}
+		<!-- As padded as a tab's panel, so the form doesn't shift between modes. -->
+		<div class="p-5">
+			<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
+		</div>
+	{/if}
 	{#snippet footer()}
 		{#if record}
 			<RemoveSource id={record.id} title={record.title} csl={record.csl} {onremoved} />

@@ -165,6 +165,8 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         source_removal,
         add_source_by_hand,
         remove_source,
+        attach_file,
+        source_files,
         restore_default_labels,
         name_labels_after_colours,
     ])
