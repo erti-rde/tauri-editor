@@ -133,6 +133,53 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 		expect(gone.found).toBe(false);
 	});
 
+	// M1b-8: the same rules as `source_notes.rs`.
+	it('keeps a note on the work as Rust does, and lists it with the marks on its files', async () => {
+		await openFixtureProject();
+		const { state } = backend();
+		state.aliases.set(SHA.scan, SHA.vaswani);
+		const marked = [...state.marks.values()].filter((m) => m.sha256 === SHA.vaswani).length;
+		expect(marked).toBeGreaterThan(1);
+
+		await db.saveSourceNote({
+			id: 'n1',
+			sha256: SHA.scan,
+			body: '  On the paper  ',
+			quote: ' ',
+			page_label: ' 12 '
+		});
+
+		for (const id of [SHA.scan, SHA.vaswani]) {
+			const listed = await db.workNotes(id);
+			expect(listed.notes).toEqual([
+				expect.objectContaining({
+					id: 'n1',
+					sha256: SHA.vaswani,
+					body: 'On the paper',
+					quote: null,
+					page_label: '12',
+					label_id: null
+				})
+			]);
+			expect(listed.marks).toHaveLength(marked);
+			const pages = listed.marks.map((m) => m.page);
+			expect(pages).toEqual([...pages].sort((a, b) => a - b));
+		}
+		expect((await db.sourceRemoval(SHA.vaswani)).notes).toBeGreaterThanOrEqual(1);
+
+		const empty = await db
+			.saveSourceNote({ id: 'n2', sha256: SHA.vaswani, body: ' ' })
+			.catch((e) => e);
+		expect((empty as IpcError).kind).toBe('InvalidInput');
+		const nowhere = await db
+			.saveSourceNote({ id: 'n3', sha256: 'erti:gone', body: 'x' })
+			.catch((e) => e);
+		expect((nowhere as IpcError).kind).toBe('NotFound');
+
+		await db.deleteSourceNote('n1');
+		expect((await db.workNotes(SHA.vaswani)).notes).toEqual([]);
+	});
+
 	it('fails with a kind, as Rust does', async () => {
 		const failure = await db.projectRoot().catch((e: unknown) => e);
 		expect(failure).toBeInstanceOf(IpcError);

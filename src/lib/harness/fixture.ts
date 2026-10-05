@@ -1,4 +1,4 @@
-import type { Annotation, AnnotationLabel, Source } from '$lib/ipc';
+import type { Annotation, AnnotationLabel, Source, SourceNote } from '$lib/ipc';
 
 // Two pages of our own text: the retrieval corpus is fetched on demand, so it
 // can't be relied on here, and a paper of someone else's shouldn't be in the
@@ -30,6 +30,8 @@ export interface Fixture {
 	aliases?: Record<string, string>;
 	labels: AnnotationLabel[];
 	marks: Annotation[];
+	/** Notes on works (ADR 004). None by default. */
+	notes?: SourceNote[];
 	/**
 	 * Files on the fake disk, by absolute path. A string is the file's text; a
 	 * `{ pdf }` entry is a PDF served from a URL, so the reader can open it.

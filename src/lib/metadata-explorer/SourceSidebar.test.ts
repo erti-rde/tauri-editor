@@ -12,7 +12,11 @@ import SourceSidebar from './SourceSidebar.svelte';
 const db = vi.hoisted(() => ({
 	addSourceByHand: vi.fn(async () => {}),
 	setMetadataOverride: vi.fn(async () => {}),
-	sourceFiles: vi.fn(async () => [])
+	sourceFiles: vi.fn(async () => []),
+	workNotes: vi.fn(async () => ({ notes: [], marks: [] }) as unknown),
+	annotationLabels: vi.fn(async () => []),
+	saveSourceNote: vi.fn(async () => {}),
+	deleteSourceNote: vi.fn(async () => {})
 }));
 vi.mock('$lib/stores/db', () => db);
 vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
@@ -149,11 +153,35 @@ describe('switching kind while entering one', () => {
 });
 
 describe('the sidebar’s tabs (M1b-7 AC-3, UX-3)', () => {
-	it('shows a source’s details and its files in tabs', () => {
+	// M1b-8 AC-1
+	it('shows a source’s details, its notes with their count, and its files in tabs', async () => {
+		db.workNotes.mockResolvedValueOnce({
+			notes: [{ id: 'n1' }, { id: 'n2' }],
+			marks: [{ id: 'm1' }]
+		});
 		open();
-		const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent?.trim());
-		expect(tabs).toEqual(['Details', 'File']);
+		expect(db.workNotes).toHaveBeenCalledWith('sha-chapter');
+		await waitFor(() =>
+			expect(screen.getAllByRole('tab').map((tab) => tab.textContent?.trim())).toEqual([
+				'Details',
+				'Notes (3)',
+				'File'
+			])
+		);
 		expect(screen.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'true');
+	});
+
+	// M1b-8 AC-2
+	it('saves the details from their own tab: a note has its own Save', async () => {
+		const user = userEvent.setup();
+		open();
+		expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+
+		await user.click(screen.getByRole('tab', { name: /^Notes/ }));
+
+		expect(await screen.findByRole('button', { name: 'New note' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Remove from library…' })).toBeInTheDocument();
 	});
 
 	it('lists the files when their tab is chosen, not on opening', async () => {

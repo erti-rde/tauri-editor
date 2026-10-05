@@ -229,6 +229,16 @@ export const allAnnotations = (options: { limit?: number; offset?: number } = {}
 
 export const deleteAnnotation = (id: string) => run(commands.deleteAnnotation(id));
 
+/** A note on a work as a whole, or on one read on paper (M1b-8, ADR 004). */
+export type SourceNote = ipc.SourceNote;
+export type NewSourceNote = ipc.NewSourceNote;
+/** A work's notes, and the marks on each of its files (UX-3's Notes tab). */
+export type WorkNotes = Omit<ipc.WorkNotes, 'marks'> & { marks: Annotation[] };
+
+export const workNotes = (id: string) => call(commands.workNotes(id)) as Promise<WorkNotes>;
+export const saveSourceNote = (note: NewSourceNote) => run(commands.saveSourceNote(note));
+export const deleteSourceNote = (id: string) => run(commands.deleteSourceNote(id));
+
 /** Undo an import, leaving marks the reader made themselves untouched. */
 export const deleteImportedAnnotations = (sha256: string) =>
 	call(commands.deleteImportedAnnotations(sha256));

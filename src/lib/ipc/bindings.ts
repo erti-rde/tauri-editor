@@ -99,6 +99,11 @@ export const commands = {
 	annotationsForSource: (sha256: string) => typedError<Annotation[], AppError>(__TAURI_INVOKE("annotations_for_source", { sha256 })),
 	allAnnotations: (limit: number | null, offset: number | null) => typedError<Annotation[], AppError>(__TAURI_INVOKE("all_annotations", { limit, offset })),
 	deleteAnnotation: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_annotation", { id })),
+	/**  A work's notes and the marks on its files, for its Notes tab (M1b-8, UX-3). */
+	workNotes: (id: string) => typedError<WorkNotes, AppError>(__TAURI_INVOKE("work_notes", { id })),
+	/**  Write a note on a work, or rewrite one (M1b-8 AC-2, ADR 004). */
+	saveSourceNote: (note: NewSourceNote) => typedError<null, AppError>(__TAURI_INVOKE("save_source_note", { note })),
+	deleteSourceNote: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_source_note", { id })),
 	deleteImportedAnnotations: (sha256: string) => typedError<number, AppError>(__TAURI_INVOKE("delete_imported_annotations", { sha256 })),
 	annotationLabels: () => typedError<AnnotationLabel[], AppError>(__TAURI_INVOKE("annotation_labels")),
 	saveLabel: (label: AnnotationLabel) => typedError<null, AppError>(__TAURI_INVOKE("save_label", { label })),
@@ -353,6 +358,22 @@ export type NewChunk = {
 	char_end?: number | null,
 };
 
+/**
+ *  A source note on its way in (M1b-8, ADR 004). The id is the caller's, as a
+ *  mark's is, so a note keeps it through an export and back.
+ */
+export type NewSourceNote = {
+	id: string,
+	/**  Any of the work's ids: the note is kept under the work's own. */
+	sha256: string,
+	/**  Markdown. May be empty when there's a quote. */
+	body: string,
+	quote?: string | null,
+	/**  The page as the paper prints it. */
+	page_label?: string | null,
+	label_id?: string | null,
+};
+
 export type SalvageReport = {
 	/**  Rows carried forward. */
 	imported: number,
@@ -505,6 +526,18 @@ export type TexToolchain = {
 	engine: string | null,
 	/**  Whether BibTeX or Biber is available to resolve citations. */
 	bibliography: string | null,
+};
+
+/**
+ *  Everything noted on a work (UX-3's Notes tab): its own notes, and the marks
+ *  on each of its files (ADR 003), so a book's tab shows the highlights made in
+ *  the PDF attached to it.
+ */
+export type WorkNotes = {
+	/**  In the order they were first written. */
+	notes: SourceNote[],
+	/**  By page, as a file's own marks are. */
+	marks: Annotation[],
 };
 
 /* Tauri Specta runtime */

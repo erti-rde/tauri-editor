@@ -89,4 +89,14 @@ test('shots', async ({ page }) => {
 	await expect(page.getByRole('button', { name: 'Show in folder' })).toBeVisible();
 	// Finished, not mid-way through the tab's 120ms change of colour.
 	await page.screenshot({ ...shot('14-source-files'), animations: 'disabled' });
+
+	// A source's notes, with one being written, above the marks in its PDF (UX-3).
+	await page.getByRole('tab', { name: /^Notes/ }).click();
+	await page.getByRole('button', { name: 'New note' }).click();
+	await page.getByRole('textbox', { name: /^Note/ }).fill('The contrast I need for §3.');
+	await page
+		.getByRole('textbox', { name: /^Quote/ })
+		.fill('dispensing with recurrence and convolutions entirely');
+	await page.getByRole('textbox', { name: /^Page/ }).fill('1');
+	await page.screenshot({ ...shot('16-source-notes'), animations: 'disabled' });
 });

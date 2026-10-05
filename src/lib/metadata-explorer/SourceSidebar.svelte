@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	import { describeError } from '$lib/ipc';
-	import { addSourceByHand, setMetadataOverride } from '$lib/stores/db';
+	import { log } from '$lib/log';
+	import { addSourceByHand, setMetadataOverride, workNotes, type WorkNotes } from '$lib/stores/db';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { Button, Sidebar, Tabs } from '$lib/ui';
 
@@ -9,6 +12,7 @@
 	import RemoveSource from './RemoveSource.svelte';
 	import SourceFields from './SourceFields.svelte';
 	import SourceFiles from './SourceFiles.svelte';
+	import SourceNotes from './SourceNotes.svelte';
 	import { itemTypeOf, missing, newSourceId } from './sourceForm';
 
 	/**
@@ -48,6 +52,20 @@
 
 	/** Which tab shows. The files are listed when theirs is chosen, not on opening. */
 	let tab = $state('details');
+	/** Read on opening, for the tab's count. Null until then, or for a new source. */
+	let notes = $state<WorkNotes | null>(null);
+	const noted = $derived(notes ? notes.notes.length + notes.marks.length : null);
+
+	async function loadNotes() {
+		if (!record) return;
+		try {
+			notes = await workNotes(record.id);
+		} catch (error) {
+			log.warn('Could not read the source’s notes', error);
+		}
+	}
+
+	onMount(loadNotes);
 
 	const typeNamed = (itemType: string | undefined) =>
 		schema.itemTypes.find((t) => t.itemType === itemType && t.cslType);
@@ -108,20 +126,24 @@
 >
 	{#if record}
 		{@const id = record.id}
-		<!-- Notes (M1b-8) joins these. A column, so the panel fills the sidebar. -->
+		<!-- A column, so the panel fills the sidebar. -->
 		<div class="flex h-full flex-col">
 			<Tabs
 				label="Source"
 				bind:value={tab}
 				tabs={[
 					{ value: 'details', label: 'Details' },
+					// Notes and marks together (UX-3).
+					{ value: 'notes', label: noted === null ? 'Notes' : `Notes (${noted})` },
 					{ value: 'file', label: 'File' }
 				]}
 			>
 				{#snippet panel(panelFor)}
 					{#if panelFor === 'details'}
 						<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
-					{:else if tab === 'file'}
+					{:else if panelFor === 'notes' && tab === 'notes'}
+						<SourceNotes {id} {notes} onchange={loadNotes} />
+					{:else if panelFor === 'file' && tab === 'file'}
 						<SourceFiles {id} onchange={onfileschanged} {onopen} {revision} />
 					{/if}
 				{/snippet}
@@ -138,8 +160,11 @@
 			<RemoveSource id={record.id} title={record.title} csl={record.csl} {onremoved} />
 		{/if}
 		<span class="flex-1"></span>
-		<Button variant="primary" loading={saving} disabled={!type} onclick={save}>
-			{record ? 'Save' : 'Add to library'}
-		</Button>
+		<!-- Saves the details: a note is saved in its own form. -->
+		{#if !record || tab === 'details'}
+			<Button variant="primary" loading={saving} disabled={!type} onclick={save}>
+				{record ? 'Save' : 'Add to library'}
+			</Button>
+		{/if}
 	{/snippet}
 </Sidebar>
