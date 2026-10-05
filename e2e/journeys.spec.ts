@@ -659,3 +659,48 @@ test('a note on a source is written in its Notes tab, beside the marks on its PD
 		.click();
 	await expect(sidebar.getByRole('tab', { name: 'Notes (2)' })).toBeVisible();
 });
+
+// M1b-8 AC-3: from the Sources view, where the editor isn't, to the place the
+// writer left off in the manuscript.
+test('a note with a page cites its source at that page, where the writer left off', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	// The cursor at the start of the opening paragraph, not the end the editor opens at.
+	const opening = page.locator('.ProseMirror p').first();
+	await opening.click({ position: { x: 2, y: 2 } });
+	await page.keyboard.press('Home');
+
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
+	const sidebar = page.getByRole('complementary', { name: 'Edit source' });
+	await sidebar.getByRole('tab', { name: /^Notes/ }).click();
+	await sidebar.getByRole('button', { name: 'New note' }).click();
+	await sidebar.getByRole('textbox', { name: /^Note/ }).fill('Eight heads.');
+	await sidebar.getByRole('textbox', { name: /^Page/ }).fill('3');
+	await sidebar.getByRole('textbox', { name: /^Page/ }).press('ControlOrMeta+Enter');
+
+	await sidebar.getByRole('button', { name: 'Cite with p. 3' }).click();
+
+	await expect(opening).toContainText('(Vaswani, 2017, p. 3) Sequence models built on recurrence');
+	await expect(page.getByRole('heading', { name: /^Sources/ })).toHaveCount(0);
+	// And the cursor after it, so the next words follow the citation: the
+	// editor's own focus, a tick after it opens, once put the cursor back.
+	await page.keyboard.type('Next.');
+	await expect(opening).toContainText('(Vaswani, 2017, p. 3) Next.');
+
+	// Kept in the file as the page, beside the work, not only as the words shown.
+	const cited = () =>
+		page.evaluate(() => {
+			const files = window.__ERTI_FAKE__!.files;
+			const path = [...files.keys()].find((p) => p.endsWith('Chapter 1.erti.json'))!;
+			const opening = JSON.parse(files.get(path) as string).content[2].content;
+			return opening.find((node: { type: string }) => node.type === 'citation').attrs;
+		});
+	await expect.poll(async () => (await cited()).locators).toBeTruthy();
+	const { id, locators } = await cited();
+	expect(Object.values(locators)).toEqual(['3']);
+	expect(JSON.parse(id)).toEqual(Object.keys(locators));
+});

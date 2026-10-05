@@ -25,8 +25,9 @@ export interface DraftContext {
 	 * Handed over rather than re-derived, because only the editor holds the
 	 * ProseMirror view — and null when no manuscript is open, so the panel can
 	 * offer to cite only when there is somewhere for a citation to go.
+	 * `locator` is the page cited, as printed (M1b-8).
 	 */
-	cite: ((sha256: string) => Promise<void>) | null;
+	cite: ((sha256: string, locator?: string) => Promise<void>) | null;
 }
 
 const EMPTY: DraftContext = { paragraph: '', cite: null };

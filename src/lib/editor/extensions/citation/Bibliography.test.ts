@@ -262,3 +262,36 @@ describe('the references section as part of the manuscript', () => {
 		expect(biblio(editor).entries).toHaveLength(1);
 	});
 });
+
+// Brought in by a citation just written, the list mustn't take the cursor:
+// it went to the end of the manuscript, and the writer's next words with it.
+describe('a references section brought in, not asked for', () => {
+	it('leaves the cursor where the writer was', async () => {
+		const editor = new Editor({
+			extensions: [StarterKit, Citation, Bibliography],
+			content: {
+				type: 'doc',
+				content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Writing here' }] }]
+			}
+		});
+		await new Promise((r) => setTimeout(r, 0));
+		editor.commands.setTextSelection(5);
+
+		editor.commands.insertBibliography({ quietly: true });
+
+		expect(editor.state.selection.head).toBe(5);
+		expect(biblio(editor).entries).toEqual([]);
+		let added = false;
+		editor.state.doc.forEach((node) => (added ||= node.type.name === BIBLIOGRAPHY_NODE));
+		expect(added).toBe(true);
+	});
+
+	it('is shown selected when asked for', async () => {
+		const editor = await editorWith(['smith-2020-a']);
+		editor.commands.setTextSelection(1);
+
+		editor.commands.insertBibliography();
+
+		expect(editor.state.selection.toJSON().type).toBe('node');
+	});
+});

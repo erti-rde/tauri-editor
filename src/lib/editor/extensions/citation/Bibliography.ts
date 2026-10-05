@@ -27,7 +27,12 @@ import { NOTES_NODE } from './Notes';
 declare module '@tiptap/core' {
 	interface Commands<ReturnType> {
 		bibliography: {
-			insertBibliography: () => ReturnType;
+			/**
+			 * Add the references (and notes) section at the end. `quietly` leaves
+			 * the cursor where it is: for the list brought in by a new citation,
+			 * not one asked for.
+			 */
+			insertBibliography: (options?: { quietly?: boolean }) => ReturnType;
 		};
 	}
 }
@@ -151,8 +156,13 @@ export const Bibliography = Node.create({
 			 * render pass and read as a duplicated list.
 			 */
 			insertBibliography:
-				(): Command =>
+				({ quietly = false }: { quietly?: boolean } = {}): Command =>
 				({ chain, state }) => {
+					// Asked for, the section is shown selected. Brought in by a citation
+					// just written, it mustn't take the cursor: it went to the end of
+					// the manuscript, and the writer's next words with it.
+					const start = () => (quietly ? chain() : chain().focus());
+					const where = { updateSelection: !quietly };
 					const existing = findNode(state, BIBLIOGRAPHY_NODE);
 
 					// A note style needs somewhere for its notes to go, and the two
@@ -167,11 +177,12 @@ export const Bibliography = Node.create({
 						// and nowhere for its notes to go. Returning here on the strength
 						// of the bibliography alone left such a document permanently
 						// unable to gain one.
-						if (!wantsNotes) return chain().focus().setNodeSelection(existing).run();
+						if (!wantsNotes) {
+							return quietly ? true : chain().focus().setNodeSelection(existing).run();
+						}
 
-						return chain()
-							.focus()
-							.insertContentAt(existing, { type: NOTES_NODE, attrs: { notes: [] } })
+						return start()
+							.insertContentAt(existing, { type: NOTES_NODE, attrs: { notes: [] } }, where)
 							.updateAllCitation()
 							.run();
 					}
@@ -181,9 +192,8 @@ export const Bibliography = Node.create({
 					content.push({ type: BIBLIOGRAPHY_NODE, attrs: { entries: [], missing: 0 } });
 
 					return (
-						chain()
-							.focus()
-							.insertContentAt(state.doc.content.size, content)
+						start()
+							.insertContentAt(state.doc.content.size, content, where)
 							// Empty until the render pass fills it, which is the same pass
 							// that relabels citations.
 							.updateAllCitation()

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Editor } from '@tiptap/core';
+import { Editor, type Attributes, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 
 import { CitationEngine } from '$lib/citations/engine';
 import { citationStore, type CitationItem } from '$lib/stores/citationStore';
-import { Citation } from './Citation';
+import { Citation, locatorsFor } from './Citation';
 
 /**
  * The wiring, end to end: a real editor, real citeproc, real CSL styles.
@@ -207,5 +207,99 @@ describe('citations react to the document', () => {
 		expect(plain(labels(editor)[0])).toContain('1');
 
 		editor.destroy();
+	});
+});
+
+describe('a citation of a page (M1b-8)', () => {
+	/** The citation's attributes, as the file keeps them. */
+	const citationIn = (json: unknown) =>
+		(json as { content: { content: { attrs: Record<string, unknown> }[] }[] }).content[0].content[1]
+			.attrs;
+
+	// M1b-8 AC-3
+	it('cites the page it was given, and keeps it through a save and reload', async () => {
+		const editor = await editorWith();
+		editor.commands.insertCitation({
+			id: JSON.stringify(['okafor-2019']),
+			label: 'pending',
+			locators: { 'okafor-2019': '78' }
+		});
+		expect(plain(labels(editor)[0])).toMatch(/2019, p\. 78\)$/);
+
+		const saved = editor.getJSON();
+		expect(citationIn(saved)).toMatchObject({ locators: { 'okafor-2019': '78' } });
+		editor.destroy();
+
+		const reopened = new Editor({ extensions: [StarterKit, Citation], content: saved });
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(plain(labels(reopened)[0])).toMatch(/p\. 78\)$/);
+		reopened.destroy();
+	});
+
+	// M1b-8 AC-3
+	it('renders again when only the page changes', async () => {
+		const editor = await editorWith(['okafor-2019']);
+		expect(plain(labels(editor)[0])).not.toContain('p.');
+
+		editor.state.doc.descendants((node, pos) => {
+			if (node.type.name !== 'citation') return true;
+			editor.view.dispatch(
+				editor.state.tr.setNodeMarkup(pos, undefined, {
+					...node.attrs,
+					locators: { 'okafor-2019': '80–82' }
+				})
+			);
+			return false;
+		});
+
+		expect(plain(labels(editor)[0])).toMatch(/pp\. 80–82\)$/);
+		editor.destroy();
+	});
+
+	// M1b-8 AC-3, and the manuscript format's rule: add fields, never repurpose them.
+	it('opens in an Erti that knows nothing of pages, which loses only the page', async () => {
+		const Older = Citation.extend({
+			addAttributes() {
+				const { locators: _, ...before } = this.parent?.() as Attributes;
+				return before;
+			}
+		});
+		const editor = new Editor({
+			extensions: [StarterKit, Older],
+			content: {
+				type: 'doc',
+				content: [
+					{
+						type: 'paragraph',
+						content: [
+							{ type: 'text', text: 'As argued ' },
+							{
+								type: 'citation',
+								attrs: {
+									id: JSON.stringify(['okafor-2019']),
+									label: 'pending',
+									locators: { 'okafor-2019': '78' }
+								}
+							}
+						]
+					}
+				]
+			}
+		});
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(editor.getText()).toContain('As argued');
+		expect(plain(labels(editor)[0])).toMatch(/Okafor.*2019\)$/);
+		const saved = editor.getJSON() as JSONContent;
+		expect(saved.content?.[0].content?.[1].attrs).not.toHaveProperty('locators');
+		editor.destroy();
+	});
+
+	// M1b-8 AC-3: choosing other works for a citation keeps the pages of those still in it.
+	it('keeps the page of a work still cited when the works change', () => {
+		const locators = { a: '78', b: 'xiv' };
+		expect(locatorsFor(locators, ['b', 'c'])).toEqual({ b: 'xiv' });
+		expect(locatorsFor(locators, ['c'])).toBeNull();
+		expect(locatorsFor(null, ['a'])).toBeNull();
 	});
 });

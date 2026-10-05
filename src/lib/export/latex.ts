@@ -1,6 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 
-import { parseCitationIds } from '$lib/citations/document';
+import { pageAbbreviation, parseCitationIds, parseCitationLocators } from '$lib/citations/document';
 import { BIBLIOGRAPHY_NODE } from '$lib/editor/extensions/citation/Bibliography';
 import { NOTES_NODE } from '$lib/editor/extensions/citation/Notes';
 import { PAGE_BREAK_NODE } from '$lib/editor/extensions/PageBreak';
@@ -158,17 +158,31 @@ function serialize(node: JSONContent, options: LatexOptions): string {
 
 		case 'citation': {
 			const ids = parseCitationIds(node.attrs?.id);
+			const locators = parseCitationLocators(node.attrs?.locators);
 			// Once each: a citation naming a work and its attached PDF has one key
 			// for both (ADR 003), and \cite{k,k} would list the reference twice.
-			const keys = [
-				...new Set(ids.map((id) => options.citationKeys?.[id]).filter((k): k is string => !!k))
-			];
+			// The key keeps the first page cited by any of its ids.
+			const pages = new Map<string, string | undefined>();
+			for (const id of ids) {
+				const key = options.citationKeys?.[id];
+				if (key && !pages.get(key)) pages.set(key, locators[id]);
+			}
 
 			// A citation whose source is gone becomes a visible marker rather than
 			// an empty \cite{}, which LaTeX renders as a silent "[?]".
-			if (keys.length === 0) return '\\textbf{[source removed]}';
+			if (pages.size === 0) return '\\textbf{[source removed]}';
 
-			return `\\cite{${keys.join(',')}}`;
+			// \cite takes one page for all its keys, so a citation with a page
+			// gives each work its own command (M1b-8).
+			if ([...pages.values()].every((page) => !page))
+				return `\\cite{${[...pages.keys()].join(',')}}`;
+			return [...pages]
+				.map(([key, page]) =>
+					page
+						? `\\cite[${pageAbbreviation(page)}~{${escapeLatex(page)}}]{${key}}`
+						: `\\cite{${key}}`
+				)
+				.join(', ');
 		}
 
 		case PAGE_BREAK_NODE:

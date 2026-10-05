@@ -154,6 +154,28 @@ describe('citations', () => {
 		expect(out).toBe('\\cite{tanaka2021}');
 	});
 
+	// M1b-8 AC-3
+	it('puts the page cited in the cite command', () => {
+		const cite = (ids: string[], locators: Record<string, string>) =>
+			toLatexBody(
+				doc(para({ type: 'citation', attrs: { id: JSON.stringify(ids), label: 'x', locators } })),
+				{ citationKeys: { ...keys, 'erti:book': 'tanaka2021', pdf: 'tanaka2021' } }
+			);
+
+		expect(cite(['sha1'], { sha1: '78' })).toBe('\\cite[p.~{78}]{smith2020}');
+		expect(cite(['sha1'], { sha1: '80–82' })).toBe('\\cite[pp.~{80–82}]{smith2020}');
+		// Each work its own command, so each page goes with its work.
+		expect(cite(['sha1', 'sha2'], { sha2: 'xiv' })).toBe(
+			'\\cite{smith2020}, \\cite[p.~{xiv}]{okafor2019}'
+		);
+		// Braced and escaped: a page label can't close the option or start a command.
+		expect(cite(['sha1'], { sha1: '3] \\x_1' })).toBe(
+			'\\cite[p.~{3] \\textbackslash{}x\\_1}]{smith2020}'
+		);
+		// A work and its PDF, one key: the page it was cited at, once.
+		expect(cite(['erti:book', 'pdf'], { pdf: '12' })).toBe('\\cite[p.~{12}]{tanaka2021}');
+	});
+
 	it('does not emit the rendered citation text', () => {
 		// Handing a journal frozen citation strings defeats the point of sending
 		// LaTeX: their class file expects to format them itself.

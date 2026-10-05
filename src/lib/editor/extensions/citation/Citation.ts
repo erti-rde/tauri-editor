@@ -8,7 +8,12 @@ import type { Transaction } from '@tiptap/pm/state';
 import type { Node as ProsemirrorNode } from '@tiptap/pm/model';
 import Suggestion from '@tiptap/suggestion';
 
-import { parseCitationIds, type CitationSite, type RenderedNote } from '$lib/citations/document';
+import {
+	parseCitationIds,
+	parseCitationLocators,
+	type CitationSite,
+	type RenderedNote
+} from '$lib/citations/document';
 import { setCitationHtml } from '$lib/citations/sanitize';
 import { BIBLIOGRAPHY_NODE } from './Bibliography';
 import { NOTES_NODE } from './Notes';
@@ -30,15 +35,30 @@ declare module '@tiptap/core' {
 export interface CitationNodeAttrs {
 	id: string | null;
 	label: string | null;
+	/** The page cited in each work, as printed, by the id in `id` (M1b-8). */
+	locators?: Record<string, string> | null;
+}
+
+/**
+ * The pages to keep when a citation's works change: those of the works still
+ * cited. Null when none are, which is what the node stores for "no pages".
+ */
+export function locatorsFor(locators: unknown, ids: string[]): Record<string, string> | null {
+	const kept = Object.entries(parseCitationLocators(locators)).filter(([id]) => ids.includes(id));
+	return kept.length ? Object.fromEntries(kept) : null;
 }
 
 export const CitationPluginKey = new PluginKey('citation');
 
-/** The cited ids in document order — what the rendering actually depends on. */
+/** The cited ids and pages in document order — what the rendering actually depends on. */
 function citationSignature(doc: ProsemirrorNode): string {
 	const parts: string[] = [];
 	doc.descendants((node) => {
-		if (node.type.name === 'citation') parts.push(parseCitationIds(node.attrs.id).join(','));
+		if (node.type.name === 'citation') {
+			// The attribute as stored, not parsed: this runs on every keystroke.
+			const pages = node.attrs.locators ? JSON.stringify(node.attrs.locators) : '';
+			parts.push(`${parseCitationIds(node.attrs.id).join(',')}${pages}`);
+		}
 		// Adding or removing the references section changes what has to be
 		// rendered, though it cites nothing itself.
 		if (node.type.name === BIBLIOGRAPHY_NODE) parts.push('#bibliography');
@@ -110,7 +130,11 @@ function updateAllCitations(tr: Transaction): boolean {
 	const sites: CitationSite[] = [];
 	tr.doc.descendants((node, pos) => {
 		if (node.type.name === 'citation') {
-			sites.push({ pos, itemIds: parseCitationIds(node.attrs.id) });
+			sites.push({
+				pos,
+				itemIds: parseCitationIds(node.attrs.id),
+				locators: parseCitationLocators(node.attrs.locators)
+			});
 		}
 		return true;
 	});
@@ -217,7 +241,10 @@ export const Citation = Node.create({
 						// Get the formatted citation text
 						// Provisional: the document render below replaces it with the
 						// citation as it should read given everything else cited.
-						const citationText = citationStore.previewCitation(parseCitationIds(id));
+						const ids = parseCitationIds(id);
+						// The works still cited keep the pages they were cited at.
+						const locators = locatorsFor(attrs.locators, ids);
+						const citationText = citationStore.previewCitation(ids, locators ?? {});
 
 						// Update the citation
 						this.editor
@@ -230,7 +257,8 @@ export const Citation = Node.create({
 									type: 'citation',
 									attrs: {
 										id: id,
-										label: citationText
+										label: citationText,
+										locators
 									}
 								}
 							)
@@ -450,6 +478,26 @@ export const Citation = Node.create({
 				renderHTML: (attributes) => (attributes.label ? { 'data-label': attributes.label } : {})
 			},
 			/**
+			 * The page cited in each work, as printed: `{ "<id>": "78" }` (M1b-8).
+			 * Keyed by the id in `id`, so each work in a citation has its own.
+			 * An Erti from before pages drops it and cites the work.
+			 */
+			locators: {
+				default: null,
+				parseHTML: (element) => {
+					try {
+						const pages = parseCitationLocators(
+							JSON.parse(element.getAttribute('data-locators') ?? 'null')
+						);
+						return Object.keys(pages).length ? pages : null;
+					} catch {
+						return null;
+					}
+				},
+				renderHTML: (attributes) =>
+					attributes.locators ? { 'data-locators': JSON.stringify(attributes.locators) } : {}
+			},
+			/**
 			 * The note number, when the style puts citations in notes.
 			 *
 			 * Zero for in-text styles. Non-zero means `label` holds the marker and
@@ -487,6 +535,8 @@ export const Citation = Node.create({
 		span.dataset.type = this.name;
 		span.dataset.id = node.attrs.id;
 		span.dataset.label = node.attrs.label;
+		// Copied with the citation, so pasting it cites the same page.
+		if (node.attrs.locators) span.dataset.locators = JSON.stringify(node.attrs.locators);
 		if (node.attrs.away) span.dataset.away = '';
 
 		// In a note style the sentence carries a marker and the reference itself is
@@ -551,7 +601,10 @@ export const Citation = Node.create({
 						.focus()
 						.insertContentAt(pos, [
 							...(needsSpace ? [{ type: 'text', text: ' ' }] : []),
-							{ type: 'citation', attrs: { label: citationText, id: attrs.id } },
+							{
+								type: 'citation',
+								attrs: { label: citationText, id: attrs.id, locators: attrs.locators ?? null }
+							},
 							{ type: 'text', text: ' ' }
 						])
 						.run();

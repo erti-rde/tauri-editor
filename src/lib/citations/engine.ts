@@ -15,6 +15,8 @@ export interface CitationCluster {
 	id: string;
 	/** Source ids cited at this point, in the order they should be rendered. */
 	itemIds: string[];
+	/** The page cited in each work, as printed, by id (M1b-8). */
+	locators?: Record<string, string>;
 }
 
 export interface RenderedCitation {
@@ -74,7 +76,12 @@ export class CitationEngine {
 	render(clusters: CitationCluster[]): RenderedCitation[] {
 		const citations = clusters.map((cluster, i) => ({
 			citationID: cluster.id,
-			citationItems: cluster.itemIds.map((id) => ({ id })),
+			citationItems: cluster.itemIds.map((id) => {
+				const locator = cluster.locators?.[id];
+				// As a page: the only locator Erti records, and the one every style
+				// knows how to print ("p. 78", or "78" in a note).
+				return locator ? { id, locator, label: 'page' } : { id };
+			}),
 			properties: {
 				// Note styles number their notes from 1; in-text styles use 0 throughout.
 				noteIndex: this.noteStyle ? i + 1 : 0

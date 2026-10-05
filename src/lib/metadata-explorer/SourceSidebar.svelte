@@ -48,6 +48,11 @@
 		onfileschanged?: () => void | Promise<void>;
 		/** A file was opened in a tab. */
 		onopen?: () => void;
+		/**
+		 * Cite the source at a page, from one of its notes (M1b-8). Absent when
+		 * there's no manuscript to cite into.
+		 */
+		oncite?: (id: string, locator: string) => void;
 		/** Goes up each time the table lists its sources again (see `SourceFiles`). */
 		revision?: number;
 	}
@@ -62,6 +67,7 @@
 		onremoved,
 		onfileschanged = () => {},
 		onopen = () => {},
+		oncite,
 		revision = 0
 	}: Props = $props();
 
@@ -186,7 +192,12 @@
 					{#if panelFor === 'details'}
 						<SourceFields {schema} {type} bind:form {errors} onTypeChange={changeType} />
 					{:else if panelFor === 'notes' && notesSeen}
-						<SourceNotes {id} {notes} onchange={loadNotes} />
+						<SourceNotes
+							{id}
+							{notes}
+							onchange={loadNotes}
+							oncite={oncite && ((locator) => oncite(id, locator))}
+						/>
 					{:else if panelFor === 'file' && tab === 'file'}
 						<SourceFiles {id} onchange={onfileschanged} {onopen} {revision} />
 					{/if}

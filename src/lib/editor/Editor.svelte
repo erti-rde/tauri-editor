@@ -13,6 +13,7 @@
 	import { get } from 'svelte/store';
 
 	import { createAutosave } from './autosave';
+	import { cursorMemory, cursorPosition, waitingCite } from './citeLater';
 	import { createManuscriptSession } from '$lib/manuscript/io';
 	import { citedIds, snapshotSources } from '$lib/manuscript/format';
 	import AwayCitationTip from './AwayCitationTip.svelte';
@@ -80,6 +81,31 @@
 	 * there. The logic now lives in ./autosave with tests for that race.
 	 */
 	let unlistenClose: (() => void) | undefined;
+	let stopWaiting: (() => void) | undefined;
+	/**
+	 * The manuscript this editor holds, fixed when it's read: the cursor is
+	 * remembered under it, not under whatever the store says is current by
+	 * the time the writer moves it.
+	 */
+	let loadedPath: string | undefined;
+	/** Set on teardown: onMount awaits, and must not finish on an editor that's gone. */
+	let destroyed = false;
+
+	/**
+	 * Once Tiptap has run its own mount-time focus, which sets the selection a
+	 * tick after mounting and then emits `create`. After that the cursor stays
+	 * where a citation leaves it.
+	 */
+	function initialised(instance: Editor): Promise<void> {
+		if (instance.isInitialized) return Promise.resolve();
+		return new Promise((resolve) => {
+			const done = () => {
+				instance.off('create', done);
+				resolve();
+			};
+			instance.on('create', done);
+		});
+	}
 	/**
 	 * Loads and saves manuscripts, and refuses to save over one it couldn't read
 	 * (`$lib/manuscript/io`).
@@ -166,6 +192,7 @@
 		// is an update. It isn't the author adding a citation, so it mustn't
 		// bring a reference list into a manuscript that had none.
 		loadingContent = true;
+		loadedPath = $documentsStore.current?.path;
 		editor = createEditor({
 			editorProps: {
 				attributes: {
@@ -180,9 +207,11 @@
 					class: 'manuscript border border-line cursor-text'
 				}
 			},
-			autofocus: 'end',
+			// Where the writer left off, if this manuscript was open before: the
+			// editor is built afresh each time it's shown (M1b-8).
+			autofocus: cursorMemory.recall(loadedPath) ?? 'end',
 			extensions: paginatedExtensions(setup),
-			content: await getDocumentData(),
+			content: await getDocumentData(loadedPath),
 
 			onUpdate: ({ editor }) => {
 				documentStatus.report({ words: countDocument(editor.state.doc) });
@@ -206,6 +235,9 @@
 			onSelectionUpdate: ({ editor }) => {
 				publishOutline(editor);
 				publishDraftContext(editor);
+				// Under the manuscript this editor shows, which the store's current
+				// one needn't be: another pane may have opened a different one.
+				if (loadedPath) cursorMemory.remember(loadedPath, cursorPosition(editor.state.selection));
 			}
 		});
 
@@ -228,6 +260,25 @@
 		citationsSeen = countCitations($editor.state.doc);
 		loadingContent = false;
 		applyEditable();
+
+		// A citation asked for while the editor was away (the Sources view, M1b-8),
+		// or while it's here: either way it goes in at the cursor.
+		//
+		// Not before Tiptap's own focus, which it runs a tick after mounting and
+		// which puts the cursor back where the editor opened: in first, the
+		// citation was left behind the cursor and the next words went before it.
+		// And not on an editor already gone: onMount awaits above, and leaving
+		// the manuscript meanwhile would leave a dead editor taking citations.
+		if (destroyed) return;
+		const ready = initialised($editor);
+		stopWaiting = waitingCite.subscribe((cite) => {
+			if (!cite) return;
+			const taken = waitingCite.take();
+			if (!taken) return;
+			void ready.then(() => {
+				if (!destroyed) void citeSource(taken.id, taken.locator ?? undefined);
+			});
+		});
 
 		// Closing the window is the last chance to write, and `beforeunload` cannot
 		// take it: the browser does not await a promise, so the webview can go away
@@ -325,6 +376,7 @@
 	});
 
 	onDestroy(() => {
+		destroyed = true;
 		// The panel outlives the editor too, and a stale `navigate` would call into
 		// a destroyed view.
 		outlineStore.clear();
@@ -338,6 +390,7 @@
 		// from a document while the app stays open.
 		void autosave.flush();
 		unlistenClose?.();
+		stopWaiting?.();
 		autosave.destroy();
 	});
 
@@ -504,8 +557,16 @@
 		if (token !== transition) return;
 
 		documentsStore.open(next);
+		loadedPath = next.path;
 		loadingContent = true;
 		$editor.commands.setContent(content);
+		// Where the writer left off in this one, as on opening the editor: a
+		// citation asked for next goes there, not wherever setContent left it.
+		const remembered = cursorMemory.recall(next.path);
+		if (remembered !== undefined) {
+			const max = $editor.state.doc.content.size;
+			$editor.commands.setTextSelection(Math.min(remembered, max));
+		}
 		loadingContent = false;
 		citationsSeen = countCitations($editor.state.doc);
 		$editor.commands.updateAllCitation();
@@ -664,9 +725,9 @@
 	 * the source joins the project if it was not in it, the engine is reloaded
 	 * before the citation is inserted, and a source with no resolved metadata is
 	 * refused with something to do about it rather than a citation that renders
-	 * as removed.
+	 * as removed. `locator` is the page cited, as printed (M1b-8).
 	 */
-	async function citeSource(id: string) {
+	async function citeSource(id: string, locator?: string) {
 		// The work, whichever of its ids the note was given (ADR 003).
 		const sha256 = citationStore.canonicalId(id);
 		try {
@@ -682,9 +743,14 @@
 				return;
 			}
 
+			// The page, as printed, goes with the work (M1b-8), trimmed as the
+			// render and the LaTeX export read it.
+			const page = locator?.trim();
+			const locators = page ? { [sha256]: page } : null;
 			$editor.commands.insertCitation({
 				id: JSON.stringify([sha256]),
-				label: citationStore.previewCitation([sha256])
+				label: citationStore.previewCitation([sha256], locators ?? {}),
+				locators
 			});
 		} catch (failure) {
 			log.error('Could not cite that paper', failure);
@@ -752,7 +818,8 @@
 		const shape = readDocumentShape($editor.state.doc);
 
 		if (references.observe({ enabled: $autoReferences, ...shape })) {
-			$editor.commands.insertBibliography();
+			// Quietly: the writer is mid-sentence, and the cursor stays there.
+			$editor.commands.insertBibliography({ quietly: true });
 		}
 	}
 

@@ -3,7 +3,11 @@ import { readSetting } from '$lib/settings';
 import { BaseDirectory, readTextFile } from '@tauri-apps/plugin-fs';
 import { projectSources, sourceAliases } from '$lib/stores/db';
 import { CitationEngine } from '$lib/citations/engine';
-import { renderDocumentCitations, type CitationSite } from '$lib/citations/document';
+import {
+	locatorsByWork,
+	renderDocumentCitations,
+	type CitationSite
+} from '$lib/citations/document';
 import { canonical, canonicalIds, type Aliases } from '$lib/citations/aliases';
 import {
 	fallbackLabel,
@@ -158,17 +162,21 @@ function createCitationStore() {
 	 * note numbers are properties of the whole manuscript, so a citation formatted
 	 * in isolation can only ever be an approximation — two different Smith 2020
 	 * papers both preview as "(Smith, 2020)". Inserting one runs a full document
-	 * render, which is what makes it correct.
+	 * render, which is what makes it correct. `locators` are the pages cited, by
+	 * id (M1b-8).
 	 */
-	function previewCitation(ids: string[]): string {
+	function previewCitation(ids: string[], locators: Record<string, string> = {}): string {
 		const { engine, citationSources, aliases } = get(citationStore);
 
 		const known = canonicalIds(aliases ?? {}, ids).filter((id) => citationSources[id]);
 		if (known.length === 0) return '';
 		if (!engine) return fallbackLabel(known.map((id) => citationSources[id]));
 
+		// Each page goes with its work, whichever of the work's ids it was given by.
+		const pages = locatorsByWork(locators, (id) => canonical(aliases ?? {}, id));
+
 		try {
-			return engine.render([{ id: 'preview', itemIds: known }])[0]?.text ?? '';
+			return engine.render([{ id: 'preview', itemIds: known, locators: pages }])[0]?.text ?? '';
 		} catch (error) {
 			log.error('Could not preview citation', error);
 			return '';

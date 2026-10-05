@@ -3,7 +3,10 @@
 
 	import FileWarning from '~icons/lucide/file-warning';
 
+	import { waitingCite } from '$lib/editor/citeLater';
+	import { documentsStore } from '$lib/stores/documents.svelte';
 	import { projectSources } from '$lib/stores/db';
+	import { workspaceStore } from '$lib/workspace/workspaceStore';
 	import { applyManualDoi, retryIngest } from '$utils/pdf_handlers';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
@@ -38,7 +41,10 @@
 	};
 
 	interface Props {
-		/** A PDF was opened in a tab, which this view hides. */
+		/**
+		 * A PDF was opened in a tab, or the manuscript was asked for: show the
+		 * workspace, which this view hides.
+		 */
 		onopen?: () => void;
 	}
 
@@ -56,6 +62,24 @@
 	let addingFromDoi = $state(false);
 	const selectedSourceId = $derived(sidebar?.mode === 'edit' ? sidebar.id : null);
 	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
+
+	/**
+	 * Cite a source at the page a note is on (M1b-8). The editor isn't here, so
+	 * the citation waits for it: the manuscript is put in front, and it goes in
+	 * where the writer left off.
+	 */
+	function cite(id: string, locator: string) {
+		const manuscript = $documentsStore.current;
+		if (!manuscript) return;
+		waitingCite.request({ id, locator });
+		// In front in whichever pane holds it, rather than moved into another.
+		const pane = $workspaceStore.panes.find((p) => p.tabs.includes(manuscript.path));
+		workspaceStore.open(
+			{ id: manuscript.path, kind: 'document', title: manuscript.title },
+			pane?.id
+		);
+		onopen();
+	}
 
 	onMount(async () => {
 		try {
@@ -449,6 +473,7 @@
 				onremoved={afterChange}
 				onfileschanged={loadSources}
 				{onopen}
+				oncite={$documentsStore.current ? cite : undefined}
 				{revision}
 			/>
 		{/key}
