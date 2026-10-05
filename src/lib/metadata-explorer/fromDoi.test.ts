@@ -13,7 +13,10 @@ vi.mock('$lib/stores/db', () => ({
 	addToProject: mocks.addToProject
 }));
 vi.mock('$lib/stores/consent', () => ({ networkAllowed: mocks.networkAllowed }));
-vi.mock('$lib/ingest/resolve', () => ({ lookupDoi: mocks.lookupDoi }));
+vi.mock('$lib/ingest/resolve', async (real) => ({
+	...(await real<typeof import('$lib/ingest/resolve')>()),
+	lookupDoi: mocks.lookupDoi
+}));
 
 import type { AugmentedZoteroSchema } from './adapterCslZotero';
 import { addFromDoi } from './fromDoi';

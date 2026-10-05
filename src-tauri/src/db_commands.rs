@@ -243,11 +243,13 @@ async fn add_work_in(
     if !typed || zotero_type.is_empty() || zotero_type.len() > 64 {
         return Err(invalid("Choose what kind of source it is."));
     }
+    // Stored as the library compares it, so a DOI typed as a link is found by
+    // the bare one, and finds it.
     let doi = csl
         .get("DOI")
         .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|d| !d.is_empty());
+        .and_then(queries::normalise_doi);
+    let doi = doi.as_deref();
     if from_doi && doi.is_none() {
         return Err(invalid("Those details have no DOI."));
     }

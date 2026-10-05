@@ -435,6 +435,7 @@
 			<SourceSidebar
 				schema={augmentedSchema}
 				initial={sidebar.mode === 'new' && sidebar.doi ? { DOI: sidebar.doi } : undefined}
+				onexisting={(id) => openFromDoi({ kind: 'existing', id })}
 				record={selected && sidebar.mode === 'edit'
 					? {
 							id: selected.id,
