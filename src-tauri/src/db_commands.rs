@@ -253,18 +253,8 @@ async fn add_work_in(
     }
 
     let library = state.library().await?;
-    if let Some(doi) = doi {
-        if queries::source_for_doi(&library, doi)
-            .await
-            .or_database()?
-            .is_some()
-        {
-            return Err(AppError::new(
-                crate::ipc::ErrorKind::Conflict,
-                "A source with that DOI is already in the library.",
-            ));
-        }
-    }
+    // The DOI is checked in the same transaction as the insert (queries.rs),
+    // so two adds of one DOI at once can't both find it free.
     let added = match (from_doi, doi) {
         (true, Some(doi)) => {
             queries::add_source_from_doi(&library, &id, &csl_json, &zotero_type, doi).await
@@ -272,11 +262,20 @@ async fn add_work_in(
         _ => queries::add_source_by_hand(&library, &id, &csl_json, &zotero_type, doi).await,
     }
     .or_database()?;
-    if !added {
-        return Err(AppError::new(
-            crate::ipc::ErrorKind::Conflict,
-            "A source with that id is already in the library.",
-        ));
+    match added {
+        queries::Added::Yes => {}
+        queries::Added::IdTaken => {
+            return Err(AppError::new(
+                crate::ipc::ErrorKind::Conflict,
+                "A source with that id is already in the library.",
+            ))
+        }
+        queries::Added::DoiTaken => {
+            return Err(AppError::new(
+                crate::ipc::ErrorKind::Conflict,
+                "A source with that DOI is already in the library.",
+            ))
+        }
     }
     if let Ok(project) = state.project().await {
         // Two databases, so no one transaction: a source the project failed to
