@@ -172,7 +172,9 @@ async fn a_file_the_library_has_read_already_is_not_read_again() {
 
     let attached = attach_file_in(&w.state, BOOK, path).await.unwrap();
     assert!(!attached.needs_ingest);
-    assert_eq!(attached.merged, None, "it had no details of its own");
+    // A source of its own, if never resolved: its row is folded into the
+    // book's, and that's said, by the file's name.
+    assert_eq!(attached.merged.as_deref(), Some("ong.pdf"));
 }
 
 // M1b-7 AC-1
@@ -297,6 +299,77 @@ async fn a_path_outside_the_project_and_unpicked_is_refused() {
         .unwrap_err();
     assert_eq!(err.kind, ErrorKind::PermissionDenied);
     let _ = std::fs::remove_file(outside);
+}
+
+// M1b-7 AC-3: a file the File tab reports missing is found by picking it
+// where it is now. Refusing it as "already attached" left no way to.
+#[tokio::test]
+async fn a_moved_file_picked_again_is_found_where_it_is_now() {
+    let w = world("found-again").await;
+    let first = w.pdf("ong.pdf", "%PDF ong");
+    let attached = attach_file_in(&w.state, BOOK, first.clone()).await.unwrap();
+    let moved = w.project.join("read").join("ong.pdf");
+    std::fs::create_dir_all(moved.parent().unwrap()).unwrap();
+    std::fs::rename(&first, &moved).unwrap();
+    let moved = moved.to_string_lossy().to_string();
+
+    let again = attach_file_in(&w.state, BOOK, moved.clone()).await.unwrap();
+    assert!(again.found_again);
+    assert_eq!(again.sha256, attached.sha256);
+    assert!(again.needs_ingest, "never read, so read now");
+
+    let files = source_files_in(&w.state, BOOK).await.unwrap();
+    assert_eq!(files.len(), 1);
+    assert!(files[0].found);
+    assert_eq!(files[0].path, moved);
+}
+
+#[tokio::test]
+async fn a_source_with_files_of_its_own_is_not_attached_to_another() {
+    // Attaching it would carry its files across with it: a merge of two
+    // sources, which changes what they open as in every project.
+    let w = world("has-files").await;
+    attach_file_in(&w.state, OTHER, w.pdf("galaxy.pdf", "%PDF galaxy"))
+        .await
+        .unwrap();
+    let published = w.pdf("published.pdf", "%PDF published");
+    let sha = erti_lib::db::hash_file(std::path::Path::new(&published))
+        .await
+        .unwrap();
+    let library = w.state.library().await.unwrap();
+    queries::register_source(&library, &sha, &published, "published.pdf")
+        .await
+        .unwrap();
+    let preprint = attach_file_in(&w.state, &sha, w.pdf("preprint.pdf", "%PDF preprint"))
+        .await
+        .unwrap();
+
+    let err = attach_file_in(&w.state, BOOK, published).await.unwrap_err();
+    assert_eq!(err.kind, ErrorKind::Conflict);
+    assert_eq!(
+        err.message,
+        "That PDF is a source, which has files of its own, so it can't be another source's file."
+    );
+    let aliases = queries::alias_map(&library).await.unwrap();
+    assert_eq!(
+        aliases.get(&preprint.sha256),
+        Some(&sha),
+        "its file stays its own"
+    );
+}
+
+#[tokio::test]
+async fn only_a_pdf_is_attached() {
+    // Its place would be recorded, and so readable in later sessions.
+    let w = world("not-pdf").await;
+    let path = w.project.join("notes.txt");
+    std::fs::write(&path, "private").unwrap();
+
+    let err = attach_file_in(&w.state, BOOK, path.to_string_lossy().to_string())
+        .await
+        .unwrap_err();
+    assert_eq!(err.kind, ErrorKind::InvalidInput);
+    assert!(source_files_in(&w.state, BOOK).await.unwrap().is_empty());
 }
 
 // M1b-7 AC-3

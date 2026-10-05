@@ -27,7 +27,8 @@ beforeEach(() => {
 		sha256: 'file-hash',
 		file_name: 'ong.pdf',
 		needs_ingest: true,
-		merged: null
+		merged: null,
+		found_again: false
 	});
 	mocks.retryIngest.mockResolvedValue(undefined);
 });
@@ -117,5 +118,37 @@ describe('attachPdf', () => {
 			'Could not attach it: That PDF is already attached to this source.'
 		);
 		expect(onchange).not.toHaveBeenCalled();
+	});
+
+	// M1b-7 AC-3: a file reported missing, picked where it is now.
+	it('says a moved file was found, rather than attached again', async () => {
+		mocks.attachFile.mockResolvedValue({
+			sha256: 'file-hash',
+			file_name: 'ong.pdf',
+			needs_ingest: false,
+			merged: null,
+			found_again: true
+		});
+
+		await attachPdf('erti:book', vi.fn());
+
+		expect(mocks.successToast).toHaveBeenCalledWith('Found ong.pdf. Erti will open it from here.');
+		expect(mocks.retryIngest).not.toHaveBeenCalled();
+	});
+
+	it('says a file that was a source of its own, never resolved, joined this one', async () => {
+		mocks.attachFile.mockResolvedValue({
+			sha256: 'file-hash',
+			file_name: 'ong.pdf',
+			needs_ingest: false,
+			merged: 'ong.pdf',
+			found_again: false
+		});
+
+		await attachPdf('erti:book', vi.fn());
+
+		expect(mocks.successToast).toHaveBeenCalledWith(
+			'ong.pdf was a source of its own in your library. It’s now this source’s file, and its citations show this source.'
+		);
 	});
 });

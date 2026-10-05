@@ -242,10 +242,16 @@ export type AttachedFile = {
 	/**  False when the library has read it already, for another project. */
 	needs_ingest: boolean,
 	/**
-	 *  The title of the source this file was until now, when it was one with
-	 *  details of its own: its citations now render as the work it joined.
+	 *  The source this file was until now, by title or file name, when the
+	 *  library had it as one of its own: its citations now render as the work
+	 *  it joined, and its row in any project is that work's.
 	 */
 	merged: string | null,
+	/**
+	 *  It was already this source's file, found somewhere new: the place is
+	 *  recorded, and Open and Show in folder use it.
+	 */
+	found_again: boolean,
 };
 
 export type CompileResult = {

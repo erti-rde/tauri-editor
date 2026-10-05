@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 	import { revealItemInDir } from '@tauri-apps/plugin-opener';
 
 	import { describeError } from '$lib/ipc';
@@ -7,6 +7,7 @@
 	import { errorToast } from '$lib/toast/Toast.svelte';
 	import { Button, EmptyState, Loader } from '$lib/ui';
 	import { workspaceStore } from '$lib/workspace/workspaceStore';
+	import { retryIngest } from '$utils/pdf_handlers';
 
 	import { attachPdf } from './attach';
 
@@ -22,12 +23,18 @@
 		onchange: () => void | Promise<void>;
 		/** A file was opened in a tab, which the Sources view hides. */
 		onopen: () => void;
+		/**
+		 * Goes up each time the table lists its sources again: a file read, or
+		 * retried, from outside this tab. The files are listed again with it.
+		 */
+		revision?: number;
 	}
 
-	let { id, onchange, onopen }: Props = $props();
+	let { id, onchange, onopen, revision = 0 }: Props = $props();
 
 	let files: SourceFile[] | null = $state(null);
 	let attaching = $state(false);
+	let retrying: string | null = $state(null);
 
 	async function load() {
 		try {
@@ -38,7 +45,10 @@
 		}
 	}
 
-	onMount(load);
+	$effect(() => {
+		void revision;
+		untrack(load);
+	});
 
 	async function attach() {
 		attaching = true;
@@ -50,6 +60,20 @@
 		} finally {
 			attaching = false;
 		}
+	}
+
+	/** A file that couldn't be read, read again, under its own hash (ADR 003). */
+	async function retry(file: SourceFile) {
+		retrying = file.sha256;
+		try {
+			await retryIngest({ sha256: file.sha256, path: file.path, file_name: file.file_name });
+		} catch (error) {
+			errorToast(`Could not read it: ${describeError(error)}`);
+		} finally {
+			retrying = null;
+		}
+		await load();
+		await onchange();
 	}
 
 	function openFile(file: SourceFile) {
@@ -94,6 +118,13 @@
 					</p>
 				{/if}
 				<div class="flex gap-2">
+					{#if file.state === 'failed' && file.found}
+						<!-- The table's row and banner show one file per source, so a
+						     second file that failed is retried here or nowhere. -->
+						<Button size="sm" loading={retrying === file.sha256} onclick={() => retry(file)}>
+							Retry
+						</Button>
+					{/if}
 					<Button size="sm" disabled={!file.found} onclick={() => openFile(file)}>Open</Button>
 					<Button size="sm" variant="ghost" disabled={!file.found} onclick={() => reveal(file)}>
 						Show in folder

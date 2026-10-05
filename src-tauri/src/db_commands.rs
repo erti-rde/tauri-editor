@@ -435,9 +435,13 @@ pub struct AttachedFile {
     pub file_name: String,
     /// False when the library has read it already, for another project.
     pub needs_ingest: bool,
-    /// The title of the source this file was until now, when it was one with
-    /// details of its own: its citations now render as the work it joined.
+    /// The source this file was until now, by title or file name, when the
+    /// library had it as one of its own: its citations now render as the work
+    /// it joined, and its row in any project is that work's.
     pub merged: Option<String>,
+    /// It was already this source's file, found somewhere new: the place is
+    /// recorded, and Open and Show in folder use it.
+    pub found_again: bool,
 }
 
 /// Attach the PDF at `path` to the work `work` (M1b-7, ADR 003).
@@ -462,6 +466,16 @@ pub async fn attach_file_in(
 
     crate::scope::authorise(state, &path).await?;
     let sha256 = crate::db::hash_file(&PathBuf::from(&path)).await?;
+    // A PDF, and only a PDF: its place is recorded, and a recorded place is
+    // one `scope::authorise` accepts in later sessions too. Anything else
+    // would turn a grant meant for this session into a lasting one. After
+    // hashing, so a file that's gone is said as such.
+    if !is_pdf(&path).await {
+        return Err(AppError::new(
+            ErrorKind::InvalidInput,
+            "That file isn't a PDF.",
+        ));
+    }
     let file_name = PathBuf::from(&path)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
@@ -479,7 +493,24 @@ pub async fn attach_file_in(
             file_name,
             needs_ingest,
             merged,
+            found_again: false,
         }),
+        queries::Attach::FoundAgain { needs_ingest } => Ok(AttachedFile {
+            sha256,
+            file_name,
+            needs_ingest,
+            merged: None,
+            found_again: true,
+        }),
+        queries::Attach::HasFiles(title) => {
+            Err(AppError::new(
+                ErrorKind::Conflict,
+                format!(
+                "That PDF is {}, which has files of its own, so it can't be another source's file.",
+                title.map_or_else(|| "a source".to_string(), |t| format!("\u{201c}{t}\u{201d}"))
+            ),
+            ))
+        }
         queries::Attach::AlreadyIts => Err(AppError::new(
             ErrorKind::Conflict,
             "That PDF is already attached to this source.",
@@ -495,6 +526,18 @@ pub async fn attach_file_in(
             ErrorKind::NotFound,
             "That source is no longer in the library.",
         )),
+    }
+}
+
+/// Whether the file at `path` starts as a PDF does. Read, not trusted from
+/// the name: the picker filters by extension, but the command can be called
+/// with any path.
+async fn is_pdf(path: &str) -> bool {
+    use tokio::io::AsyncReadExt;
+    let mut head = [0u8; 4];
+    match tokio::fs::File::open(path).await {
+        Ok(mut file) => file.read_exact(&mut head).await.is_ok() && &head == b"%PDF",
+        Err(_) => false,
     }
 }
 

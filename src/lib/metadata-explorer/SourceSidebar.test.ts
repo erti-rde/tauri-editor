@@ -11,7 +11,8 @@ import SourceSidebar from './SourceSidebar.svelte';
 
 const db = vi.hoisted(() => ({
 	addSourceByHand: vi.fn(async () => {}),
-	setMetadataOverride: vi.fn(async () => {})
+	setMetadataOverride: vi.fn(async () => {}),
+	sourceFiles: vi.fn(async () => [])
 }));
 vi.mock('$lib/stores/db', () => db);
 vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
@@ -153,6 +154,15 @@ describe('the sidebar’s tabs (M1b-7 AC-3, UX-3)', () => {
 		const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent?.trim());
 		expect(tabs).toEqual(['Details', 'File']);
 		expect(screen.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'true');
+	});
+
+	it('lists the files when their tab is chosen, not on opening', async () => {
+		const user = userEvent.setup();
+		open();
+		expect(db.sourceFiles).not.toHaveBeenCalled();
+
+		await user.click(screen.getByRole('tab', { name: 'File' }));
+		await waitFor(() => expect(db.sourceFiles).toHaveBeenCalledWith('sha-chapter'));
 	});
 
 	it('has no tabs for a source being entered, which has no file yet', () => {

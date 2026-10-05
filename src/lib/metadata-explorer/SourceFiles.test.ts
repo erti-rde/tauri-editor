@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 
 const mocks = vi.hoisted(() => ({
@@ -7,13 +7,15 @@ const mocks = vi.hoisted(() => ({
 	attachPdf: vi.fn(),
 	revealItemInDir: vi.fn(),
 	openTab: vi.fn(),
-	errorToast: vi.fn()
+	errorToast: vi.fn(),
+	retryIngest: vi.fn(async () => {})
 }));
 vi.mock('$lib/stores/db', () => ({ sourceFiles: mocks.sourceFiles }));
 vi.mock('./attach', () => ({ attachPdf: mocks.attachPdf }));
 vi.mock('@tauri-apps/plugin-opener', () => ({ revealItemInDir: mocks.revealItemInDir }));
 vi.mock('$lib/workspace/workspaceStore', () => ({ workspaceStore: { open: mocks.openTab } }));
 vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
+vi.mock('$utils/pdf_handlers', () => ({ retryIngest: mocks.retryIngest }));
 
 import SourceFiles from './SourceFiles.svelte';
 
@@ -120,5 +122,45 @@ describe('SourceFiles', () => {
 		expect(await screen.findByText('No file')).toBeTruthy();
 		await userEvent.click(screen.getByRole('button', { name: 'Attach PDF…' }));
 		expect(mocks.attachPdf).toHaveBeenCalledWith('erti:paper', expect.any(Function));
+	});
+
+	// M1b-7 AC-1: the table shows one file per source, so a second file that
+	// failed has nowhere else to be retried.
+	it('retries a file that couldn’t be read, under its own hash', async () => {
+		mocks.sourceFiles.mockResolvedValue([
+			PREPRINT,
+			{ ...PUBLISHED, found: true, state: 'failed', last_error: 'No text' }
+		]);
+		const { onchange } = show();
+
+		const retries = await screen.findAllByRole('button', { name: 'Retry' });
+		expect(retries).toHaveLength(1);
+		mocks.sourceFiles.mockResolvedValue([PREPRINT, { ...PUBLISHED, found: true }]);
+		await userEvent.click(retries[0]);
+
+		expect(mocks.retryIngest).toHaveBeenCalledWith({
+			sha256: 'pub',
+			path: '/old/vaswani-2017.pdf',
+			file_name: 'vaswani-2017.pdf'
+		});
+		await waitFor(() => expect(screen.queryByText(/Couldn’t read it/)).toBeNull());
+		expect(onchange).toHaveBeenCalled();
+	});
+
+	it('lists the files again when the table does, as a read finishes elsewhere', async () => {
+		mocks.sourceFiles.mockResolvedValue([{ ...PREPRINT, state: 'pending' }]);
+		const view = render(SourceFiles, {
+			id: 'erti:paper',
+			onchange: vi.fn(),
+			onopen: vi.fn(),
+			revision: 1
+		});
+		expect(await screen.findByText('Reading…')).toBeTruthy();
+
+		mocks.sourceFiles.mockResolvedValue([PREPRINT]);
+		await view.rerender({ id: 'erti:paper', onchange: vi.fn(), onopen: vi.fn(), revision: 2 });
+
+		await waitFor(() => expect(screen.queryByText('Reading…')).toBeNull());
+		expect(mocks.sourceFiles).toHaveBeenCalledTimes(2);
 	});
 });
