@@ -9,7 +9,10 @@ const { db, toast, annotations } = vi.hoisted(() => ({
 		removeSource: vi.fn(async () => {})
 	},
 	toast: { errorToast: vi.fn(), successToast: vi.fn() },
-	annotations: { dropIf: vi.fn(() => false), openPath: vi.fn(async () => {}) }
+	annotations: {
+		dropIf: vi.fn((_gone: (path: string) => boolean) => false),
+		openPath: vi.fn(async (_path: string) => {})
+	}
 }));
 
 vi.mock('$lib/stores/db', () => db);
