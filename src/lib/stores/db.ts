@@ -103,6 +103,13 @@ export const addSourceFromManuscript = (id: string, cslJson: string) =>
 export const addSourceByHand = (id: string, cslJson: string, zoteroType: string) =>
 	run(commands.addSourceByHand(id, cslJson, zoteroType));
 
+/** Add a source whose details were looked up for its DOI (M1b-6). */
+export const addSourceFromDoi = (id: string, cslJson: string, zoteroType: string) =>
+	run(commands.addSourceFromDoi(id, cslJson, zoteroType));
+
+/** The work in the library with this DOI, whatever its case, or null (M1b-6 AC-3). */
+export const sourceForDoi = (doi: string) => call(commands.sourceForDoi(doi));
+
 /** What removing a source would delete: its notes and highlights (UX-4). */
 export const sourceRemoval = (id: string) => call(commands.sourceRemoval(id));
 

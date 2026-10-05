@@ -165,6 +165,16 @@ export const commands = {
 	 */
 	addSourceByHand: (id: string, cslJson: string, zoteroType: string) => typedError<null, AppError>(__TAURI_INVOKE("add_source_by_hand", { id, cslJson, zoteroType })),
 	/**
+	 *  Add a source whose details were looked up for a DOI (M1b-6, UX-2): as
+	 *  `add_source_by_hand`, but recorded as resolved from the DOI it carries.
+	 */
+	addSourceFromDoi: (id: string, cslJson: string, zoteroType: string) => typedError<null, AppError>(__TAURI_INVOKE("add_source_from_doi", { id, cslJson, zoteroType })),
+	/**
+	 *  The work in the library with this DOI, if there is one (M1b-6 AC-3), so
+	 *  adding it again opens it instead.
+	 */
+	sourceForDoi: (doi: string) => typedError<string | null, AppError>(__TAURI_INVOKE("source_for_doi", { doi })),
+	/**
 	 *  Remove a source from the library, with its files' records, marks and
 	 *  notes (M1b-4). The PDFs stay where they are.
 	 */

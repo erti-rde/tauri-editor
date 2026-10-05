@@ -8,6 +8,8 @@ import { installFakeBackend } from './install';
  * particular world without code:
  *
  * - `?consent=unasked` — a first launch: the privacy question is shown.
+ * - `?consent=granted` — online lookups on. A journey answers what's asked
+ *   with `page.route`, so nothing leaves the machine.
  * - `?recents=none` — nothing opened before: the landing screen is empty.
  * - `?theme=night-owl&density=comfortable` — an appearance, as if chosen in
  *   Settings. The catalogue (M1c-5) is screenshotted in each.
@@ -17,6 +19,7 @@ export function boot(url: URL) {
 	const settings = fixture.stores['settings-store.json'];
 
 	if (url.searchParams.get('consent') === 'unasked') delete settings.allowNetworkLookups;
+	if (url.searchParams.get('consent') === 'granted') settings.allowNetworkLookups = true;
 	if (url.searchParams.get('recents') === 'none') delete settings.recentProjects;
 
 	const theme = url.searchParams.get('theme');

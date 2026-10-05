@@ -46,6 +46,24 @@ function open(record = CHAPTER) {
 
 beforeEach(() => vi.clearAllMocks());
 
+/**
+ * Choose a kind from the keyboard, by its place among the common kinds (Book,
+ * Book Section, Journal Article…): jsdom can't point at an option.
+ */
+function kindChooser(user: ReturnType<typeof userEvent.setup>) {
+	return async (name: string, place: number) => {
+		const trigger = screen.getByRole('button', { name: 'Kind of source' });
+		trigger.focus();
+		// jsdom leaves it marked open after a choice made by typing.
+		if (trigger.getAttribute('aria-expanded') !== 'true') await user.keyboard('{Enter}');
+		await screen.findByRole('listbox', { hidden: true });
+		await user.keyboard('{Home}' + '{ArrowDown}'.repeat(place) + '{Enter}');
+		await waitFor(() =>
+			expect(screen.getByRole('button', { name: 'Kind of source' })).toHaveTextContent(name)
+		);
+	};
+}
+
 describe('the edit sidebar (M1b-5 AC-5)', () => {
 	it('shows the kind and fields of a source from before the kind was kept', () => {
 		open();
@@ -115,19 +133,7 @@ describe('switching kind while entering one', () => {
 		const user = userEvent.setup();
 		const handlers = { onclose: vi.fn(), onsaved: vi.fn(), onremoved: vi.fn() };
 		render(UiHarness, { props: { component: SourceSidebar, schema, ...handlers } });
-		// From the keyboard, by its place among the common kinds (Book, Book
-		// Section, Journal Article…): jsdom can't point at an option.
-		const kind = async (name: string, place: number) => {
-			const trigger = screen.getByRole('button', { name: 'Kind of source' });
-			trigger.focus();
-			// jsdom leaves it marked open after a choice made by typing.
-			if (trigger.getAttribute('aria-expanded') !== 'true') await user.keyboard('{Enter}');
-			await screen.findByRole('listbox', { hidden: true });
-			await user.keyboard('{Home}' + '{ArrowDown}'.repeat(place) + '{Enter}');
-			await waitFor(() =>
-				expect(screen.getByRole('button', { name: 'Kind of source' })).toHaveTextContent(name)
-			);
-		};
+		const kind = kindChooser(user);
 
 		await kind('Journal Article', 2);
 		await user.type(screen.getByRole('textbox', { name: 'Title (required)' }), 'Orality');
@@ -145,6 +151,32 @@ describe('switching kind while entering one', () => {
 		const item = JSON.parse(json);
 		expect(item).toMatchObject({ type: 'book', title: 'Orality' });
 		expect(item).not.toHaveProperty('container-title');
+	});
+});
+
+describe('a new source from a DOI (M1b-6 AC-2)', () => {
+	it('starts from the DOI, and keeps it whatever kind is chosen', async () => {
+		const user = userEvent.setup();
+		const handlers = { onclose: vi.fn(), onsaved: vi.fn(), onremoved: vi.fn() };
+		render(UiHarness, {
+			props: {
+				component: SourceSidebar,
+				schema,
+				initial: { DOI: '10.1038/nature14539' },
+				...handlers
+			}
+		});
+		const kind = kindChooser(user);
+		expect(screen.getByText('DOI 10.1038/nature14539, with no file')).toBeInTheDocument();
+
+		await kind('Journal Article', 2);
+		expect(screen.getByRole('textbox', { name: 'DOI' })).toHaveValue('10.1038/nature14539');
+		await kind('Book', 0);
+		await user.type(screen.getByRole('textbox', { name: 'Title (required)' }), 'Deep learning');
+		await user.click(screen.getByRole('button', { name: 'Add to library' }));
+
+		const [, json] = db.addSourceByHand.mock.calls[0] as unknown as [string, string, string];
+		expect(JSON.parse(json)).toMatchObject({ type: 'book', DOI: '10.1038/nature14539' });
 	});
 });
 

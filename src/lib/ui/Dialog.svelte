@@ -48,6 +48,11 @@
 		 * while something it started is under way.
 		 */
 		dismissible?: boolean;
+		/**
+		 * Where focus goes on opening, when not the first control (the close
+		 * button): prevent the event's default, and focus it.
+		 */
+		onOpenAutoFocus?: (event: Event) => void;
 	}
 
 	let {
@@ -60,7 +65,8 @@
 		flush = false,
 		children,
 		footer,
-		dismissible = true
+		dismissible = true,
+		onOpenAutoFocus
 	}: Props = $props();
 </script>
 
@@ -71,6 +77,7 @@
 			class={surface({ size })}
 			escapeKeydownBehavior={dismissible ? 'close' : 'ignore'}
 			interactOutsideBehavior={dismissible ? 'close' : 'ignore'}
+			{onOpenAutoFocus}
 		>
 			<div class="border-line flex items-start justify-between gap-3 border-b px-5 py-3">
 				<div class="grid gap-0.5">

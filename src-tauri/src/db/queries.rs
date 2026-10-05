@@ -299,8 +299,49 @@ pub async fn add_source_by_hand(
     id: &str,
     csl_json: &str,
     zotero_type: &str,
+    doi: Option<&str>,
 ) -> Result<bool, String> {
-    insert_source_without_file(pool, id, csl_json, Some(zotero_type), None, "by-hand").await
+    insert_source_without_file(pool, id, csl_json, Some(zotero_type), doi, "by-hand").await
+}
+
+/// A source whose details were fetched for a DOI the researcher typed (M1b-6):
+/// an `erti:<uuid>` work with no file, resolved `'manual'` as a DOI typed into
+/// a failed PDF's row is.
+pub async fn add_source_from_doi(
+    pool: &SqlitePool,
+    id: &str,
+    csl_json: &str,
+    zotero_type: &str,
+    doi: &str,
+) -> Result<bool, String> {
+    insert_source_without_file(pool, id, csl_json, Some(zotero_type), Some(doi), "manual").await
+}
+
+/// The work in the library with this DOI, if any (M1b-6 AC-3): its canonical
+/// id, so a PDF attached to a work finds the work (ADR 003).
+///
+/// DOIs are case-insensitive, and Crossref and doi.org don't agree on case.
+/// The column is read first, then the details' own `DOI`, since a source added
+/// from a manuscript or by hand may have only the latter.
+pub async fn source_for_doi(pool: &SqlitePool, doi: &str) -> Result<Option<String>, String> {
+    let doi = doi.trim();
+    if doi.is_empty() {
+        return Ok(None);
+    }
+    sqlx::query_scalar(
+        "SELECT COALESCE(a.canonical, s.sha256)
+           FROM sources s
+           LEFT JOIN source_aliases a ON a.alias = s.sha256
+          WHERE lower(trim(COALESCE(s.doi,
+                  CASE WHEN json_valid(s.csl_json) THEN json_extract(s.csl_json, '$.DOI') END)))
+                = lower(?)
+          ORDER BY s.created_at, s.sha256
+          LIMIT 1",
+    )
+    .bind(doi)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| e.to_string())
 }
 
 async fn insert_source_without_file(
