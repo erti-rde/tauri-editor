@@ -10,7 +10,7 @@
 //! carries no copy of them.
 
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqlitePool;
+use sqlx::sqlite::{SqliteConnection, SqlitePool};
 use sqlx::Row;
 
 use super::index::{Filter, HitKind, Index, Key, Row as IndexRow};
@@ -32,8 +32,14 @@ pub struct Source {
     pub zotero_type: Option<String>,
     pub doi: Option<String>,
     pub resolved_via: Option<String>,
+    /// The work's own state: whether it can be cited. A work entered by hand
+    /// is `ready` while a PDF attached to it is still being read.
     pub state: String,
     pub last_error: Option<String>,
+    /// The ingest state of the file at `path`, which for an attached PDF is
+    /// not the work's (M1b-7 AC-1). None when the work has no file.
+    pub file_state: Option<String>,
+    pub file_error: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
@@ -90,7 +96,18 @@ pub async fn register_source(
     file_name: &str,
 ) -> Result<bool, String> {
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    let inserted = register_source_on(&mut tx, sha256, path, file_name).await?;
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(inserted)
+}
 
+/// `register_source`, inside a transaction the caller holds.
+async fn register_source_on(
+    tx: &mut SqliteConnection,
+    sha256: &str,
+    path: &str,
+    file_name: &str,
+) -> Result<bool, String> {
     let inserted = sqlx::query("INSERT OR IGNORE INTO sources (sha256) VALUES (?)")
         .bind(sha256)
         .execute(&mut *tx)
@@ -138,7 +155,6 @@ pub async fn register_source(
         .map_err(|e| e.to_string())?;
     }
 
-    tx.commit().await.map_err(|e| e.to_string())?;
     Ok(inserted)
 }
 
@@ -391,7 +407,8 @@ pub async fn project_sources(
     // is keyed by the file's hash, which is the alias. The work's own file
     // comes first, and a work is never an alias, so that's the non-alias row.
     let sql = format!(
-        "SELECT s.sha256, s.csl_json, s.zotero_type, s.doi, s.resolved_via,
+        "SELECT q.*, fi.state AS file_state, fi.last_error AS file_error FROM (
+         SELECT s.sha256, s.csl_json, s.zotero_type, s.doi, s.resolved_via,
                 COALESCE(i.state, 'pending') AS state, i.last_error,
                 (SELECT file_name FROM locations l
                   WHERE l.sha256 = s.sha256
@@ -407,7 +424,8 @@ pub async fn project_sources(
                   ORDER BY l.sha256 IN (SELECT alias FROM source_aliases), last_seen DESC LIMIT 1) AS file_sha256
            FROM sources s
            LEFT JOIN ingest_status i ON i.sha256 = s.sha256
-          WHERE s.sha256 IN ({placeholders})"
+          WHERE s.sha256 IN ({placeholders})
+         ) q LEFT JOIN ingest_status fi ON fi.sha256 = q.file_sha256"
     );
 
     let mut query = sqlx::query(&sql);
@@ -436,6 +454,12 @@ pub async fn project_sources(
                 resolved_via: r.get("resolved_via"),
                 state: r.get("state"),
                 last_error: r.get("last_error"),
+                // A file with no ingest row yet is waiting to be read.
+                file_state: r.get::<Option<String>, _>("file_sha256").map(|_| {
+                    r.get::<Option<String>, _>("file_state")
+                        .unwrap_or_else(|| "pending".into())
+                }),
+                file_error: r.get("file_error"),
                 sha256,
             }
         })
@@ -529,10 +553,21 @@ pub async fn alias_source(
     alias: &str,
     canonical: &str,
 ) -> Result<(), String> {
+    let mut tx = library.begin().await.map_err(|e| e.to_string())?;
+    alias_source_on(&mut tx, alias, canonical).await?;
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// `alias_source`, inside a transaction the caller holds.
+async fn alias_source_on(
+    tx: &mut SqliteConnection,
+    alias: &str,
+    canonical: &str,
+) -> Result<(), String> {
     if alias == canonical {
         return Err(format!("{alias} can't be an alias of itself."));
     }
-    let mut tx = library.begin().await.map_err(|e| e.to_string())?;
 
     for id in [alias, canonical] {
         let known: bool =
@@ -584,8 +619,184 @@ pub async fn alias_source(
             .map_err(|e| e.to_string())?;
     }
 
-    tx.commit().await.map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// What attaching a file to a work came to (M1b-7, ADR 003).
+#[derive(Debug, PartialEq, Eq)]
+pub enum Attach {
+    /// Attached. `needs_ingest` when the file hasn't been read yet, or failed;
+    /// `merged` names the work the file was until now, when it was one in its
+    /// own right with details of its own, since its citations now render as
+    /// this work.
+    Attached {
+        needs_ingest: bool,
+        merged: Option<String>,
+    },
+    /// The file already is the work, or one of its files.
+    AlreadyIts,
+    /// The file belongs to another work, named by its title when it has one.
+    /// Moving it between works silently would change what that work's
+    /// citations open, so it's refused.
+    Elsewhere(Option<String>),
+    /// The library has no work by that id.
+    NoWork,
+}
+
+/// Attach the file `sha256`, found at `path`, to the work `work` (M1b-7).
+///
+/// Registers the file as ingest would, then makes it an alias of the work, in
+/// one transaction: a file registered but never attached would sit in the
+/// library in no project, and the next attempt would find it "already there".
+/// The file's chunks and metadata stay under its own hash; the work's details
+/// are what's cited.
+pub async fn attach_file(
+    library: &SqlitePool,
+    work: &str,
+    sha256: &str,
+    path: &str,
+    file_name: &str,
+) -> Result<Attach, String> {
+    let mut tx = library.begin().await.map_err(|e| e.to_string())?;
+
+    let work: String = sqlx::query_scalar(
+        "SELECT COALESCE((SELECT canonical FROM source_aliases WHERE alias = ?1), ?1)",
+    )
+    .bind(work)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+    let known: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM sources WHERE sha256 = ?)")
+        .bind(&work)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    if !known {
+        return Ok(Attach::NoWork);
+    }
+
+    let title = |id: String| async move {
+        sqlx::query_scalar::<_, Option<String>>(
+            "SELECT json_extract(csl_json, '$.title') FROM sources WHERE sha256 = ?",
+        )
+        .bind(id)
+        .fetch_optional(library)
+        .await
+        .map(Option::flatten)
+        .map_err(|e| e.to_string())
+    };
+
+    let owner: Option<String> =
+        sqlx::query_scalar("SELECT canonical FROM source_aliases WHERE alias = ?")
+            .bind(sha256)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    match owner {
+        _ if sha256 == work => return Ok(Attach::AlreadyIts),
+        Some(owner) if owner == work => return Ok(Attach::AlreadyIts),
+        Some(owner) => {
+            drop(tx);
+            return Ok(Attach::Elsewhere(title(owner).await?));
+        }
+        None => {}
+    }
+
+    // A file already in the library as a work of its own, resolved to details
+    // of its own, becomes this work: the merge ADR 003 describes.
+    let merged: Option<String> = sqlx::query_scalar(
+        "SELECT COALESCE(json_extract(csl_json, '$.title'), '') FROM sources
+          WHERE sha256 = ? AND csl_json IS NOT NULL",
+    )
+    .bind(sha256)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    register_source_on(&mut tx, sha256, path, file_name).await?;
+    alias_source_on(&mut tx, sha256, &work).await?;
+
+    let needs_ingest: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM ingest_status
+                        WHERE sha256 = ? AND state IN ('pending', 'failed'))",
+    )
+    .bind(sha256)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    tx.commit().await.map_err(|e| e.to_string())?;
+    Ok(Attach::Attached {
+        needs_ingest,
+        merged: merged.map(|t| {
+            if t.is_empty() {
+                file_name.to_string()
+            } else {
+                t
+            }
+        }),
+    })
+}
+
+/// One file of a work, for its sidebar's File tab (M1b-7 AC-3).
+#[derive(Debug, Serialize, Deserialize, specta::Type, PartialEq, Eq)]
+pub struct SourceFile {
+    /// The file's own hash: the work's id, or an attached file's.
+    pub sha256: String,
+    pub file_name: String,
+    /// Where it was last found, or where it was last seen when it can't be
+    /// found anywhere now.
+    pub path: String,
+    /// False when no place it was seen still has a file.
+    pub found: bool,
+    /// Its ingest state: whether it has been read yet, or failed.
+    pub state: String,
+    pub last_error: Option<String>,
+}
+
+/// Every file of the work `id` belongs to, with every place each was seen,
+/// newest first: the work's own file, then those attached to it by name.
+pub async fn source_file_locations(
+    library: &SqlitePool,
+    id: &str,
+) -> Result<Vec<(SourceFile, Vec<(String, String)>)>, String> {
+    let group = work_and_files(library, id).await?;
+    let work = group[0].clone();
+    let mut files = Vec::new();
+    for sha256 in group {
+        let seen: Vec<(String, String)> = sqlx::query_as(
+            "SELECT path, file_name FROM locations WHERE sha256 = ? ORDER BY last_seen DESC, path",
+        )
+        .bind(&sha256)
+        .fetch_all(library)
+        .await
+        .map_err(|e| e.to_string())?;
+        let Some((path, file_name)) = seen.first().cloned() else {
+            continue;
+        };
+        let (state, last_error): (Option<String>, Option<String>) =
+            sqlx::query_as("SELECT state, last_error FROM ingest_status WHERE sha256 = ?")
+                .bind(&sha256)
+                .fetch_optional(library)
+                .await
+                .map_err(|e| e.to_string())?
+                .unwrap_or((None, None));
+        files.push((
+            SourceFile {
+                sha256,
+                file_name,
+                path,
+                found: false,
+                state: state.unwrap_or_else(|| "pending".into()),
+                last_error,
+            },
+            seen,
+        ));
+    }
+    // Attached files have no order of their own; their hashes' would look random.
+    let attached = usize::from(files.first().is_some_and(|(f, _)| f.sha256 == work));
+    files[attached..].sort_by(|(a, _), (b, _)| a.file_name.cmp(&b.file_name));
+    Ok(files)
 }
 
 /// What removing a work would take with it, for the dialog that asks first

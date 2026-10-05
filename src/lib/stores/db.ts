@@ -19,7 +19,10 @@ import type * as ipc from '$lib/ipc';
 /** Ingest state, as `ingest_status.state`'s CHECK constraint allows. */
 export type IngestState = 'pending' | 'ready' | 'failed';
 
-export type Source = Omit<ipc.Source, 'state'> & { state: IngestState };
+export type Source = Omit<ipc.Source, 'state' | 'file_state'> & {
+	state: IngestState;
+	file_state: IngestState | null;
+};
 
 export type NewChunk = ipc.NewChunk;
 
@@ -108,6 +111,18 @@ export const sourceRemoval = (id: string) => call(commands.sourceRemoval(id));
  * marks and notes (M1b-4). The PDFs themselves stay where they are.
  */
 export const removeSource = (id: string) => run(commands.removeSource(id));
+
+export type AttachedFile = ipc.AttachedFile;
+export type SourceFile = Omit<ipc.SourceFile, 'state'> & { state: IngestState };
+
+/**
+ * Attach the PDF at `path` to a source (M1b-7, ADR 003). It keeps its own
+ * hash, which reading it goes under; the source's details are what's cited.
+ */
+export const attachFile = (work: string, path: string) => call(commands.attachFile(work, path));
+
+/** A source's files, each where it can still be found (M1b-7 AC-3). */
+export const sourceFiles = (id: string) => call(commands.sourceFiles(id)) as Promise<SourceFile[]>;
 
 /** Correct a source's metadata for this project only, leaving the library's copy alone. */
 export const setMetadataOverride = (sha256: string, cslJson: string) =>

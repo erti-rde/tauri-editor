@@ -176,7 +176,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M1b-1** Spike: aliases hold (ADR-3) (#211)
 - [x] **M1b-2** Library migration 6 (#212)
 - [x] **M1b-3** One canonical-id resolver (#214)
-- [ ] **M1b-4** Remove a source (UX-4)
+- [x] **M1b-4** Remove a source (UX-4) (#222)
 - [ ] **M1b-5** Add a source by hand (UX-2)
 - [ ] **M1b-6** Add from a DOI; ISBN deferred
 - [ ] **M1b-7** Attach a PDF to a source (UX-3 File tab)

@@ -96,6 +96,43 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 		});
 	});
 
+	// M1b-7: the same rules as `attach_file.rs`.
+	it('attaches a PDF as Rust does: an alias, a pending file, refused twice', async () => {
+		await openFixtureProject();
+		const { state, files } = backend();
+		state.library.set('erti:book', {
+			...state.library.get(SHA.devlin)!,
+			sha256: 'erti:book',
+			path: null,
+			file_name: '',
+			state: 'ready'
+		});
+		state.project.add('erti:book');
+		files.set('/fake/home/Downloads/b.pdf', '');
+		files.set('/fake/home/Downloads/a.pdf', '');
+
+		const first = await db.attachFile('erti:book', '/fake/home/Downloads/b.pdf');
+		expect(first).toMatchObject({ file_name: 'b.pdf', needs_ingest: true, merged: null });
+		expect((await db.sourceAliases())[first.sha256]).toBe('erti:book');
+		const row = (await db.projectSources()).find((s) => s.sha256 === 'erti:book')!;
+		expect(row).toMatchObject({ state: 'ready', file_state: 'pending', file_sha256: first.sha256 });
+
+		await db.attachFile('erti:book', '/fake/home/Downloads/a.pdf');
+		expect((await db.sourceFiles('erti:book')).map((f) => f.file_name)).toEqual(['a.pdf', 'b.pdf']);
+
+		const again = await db.attachFile('erti:book', '/fake/home/Downloads/b.pdf').catch((e) => e);
+		expect(again).toBeInstanceOf(IpcError);
+		expect((again as IpcError).kind).toBe('Conflict');
+
+		// A PDF that was a source of its own says so.
+		const merged = await db.attachFile('erti:book', `${ROOT}/papers/vaswani-2017.pdf`);
+		expect(merged.merged).toBe('Attention Is All You Need');
+
+		files.delete('/fake/home/Downloads/a.pdf');
+		const gone = (await db.sourceFiles('erti:book')).find((f) => f.file_name === 'a.pdf')!;
+		expect(gone.found).toBe(false);
+	});
+
 	it('fails with a kind, as Rust does', async () => {
 		const failure = await db.projectRoot().catch((e: unknown) => e);
 		expect(failure).toBeInstanceOf(IpcError);

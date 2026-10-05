@@ -185,8 +185,15 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			csl_json: override ?? s.csl_json,
 			path: file?.path ?? null,
 			file_sha256: file?.sha256 ?? null,
-			file_name: file?.file_name ?? s.file_name
+			file_name: file?.file_name ?? s.file_name,
+			// The file's own reading, which for an attached PDF isn't the work's.
+			file_state: file?.state ?? null,
+			file_error: file?.last_error ?? null
 		};
+	};
+	const titleOf = (id: string): string | null => {
+		const title = JSON.parse(state.library.get(id)?.csl_json ?? '{}').title;
+		return typeof title === 'string' ? title : null;
 	};
 	const newestFirst = () =>
 		[...state.marks.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -500,6 +507,83 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			});
 			if (state.root !== null) state.project.add(id);
 			return null;
+		},
+
+		// As `queries::attach_file`: the file keeps its own row, and an alias
+		// makes it the work's. Refused rather than moved when another work has it.
+		attachFile(work, path) {
+			root();
+			if (!disk.has(path)) throw notFound(path);
+			const known = [...state.library.values()].find((s) => s.path === path);
+			const sha256 = known?.sha256 ?? fakeHash(path);
+			const target = canon(work);
+			if (!state.library.has(target)) {
+				throw appError('NotFound', 'That source is no longer in the library.');
+			}
+			if (sha256 === target || state.aliases.get(sha256) === target) {
+				throw appError('Conflict', 'That PDF is already attached to this source.');
+			}
+			const owner = state.aliases.get(sha256);
+			if (owner) {
+				const title = titleOf(owner);
+				throw appError(
+					'Conflict',
+					title
+						? `That PDF is already attached to “${title}”.`
+						: 'That PDF is already attached to another source.'
+				);
+			}
+			const file_name = path.split('/').pop() ?? path;
+			const existing = state.library.get(sha256);
+			const merged = existing?.csl_json ? (titleOf(sha256) ?? file_name) : null;
+			if (existing) existing.path = path;
+			else {
+				state.library.set(sha256, {
+					sha256,
+					file_name,
+					path,
+					csl_json: null,
+					zotero_type: null,
+					doi: null,
+					resolved_via: null,
+					state: 'pending',
+					last_error: null
+				});
+			}
+			for (const [alias, w] of state.aliases) if (w === sha256) state.aliases.set(alias, target);
+			state.aliases.set(sha256, target);
+			const file = state.library.get(sha256)!;
+			return {
+				sha256,
+				file_name,
+				needs_ingest: file.state !== 'ready',
+				merged
+			};
+		},
+
+		// As `queries::source_file_locations`: the work's own file, then the
+		// attached ones by name.
+		sourceFiles(id) {
+			library();
+			const [work, ...attached] = workAndFiles(id);
+			const byName = (a: string, b: string) =>
+				(state.library.get(a)?.file_name ?? '').localeCompare(
+					state.library.get(b)?.file_name ?? ''
+				);
+			return [work, ...attached.sort(byName)].flatMap((sha256) => {
+				const file = state.library.get(sha256);
+				if (!file?.path) return [];
+				return [
+					{
+						sha256,
+						file_name: file.file_name,
+						path: file.path,
+						found: disk.has(file.path),
+						state: file.state,
+						last_error: file.last_error
+					}
+				];
+			});
 		},
 
 		sourceRemoval(id) {

@@ -146,3 +146,25 @@ describe('switching kind while entering one', () => {
 		expect(item).not.toHaveProperty('container-title');
 	});
 });
+
+describe('the sidebar’s tabs (M1b-7 AC-3, UX-3)', () => {
+	it('shows a source’s details and its files in tabs', () => {
+		open();
+		const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent?.trim());
+		expect(tabs).toEqual(['Details', 'File']);
+		expect(screen.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'true');
+	});
+
+	it('has no tabs for a source being entered, which has no file yet', () => {
+		render(UiHarness, {
+			props: {
+				component: SourceSidebar,
+				schema,
+				onclose: vi.fn(),
+				onsaved: vi.fn(),
+				onremoved: vi.fn()
+			}
+		});
+		expect(screen.queryAllByRole('tab')).toHaveLength(0);
+	});
+});
