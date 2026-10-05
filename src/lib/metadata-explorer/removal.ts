@@ -130,6 +130,16 @@ export function filePlace(paths: readonly string[], root: string): FilePlace {
 	return paths.some((path) => comparable(path).startsWith(folder)) ? 'in-project' : 'elsewhere';
 }
 
+/**
+ * Whether a path is one of the files removed with the source: the work's own
+ * and every attached one's, as `source_removal` listed them. A tab or reader
+ * still open on one would go on saving marks the library can no longer take.
+ */
+export function removedFile(paths: readonly string[]): (path: string) => boolean {
+	const removed = new Set(paths.map(comparable));
+	return (path) => removed.has(comparable(path));
+}
+
 export interface Consequences {
 	/** "Cited 4 times in", then the documents, then `citedAfter`. Null when nothing cites it. */
 	cited: { before: string; documents: string[]; after: string } | null;

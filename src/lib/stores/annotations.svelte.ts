@@ -89,6 +89,15 @@ function createAnnotationsStore() {
 	/** Kept so writes do not have to read the store back to find the source. */
 	let current: string | null = null;
 
+	/** The file on screen, as the reader named it, so a removal can find it. */
+	let openedPath: string | null = null;
+
+	/**
+	 * Which load may land. A paper closed or removed while its marks were
+	 * still being read must not have them put back when the read finishes.
+	 */
+	let generation = 0;
+
 	/** What Ctrl+Z would undo, most recent last. */
 	let reversals: Reversal[] = [];
 
@@ -171,6 +180,8 @@ function createAnnotationsStore() {
 			// A different paper is a different history. Undoing into a paper that is
 			// no longer on screen would change something nobody can see.
 			forget();
+			const mine = ++generation;
+			openedPath = path;
 			update((state) => ({ ...state, loading: true }));
 
 			try {
@@ -182,19 +193,25 @@ function createAnnotationsStore() {
 				await this.loadLabels();
 
 				const sha256 = await sourceForPath(path);
-				current = sha256;
+				if (mine !== generation) return;
 
 				if (!sha256) {
+					current = null;
 					update((state) => ({ ...state, sha256: null, annotations: [], loading: false }));
 					return;
 				}
 
 				const loaded = await annotationsForSource(sha256);
+				if (mine !== generation) return;
 				const annotations = Array.isArray(loaded) ? loaded : [];
+				// With the state, once nothing can overtake it: set earlier, a load
+				// overtaken by a later one that failed left writes going to one
+				// paper while the store showed another.
+				current = sha256;
 				update((state) => ({ ...state, sha256, annotations, loading: false }));
 			} catch (failure) {
 				log.error('Could not load the annotations for this paper', failure);
-				update((state) => ({ ...state, loading: false }));
+				if (mine === generation) update((state) => ({ ...state, loading: false }));
 			}
 		},
 
@@ -350,13 +367,30 @@ function createAnnotationsStore() {
 
 		/** No paper open. */
 		clear() {
+			generation++;
 			current = null;
+			openedPath = null;
 			forget();
 			update((state) => ({ ...EMPTY, labels: state.labels, lastLabel: state.lastLabel }));
 		},
 
+		/**
+		 * Let go of the paper on screen if `gone` says it has left the library.
+		 *
+		 * Removing a source deletes its marks' rows (M1b-4). Kept here, they would
+		 * still be drawn, and an undo would write into a source that no longer
+		 * exists, which the library refuses. Whether it let go.
+		 */
+		dropIf(gone: (path: string) => boolean): boolean {
+			if (openedPath === null || !gone(openedPath)) return false;
+			this.clear();
+			return true;
+		},
+
 		reset() {
+			generation++;
 			current = null;
+			openedPath = null;
 			reversals = [];
 			set(EMPTY);
 		}

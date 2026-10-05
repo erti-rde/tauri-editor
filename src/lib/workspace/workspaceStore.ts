@@ -88,6 +88,25 @@ function createWorkspaceStore() {
 			update((workspace) => closeTab(workspace, paneId, tabId));
 		},
 
+		/**
+		 * Close every tab that matches, in whichever pane shows it.
+		 *
+		 * For files nothing more can be done with, such as the PDFs of a source
+		 * just removed from the library: every pane lets go of them, so neither
+		 * side is left offering to mark a paper the library has forgotten.
+		 */
+		closeWhere(match: (tab: Tab) => boolean) {
+			update((workspace) => {
+				let next = workspace;
+				for (const pane of workspace.panes) {
+					for (const id of pane.tabs) {
+						if (match(workspace.tabs[id])) next = closeTab(next, pane.id, id);
+					}
+				}
+				return next;
+			});
+		},
+
 		focus(paneId: string) {
 			update((workspace) => focusPane(workspace, paneId));
 		},
