@@ -8,6 +8,7 @@ import {
 	guardEnvelope,
 	guardMark,
 	guardSidecar,
+	guardSourceNote,
 	LimitError,
 	LIMITS,
 	ShapeError
@@ -306,6 +307,39 @@ describe('a sidecar', () => {
 		);
 		expect(() => guardSidecar({ format: 'erti-annotations', annotations: [] })).toThrow(ShapeError);
 		expect(() => guardSidecar(null)).toThrow(ShapeError);
+	});
+
+	// M1b-8 AC-5
+	it('keeps each source note, and reads a file written before them', () => {
+		const note = { id: 'n1', sha256: 'erti:book', body: 'A thought', page_label: 'xiv' };
+		const sidecar = guardSidecar({
+			format: 'erti-annotations',
+			version: 1,
+			annotations: [],
+			source_notes: [note]
+		});
+		expect(sidecar.source_notes).toEqual([
+			{ ...note, quote: null, label_id: null, created_at: null, updated_at: null }
+		]);
+
+		expect(
+			guardSidecar({ format: 'erti-annotations', version: 1, annotations: [] }).source_notes
+		).toEqual([]);
+	});
+
+	// M1b-8 AC-5
+	it('refuses a source note with nothing said, and with it the whole file', () => {
+		expect(guardSourceNote({ id: 'n1', sha256: 'w', quote: 'Words quoted' }).body).toBe('');
+		expect(() => guardSourceNote({ id: 'n1', sha256: 'w', body: '  ' })).toThrow(ShapeError);
+		expect(() => guardSourceNote({ id: 'n1', body: 'A thought' })).toThrow(ShapeError);
+		expect(() =>
+			guardSidecar({
+				format: 'erti-annotations',
+				version: 1,
+				annotations: [],
+				source_notes: { n1: 'not a list' }
+			})
+		).toThrow(ShapeError);
 	});
 
 	// M1b-10 AC-3

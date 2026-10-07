@@ -271,13 +271,36 @@ describe('behaving like the database', () => {
 
 	it('finds marks by their words, across the library', async () => {
 		await openFixtureProject();
-		const found = await db.searchAnnotations('eleven benchmarks');
-		expect(found.map((m) => m.id)).toEqual(['mark-3']);
+		const found = await db.searchNotes('eleven benchmarks');
+		expect(found.map(({ hit }) => hit.id)).toEqual(['mark-3']);
 		expect(found[0]).toMatchObject({
-			similarity: 1,
-			in_project: true,
-			file_name: 'devlin-2019.pdf'
+			kind: 'annotation',
+			hit: { similarity: 1, in_project: true, file_name: 'devlin-2019.pdf' }
 		});
+	});
+
+	it('finds a note on a source beside the marks, by words and by meaning (M1b-8)', async () => {
+		await openFixtureProject();
+		await db.saveSourceNote({
+			id: 'note-1',
+			sha256: SHA.vaswani,
+			body: 'Eleven benchmarks is the wrong paper: that is BERT.',
+			quote: null,
+			page_label: '3',
+			label_id: null
+		});
+
+		const byWords = await db.searchNotes('eleven benchmarks');
+		expect(byWords.map(({ kind, hit }) => [kind, hit.id])).toEqual([
+			['source_note', 'note-1'],
+			['annotation', 'mark-3']
+		]);
+		expect(byWords[0].hit).toMatchObject({ source_id: SHA.vaswani, in_project: true });
+
+		expect(await db.embedSourceNote('note-1')).toBe(true);
+		expect(await db.embedSourceNote('note-1')).toBe(false);
+		const byMeaning = await db.searchNotes('wrong paper', { semantic: true });
+		expect(byMeaning[0]).toMatchObject({ kind: 'source_note', hit: { id: 'note-1' } });
 	});
 
 	it('searches passages and marks in one list, each saying which, as Rust does (M2-1)', async () => {

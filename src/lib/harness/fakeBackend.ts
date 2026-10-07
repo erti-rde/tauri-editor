@@ -9,6 +9,7 @@ import type {
 	NewChunk,
 	ScoredAnnotation,
 	ScoredChunk,
+	ScoredSourceNote,
 	Source,
 	SourceNote
 } from '$lib/ipc';
@@ -279,6 +280,16 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		in_project: projectWorks().has(canon(m.sha256)),
 		file_name: fileName(m.sha256)
 	});
+	const scoredNote = (n: SourceNote, similarity: number): ScoredSourceNote => ({
+		...n,
+		similarity,
+		source_id: canon(n.sha256),
+		in_project: projectWorks().has(canon(n.sha256)),
+		title: titleOf(canon(n.sha256)) ?? fileName(canon(n.sha256))
+	});
+	// As `source_note_text`: the words quoted, then the note.
+	const noteText = (n: SourceNote) =>
+		[n.quote?.trim(), n.body.trim()].filter(Boolean).join(' \u2014 ');
 	// Every passage, scored, inside the scope: what the index ranks.
 	const passages = (query: string, includeLibrary: boolean): ScoredChunk[] => {
 		const results: ScoredChunk[] = [];
@@ -773,8 +784,28 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		deleteSourceNote(id) {
 			library();
 			state.sourceNotes.delete(id);
+			state.embedded.delete(id);
 			return null;
 		},
+
+		// As `embed_source_note`: the words read back, and skipped when they're
+		// what was last embedded. Notes share `embedded` with marks: the ids are
+		// uuids either way.
+		embedSourceNote(id) {
+			library();
+			const note = state.sourceNotes.get(id);
+			const text = note ? noteText(note) : '';
+			if (!text || state.embedded.get(id) === text) return false;
+			state.embedded.set(id, text);
+			return true;
+		},
+
+		allSourceNotes: () => (
+			library(),
+			[...state.sourceNotes.values()].sort(
+				(a, b) => a.sha256.localeCompare(b.sha256) || a.created_at.localeCompare(b.created_at)
+			)
+		),
 
 		deleteAnnotation(id) {
 			library();
@@ -848,34 +879,59 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 				state.embedded.set(m.id, `${m.quote ?? ''}\n${m.note ?? ''}`);
 				embedded++;
 			}
+			for (const n of state.sourceNotes.values()) {
+				if (state.embedded.has(n.id)) continue;
+				state.embedded.set(n.id, noteText(n));
+				embedded++;
+			}
 			return embedded;
 		},
 
-		// Library-wide, like Rust. Literal is SQLite's case-insensitive LIKE on
-		// the quote or the note, the project's first and then newest; by meaning
-		// scores every mark with a vector and puts the project's first.
-		searchAnnotations(query, limit, semantic) {
+		// Library-wide, like Rust, marks and source notes together. Literal is
+		// SQLite's case-insensitive LIKE on the quote or the note, the project's
+		// first and then newest; by meaning scores every note with a vector and
+		// puts the project's first.
+		searchNotes(query, limit, semantic) {
 			library();
 			const max = limit ?? 50;
+			const notes = [...state.sourceNotes.values()];
 			if (!semantic) {
 				const needle = query.toLowerCase();
+				const has = (text: string | null | undefined) =>
+					needle === '' || !!text?.toLowerCase().includes(needle);
 				// An empty query filters nothing, as in Rust.
-				return newestFirst()
-					.filter(
-						(m) =>
-							needle === '' ||
-							m.quote?.toLowerCase().includes(needle) ||
-							m.note?.toLowerCase().includes(needle)
+				const hits: Hit[] = [
+					...newestFirst()
+						.filter((m) => has(m.quote) || has(m.note))
+						.map((m) => ({ kind: 'annotation' as const, hit: scored(m, 1) })),
+					...notes
+						.filter((n) => has(n.quote) || has(n.body))
+						.map((n) => ({ kind: 'source_note' as const, hit: scoredNote(n, 1) }))
+				];
+				const created = (hit: Hit) => (hit.kind === 'chunk' ? '' : hit.hit.created_at);
+				return hits
+					.sort(
+						(a, b) =>
+							Number(b.hit.in_project) - Number(a.hit.in_project) ||
+							created(b).localeCompare(created(a))
 					)
-					.map((m) => scored(m, 1))
-					.sort(projectFirst)
 					.slice(0, max);
 			}
-			return [...state.marks.values()]
-				.filter((m) => state.embedded.has(m.id))
-				.map((m) => scored(m, overlap(query, state.embedded.get(m.id)!)))
-				.sort(projectFirst)
-				.slice(0, max);
+			const hits: Hit[] = [
+				...[...state.marks.values()]
+					.filter((m) => state.embedded.has(m.id))
+					.map((m) => ({
+						kind: 'annotation' as const,
+						hit: scored(m, overlap(query, state.embedded.get(m.id)!))
+					})),
+				...notes
+					.filter((n) => state.embedded.has(n.id))
+					.map((n) => ({
+						kind: 'source_note' as const,
+						hit: scoredNote(n, overlap(query, state.embedded.get(n.id)!))
+					}))
+			];
+			return hits.sort((a, b) => projectFirst(a.hit, b.hit)).slice(0, max);
 		},
 
 		searchLibrary(query, kinds, limit, includeLibrary) {
@@ -893,7 +949,14 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 					if (hit.in_project || includeLibrary) hits.push({ kind: 'annotation', hit });
 				}
 			}
-			// No source notes: nothing writes one until M1b-8.
+			if (wanted('source_note')) {
+				for (const n of state.sourceNotes.values()) {
+					const vector = state.embedded.get(n.id);
+					if (vector === undefined) continue;
+					const hit = scoredNote(n, overlap(query, vector));
+					if (hit.in_project || includeLibrary) hits.push({ kind: 'source_note', hit });
+				}
+			}
 			return hits.sort((a, b) => projectFirst(a.hit, b.hit)).slice(0, limit ?? 20);
 		},
 

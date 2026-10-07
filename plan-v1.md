@@ -322,7 +322,10 @@ images · collaboration · macOS E2E once a WKWebView driver exists · reopening
 if Erti recorded the user picking it, in Rust-owned state, rather than on finding
 `.erti/project.db` (security.md T2; kept for 1.0 by the maintainer, 2026-10-03) · remembering a
 source removed from the library, so the next scan of a project folder holding its PDF doesn't
-add it back (found in M1b-4, whose dialog says that it will; the maintainer may want it in 1.0).
+add it back (found in M1b-4, whose dialog says that it will; the maintainer may want it in 1.0) ·
+importing a notes sidecar into the library: the sidecar is read back and guarded, marks and
+source notes alike, but nothing in the app writes it in yet (found in M1b-8 AC-5; it needs a
+rule for notes on papers the library hasn't got).
 
 ---
 

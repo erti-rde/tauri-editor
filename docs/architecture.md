@@ -18,7 +18,7 @@ planned item lands, it says so.
 │ lib/export            PURE: LaTeX, BibTeX              lib/theme      tokens, palettes, contrast│
 │ lib/ui                primitives (M1c grows these)     lib/stores     app state + IPC wrappers  │
 └───────────────────────────────────────┬───────────────────────────────────────────────────────┘
-                                        │ lib/ipc: 56 typed commands (ADR 011); only results cross, never vectors
+                                        │ lib/ipc: 58 typed commands (ADR 011); only results cross, never vectors
 ┌─────────────────────────────── Rust core (src-tauri/src) ─────────────────────────────────────┐
 │ lib.rs            plugins, managed state, the command list (generate_handler!)                │
 │ db_commands.rs    commands over the two databases        commands.rs   fs listing, embedding   │
@@ -62,8 +62,10 @@ in the Tauri store `settings-store.json`.
   `tests/fixtures/aliases.json`. The `source_set` and overrides keep the id they were given and
   are resolved when read.
 - **Reading.** `pdfreader/PdfReader.svelte` + `viewer.ts` (pdf.js) → marks in
-  `stores/annotations.svelte.ts` → `save_annotation` + `embed_annotation`. The Notes panel
-  searches them. `notes/draftContext.ts` carries the paragraph under the cursor to the panel.
+  `stores/annotations.svelte.ts` → `save_annotation` + `embed_annotation`. Notes on a source:
+  `metadata-explorer/SourceNotes.svelte` → `save_source_note` + `embed_source_note`. The Notes
+  panel searches both with `search_notes`, each result a `Hit` saying which kind it is.
+  `notes/draftContext.ts` carries the paragraph under the cursor to the panel.
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
   `export/bibtex.ts` → files → `compile_latex` if TeX exists.
 

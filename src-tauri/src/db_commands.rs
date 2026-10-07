@@ -957,6 +957,64 @@ pub async fn delete_source_note_in(state: &DbState, id: String) -> Result<(), Ap
     deleted.or_database()
 }
 
+/// Embed a source note's words so a search by meaning finds it (M1b-8 AC-4).
+///
+/// Asked for after the note is saved, as a mark's is, rather than inside the
+/// save: inference can take a moment while the model loads, and a note must
+/// never wait on it, or be lost to it failing. The words are read back from
+/// the library, so what's embedded is what was kept. Skipped, resolving false,
+/// when they haven't changed since they were last embedded: relabelling a note
+/// costs no inference.
+#[tauri::command]
+#[specta::specta]
+pub async fn embed_source_note(state: State<'_, DbState>, id: String) -> Result<bool, AppError> {
+    embed_source_note_with(&state, &id, |text| {
+        crate::commands::embed_texts(&[text], true)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "the note produced no embedding".to_string())
+    })
+    .await
+}
+
+/// `embed_source_note` with the model passed in, so tests can count what it's
+/// asked to embed.
+pub async fn embed_source_note_with(
+    state: &DbState,
+    id: &str,
+    embed: impl FnOnce(String) -> Result<Vec<f32>, String> + Send + 'static,
+) -> Result<bool, AppError> {
+    let library = state.library().await?;
+    let Some((text, hash)) = queries::source_note_to_embed(&library, id)
+        .await
+        .or_database()?
+    else {
+        return Ok(false);
+    };
+    // spawn_blocking for the same reason search_sources does it: inference has
+    // no await points and would hold an async worker for its whole duration.
+    let embedding = tokio::task::spawn_blocking(move || embed(text))
+        .await
+        .or_internal()?
+        .or_model()?;
+
+    let saved = queries::save_source_note_embedding(&library, id, &embedding, &hash).await;
+    state.invalidate_index();
+    saved.or_database()?;
+    Ok(true)
+}
+
+/// Every source note in the library, for the notes export (M1b-8 AC-5).
+#[tauri::command]
+#[specta::specta]
+pub async fn all_source_notes(
+    state: State<'_, DbState>,
+) -> Result<Vec<queries::SourceNote>, AppError> {
+    queries::all_source_notes(&state.library().await?)
+        .await
+        .or_database()
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn delete_imported_annotations(
@@ -1098,12 +1156,7 @@ pub async fn embed_annotation(
 ) -> Result<bool, AppError> {
     let library = state.library().await?;
 
-    let hash = {
-        use sha2::{Digest, Sha256};
-        let mut hasher = Sha256::new();
-        hasher.update(text.as_bytes());
-        format!("{:x}", hasher.finalize())
-    };
+    let hash = queries::text_hash(&text);
 
     if queries::annotation_embedding_hash(&library, &id)
         .await
@@ -1155,8 +1208,10 @@ pub async fn embed_pending_annotations(state: State<'_, DbState>) -> Result<u32,
     let pending = queries::annotations_needing_embedding(&library, 500)
         .await
         .or_database()?;
+    // Source notes too (M1b-8 AC-4): "Prepare my notes" means all of them.
+    let notes = embed_pending_source_notes(state.inner(), &library).await?;
     if pending.is_empty() {
-        return Ok(0);
+        return Ok(count(notes));
     }
 
     let (ids, texts): (Vec<String>, Vec<String>) = pending.into_iter().unzip();
@@ -1179,47 +1234,89 @@ pub async fn embed_pending_annotations(state: State<'_, DbState>) -> Result<u32,
         done += 1;
     }
 
-    Ok(count(done as u64))
+    Ok(count(done as u64 + notes))
 }
 
-/// Find marks, by their words or by what they are about.
+/// Embed the source notes that have no vector, in one batch, under the hash
+/// of their words.
+async fn embed_pending_source_notes(
+    state: &DbState,
+    library: &sqlx::SqlitePool,
+) -> Result<u64, AppError> {
+    let pending = queries::source_notes_needing_embedding(library, 500)
+        .await
+        .or_database()?;
+    if pending.is_empty() {
+        return Ok(0);
+    }
+    let texts: Vec<String> = pending.iter().map(|(_, _, text)| text.clone()).collect();
+    let embeddings =
+        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&texts, true))
+            .await
+            .or_internal()?
+            .or_model()?;
+
+    let mut done = 0;
+    for ((id, hash, _), embedding) in pending.iter().zip(embeddings.iter()) {
+        let saved = queries::save_source_note_embedding(library, id, embedding, hash).await;
+        state.invalidate_index();
+        saved.or_database()?;
+        done += 1;
+    }
+    Ok(done)
+}
+
+/// Find notes, marks and source notes alike, by their words or by what they
+/// are about (M1b-8 AC-4, ADR 004).
 ///
 /// Deliberately separate from `search_sources`. A passage from a paper and a
 /// note the researcher wrote are not the same kind of thing — one is quotable,
 /// the other is a judgement already made — and a 12-word note does not produce
 /// a cosine score comparable with a 100-word passage, so merging the two into
-/// one ranked list would be quietly wrong in a way nobody could see.
+/// one ranked list would be quietly wrong in a way nobody could see. A mark and
+/// a source note are the same kind of thing, so they share one list, each
+/// result saying which it is.
 #[tauri::command]
 #[specta::specta]
-pub async fn search_annotations(
+pub async fn search_notes(
     state: State<'_, DbState>,
     query: String,
     limit: Option<u32>,
     semantic: Option<bool>,
-) -> Result<Vec<queries::ScoredAnnotation>, AppError> {
-    let library = state.library().await?;
-    let project_hashes = open_project_sources(&state).await?;
-
-    let limit = i64::from(limit.unwrap_or(50));
-
+) -> Result<Vec<queries::Hit>, AppError> {
+    let limit = limit.unwrap_or(50);
     if !semantic.unwrap_or(false) {
-        return queries::search_annotations_literally(&library, &query, &project_hashes, limit)
-            .await
-            .or_database();
+        return search_notes_literally_in(&state, query, limit).await;
     }
-
     let embedding = embed_query(query).await?;
-    let (library, index) = state.index().await?;
+    search_notes_in(&state, &embedding, limit).await
+}
 
-    queries::search_annotations_in(
-        &index,
-        &library,
-        &embedding,
-        &project_hashes,
-        limit as usize,
-    )
-    .await
-    .or_database()
+/// `search_notes` by words.
+pub async fn search_notes_literally_in(
+    state: &DbState,
+    query: String,
+    limit: u32,
+) -> Result<Vec<queries::Hit>, AppError> {
+    let library = state.library().await?;
+    let project_hashes = open_project_sources(state).await?;
+    queries::search_notes_literally(&library, &query, &project_hashes, i64::from(limit))
+        .await
+        .or_database()
+}
+
+/// `search_notes` by meaning, from a vector already made, so tests can reach it
+/// without the model.
+pub async fn search_notes_in(
+    state: &DbState,
+    embedding: &[f32],
+    limit: u32,
+) -> Result<Vec<queries::Hit>, AppError> {
+    let project_hashes = open_project_sources(state).await?;
+    let (library, index) = state.index().await?;
+    queries::search_notes_in(&index, &library, embedding, &project_hashes, limit as usize)
+        .await
+        .or_database()
 }
 
 #[tauri::command]

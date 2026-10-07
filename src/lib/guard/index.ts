@@ -547,11 +547,42 @@ export function guardMark(value: unknown): Record<string, string | number | null
 	return mark;
 }
 
+const SOURCE_NOTE_TEXT = [
+	'id',
+	'sha256',
+	'body',
+	'quote',
+	'page_label',
+	'label_id',
+	'created_at',
+	'updated_at'
+] as const;
+const LONG_SOURCE_NOTE_TEXT = new Set(['body', 'quote']);
+
+/**
+ * One source note from a sidecar (M1b-8 AC-5). Refused without an id, a work,
+ * and something said, the quote or the note itself, as the library refuses one.
+ */
+export function guardSourceNote(value: unknown): Record<string, string | null> {
+	if (!isRecord(value)) throw new ShapeError('A note must be an object.');
+	const note: Record<string, string | null> = {};
+	for (const key of SOURCE_NOTE_TEXT) {
+		note[key] =
+			text(value[key], LONG_SOURCE_NOTE_TEXT.has(key) ? LIMITS.longField : LIMITS.field) ?? null;
+	}
+	note.body ??= '';
+	if (!note.id || !note.sha256 || (!note.body.trim() && !note.quote?.trim())) {
+		throw new ShapeError('A note needs an id, the source it is on, and something said.');
+	}
+	return note;
+}
+
 /** A sidecar file's contents. Refused whole if any mark is unusable, so an import never half-happens. */
 export function guardSidecar(value: unknown): {
 	format: 'erti-annotations';
 	version: number;
 	annotations: Record<string, string | number | null>[];
+	source_notes: Record<string, string | null>[];
 } {
 	if (!isRecord(value) || value.format !== 'erti-annotations') {
 		throw new ShapeError('This is not an Erti notes file.');
@@ -565,9 +596,20 @@ export function guardSidecar(value: unknown): {
 			`A notes file can hold at most ${count(LIMITS.sidecarMarks)} marks; this one holds ${count(value.annotations.length)}.`
 		);
 	}
+	// Absent from a file written before notes on a source, and that file is
+	// still a sidecar.
+	const notes = value.source_notes === undefined ? [] : value.source_notes;
+	if (!Array.isArray(notes)) throw new ShapeError('This Erti notes file is damaged.');
+	if (notes.length > LIMITS.sidecarMarks) {
+		throw new LimitError(
+			'sidecarMarks',
+			`A notes file can hold at most ${count(LIMITS.sidecarMarks)} source notes; this one holds ${count(notes.length)}.`
+		);
+	}
 	return {
 		format: 'erti-annotations',
 		version: value.version,
-		annotations: value.annotations.map(guardMark)
+		annotations: value.annotations.map(guardMark),
+		source_notes: notes.map(guardSourceNote)
 	};
 }
