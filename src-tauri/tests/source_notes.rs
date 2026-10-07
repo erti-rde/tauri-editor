@@ -3,9 +3,12 @@
 
 use erti_lib::db::{queries, DbState};
 use erti_lib::db_commands::{
-    add_source_by_hand_in, delete_source_note_in, save_source_note_in, work_notes_in,
+    add_source_by_hand_in, delete_source_note_in, embed_source_note_with, save_source_note_in,
+    search_notes_in, search_notes_literally_in, work_notes_in,
 };
 use erti_lib::ipc::ErrorKind;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 const BOOK: &str = "erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01";
 const PDF: &str = "c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00";
@@ -247,4 +250,195 @@ async fn a_deleted_note_is_gone() {
         .unwrap()
         .notes
         .is_empty());
+}
+
+/* --------------------------------------------- found by search (AC-4, AC-5) */
+
+/// A stand-in for the model: one fixed vector, and a count of what it was
+/// asked to embed.
+fn model(asked: &Arc<AtomicUsize>) -> impl FnOnce(String) -> Result<Vec<f32>, String> + Send {
+    let asked = Arc::clone(asked);
+    move |_| {
+        asked.fetch_add(1, Ordering::SeqCst);
+        Ok(vec![1.0, 0.0])
+    }
+}
+
+// M1b-8 AC-4
+#[tokio::test]
+async fn a_note_is_embedded_from_its_quote_and_body_and_not_again_while_they_stand() {
+    let state = opened("embedded").await;
+    let quoted = |label: &str, body: &str| queries::NewSourceNote {
+        quote: Some("Oral structures look to pragmatics.".into()),
+        label_id: Some(label.into()),
+        ..note(NOTE, BOOK, body)
+    };
+    save_source_note_in(&state, quoted("claim", "Additive, not subordinative."))
+        .await
+        .unwrap();
+    let library = state.library().await.unwrap();
+    let (text, _) = queries::source_note_to_embed(&library, NOTE)
+        .await
+        .unwrap()
+        .expect("a new note wants a vector");
+    assert_eq!(
+        text,
+        "Oral structures look to pragmatics. \u{2014} Additive, not subordinative."
+    );
+
+    let asked = Arc::new(AtomicUsize::new(0));
+    assert!(embed_source_note_with(&state, NOTE, model(&asked))
+        .await
+        .unwrap());
+    assert_eq!(asked.load(Ordering::SeqCst), 1);
+
+    // The same words, and a new label: nothing to embed.
+    save_source_note_in(&state, quoted("method", "Additive, not subordinative."))
+        .await
+        .unwrap();
+    assert!(!embed_source_note_with(&state, NOTE, model(&asked))
+        .await
+        .unwrap());
+    assert_eq!(asked.load(Ordering::SeqCst), 1);
+
+    // New words: embedded again.
+    save_source_note_in(&state, quoted("method", "Additive, then aggregative."))
+        .await
+        .unwrap();
+    assert!(embed_source_note_with(&state, NOTE, model(&asked))
+        .await
+        .unwrap());
+    assert_eq!(asked.load(Ordering::SeqCst), 2);
+
+    // A note that's gone has nothing to embed.
+    delete_source_note_in(&state, NOTE.into()).await.unwrap();
+    assert!(!embed_source_note_with(&state, NOTE, model(&asked))
+        .await
+        .unwrap());
+}
+
+// M1b-8 AC-4: the backfill behind "Prepare my notes".
+#[tokio::test]
+async fn notes_never_embedded_are_found_with_the_hash_of_their_words() {
+    let state = opened("backfill").await;
+    save_source_note_in(&state, note(NOTE, BOOK, "Never embedded"))
+        .await
+        .unwrap();
+    save_source_note_in(&state, note("embedded", BOOK, "Already embedded"))
+        .await
+        .unwrap();
+    let asked = Arc::new(AtomicUsize::new(0));
+    embed_source_note_with(&state, "embedded", model(&asked))
+        .await
+        .unwrap();
+
+    let library = state.library().await.unwrap();
+    let pending = queries::source_notes_needing_embedding(&library, 10)
+        .await
+        .unwrap();
+    assert_eq!(
+        pending,
+        vec![(
+            NOTE.to_string(),
+            queries::text_hash("Never embedded"),
+            "Never embedded".to_string()
+        )]
+    );
+}
+
+fn found(hits: &[queries::Hit]) -> Vec<(&'static str, String)> {
+    hits.iter()
+        .map(|hit| match hit {
+            queries::Hit::Annotation(mark) => ("mark", mark.annotation.id.clone()),
+            queries::Hit::SourceNote(note) => ("note", note.note.id.clone()),
+            queries::Hit::Chunk(chunk) => ("passage", chunk.idx.to_string()),
+        })
+        .collect()
+}
+
+// M1b-8 AC-4
+#[tokio::test]
+async fn a_search_by_words_finds_source_notes_beside_marks() {
+    let state = opened("words").await;
+    attach_pdf(&state).await;
+    mark(&state, "m1", 3).await;
+    save_source_note_in(
+        &state,
+        queries::NewSourceNote {
+            quote: Some("Writing restructures consciousness, says Ong.".into()),
+            ..note(NOTE, BOOK, "The chapter's thesis")
+        },
+    )
+    .await
+    .unwrap();
+    save_source_note_in(&state, note("other", BOOK, "Nothing to do with it"))
+        .await
+        .unwrap();
+
+    let by_quote = search_notes_literally_in(&state, "restructures".into(), 10)
+        .await
+        .unwrap();
+    let mut kinds = found(&by_quote);
+    kinds.sort();
+    assert_eq!(kinds, vec![("mark", "m1".into()), ("note", NOTE.into())]);
+
+    let by_body = search_notes_literally_in(&state, "thesis".into(), 10)
+        .await
+        .unwrap();
+    assert_eq!(found(&by_body), vec![("note", NOTE.into())]);
+    let queries::Hit::SourceNote(hit) = &by_body[0] else {
+        unreachable!()
+    };
+    // Named by the work, which a book entered by hand has and a file name
+    // doesn't, and cited as the work.
+    assert_eq!(hit.title.as_deref(), Some("Orality and Literacy"));
+    assert_eq!(hit.source_id, BOOK);
+    assert!(hit.in_project);
+
+    // Nothing asked: every note of both kinds, as browsing shows them.
+    let everything = search_notes_literally_in(&state, "".into(), 10)
+        .await
+        .unwrap();
+    assert_eq!(everything.len(), 3);
+}
+
+// M1b-8 AC-4: and so in the follow list, which searches by meaning.
+#[tokio::test]
+async fn a_search_by_meaning_finds_an_embedded_source_note() {
+    let state = opened("meaning").await;
+    save_source_note_in(&state, note(NOTE, BOOK, "The chapter's thesis"))
+        .await
+        .unwrap();
+    let asked = Arc::new(AtomicUsize::new(0));
+    embed_source_note_with(&state, NOTE, model(&asked))
+        .await
+        .unwrap();
+
+    let hits = search_notes_in(&state, &[1.0, 0.0], 10).await.unwrap();
+
+    assert_eq!(found(&hits), vec![("note", NOTE.into())]);
+    let queries::Hit::SourceNote(hit) = &hits[0] else {
+        unreachable!()
+    };
+    assert_eq!(hit.title.as_deref(), Some("Orality and Literacy"));
+}
+
+// M1b-8 AC-5
+#[tokio::test]
+async fn every_source_note_is_listed_for_the_export() {
+    let state = opened("export").await;
+    save_source_note_in(&state, note(NOTE, BOOK, "First"))
+        .await
+        .unwrap();
+    save_source_note_in(&state, note("second", BOOK, "Second"))
+        .await
+        .unwrap();
+
+    let library = state.library().await.unwrap();
+    let all = queries::all_source_notes(&library).await.unwrap();
+
+    assert_eq!(
+        all.iter().map(|n| n.body.as_str()).collect::<Vec<_>>(),
+        vec!["First", "Second"]
+    );
 }

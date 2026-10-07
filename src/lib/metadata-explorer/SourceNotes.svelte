@@ -7,6 +7,7 @@
 	import {
 		annotationLabels,
 		deleteSourceNote,
+		embedSourceNote,
 		saveSourceNote,
 		type AnnotationLabel,
 		type NewSourceNote,
@@ -75,8 +76,14 @@
 
 	async function save(fields: Omit<NewSourceNote, 'id' | 'sha256'>, note?: SourceNote) {
 		try {
-			await saveSourceNote({ ...fields, id: note?.id ?? crypto.randomUUID(), sha256: id });
+			const noteId = note?.id ?? crypto.randomUUID();
+			await saveSourceNote({ ...fields, id: noteId, sha256: id });
 			editing = null;
+			// Not waited for, as a mark's isn't: the note is kept whether or not
+			// the model is ready, and "Prepare my notes" finds any it missed.
+			embedSourceNote(noteId).catch((error) =>
+				log.warn('Could not prepare the note for searching by meaning', error)
+			);
 			await onchange();
 		} catch (error) {
 			errorToast(`Could not save the note: ${describeError(error)}`);

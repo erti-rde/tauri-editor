@@ -245,6 +245,8 @@ export type WorkNotes = Omit<ipc.WorkNotes, 'marks'> & { marks: Annotation[] };
 export const workNotes = (id: string) => call(commands.workNotes(id)) as Promise<WorkNotes>;
 export const saveSourceNote = (note: NewSourceNote) => run(commands.saveSourceNote(note));
 export const deleteSourceNote = (id: string) => run(commands.deleteSourceNote(id));
+/** Every source note in the library, for the notes export. */
+export const allSourceNotes = () => call(commands.allSourceNotes());
 
 /** Undo an import, leaving marks the reader made themselves untouched. */
 export const deleteImportedAnnotations = (sha256: string) =>
@@ -315,7 +317,8 @@ export const embedAnnotation = (id: string, text: string) =>
 	call(commands.embedAnnotation(id, text));
 
 /**
- * Give every mark that has none a vector, and say how many.
+ * Give every note that has none a vector, marks and source notes, and say how
+ * many.
  *
  * Marks are embedded as they are made, and that can fail quietly — before a
  * library is open, while the model is loading. A highlight is never lost to it,
@@ -324,24 +327,34 @@ export const embedAnnotation = (id: string, text: string) =>
 export const embedPendingAnnotations = () => call(commands.embedPendingAnnotations());
 
 /**
+ * Embed a source note's words, as they were saved, so it can be found by
+ * meaning. False when they haven't changed since they last were.
+ */
+export const embedSourceNote = (id: string) => call(commands.embedSourceNote(id));
+
+/**
  * A mark, ranked against what the researcher is looking for: cosine similarity
  * for a search by meaning, 1 for a literal match, so never null.
  */
 export type ScoredAnnotation = Annotation &
 	Omit<ipc.ScoredAnnotation, keyof ipc.Annotation | 'similarity'> & { similarity: number };
 
+/** A source note, ranked: never null for the same reason as a mark's. */
+export type ScoredSourceNote = Omit<ipc.ScoredSourceNote, 'similarity'> & { similarity: number };
+
+/** A note of either kind, saying which: a mark, or a note on a source (ADR 004). */
+export type NoteHit =
+	{ kind: 'annotation'; hit: ScoredAnnotation } | { kind: 'source_note'; hit: ScoredSourceNote };
+
 /**
- * Search the marks.
+ * Search the notes: marks and source notes, in one list (M1b-8 AC-4).
  *
  * Kept apart from `searchSources` on purpose. A passage from a paper and a note
  * the reader wrote are not the same kind of thing, and a short note does not
  * score comparably against a long passage — merging them into one ranked list
  * would be wrong in a way that never shows.
  */
-export const searchAnnotations = (
-	query: string,
-	options: { limit?: number; semantic?: boolean } = {}
-) =>
-	call(
-		commands.searchAnnotations(query, options.limit ?? null, options.semantic ?? false)
-	) as Promise<ScoredAnnotation[]>;
+export const searchNotes = (query: string, options: { limit?: number; semantic?: boolean } = {}) =>
+	call(commands.searchNotes(query, options.limit ?? null, options.semantic ?? false)) as Promise<
+		NoteHit[]
+	>;

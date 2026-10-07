@@ -2,14 +2,15 @@
 	import { onMount } from 'svelte';
 
 	import Icon from '$lib/icon/Icon.svelte';
-	import { Button, Item, LabelChip } from '$lib/ui';
+	import { Button, Checkbox, Item, LabelChip, RadioGroup, SearchField } from '$lib/ui';
 	import Loader from '$lib/loader/Loader.svelte';
 	import { annotationsStore, pageLabelOf } from '$lib/stores/annotations.svelte';
 	import {
 		allAnnotations,
+		allSourceNotes,
 		embedPendingAnnotations,
-		searchAnnotations,
-		type ScoredAnnotation
+		searchNotes,
+		type NoteHit
 	} from '$lib/stores/db';
 	import { showInPdf } from '$lib/pdfreader/showInPdf';
 	import { save } from '@tauri-apps/plugin-dialog';
@@ -30,6 +31,10 @@
 	 * could answer before: a note taken last year for another project was, in
 	 * practice, lost.
 	 *
+	 * Notes on a source (M1b-8) are listed with the marks, each saying which it
+	 * is: both are something the researcher wrote, and they ask the same
+	 * question of them (ADR 004).
+	 *
 	 * Results put the open project first and the wider library after, the same
 	 * ordering the citation search uses, so the two surfaces behave alike.
 	 */
@@ -48,7 +53,7 @@
 	 */
 	let following = $state(true);
 	let followed = $state('');
-	let results = $state<ScoredAnnotation[]>([]);
+	let results = $state<NoteHit[]>([]);
 	let loading = $state(false);
 	let ran = $state(false);
 
@@ -93,13 +98,13 @@
 		try {
 			const asked = query.trim();
 			const found = asked
-				? await searchAnnotations(asked, { semantic, limit: 100 })
+				? await searchNotes(asked, { semantic, limit: 100 })
 				: context
-					? await searchAnnotations(context, { semantic: true, limit: 20 })
-					: // Nothing asked: every mark, newest first, each with its paper and
+					? await searchNotes(context, { semantic: true, limit: 20 })
+					: // Nothing asked: every note, newest first, each with its paper and
 						// whether it's in this project. The plain list used to be cast to
 						// this type without those, so every mark read "unknown paper".
-						await searchAnnotations('', { limit: 100 });
+						await searchNotes('', { limit: 100 });
 			results = Array.isArray(found) ? found : [];
 			ran = true;
 
@@ -107,10 +112,7 @@
 			// model was unavailable has none — so an empty answer here may mean
 			// "nothing is about that" or "nothing has been prepared", and only one
 			// of those is the reader's to solve.
-			if (results.length === 0 && (semantic || context)) {
-				const marks = await allAnnotations({ limit: 1 });
-				unprepared = Array.isArray(marks) && marks.length > 0;
-			}
+			if (results.length === 0 && (semantic || context)) unprepared = await anyNotes();
 
 			// Report back only for a search that followed the writing. A typed
 			// query is the writer asking a question, and answering it should not
@@ -119,7 +121,7 @@
 				draftMatches.set({
 					paragraph: context,
 					// By work, which is what the paragraph's citations resolve to.
-					sources: results.map((row) => ({ sha256: row.source_id, similarity: row.similarity }))
+					sources: results.map(({ hit }) => ({ sha256: hit.source_id, similarity: hit.similarity }))
 				});
 			}
 		} catch (thrown) {
@@ -155,8 +157,16 @@
 		}
 	}
 
-	const inProject = $derived(results.filter((row) => row.in_project !== false));
-	const elsewhere = $derived(results.filter((row) => row.in_project === false));
+	/** Whether there's a note of either kind, for a search that found none. */
+	async function anyNotes(): Promise<boolean> {
+		const marks = await allAnnotations({ limit: 1 });
+		if (Array.isArray(marks) && marks.length > 0) return true;
+		const notes = await allSourceNotes();
+		return Array.isArray(notes) && notes.length > 0;
+	}
+
+	const inProject = $derived(results.filter(({ hit }) => hit.in_project !== false));
+	const elsewhere = $derived(results.filter(({ hit }) => hit.in_project === false));
 
 	/**
 	 * Write the notes out.
@@ -167,15 +177,19 @@
 	 */
 	async function exportNotes(format: 'md' | 'json') {
 		try {
-			const marks = await allAnnotations({ limit: 10_000 });
-			if (!Array.isArray(marks) || marks.length === 0) {
+			const [marks, notes] = await Promise.all([
+				allAnnotations({ limit: 10_000 }),
+				allSourceNotes()
+			]);
+			const written = marks.length + notes.length;
+			if (written === 0) {
 				errorToast('There are no notes to export yet.');
 				return;
 			}
 
 			let contents: string;
 			if (format === 'json') {
-				contents = toSidecar(marks);
+				contents = toSidecar(marks, notes);
 			} else {
 				const [sources, aliases] = await Promise.all([
 					projectSources().catch(() => []),
@@ -188,7 +202,8 @@
 						title: titleOf(source.csl_json) ?? source.file_name
 					})),
 					$annotationsStore.labels,
-					(id) => canonical(aliases, id)
+					(id) => canonical(aliases, id),
+					notes
 				);
 			}
 
@@ -203,7 +218,7 @@
 			if (!path) return;
 
 			await writeTextFile(path, contents);
-			successToast(`Wrote ${marks.length} notes.`);
+			successToast(`Wrote ${written} ${written === 1 ? 'note' : 'notes'}.`);
 		} catch (failure) {
 			log.error('Could not export the notes', failure);
 			errorToast('Could not write the notes out.');
@@ -232,51 +247,34 @@
 
 <div class="flex h-full flex-col">
 	<div class="border-line flex flex-col gap-2 border-b p-2">
-		<div class="flex items-center gap-1">
-			<input
-				class="border-line bg-surface-sunken text-ink grow rounded border px-2 py-1 text-xs"
-				placeholder="Search your notes…"
-				aria-label="Search your notes"
-				bind:value={query}
-				onkeydown={(event) => {
-					if (event.key === 'Enter') void run();
-				}}
-			/>
-			<button
-				class="text-ink-muted hover:bg-surface-hover rounded p-1"
-				onclick={() => void run()}
-				aria-label="Search"
-			>
-				<Icon icon="Search" size="s" />
-			</button>
-		</div>
+		<SearchField
+			label="Search your notes"
+			placeholder="Search your notes…"
+			bind:value={query}
+			onkeydown={(event) => {
+				if (event.key === 'Enter') void run();
+			}}
+			onclear={() => void run()}
+		/>
 
 		<!--
 			Named for what it does rather than for what it is.
-			
+
 			"Follow what I am writing" described the mechanism and left the reader to
 			work out the consequence — which is that with nothing typed here, the
 			panel keeps showing notes about the paragraph the cursor is in. The
 			second line says that outright, because a checkbox whose effect you have
 			to discover by experiment is one you switch off.
 		-->
-		<label class="flex items-start gap-1.5 text-[11px]">
-			<input
-				type="checkbox"
-				class="mt-0.5"
-				bind:checked={following}
-				onchange={() => {
-					followed = '';
-					if (!following) void run();
-				}}
-			/>
-			<span>
-				<span class="text-ink">Show notes about the paragraph I'm in</span>
-				<span class="text-ink-muted block">
-					Updates as you write, by meaning. Typing a search here takes over.
-				</span>
-			</span>
-		</label>
+		<Checkbox
+			label="Show notes about the paragraph I'm in"
+			description="Updates as you write, by meaning. Typing a search here takes over."
+			bind:checked={following}
+			onCheckedChange={() => {
+				followed = '';
+				if (!following) void run();
+			}}
+		/>
 
 		<!--
 			Only meaningful for a typed question. Following the writing always
@@ -284,43 +282,26 @@
 			so with nothing typed this control decides nothing, and saying so beats
 			leaving it looking broken.
 		-->
-		<div
-			class="flex items-center gap-1 text-[11px]"
-			role="group"
-			aria-label="How to search"
-			aria-disabled={following && !query.trim()}
-			class:opacity-50={following && !query.trim()}
-		>
-			<button
-				class="rounded px-2 py-0.5 {semantic
-					? 'text-ink-muted hover:bg-surface-hover'
-					: 'bg-surface-active text-ink'}"
-				aria-pressed={!semantic}
-				onclick={() => {
-					semantic = false;
-					void run();
-				}}>Words</button
-			>
-			<button
-				class="rounded px-2 py-0.5 {semantic
-					? 'bg-surface-active text-ink'
-					: 'text-ink-muted hover:bg-surface-hover'}"
-				aria-pressed={semantic}
-				onclick={() => {
-					semantic = true;
-					void run();
-				}}>Meaning</button
-			>
-		</div>
+		<RadioGroup
+			label="How to search"
+			hideLabel
+			orientation="horizontal"
+			options={[
+				{ value: 'words', label: 'Words' },
+				{ value: 'meaning', label: 'Meaning' }
+			]}
+			value={semantic ? 'meaning' : 'words'}
+			disabled={following && !query.trim()}
+			onValueChange={(value) => {
+				semantic = value === 'meaning';
+				void run();
+			}}
+		/>
 
-		<div class="text-ink-muted flex items-center gap-2 text-[11px]">
+		<div class="text-caption text-ink-muted flex items-center gap-1">
 			<span>Export</span>
-			<button class="hover:text-ink underline" onclick={() => void exportNotes('md')}>
-				Markdown
-			</button>
-			<button class="hover:text-ink underline" onclick={() => void exportNotes('json')}>
-				JSON
-			</button>
+			<Button variant="ghost" size="sm" onclick={() => void exportNotes('md')}>Markdown</Button>
+			<Button variant="ghost" size="sm" onclick={() => void exportNotes('json')}>JSON</Button>
 		</div>
 	</div>
 
@@ -351,13 +332,15 @@
 					Some of your notes have not been prepared for this yet, so searching by meaning cannot see
 					them. Searching by words still works.
 				</p>
-				<button
-					class="bg-accent text-accent-ink hover:bg-accent-hover mt-2 rounded px-2 py-1 text-[11px] font-medium disabled:opacity-60"
-					disabled={preparing}
+				<Button
+					variant="primary"
+					size="sm"
+					class="mt-2"
+					loading={preparing}
 					onclick={() => void prepare()}
 				>
 					{preparing ? 'Preparing…' : 'Prepare my notes'}
-				</button>
+				</Button>
 			</div>
 		{:else if results.length === 0}
 			<p class="text-ink-muted p-3 text-xs">
@@ -367,7 +350,7 @@
 			</p>
 		{:else}
 			{#if following && !query.trim() && followed}
-				<p class="text-ink-muted bg-surface-sunken border-line border-b px-3 py-1 text-[11px]">
+				<p class="text-caption text-ink-muted bg-surface-sunken border-line border-b px-3 py-1">
 					Related to what you are writing
 				</p>
 			{/if}
@@ -375,53 +358,90 @@
 			{#each [{ title: 'In this project', rows: inProject }, { title: 'Elsewhere in your library', rows: elsewhere }] as group (group.title)}
 				{#if group.rows.length > 0}
 					<h3
-						class="text-ink-muted bg-surface-sunken sticky top-0 px-3 py-1 text-[11px] font-medium"
+						class="text-caption text-ink-muted bg-surface-sunken sticky top-0 px-3 py-1 font-medium"
 					>
 						{group.title}
 					</h3>
 
-					{#each group.rows as row (row.id)}
-						<Item text={row.note ?? undefined} quote={row.quote ?? undefined}>
-							{#snippet meta()}
-								<LabelChip name={nameOf(row.label_id)} colour={colourOf(row.label_id)} />
-								<span class="truncate">· {row.file_name ?? 'unknown paper'}</span>
-								<span class="shrink-0">· p. {pageLabelOf(row)}</span>
-							{/snippet}
+					{#each group.rows as row (`${row.kind}:${row.hit.id}`)}
+						{#if row.kind === 'annotation'}
+							{@const hit = row.hit}
+							<Item text={hit.note ?? undefined} quote={hit.quote ?? undefined}>
+								{#snippet meta()}
+									<LabelChip name={nameOf(hit.label_id)} colour={colourOf(hit.label_id)} />
+									<span class="truncate">· {hit.file_name ?? 'unknown paper'}</span>
+									<span class="shrink-0">· p. {pageLabelOf(hit)}</span>
+								{/snippet}
 
-							{#snippet actions()}
-								<Button
-									variant="ghost"
-									size="sm"
-									onclick={() =>
-										void showInPdf({
-											sha256: row.sha256,
-											page: row.page,
-											selector: row.quote ? { quote: row.quote } : undefined
-										})}
-								>
-									<Icon icon="BookOpen" size="s" />
-									Show in PDF
-								</Button>
-
-								<!--
-									Offered only when a manuscript is open, because a citation
-									needs somewhere to go. A note carries the work its paper
-									belongs to, so this is the same insertion the citation panel
-									makes from a search result. Show in PDF, above, keeps the
-									file's own hash: the work may be a book with no file.
-								-->
-								{#if $draftContext.cite}
+								{#snippet actions()}
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() => void $draftContext.cite?.(row.source_id)}
+										onclick={() =>
+											void showInPdf({
+												sha256: hit.sha256,
+												page: hit.page,
+												selector: hit.quote ? { quote: hit.quote } : undefined
+											})}
 									>
-										<Icon icon="Quote" size="s" />
-										Cite
+										<Icon icon="BookOpen" size="s" />
+										Show in PDF
 									</Button>
-								{/if}
-							{/snippet}
-						</Item>
+
+									<!--
+										Offered only when a manuscript is open, because a citation
+										needs somewhere to go. A note carries the work its paper
+										belongs to, so this is the same insertion the citation panel
+										makes from a search result. Show in PDF, above, keeps the
+										file's own hash: the work may be a book with no file.
+									-->
+									{#if $draftContext.cite}
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() => void $draftContext.cite?.(hit.source_id)}
+										>
+											<Icon icon="Quote" size="s" />
+											Cite
+										</Button>
+									{/if}
+								{/snippet}
+							</Item>
+						{:else}
+							{@const hit = row.hit}
+							<!--
+								A note on the work as a whole (M1b-8): named by the work, since a
+								book entered by hand has no file, and said to be a note, so the
+								two kinds tell apart without the label's colour.
+							-->
+							<Item text={hit.body || undefined} quote={hit.quote ?? undefined}>
+								{#snippet meta()}
+									{#if hit.label_id}
+										<LabelChip name={nameOf(hit.label_id)} colour={colourOf(hit.label_id)} />
+									{:else}
+										<span class="shrink-0">Note</span>
+									{/if}
+									<span class="truncate">· {hit.title ?? 'unknown source'}</span>
+									{#if hit.page_label}
+										<span class="shrink-0">· p. {hit.page_label}</span>
+									{/if}
+								{/snippet}
+
+								{#snippet actions()}
+									{#if $draftContext.cite}
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() =>
+												void $draftContext.cite?.(hit.source_id, hit.page_label ?? undefined)}
+										>
+											<Icon icon="Quote" size="s" />
+											{hit.page_label ? `Cite with p. ${hit.page_label}` : 'Cite'}
+										</Button>
+									{/if}
+								{/snippet}
+							</Item>
+						{/if}
 					{/each}
 				{/if}
 			{/each}

@@ -1,4 +1,4 @@
-import type { Annotation, AnnotationLabel } from '$lib/stores/db';
+import type { Annotation, AnnotationLabel, SourceNote } from '$lib/stores/db';
 import { guardSidecar, LimitError } from '$lib/guard';
 
 /**
@@ -25,7 +25,8 @@ function labelName(labels: AnnotationLabel[], id: string | null): string | null 
 }
 
 /**
- * Marks grouped by paper, in reading order.
+ * Notes grouped by paper, in reading order: the notes on the work as a whole,
+ * then its marks by page, as its Notes tab lists them.
  *
  * Grouped rather than listed flat because notes are read back one paper at a
  * time — "what did I get out of Smith" is the question, not "what did I write
@@ -35,24 +36,39 @@ export function toMarkdown(
 	annotations: Annotation[],
 	sources: ExportSource[],
 	labels: AnnotationLabel[],
-	resolve: (id: string) => string = (id) => id
+	resolve: (id: string) => string = (id) => id,
+	sourceNotes: SourceNote[] = []
 ): string {
-	const byPaper = new Map<string, Annotation[]>();
-
-	// A mark sits on its file's hash, and a project lists works (ADR 003), so a
-	// mark on a PDF attached to a book is filed under the book.
-	for (const annotation of annotations) {
-		const work = resolve(annotation.sha256);
-		const group = byPaper.get(work) ?? [];
-		group.push(annotation);
+	const byPaper = new Map<string, { notes: SourceNote[]; marks: Annotation[] }>();
+	const groupOf = (work: string) => {
+		const group = byPaper.get(work) ?? { notes: [], marks: [] };
 		byPaper.set(work, group);
-	}
+		return group;
+	};
+
+	// A note is kept on its work. A mark sits on its file's hash, and a project
+	// lists works (ADR 003), so a mark on a PDF attached to a book is filed
+	// under the book.
+	for (const note of sourceNotes) groupOf(resolve(note.sha256)).notes.push(note);
+	for (const annotation of annotations) groupOf(resolve(annotation.sha256)).marks.push(annotation);
 
 	const lines: string[] = ['# Notes', ''];
 
-	for (const [sha256, marks] of byPaper) {
+	for (const [sha256, { notes, marks }] of byPaper) {
 		const source = sources.find((candidate) => candidate.sha256 === sha256);
 		lines.push(`## ${source?.title ?? 'Unknown paper'}`, '');
+
+		for (const note of notes) {
+			const page = note.page_label?.trim();
+			const heading = [labelName(labels, note.label_id), page && `p. ${page}`]
+				.filter(Boolean)
+				.join(' · ');
+			lines.push(`**${heading || 'Note'}**`, '');
+
+			// Transcribed by hand, so its lines are the writer's own and kept.
+			if (note.quote) lines.push(...note.quote.split('\n').map((line) => `> ${line}`), '');
+			if (note.body) lines.push(note.body, '');
+		}
 
 		for (const mark of [...marks].sort((a, b) => a.page - b.page)) {
 			const label = labelName(labels, mark.label_id);
@@ -79,15 +95,22 @@ export function toMarkdown(
 	return lines.join('\n').trimEnd() + '\n';
 }
 
-/** The complete records, re-importable, ids and all. */
-export function toSidecar(annotations: Annotation[]): string {
+/**
+ * The complete records, re-importable, ids and all.
+ *
+ * Source notes ride in a field of their own, and the version stays 1: a field
+ * is added, none is repurposed, so a reader written before notes on a source
+ * reads the marks and passes over the rest.
+ */
+export function toSidecar(annotations: Annotation[], sourceNotes: SourceNote[] = []): string {
 	return JSON.stringify(
 		{
 			// Versioned so a reader written later can tell what it is looking at.
 			format: 'erti-annotations',
 			version: 1,
 			exported_at: new Date().toISOString(),
-			annotations
+			annotations,
+			source_notes: sourceNotes
 		},
 		null,
 		2
@@ -99,6 +122,8 @@ export interface Sidecar {
 	format: string;
 	version: number;
 	annotations: Annotation[];
+	/** Empty for a file written before notes on a source. */
+	source_notes: SourceNote[];
 }
 
 /**

@@ -46,7 +46,7 @@ test('each rail panel opens', async ({ page }) => {
 	);
 
 	await page.getByRole('button', { name: 'Notes' }).click();
-	await expect(page.getByRole('textbox', { name: 'Search your notes' })).toBeVisible();
+	await expect(page.getByRole('searchbox', { name: 'Search your notes' })).toBeVisible();
 	await expect(page.getByText('Core claim; contrast with the RNN section')).toBeVisible();
 	// Each mark names its paper.
 	await expect(page.getByText('· vaswani-2017.pdf').first()).toBeVisible();
@@ -703,4 +703,39 @@ test('a note with a page cites its source at that page, where the writer left of
 	const { id, locators } = await cited();
 	expect(Object.values(locators)).toEqual(['3']);
 	expect(JSON.parse(id)).toEqual(Object.keys(locators));
+});
+
+test('a note on a source is found in the Notes panel, by its words and by its meaning', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await page.getByRole('button', { name: /Attention Is All You Need/ }).click();
+	const sidebar = page.getByRole('complementary', { name: 'Edit source' });
+	await sidebar.getByRole('tab', { name: /^Notes/ }).click();
+	await sidebar.getByRole('button', { name: 'New note' }).click();
+	await sidebar
+		.getByRole('textbox', { name: /^Note/ })
+		.fill('Heads attend to positions jointly, which recurrence cannot.');
+	await sidebar.getByRole('textbox', { name: /^Page/ }).fill('4');
+	await sidebar.getByRole('textbox', { name: /^Page/ }).press('ControlOrMeta+Enter');
+	await expect(sidebar.getByRole('button', { name: 'Cite with p. 4' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Notes', exact: true }).click();
+	const search = page.getByRole('searchbox', { name: 'Search your notes' });
+	await search.fill('recurrence cannot');
+	await search.press('Enter');
+	const found = page.getByText('Heads attend to positions jointly, which recurrence cannot.');
+	await expect(found).toBeVisible();
+	await expect(page.getByText('· Attention Is All You Need')).toBeVisible();
+	await expect(page.getByText('· p. 4', { exact: true })).toBeVisible();
+
+	// By meaning, which only finds it if saving the note prepared it.
+	await search.fill('positions jointly');
+	await page.getByRole('radio', { name: 'Meaning' }).click();
+	await expect(found).toBeVisible();
+	await expect(page.getByText('Nothing found by meaning.')).toHaveCount(0);
 });

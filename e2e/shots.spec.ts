@@ -120,4 +120,12 @@ test('shots', async ({ page }) => {
 	await citeIt.click();
 	await expect(page.locator('.ProseMirror')).toContainText('(Vaswani, 2017, p. 1)');
 	await page.screenshot({ ...shot('18-cited-at-page'), animations: 'disabled' });
+
+	// And the note is found in the Notes panel with the marks (M1b-8 AC-4).
+	await page.getByRole('button', { name: 'Notes', exact: true }).click();
+	const search = page.getByRole('searchbox', { name: 'Search your notes' });
+	await search.fill('contrast');
+	await search.press('Enter');
+	await expect(page.getByText('The contrast I need for §3.')).toBeVisible();
+	await page.screenshot({ ...shot('19-notes-find-source-note'), animations: 'disabled' });
 });

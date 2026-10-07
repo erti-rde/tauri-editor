@@ -101,6 +101,19 @@ export const commands = {
 	deleteAnnotation: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_annotation", { id })),
 	/**  A work's notes and the marks on its files, for its Notes tab (M1b-8, UX-3). */
 	workNotes: (id: string) => typedError<WorkNotes, AppError>(__TAURI_INVOKE("work_notes", { id })),
+	/**
+	 *  Embed a source note's words so a search by meaning finds it (M1b-8 AC-4).
+	 * 
+	 *  Asked for after the note is saved, as a mark's is, rather than inside the
+	 *  save: inference can take a moment while the model loads, and a note must
+	 *  never wait on it, or be lost to it failing. The words are read back from
+	 *  the library, so what's embedded is what was kept. Skipped, resolving false,
+	 *  when they haven't changed since they were last embedded: relabelling a note
+	 *  costs no inference.
+	 */
+	embedSourceNote: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("embed_source_note", { id })),
+	/**  Every source note in the library, for the notes export (M1b-8 AC-5). */
+	allSourceNotes: () => typedError<SourceNote[], AppError>(__TAURI_INVOKE("all_source_notes")),
 	/**  Write a note on a work, or rewrite one (M1b-8 AC-2, ADR 004). */
 	saveSourceNote: (note: NewSourceNote) => typedError<null, AppError>(__TAURI_INVOKE("save_source_note", { note })),
 	deleteSourceNote: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_source_note", { id })),
@@ -140,15 +153,18 @@ export const commands = {
 	 */
 	embedPendingAnnotations: () => typedError<number, AppError>(__TAURI_INVOKE("embed_pending_annotations")),
 	/**
-	 *  Find marks, by their words or by what they are about.
+	 *  Find notes, marks and source notes alike, by their words or by what they
+	 *  are about (M1b-8 AC-4, ADR 004).
 	 * 
 	 *  Deliberately separate from `search_sources`. A passage from a paper and a
 	 *  note the researcher wrote are not the same kind of thing — one is quotable,
 	 *  the other is a judgement already made — and a 12-word note does not produce
 	 *  a cosine score comparable with a 100-word passage, so merging the two into
-	 *  one ranked list would be quietly wrong in a way nobody could see.
+	 *  one ranked list would be quietly wrong in a way nobody could see. A mark and
+	 *  a source note are the same kind of thing, so they share one list, each
+	 *  result saying which it is.
 	 */
-	searchAnnotations: (query: string, limit: number | null, semantic: boolean | null) => typedError<ScoredAnnotation[], AppError>(__TAURI_INVOKE("search_annotations", { query, limit, semantic })),
+	searchNotes: (query: string, limit: number | null, semantic: boolean | null) => typedError<Hit[], AppError>(__TAURI_INVOKE("search_notes", { query, limit, semantic })),
 	/**
 	 *  Search everything in the library by meaning: passages, marks and source
 	 *  notes, in one ranked list, each result saying which it is (ADR 005).
@@ -451,6 +467,11 @@ export type ScoredSourceNote = {
 	source_id: string,
 	/**  False when the work is outside the open project's source set. */
 	in_project: boolean,
+	/**
+	 *  How to name the work: its title, else its file's name. A book entered
+	 *  by hand has no file, so a note can't be named the way a mark is.
+	 */
+	title: string | null,
 } & SourceNote;
 
 export type Source = {

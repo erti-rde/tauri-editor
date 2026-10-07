@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseSidecar, toMarkdown, toSidecar } from './export';
-import type { Annotation, AnnotationLabel } from '$lib/stores/db';
+import type { Annotation, AnnotationLabel, SourceNote } from '$lib/stores/db';
 
 const labels: AnnotationLabel[] = [
 	{ id: 'claim', name: 'Claim', colour: '45 95% 62%', position: 0, enabled: true }
@@ -34,6 +34,70 @@ function mark(overrides: Partial<Annotation> = {}): Annotation {
 		...overrides
 	};
 }
+
+function sourceNote(overrides: Partial<SourceNote> = {}): SourceNote {
+	return {
+		id: 'n1',
+		sha256: 'sha-1',
+		body: 'The study I argue *against* in §2.',
+		quote: null,
+		page_label: null,
+		label_id: null,
+		created_at: '2026-01-01',
+		updated_at: '2026-01-01',
+		...overrides
+	};
+}
+
+// M1b-8 AC-5
+describe('notes on a source, written out', () => {
+	it('come first under their paper, then its marks', () => {
+		const out = toMarkdown([mark()], sources, labels, undefined, [
+			sourceNote({ label_id: 'claim', page_label: 'xiv', quote: 'Two lines\nof print' })
+		]);
+
+		expect(out).toBe(
+			[
+				'# Notes',
+				'',
+				'## Smith 2020, A Study',
+				'',
+				'**Claim · p. xiv**',
+				'',
+				'> Two lines',
+				'> of print',
+				'',
+				'The study I argue *against* in §2.',
+				'',
+				'**Claim · p. 4**',
+				'',
+				'> the effect was strongest',
+				''
+			].join('\n')
+		);
+	});
+
+	it('are headed "Note" when they have no label or page', () => {
+		const out = toMarkdown([], sources, labels, undefined, [sourceNote({ sha256: 'sha-2' })]);
+
+		expect(out).toContain('## Jones 2019, Another\n\n**Note**\n\nThe study I argue');
+	});
+
+	it('travel in the sidecar and come back from it, ids and all', () => {
+		const notes = [sourceNote(), sourceNote({ id: 'n2', quote: 'Words', page_label: '37' })];
+
+		const back = parseSidecar(toSidecar([mark()], notes));
+
+		expect(back?.source_notes).toEqual(notes);
+		expect(back?.annotations).toEqual([mark()]);
+	});
+
+	it('are none in a sidecar written before them', () => {
+		const older = JSON.stringify({ format: 'erti-annotations', version: 1, annotations: [mark()] });
+
+		expect(parseSidecar(older)?.source_notes).toEqual([]);
+	});
+});
 
 describe('notes as Markdown', () => {
 	it('groups marks under the paper they came from', () => {

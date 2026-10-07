@@ -1216,6 +1216,37 @@ pub struct ScoredSourceNote {
     pub source_id: String,
     /// False when the work is outside the open project's source set.
     pub in_project: bool,
+    /// How to name the work: its title, else its file's name. A book entered
+    /// by hand has no file, so a note can't be named the way a mark is.
+    pub title: Option<String>,
+}
+
+/// The columns a source note search reads, with the work's name alongside.
+/// `json_valid` first: `json_extract` on a malformed record is an error, and
+/// one bad record would sink the whole search.
+const SOURCE_NOTE_SEARCH_SELECT: &str = "SELECT n.id, n.sha256, n.body, n.quote, n.page_label,
+            n.label_id, n.created_at, n.updated_at,
+            COALESCE(
+              (SELECT json_extract(s.csl_json, '$.title') FROM sources s
+                WHERE s.sha256 = n.sha256 AND json_valid(s.csl_json)),
+              (SELECT l.file_name FROM locations l WHERE l.sha256 = n.sha256
+                ORDER BY l.last_seen DESC LIMIT 1)) AS title
+       FROM source_notes n";
+
+fn scored_note_from(
+    row: &sqlx::sqlite::SqliteRow,
+    similarity: f32,
+    source_id: String,
+    in_project: bool,
+) -> ScoredSourceNote {
+    ScoredSourceNote {
+        note: source_note_from(row),
+        similarity,
+        source_id,
+        in_project,
+        // A title that isn't a string is no name at all.
+        title: row.try_get::<Option<String>, _>("title").ok().flatten(),
+    }
 }
 
 /// One result from the index, whatever kind of row it is (ADR 005).
@@ -1305,21 +1336,21 @@ pub async fn search_index(
                         })
                     })
             }
-            Key::SourceNote(id) => sqlx::query(&format!(
-                "SELECT {SOURCE_NOTE_COLUMNS} FROM source_notes WHERE id = ?"
-            ))
-            .bind(id)
-            .fetch_optional(library)
-            .await
-            .map_err(|e| e.to_string())?
-            .map(|r| {
-                Hit::SourceNote(ScoredSourceNote {
-                    note: source_note_from(&r),
-                    similarity: found.similarity,
-                    source_id,
-                    in_project: found.in_project,
-                })
-            }),
+            Key::SourceNote(id) => {
+                sqlx::query(&format!("{SOURCE_NOTE_SEARCH_SELECT} WHERE n.id = ?"))
+                    .bind(id)
+                    .fetch_optional(library)
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .map(|r| {
+                        Hit::SourceNote(scored_note_from(
+                            &r,
+                            found.similarity,
+                            source_id,
+                            found.in_project,
+                        ))
+                    })
+            }
         };
         hits.extend(hit);
     }
@@ -1713,6 +1744,121 @@ pub async fn delete_source_note(library: &SqlitePool, id: &str) -> Result<(), St
         .await
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Every source note in the library, each work's together, oldest first: what
+/// the notes export writes out beside the marks (M1b-8 AC-5).
+pub async fn all_source_notes(library: &SqlitePool) -> Result<Vec<SourceNote>, String> {
+    Ok(sqlx::query(&format!(
+        "SELECT {SOURCE_NOTE_COLUMNS} FROM source_notes ORDER BY sha256, created_at, rowid"
+    ))
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?
+    .iter()
+    .map(source_note_from)
+    .collect())
+}
+
+/// The text a source note is embedded from: the words quoted, then what was
+/// thought of them (ADR 004), joined as a mark's are so the two read alike to
+/// the model.
+pub fn source_note_text(quote: Option<&str>, body: &str) -> String {
+    let quote = quote.unwrap_or("").trim();
+    let body = body.trim();
+    match (quote.is_empty(), body.is_empty()) {
+        (false, false) => format!("{quote} \u{2014} {body}"),
+        (false, true) => quote.to_string(),
+        _ => body.to_string(),
+    }
+}
+
+/// A source note's text and its hash, when its vector is missing or was made
+/// from other words. `None` when there's nothing to embed: the note is gone,
+/// says nothing, or was embedded from exactly this.
+///
+/// Read from the library rather than handed in, so what's embedded is what was
+/// saved, trimmed and all.
+pub async fn source_note_to_embed(
+    library: &SqlitePool,
+    id: &str,
+) -> Result<Option<(String, String)>, String> {
+    let row = sqlx::query(
+        "SELECT n.body, n.quote, e.text_hash
+           FROM source_notes n LEFT JOIN source_note_embeddings e ON e.id = n.id
+          WHERE n.id = ?",
+    )
+    .bind(id)
+    .fetch_optional(library)
+    .await
+    .map_err(|e| e.to_string())?;
+    let Some(row) = row else { return Ok(None) };
+
+    let text = source_note_text(row.get("quote"), row.get("body"));
+    if text.is_empty() {
+        return Ok(None);
+    }
+    let hash = text_hash(&text);
+    let embedded: Option<String> = row.get("text_hash");
+    Ok((embedded.as_deref() != Some(hash.as_str())).then_some((text, hash)))
+}
+
+/// The SHA-256 of some text, as hex: what an embedding's `text_hash` records.
+pub fn text_hash(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(text.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+/// Store a source note's vector, with the hash of the text it came from.
+pub async fn save_source_note_embedding(
+    library: &SqlitePool,
+    id: &str,
+    embedding: &[f32],
+    text_hash: &str,
+) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO source_note_embeddings (id, embedding, text_hash) VALUES (?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+            embedding = excluded.embedding, text_hash = excluded.text_hash",
+    )
+    .bind(id)
+    .bind(pack_embedding(embedding))
+    .bind(text_hash)
+    .execute(library)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Source notes with no vector, and the text and hash that would give them
+/// one: `annotations_needing_embedding` for notes. The hash is the real one,
+/// so a backfilled note isn't embedded again until its words change.
+pub async fn source_notes_needing_embedding(
+    library: &SqlitePool,
+    limit: i64,
+) -> Result<Vec<(String, String, String)>, String> {
+    let rows = sqlx::query(
+        "SELECT n.id, n.body, n.quote
+           FROM source_notes n
+           LEFT JOIN source_note_embeddings e ON e.id = n.id
+          WHERE e.id IS NULL
+          ORDER BY n.created_at, n.rowid
+          LIMIT ?",
+    )
+    .bind(limit)
+    .fetch_all(library)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(rows
+        .iter()
+        .filter_map(|row| {
+            let text = source_note_text(row.get("quote"), row.get("body"));
+            (!text.is_empty()).then(|| (row.get("id"), text_hash(&text), text))
+        })
+        .collect())
 }
 
 /// Drop every annotation brought in from another tool for this paper.
@@ -2137,6 +2283,85 @@ pub async fn search_annotations_in(
             _ => None,
         })
         .collect())
+}
+
+/// Find notes of either kind, marks and source notes, by the words in them
+/// (ADR 004: no surface special-cases either).
+///
+/// Each kind is asked as `search_annotations_literally` asks for marks, and the
+/// two lists are merged the same way: the project's first, then the newest.
+/// Both tables stamp `created_at` as SQLite's `CURRENT_TIMESTAMP`, so the
+/// dates compare as they stand.
+pub async fn search_notes_literally(
+    pool: &SqlitePool,
+    query: &str,
+    project_hashes: &[String],
+    limit: i64,
+) -> Result<Vec<Hit>, String> {
+    let marks = search_annotations_literally(pool, query, project_hashes, limit).await?;
+
+    let pattern = format!("%{}%", query.replace('%', "\\%").replace('_', "\\_"));
+    let aliases = alias_map(pool).await?;
+    let in_set: std::collections::HashSet<&str> = project_hashes
+        .iter()
+        .map(|id| resolve(&aliases, id))
+        .collect();
+    let project = serde_json::to_string(&in_set).map_err(|e| e.to_string())?;
+    // A note's `sha256` is already its work's (ADR 004), resolved again only in
+    // case an alias landed since.
+    let notes = sqlx::query(&format!(
+        "{SOURCE_NOTE_SEARCH_SELECT}
+          WHERE ?3 OR n.body LIKE ?1 ESCAPE '\\' OR n.quote LIKE ?1 ESCAPE '\\'
+          ORDER BY COALESCE((SELECT canonical FROM source_aliases WHERE alias = n.sha256), n.sha256)
+                   IN (SELECT value FROM json_each(?4)) DESC,
+                   n.created_at DESC
+          LIMIT ?2"
+    ))
+    .bind(&pattern)
+    .bind(limit)
+    .bind(query.is_empty())
+    .bind(&project)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let mut hits: Vec<Hit> = marks.into_iter().map(Hit::Annotation).collect();
+    hits.extend(notes.iter().map(|row| {
+        let source_id = resolve(&aliases, row.get::<&str, _>("sha256")).to_string();
+        let in_project = in_set.contains(source_id.as_str());
+        Hit::SourceNote(scored_note_from(row, 1.0, source_id, in_project))
+    }));
+    let key = |hit: &Hit| match hit {
+        Hit::Annotation(mark) => (mark.in_project, mark.annotation.created_at.clone()),
+        Hit::SourceNote(note) => (note.in_project, note.note.created_at.clone()),
+        Hit::Chunk(chunk) => (chunk.in_project, String::new()),
+    };
+    // Stable, so two notes made in the same second keep their kind's order.
+    hits.sort_by_key(|hit| std::cmp::Reverse(key(hit)));
+    hits.truncate(limit.max(0) as usize);
+    Ok(hits)
+}
+
+/// Find notes of either kind by what they are about: the index, asked for
+/// marks and source notes together, across the library with the project's
+/// first.
+pub async fn search_notes_in(
+    index: &Index,
+    pool: &SqlitePool,
+    query_embedding: &[f32],
+    project_hashes: &[String],
+    limit: usize,
+) -> Result<Vec<Hit>, String> {
+    search_index(
+        index,
+        pool,
+        query_embedding,
+        project_hashes,
+        &[HitKind::Annotation, HitKind::SourceNote],
+        limit,
+        true,
+    )
+    .await
 }
 
 /// What a reader would call a colour, from its hue.

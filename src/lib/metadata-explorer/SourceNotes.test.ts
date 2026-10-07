@@ -10,7 +10,8 @@ import SourceNotes from './SourceNotes.svelte';
 const db = vi.hoisted(() => ({
 	annotationLabels: vi.fn(),
 	saveSourceNote: vi.fn(async () => {}),
-	deleteSourceNote: vi.fn(async () => {})
+	deleteSourceNote: vi.fn(async () => {}),
+	embedSourceNote: vi.fn(async () => true)
 }));
 vi.mock('$lib/stores/db', () => db);
 const toast = vi.hoisted(() => ({ errorToast: vi.fn() }));
@@ -152,6 +153,28 @@ describe('the Notes tab (M1b-8, UX-3)', () => {
 		});
 		expect(onchange).toHaveBeenCalled();
 		expect(screen.queryByRole('form', { name: 'New note' })).toBeNull();
+
+		// M1b-8 AC-4: and then prepared for a search by meaning, the note just
+		// kept and no other.
+		const [saved] = db.saveSourceNote.mock.calls[0] as unknown as [{ id: string }];
+		expect(db.embedSourceNote).toHaveBeenCalledWith(saved.id);
+	});
+
+	// M1b-8 AC-4
+	it('keeps a note when it can’t be prepared for searching by meaning', async () => {
+		const user = userEvent.setup();
+		db.embedSourceNote.mockRejectedValueOnce(new Error('The model is still loading.'));
+		const { onchange } = show({ notes: [], marks: [], files: [] });
+
+		await user.click(screen.getByRole('button', { name: 'New note' }));
+		const body = screen.getByRole('textbox', { name: /^Note/ });
+		await waitFor(() => expect(body).toHaveFocus());
+		await user.type(body, 'A thought');
+		await user.keyboard('{Meta>}{Enter}{/Meta}');
+
+		await waitFor(() => expect(db.embedSourceNote).toHaveBeenCalled());
+		expect(onchange).toHaveBeenCalled();
+		expect(toast.errorToast).not.toHaveBeenCalled();
 	});
 
 	// M1b-8 AC-2

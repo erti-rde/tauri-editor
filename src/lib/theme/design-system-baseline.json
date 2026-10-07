@@ -57,11 +57,6 @@
 	"src/lib/metadata-explorer/MetadataEditor.svelte": {
 		"button": 1
 	},
-	"src/lib/notes/Notes.svelte": {
-		"button": 6,
-		"input": 2,
-		"textPx": 6
-	},
 	"src/lib/outline/Outline.svelte": {
 		"button": 1,
 		"textPx": 1
