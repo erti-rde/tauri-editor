@@ -1,0 +1,30 @@
+[
+	{
+		"id": "http://zotero.org/users/1234/items/ABCD1234",
+		"type": "article-journal",
+		"title": "Justice as Fairness",
+		"container-title": "The Philosophical Review",
+		"page": "164-194",
+		"volume": "67",
+		"issue": "2",
+		"source": "JSTOR",
+		"URL": "https://www.jstor.org/stable/2182612",
+		"DOI": "10.2307/2182612",
+		"ISSN": "0031-8108",
+		"author": [{ "family": "Rawls", "given": "John" }],
+		"accessed": { "date-parts": [["2024", 1, 5]] },
+		"issued": { "date-parts": [["1958", 4]] }
+	},
+	{
+		"id": "arendt1958",
+		"type": "book",
+		"title": "The Human Condition",
+		"publisher": "University of Chicago Press",
+		"publisher-place": "Chicago",
+		"author": [{ "family": "Arendt", "given": "Hannah" }],
+		"issued": { "date-parts": [[1958]] },
+		"custom": { "dropped": true }
+	},
+	"not a source",
+	{ "id": "untitled", "type": "book" }
+]
