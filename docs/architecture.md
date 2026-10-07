@@ -16,6 +16,7 @@ planned item lands, it says so.
 │ lib/ingest            PURE: extract, chunk, resolve, pipeline decisions                        │
 │ lib/citations         PURE: citeproc engine, whole-document render, sanitize                   │
 │ lib/export            PURE: LaTeX, BibTeX              lib/theme      tokens, palettes, contrast│
+│ lib/import            PURE: .bib, .ris, CSL-JSON → CSL items; what the library has already      │
 │ lib/ui                primitives (M1c grows these)     lib/stores     app state + IPC wrappers  │
 └───────────────────────────────────────┬───────────────────────────────────────────────────────┘
                                         │ lib/ipc: 58 typed commands (ADR 011); only results cross, never vectors
@@ -66,6 +67,10 @@ in the Tauri store `settings-store.json`.
   `metadata-explorer/SourceNotes.svelte` → `save_source_note` + `embed_source_note`. The Notes
   panel searches both with `search_notes`, each result a `Hit` saying which kind it is.
   `notes/draftContext.ts` carries the paragraph under the cursor to the panel.
+- **Importing a bibliography.** `import/index.ts` reads `.bib`, `.ris` or CSL-JSON into CSL
+  items through the shape guard (`guard/`). The BibTeX parser is loaded with `import()` on the
+  first `.bib`, never at startup (ADR 009). `import/dedupe.ts` says which the library has
+  already, by DOI, then by title, year and first author.
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
   `export/bibtex.ts` → files → `compile_latex` if TeX exists.
 
