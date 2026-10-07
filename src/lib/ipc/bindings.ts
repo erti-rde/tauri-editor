@@ -109,11 +109,12 @@ export const commands = {
 	 *  never wait on it, or be lost to it failing. The words are read back from
 	 *  the library, so what's embedded is what was kept. Skipped, resolving false,
 	 *  when they haven't changed since they were last embedded: relabelling a note
-	 *  costs no inference.
+	 *  costs no inference. False too when the note was saved again while this one
+	 *  was embedding: that save's own embedding has the words that stand.
 	 */
 	embedSourceNote: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("embed_source_note", { id })),
 	/**  Every source note in the library, for the notes export (M1b-8 AC-5). */
-	allSourceNotes: () => typedError<SourceNote[], AppError>(__TAURI_INVOKE("all_source_notes")),
+	allSourceNotes: () => typedError<NamedSourceNote[], AppError>(__TAURI_INVOKE("all_source_notes")),
 	/**  Write a note on a work, or rewrite one (M1b-8 AC-2, ADR 004). */
 	saveSourceNote: (note: NewSourceNote) => typedError<null, AppError>(__TAURI_INVOKE("save_source_note", { note })),
 	deleteSourceNote: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_source_note", { id })),
@@ -351,6 +352,15 @@ export type Hit = { kind: "chunk"; hit: ScoredChunk } | { kind: "annotation"; hi
  *  a mark or a note is a judgement already made (see `search_annotations`).
  */
 export type HitKind = "chunk" | "annotation" | "source_note";
+
+/**  A source note with its work's name: what the notes export writes out. */
+export type NamedSourceNote = {
+	/**
+	 *  How to name the work, as a search result names it. The export can't
+	 *  name it from the open project alone: the notes are the whole library's.
+	 */
+	title: string | null,
+} & SourceNote;
 
 /**
  *  An annotation on its way in. The id is chosen by the caller so the same

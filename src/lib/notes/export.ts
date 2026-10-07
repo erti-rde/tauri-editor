@@ -1,4 +1,7 @@
 import type { Annotation, AnnotationLabel, SourceNote } from '$lib/stores/db';
+
+/** A source note as the export is given it, with its work's name when known. */
+export type NamedSourceNote = SourceNote & { title?: string | null };
 import { guardSidecar, LimitError } from '$lib/guard';
 
 /**
@@ -37,9 +40,9 @@ export function toMarkdown(
 	sources: ExportSource[],
 	labels: AnnotationLabel[],
 	resolve: (id: string) => string = (id) => id,
-	sourceNotes: SourceNote[] = []
+	sourceNotes: NamedSourceNote[] = []
 ): string {
-	const byPaper = new Map<string, { notes: SourceNote[]; marks: Annotation[] }>();
+	const byPaper = new Map<string, { notes: NamedSourceNote[]; marks: Annotation[] }>();
 	const groupOf = (work: string) => {
 		const group = byPaper.get(work) ?? { notes: [], marks: [] };
 		byPaper.set(work, group);
@@ -56,7 +59,10 @@ export function toMarkdown(
 
 	for (const [sha256, { notes, marks }] of byPaper) {
 		const source = sources.find((candidate) => candidate.sha256 === sha256);
-		lines.push(`## ${source?.title ?? 'Unknown paper'}`, '');
+		// The sources are the open project's and the notes the library's, so a
+		// work elsewhere is named by its notes, which carry its name.
+		const title = source?.title ?? notes.find((note) => note.title)?.title;
+		lines.push(`## ${title ?? 'Unknown paper'}`, '');
 
 		for (const note of notes) {
 			const page = note.page_label?.trim();
@@ -102,7 +108,7 @@ export function toMarkdown(
  * is added, none is repurposed, so a reader written before notes on a source
  * reads the marks and passes over the rest.
  */
-export function toSidecar(annotations: Annotation[], sourceNotes: SourceNote[] = []): string {
+export function toSidecar(annotations: Annotation[], sourceNotes: NamedSourceNote[] = []): string {
 	return JSON.stringify(
 		{
 			// Versioned so a reader written later can tell what it is looking at.
@@ -110,7 +116,8 @@ export function toSidecar(annotations: Annotation[], sourceNotes: SourceNote[] =
 			version: 1,
 			exported_at: new Date().toISOString(),
 			annotations,
-			source_notes: sourceNotes
+			// The records as kept: a work's name is read from the work, not the note.
+			source_notes: sourceNotes.map(({ title: _title, ...note }) => note)
 		},
 		null,
 		2

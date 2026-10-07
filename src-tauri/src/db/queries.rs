@@ -1746,17 +1746,30 @@ pub async fn delete_source_note(library: &SqlitePool, id: &str) -> Result<(), St
     Ok(())
 }
 
+/// A source note with its work's name: what the notes export writes out.
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+pub struct NamedSourceNote {
+    #[serde(flatten)]
+    pub note: SourceNote,
+    /// How to name the work, as a search result names it. The export can't
+    /// name it from the open project alone: the notes are the whole library's.
+    pub title: Option<String>,
+}
+
 /// Every source note in the library, each work's together, oldest first: what
 /// the notes export writes out beside the marks (M1b-8 AC-5).
-pub async fn all_source_notes(library: &SqlitePool) -> Result<Vec<SourceNote>, String> {
+pub async fn all_source_notes(library: &SqlitePool) -> Result<Vec<NamedSourceNote>, String> {
     Ok(sqlx::query(&format!(
-        "SELECT {SOURCE_NOTE_COLUMNS} FROM source_notes ORDER BY sha256, created_at, rowid"
+        "{SOURCE_NOTE_SEARCH_SELECT} ORDER BY n.sha256, n.created_at, n.rowid"
     ))
     .fetch_all(library)
     .await
     .map_err(|e| e.to_string())?
     .iter()
-    .map(source_note_from)
+    .map(|row| NamedSourceNote {
+        note: source_note_from(row),
+        title: row.try_get::<Option<String>, _>("title").ok().flatten(),
+    })
     .collect())
 }
 
@@ -1773,18 +1786,49 @@ pub fn source_note_text(quote: Option<&str>, body: &str) -> String {
     }
 }
 
-/// A source note's text and its hash, when its vector is missing or was made
-/// from other words. `None` when there's nothing to embed: the note is gone,
-/// says nothing, or was embedded from exactly this.
+/// A source note's words as they were read, and the text and hash they make:
+/// what an embedding is made from, and what it's kept against.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NoteToEmbed {
+    pub id: String,
+    pub body: String,
+    pub quote: Option<String>,
+    pub text: String,
+    pub hash: String,
+}
+
+/// The note in a row of `id, body, quote, text_hash`, when its vector is
+/// missing or was made from other words.
+fn note_to_embed_from(row: &sqlx::sqlite::SqliteRow) -> Option<NoteToEmbed> {
+    let body: String = row.get("body");
+    let quote: Option<String> = row.get("quote");
+    let text = source_note_text(quote.as_deref(), &body);
+    if text.is_empty() {
+        return None;
+    }
+    let hash = text_hash(&text);
+    let embedded: Option<String> = row.get("text_hash");
+    (embedded.as_deref() != Some(hash.as_str())).then(|| NoteToEmbed {
+        id: row.get("id"),
+        body,
+        quote,
+        text,
+        hash,
+    })
+}
+
+/// A source note to embed, when its vector is missing or was made from other
+/// words. `None` when there's nothing to embed: the note is gone, says
+/// nothing, or was embedded from exactly this.
 ///
 /// Read from the library rather than handed in, so what's embedded is what was
 /// saved, trimmed and all.
 pub async fn source_note_to_embed(
     library: &SqlitePool,
     id: &str,
-) -> Result<Option<(String, String)>, String> {
+) -> Result<Option<NoteToEmbed>, String> {
     let row = sqlx::query(
-        "SELECT n.body, n.quote, e.text_hash
+        "SELECT n.id, n.body, n.quote, e.text_hash
            FROM source_notes n LEFT JOIN source_note_embeddings e ON e.id = n.id
           WHERE n.id = ?",
     )
@@ -1792,15 +1836,7 @@ pub async fn source_note_to_embed(
     .fetch_optional(library)
     .await
     .map_err(|e| e.to_string())?;
-    let Some(row) = row else { return Ok(None) };
-
-    let text = source_note_text(row.get("quote"), row.get("body"));
-    if text.is_empty() {
-        return Ok(None);
-    }
-    let hash = text_hash(&text);
-    let embedded: Option<String> = row.get("text_hash");
-    Ok((embedded.as_deref() != Some(hash.as_str())).then_some((text, hash)))
+    Ok(row.as_ref().and_then(note_to_embed_from))
 }
 
 /// The SHA-256 of some text, as hex: what an embedding's `text_hash` records.
@@ -1811,53 +1847,64 @@ pub fn text_hash(text: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-/// Store a source note's vector, with the hash of the text it came from.
+/// Store a source note's vector, with the hash of the text it came from, if
+/// the note still says what it said when it was read. False when it doesn't,
+/// or is gone.
+///
+/// Inference takes seconds, and the note can be saved again meanwhile. Kept
+/// unconditionally, the slower of two embeds would win, and a vector of the
+/// older words would stand under their hash. The words are compared in the
+/// same statement that writes, so nothing lands between the check and the
+/// write.
 pub async fn save_source_note_embedding(
     library: &SqlitePool,
-    id: &str,
+    note: &NoteToEmbed,
     embedding: &[f32],
-    text_hash: &str,
-) -> Result<(), String> {
-    sqlx::query(
-        "INSERT INTO source_note_embeddings (id, embedding, text_hash) VALUES (?, ?, ?)
+) -> Result<bool, String> {
+    // The WHERE also settles SQLite's upsert-after-SELECT parsing ambiguity.
+    let saved = sqlx::query(
+        "INSERT INTO source_note_embeddings (id, embedding, text_hash)
+         SELECT id, ?2, ?3 FROM source_notes WHERE id = ?1 AND body = ?4 AND quote IS ?5
          ON CONFLICT(id) DO UPDATE SET
             embedding = excluded.embedding, text_hash = excluded.text_hash",
     )
-    .bind(id)
+    .bind(&note.id)
     .bind(pack_embedding(embedding))
-    .bind(text_hash)
+    .bind(&note.hash)
+    .bind(&note.body)
+    .bind(&note.quote)
     .execute(library)
     .await
     .map_err(|e| e.to_string())?;
-    Ok(())
+    Ok(saved.rows_affected() > 0)
 }
 
-/// Source notes with no vector, and the text and hash that would give them
-/// one: `annotations_needing_embedding` for notes. The hash is the real one,
-/// so a backfilled note isn't embedded again until its words change.
+/// Source notes whose vector is missing or was made from other words: what
+/// "Prepare my notes" embeds. `annotations_needing_embedding` for notes, but
+/// the hash is the real one, so a backfilled note isn't embedded again until
+/// its words change, and one whose re-embedding failed after an edit is.
+///
+/// The hash is SHA-256, which SQLite can't compute, so every note is read and
+/// compared here. A library holds a few thousand at most, and this runs when
+/// asked, not as anyone types.
 pub async fn source_notes_needing_embedding(
     library: &SqlitePool,
-    limit: i64,
-) -> Result<Vec<(String, String, String)>, String> {
+    limit: usize,
+) -> Result<Vec<NoteToEmbed>, String> {
     let rows = sqlx::query(
-        "SELECT n.id, n.body, n.quote
+        "SELECT n.id, n.body, n.quote, e.text_hash
            FROM source_notes n
            LEFT JOIN source_note_embeddings e ON e.id = n.id
-          WHERE e.id IS NULL
-          ORDER BY n.created_at, n.rowid
-          LIMIT ?",
+          ORDER BY n.created_at, n.rowid",
     )
-    .bind(limit)
     .fetch_all(library)
     .await
     .map_err(|e| e.to_string())?;
 
     Ok(rows
         .iter()
-        .filter_map(|row| {
-            let text = source_note_text(row.get("quote"), row.get("body"));
-            (!text.is_empty()).then(|| (row.get("id"), text_hash(&text), text))
-        })
+        .filter_map(note_to_embed_from)
+        .take(limit)
         .collect())
 }
 
@@ -2186,6 +2233,18 @@ const ANNOTATION_SEARCH_SELECT: &str = "SELECT a.id, a.sha256, a.kind, a.label_i
               ORDER BY l.last_seen DESC LIMIT 1) AS file_name
        FROM annotations a";
 
+/// `%query%` for a LIKE with `ESCAPE '\'`, the query's own `%`, `_` and `\`
+/// taken literally. The backslash goes first: escaped after the others, it
+/// would double their escapes, and left alone, a query ending in one would
+/// escape the closing `%` and find nothing.
+fn like_pattern(query: &str) -> String {
+    let escaped = query
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
+    format!("%{escaped}%")
+}
+
 /// Find marks by the words in them.
 ///
 /// `LIKE` rather than FTS5, deliberately. There is no full-text index anywhere
@@ -2208,7 +2267,7 @@ pub async fn search_annotations_literally(
     project_hashes: &[String],
     limit: i64,
 ) -> Result<Vec<ScoredAnnotation>, String> {
-    let pattern = format!("%{}%", query.replace('%', "\\%").replace('_', "\\_"));
+    let pattern = like_pattern(query);
     let aliases = alias_map(pool).await?;
     let in_set: std::collections::HashSet<&str> = project_hashes
         .iter()
@@ -2300,7 +2359,7 @@ pub async fn search_notes_literally(
 ) -> Result<Vec<Hit>, String> {
     let marks = search_annotations_literally(pool, query, project_hashes, limit).await?;
 
-    let pattern = format!("%{}%", query.replace('%', "\\%").replace('_', "\\_"));
+    let pattern = like_pattern(query);
     let aliases = alias_map(pool).await?;
     let in_set: std::collections::HashSet<&str> = project_hashes
         .iter()

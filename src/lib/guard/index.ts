@@ -34,7 +34,7 @@ export const LIMITS = {
 	importEntries: 50_000,
 	/** Sources carried in one manuscript. */
 	manuscriptSources: 20_000,
-	/** Marks in one sidecar. */
+	/** Marks and source notes in one sidecar, together. */
 	sidecarMarks: 100_000,
 	/** People in one name list: large collaborations run to a few thousand. */
 	names: 10_000,
@@ -560,11 +560,33 @@ const SOURCE_NOTE_TEXT = [
 const LONG_SOURCE_NOTE_TEXT = new Set(['body', 'quote']);
 
 /**
+ * The library's own ceilings on a note's words, counted as Rust counts them
+ * (`save_source_note_in`), in characters and after the same trimming.
+ */
+const SOURCE_NOTE_CEILINGS: Record<string, [number, (raw: string) => string]> = {
+	body: [LIMITS.longField, (raw) => raw.trimEnd()],
+	quote: [LIMITS.longField, (raw) => raw.trim()],
+	page_label: [100, (raw) => raw.trim()]
+};
+
+/**
  * One source note from a sidecar (M1b-8 AC-5). Refused without an id, a work,
  * and something said, the quote or the note itself, as the library refuses one.
+ * Refused too when it says more than the library keeps: cut short here, it
+ * would come back as less than was written, and say nothing about it.
  */
 export function guardSourceNote(value: unknown): Record<string, string | null> {
 	if (!isRecord(value)) throw new ShapeError('A note must be an object.');
+	for (const [key, [max, trimmed]] of Object.entries(SOURCE_NOTE_CEILINGS)) {
+		const raw = value[key];
+		if (typeof raw === 'string' && [...trimmed(raw)].length > max) {
+			throw new ShapeError(
+				key === 'page_label'
+					? 'A note’s page is a number or a short label, such as 853 or xiv.'
+					: 'A note is too long to keep.'
+			);
+		}
+	}
 	const note: Record<string, string | null> = {};
 	for (const key of SOURCE_NOTE_TEXT) {
 		note[key] =
@@ -600,10 +622,12 @@ export function guardSidecar(value: unknown): {
 	// still a sidecar.
 	const notes = value.source_notes === undefined ? [] : value.source_notes;
 	if (!Array.isArray(notes)) throw new ShapeError('This Erti notes file is damaged.');
-	if (notes.length > LIMITS.sidecarMarks) {
+	// One ceiling for both kinds: it bounds the file, not each list in it.
+	const total = value.annotations.length + notes.length;
+	if (total > LIMITS.sidecarMarks) {
 		throw new LimitError(
 			'sidecarMarks',
-			`A notes file can hold at most ${count(LIMITS.sidecarMarks)} source notes; this one holds ${count(notes.length)}.`
+			`A notes file can hold at most ${count(LIMITS.sidecarMarks)} marks and notes together; this one holds ${count(total)}.`
 		);
 	}
 	return {

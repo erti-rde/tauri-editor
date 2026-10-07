@@ -157,11 +157,13 @@
 		}
 	}
 
-	/** Whether there's a note of either kind, for a search that found none. */
+	/**
+	 * Whether there's a note of either kind, for a search that found none. An
+	 * empty search by words filters nothing, so one result says there is,
+	 * without reading every note to find out.
+	 */
 	async function anyNotes(): Promise<boolean> {
-		const marks = await allAnnotations({ limit: 1 });
-		if (Array.isArray(marks) && marks.length > 0) return true;
-		const notes = await allSourceNotes();
+		const notes = await searchNotes('', { limit: 1 });
 		return Array.isArray(notes) && notes.length > 0;
 	}
 
@@ -270,9 +272,9 @@
 			label="Show notes about the paragraph I'm in"
 			description="Updates as you write, by meaning. Typing a search here takes over."
 			bind:checked={following}
-			onCheckedChange={() => {
+			onCheckedChange={(checked) => {
 				followed = '';
-				if (!following) void run();
+				if (!checked) void run();
 			}}
 		/>
 

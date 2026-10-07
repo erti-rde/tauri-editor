@@ -964,7 +964,8 @@ pub async fn delete_source_note_in(state: &DbState, id: String) -> Result<(), Ap
 /// never wait on it, or be lost to it failing. The words are read back from
 /// the library, so what's embedded is what was kept. Skipped, resolving false,
 /// when they haven't changed since they were last embedded: relabelling a note
-/// costs no inference.
+/// costs no inference. False too when the note was saved again while this one
+/// was embedding: that save's own embedding has the words that stand.
 #[tauri::command]
 #[specta::specta]
 pub async fn embed_source_note(state: State<'_, DbState>, id: String) -> Result<bool, AppError> {
@@ -985,7 +986,7 @@ pub async fn embed_source_note_with(
     embed: impl FnOnce(String) -> Result<Vec<f32>, String> + Send + 'static,
 ) -> Result<bool, AppError> {
     let library = state.library().await?;
-    let Some((text, hash)) = queries::source_note_to_embed(&library, id)
+    let Some(note) = queries::source_note_to_embed(&library, id)
         .await
         .or_database()?
     else {
@@ -993,15 +994,15 @@ pub async fn embed_source_note_with(
     };
     // spawn_blocking for the same reason search_sources does it: inference has
     // no await points and would hold an async worker for its whole duration.
+    let text = note.text.clone();
     let embedding = tokio::task::spawn_blocking(move || embed(text))
         .await
         .or_internal()?
         .or_model()?;
 
-    let saved = queries::save_source_note_embedding(&library, id, &embedding, &hash).await;
+    let saved = queries::save_source_note_embedding(&library, &note, &embedding).await;
     state.invalidate_index();
-    saved.or_database()?;
-    Ok(true)
+    saved.or_database()
 }
 
 /// Every source note in the library, for the notes export (M1b-8 AC-5).
@@ -1009,7 +1010,7 @@ pub async fn embed_source_note_with(
 #[specta::specta]
 pub async fn all_source_notes(
     state: State<'_, DbState>,
-) -> Result<Vec<queries::SourceNote>, AppError> {
+) -> Result<Vec<queries::NamedSourceNote>, AppError> {
     queries::all_source_notes(&state.library().await?)
         .await
         .or_database()
@@ -1205,13 +1206,21 @@ pub async fn embed_pending_annotations(state: State<'_, DbState>) -> Result<u32,
 
     // Bounded: a first run over a large library should take a moment and finish,
     // not hold the model for a minute. Running it again picks up the rest.
-    let pending = queries::annotations_needing_embedding(&library, 500)
+    let marks = embed_pending_marks(state.inner(), &library).await?;
+    // Source notes too (M1b-8 AC-4): "Prepare my notes" means all of them.
+    // After the marks, which are kept by now, so a note that fails to embed
+    // can't cost a mark its vector.
+    let notes = embed_pending_source_notes(state.inner(), &library).await?;
+    Ok(count(marks + notes))
+}
+
+/// Embed the marks that have no vector, in one batch.
+async fn embed_pending_marks(state: &DbState, library: &sqlx::SqlitePool) -> Result<u64, AppError> {
+    let pending = queries::annotations_needing_embedding(library, 500)
         .await
         .or_database()?;
-    // Source notes too (M1b-8 AC-4): "Prepare my notes" means all of them.
-    let notes = embed_pending_source_notes(state.inner(), &library).await?;
     if pending.is_empty() {
-        return Ok(count(notes));
+        return Ok(0);
     }
 
     let (ids, texts): (Vec<String>, Vec<String>) = pending.into_iter().unzip();
@@ -1228,17 +1237,16 @@ pub async fn embed_pending_annotations(state: State<'_, DbState>) -> Result<u32,
     for (id, embedding) in ids.iter().zip(embeddings.iter()) {
         // A hash of nothing: these are backfills, and the next real edit
         // re-embeds them under the hash of whatever it then says.
-        let saved = queries::save_annotation_embedding(&library, id, embedding, "backfilled").await;
+        let saved = queries::save_annotation_embedding(library, id, embedding, "backfilled").await;
         state.invalidate_index();
         saved.or_database()?;
         done += 1;
     }
-
-    Ok(count(done as u64 + notes))
+    Ok(done)
 }
 
-/// Embed the source notes that have no vector, in one batch, under the hash
-/// of their words.
+/// Embed the source notes whose vector is missing or stale, in one batch,
+/// under the hash of their words.
 async fn embed_pending_source_notes(
     state: &DbState,
     library: &sqlx::SqlitePool,
@@ -1249,7 +1257,7 @@ async fn embed_pending_source_notes(
     if pending.is_empty() {
         return Ok(0);
     }
-    let texts: Vec<String> = pending.iter().map(|(_, _, text)| text.clone()).collect();
+    let texts: Vec<String> = pending.iter().map(|note| note.text.clone()).collect();
     let embeddings =
         tokio::task::spawn_blocking(move || crate::commands::embed_texts(&texts, true))
             .await
@@ -1257,11 +1265,14 @@ async fn embed_pending_source_notes(
             .or_model()?;
 
     let mut done = 0;
-    for ((id, hash, _), embedding) in pending.iter().zip(embeddings.iter()) {
-        let saved = queries::save_source_note_embedding(library, id, embedding, hash).await;
+    for (note, embedding) in pending.iter().zip(embeddings.iter()) {
+        // Not counted when the note changed while the batch ran: its own
+        // save's embedding has the words that stand.
+        let saved = queries::save_source_note_embedding(library, note, embedding).await;
         state.invalidate_index();
-        saved.or_database()?;
-        done += 1;
+        if saved.or_database()? {
+            done += 1;
+        }
     }
     Ok(done)
 }

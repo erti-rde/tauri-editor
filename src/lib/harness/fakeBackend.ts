@@ -800,11 +800,14 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			return true;
 		},
 
+		// Named as a search result names the work, as in Rust.
 		allSourceNotes: () => (
 			library(),
-			[...state.sourceNotes.values()].sort(
-				(a, b) => a.sha256.localeCompare(b.sha256) || a.created_at.localeCompare(b.created_at)
-			)
+			[...state.sourceNotes.values()]
+				.sort(
+					(a, b) => a.sha256.localeCompare(b.sha256) || a.created_at.localeCompare(b.created_at)
+				)
+				.map((n) => ({ ...n, title: titleOf(canon(n.sha256)) ?? fileName(canon(n.sha256)) }))
 		),
 
 		deleteAnnotation(id) {

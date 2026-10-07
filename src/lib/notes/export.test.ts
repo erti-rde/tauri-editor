@@ -83,6 +83,21 @@ describe('notes on a source, written out', () => {
 		expect(out).toContain('## Jones 2019, Another\n\n**Note**\n\nThe study I argue');
 	});
 
+	it("are under their work's name when it isn't in the open project", () => {
+		const out = toMarkdown([], sources, labels, undefined, [
+			{ ...sourceNote({ sha256: 'elsewhere' }), title: 'Orality and Literacy' }
+		]);
+
+		expect(out).toContain('## Orality and Literacy');
+		expect(out).not.toContain('Unknown paper');
+	});
+
+	it("travel in the sidecar as kept, without their work's name", () => {
+		const back = parseSidecar(toSidecar([], [{ ...sourceNote(), title: 'A Study' }]));
+
+		expect(back?.source_notes).toEqual([sourceNote()]);
+	});
+
 	it('travel in the sidecar and come back from it, ids and all', () => {
 		const notes = [sourceNote(), sourceNote({ id: 'n2', quote: 'Words', page_label: '37' })];
 

@@ -277,12 +277,12 @@ async fn a_note_is_embedded_from_its_quote_and_body_and_not_again_while_they_sta
         .await
         .unwrap();
     let library = state.library().await.unwrap();
-    let (text, _) = queries::source_note_to_embed(&library, NOTE)
+    let to_embed = queries::source_note_to_embed(&library, NOTE)
         .await
         .unwrap()
         .expect("a new note wants a vector");
     assert_eq!(
-        text,
+        to_embed.text,
         "Oral structures look to pragmatics. \u{2014} Additive, not subordinative."
     );
 
@@ -338,12 +338,80 @@ async fn notes_never_embedded_are_found_with_the_hash_of_their_words() {
         .unwrap();
     assert_eq!(
         pending,
-        vec![(
-            NOTE.to_string(),
-            queries::text_hash("Never embedded"),
-            "Never embedded".to_string()
-        )]
+        vec![queries::NoteToEmbed {
+            id: NOTE.to_string(),
+            body: "Never embedded".to_string(),
+            quote: None,
+            text: "Never embedded".to_string(),
+            hash: queries::text_hash("Never embedded"),
+        }]
     );
+}
+
+// M1b-8 AC-4: a note edited while the model couldn't run keeps its old
+// vector, and "Prepare my notes" must still see it as unprepared.
+#[tokio::test]
+async fn a_note_whose_words_changed_since_its_vector_is_embedded_again() {
+    let state = opened("stale").await;
+    save_source_note_in(&state, note(NOTE, BOOK, "First words"))
+        .await
+        .unwrap();
+    let asked = Arc::new(AtomicUsize::new(0));
+    embed_source_note_with(&state, NOTE, model(&asked))
+        .await
+        .unwrap();
+    // Edited, and its embedding failed: the old vector stands.
+    save_source_note_in(&state, note(NOTE, BOOK, "Second words"))
+        .await
+        .unwrap();
+    assert!(
+        embed_source_note_with(&state, NOTE, |_| Err("the model isn't ready".into()))
+            .await
+            .is_err()
+    );
+
+    let library = state.library().await.unwrap();
+    let pending = queries::source_notes_needing_embedding(&library, 10)
+        .await
+        .unwrap();
+    assert_eq!(
+        pending.iter().map(|n| n.text.as_str()).collect::<Vec<_>>(),
+        vec!["Second words"]
+    );
+}
+
+// M1b-8 AC-4: two saves close together, and the first one's inference
+// finishing last, mustn't leave the older words' vector standing.
+#[tokio::test]
+async fn a_vector_of_words_since_replaced_is_not_kept() {
+    let state = opened("raced").await;
+    save_source_note_in(&state, note(NOTE, BOOK, "Old words"))
+        .await
+        .unwrap();
+    let library = state.library().await.unwrap();
+    let read_before_the_edit = queries::source_note_to_embed(&library, NOTE)
+        .await
+        .unwrap()
+        .unwrap();
+
+    save_source_note_in(&state, note(NOTE, BOOK, "New words"))
+        .await
+        .unwrap();
+    let asked = Arc::new(AtomicUsize::new(0));
+    assert!(embed_source_note_with(&state, NOTE, model(&asked))
+        .await
+        .unwrap());
+
+    // The slower embed of the old words lands now, and is refused.
+    assert!(
+        !queries::save_source_note_embedding(&library, &read_before_the_edit, &[0.0, 1.0])
+            .await
+            .unwrap()
+    );
+    assert!(queries::source_note_to_embed(&library, NOTE)
+        .await
+        .unwrap()
+        .is_none());
 }
 
 fn found(hits: &[queries::Hit]) -> Vec<(&'static str, String)> {
@@ -395,6 +463,16 @@ async fn a_search_by_words_finds_source_notes_beside_marks() {
     assert_eq!(hit.source_id, BOOK);
     assert!(hit.in_project);
 
+    // A backslash is a character like any other, even last.
+    save_source_note_in(&state, note("path", BOOK, r"Kept in C:\notes\"))
+        .await
+        .unwrap();
+    let by_backslash = search_notes_literally_in(&state, r"notes\".into(), 10)
+        .await
+        .unwrap();
+    assert_eq!(found(&by_backslash), vec![("note", "path".into())]);
+    delete_source_note_in(&state, "path".into()).await.unwrap();
+
     // Nothing asked: every note of both kinds, as browsing shows them.
     let everything = search_notes_literally_in(&state, "".into(), 10)
         .await
@@ -438,7 +516,11 @@ async fn every_source_note_is_listed_for_the_export() {
     let all = queries::all_source_notes(&library).await.unwrap();
 
     assert_eq!(
-        all.iter().map(|n| n.body.as_str()).collect::<Vec<_>>(),
+        all.iter().map(|n| n.note.body.as_str()).collect::<Vec<_>>(),
         vec!["First", "Second"]
     );
+    // Named, so a work outside the open project isn't "Unknown paper".
+    assert!(all
+        .iter()
+        .all(|n| n.title.as_deref() == Some("Orality and Literacy")));
 }
