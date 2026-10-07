@@ -95,6 +95,16 @@ async function ask(user: ReturnType<typeof userEvent.setup>, words: string) {
 	await user.click(screen.getByRole('radio', { name: 'Meaning' }));
 }
 
+/**
+ * Nothing found by the search itself, though a note exists: what an unprepared
+ * library looks like. Only the one-result check for any note at all finds it.
+ */
+function onlyTheCheckForAnyNoteFinds(found: unknown) {
+	db.searchNotes.mockImplementation(async (query, options) =>
+		query === '' && (options as { limit?: number } | undefined)?.limit === 1 ? [found] : []
+	);
+}
+
 describe('when there is nothing to show', () => {
 	it('says a search failed rather than going blank', async () => {
 		const user = userEvent.setup();
@@ -118,8 +128,7 @@ describe('when there is nothing to show', () => {
 		// Marks exist, and none of them has a vector — so searching by meaning
 		// finds nothing for a reason the reader can act on.
 		const user = userEvent.setup();
-		db.searchNotes.mockResolvedValue([]);
-		db.allAnnotations.mockResolvedValue([MARK]);
+		onlyTheCheckForAnyNoteFinds(hit(MARK));
 
 		render(Notes);
 		await ask(user, 'attention');
@@ -130,8 +139,7 @@ describe('when there is nothing to show', () => {
 
 	it('embeds them when asked, and looks again', async () => {
 		const user = userEvent.setup();
-		db.searchNotes.mockResolvedValue([]);
-		db.allAnnotations.mockResolvedValue([MARK]);
+		onlyTheCheckForAnyNoteFinds(hit(MARK));
 		db.embedPendingAnnotations.mockResolvedValue(3);
 
 		render(Notes);
@@ -143,8 +151,10 @@ describe('when there is nothing to show', () => {
 
 		await waitFor(() => expect(db.embedPendingAnnotations).toHaveBeenCalled());
 		// And asks again, so a successful preparation shows its results at once.
-		await waitFor(() => expect(db.searchNotes.mock.calls.length).toBeGreaterThan(before));
-		expect(db.searchNotes.mock.calls.at(-1)?.[0]).toBe('attention');
+		// (Finding nothing again, it checks for any note after, so not the last call.)
+		await waitFor(() =>
+			expect(db.searchNotes.mock.calls.slice(before).map(([query]) => query)).toContain('attention')
+		);
 	});
 
 	it('does not blame preparation when a literal search finds nothing', async () => {
@@ -275,7 +285,7 @@ describe('a note on a source', () => {
 
 	it('counts as a note a search by meaning could not see', async () => {
 		const user = userEvent.setup();
-		db.allSourceNotes.mockResolvedValue([SOURCE_NOTE]);
+		onlyTheCheckForAnyNoteFinds(noteHit(SOURCE_NOTE));
 
 		render(Notes);
 		await ask(user, 'pragmatics');

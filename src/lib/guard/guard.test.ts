@@ -342,6 +342,30 @@ describe('a sidecar', () => {
 		).toThrow(ShapeError);
 	});
 
+	// M1b-8 AC-5: what the library would refuse, refused whole, not cut short.
+	it('refuses a source note longer than the library keeps', () => {
+		const at = (key: string, length: number) =>
+			guardSourceNote({ id: 'n1', sha256: 'w', body: 'A thought', [key]: 'x'.repeat(length) });
+		expect(at('page_label', 100).page_label).toHaveLength(100);
+		expect(() => at('page_label', 101)).toThrow(/short label/);
+		expect(at('body', LIMITS.longField).body).toHaveLength(LIMITS.longField);
+		expect(() => at('body', LIMITS.longField + 1)).toThrow(/too long/);
+		expect(() => at('quote', LIMITS.longField + 1)).toThrow(/too long/);
+	});
+
+	// M1b-8 AC-5
+	it('counts marks and source notes against one limit', () => {
+		const half = Array.from({ length: LIMITS.sidecarMarks / 2 + 1 });
+		expect(() =>
+			guardSidecar({
+				format: 'erti-annotations',
+				version: 1,
+				annotations: half.map(() => mark),
+				source_notes: half.map(() => ({ id: 'n1', sha256: 'w', body: 'A thought' }))
+			})
+		).toThrow(/at most 100,000 marks and notes together/);
+	});
+
 	// M1b-10 AC-3
 	it('refuses more marks than the limit, saying so', () => {
 		const annotations = { length: LIMITS.sidecarMarks + 1 } as unknown as unknown[];
