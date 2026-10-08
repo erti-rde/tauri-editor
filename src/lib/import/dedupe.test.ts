@@ -62,6 +62,29 @@ describe('what the library has already', () => {
 		expect(known).toHaveLength(1);
 	});
 
+	// M1b-9 AC-4
+	it('by title against any work with that title whose DOI doesn’t rule it out', () => {
+		const library: Known[] = [
+			{ id: 'w1', csl: { ...rawls, DOI: '10.5555/one' } },
+			{ id: 'w2', csl: rawls }
+		];
+		const { known } = dedupe(library, [entry('a', { ...rawls, DOI: '10.5555/two' })]);
+		expect(known).toEqual([expect.objectContaining({ match: { by: 'title', id: 'w2' } })]);
+	});
+
+	it('within the file too: a later entry with no DOI is a repeat of either', () => {
+		const { fresh, repeated } = dedupe(
+			[],
+			[
+				entry('a', { ...rawls, DOI: '10.5555/one' }),
+				entry('b', { ...rawls, DOI: '10.5555/two' }),
+				entry('c', rawls)
+			]
+		);
+		expect(fresh.map((e) => e.key)).toEqual(['a', 'b']);
+		expect(repeated).toEqual([expect.objectContaining({ of: 'a' })]);
+	});
+
 	it('a source with no details yet matches nothing', () => {
 		const { fresh } = dedupe([{ id: 'w3', csl: null }], [entry('a', rawls)]);
 		expect(fresh).toHaveLength(1);

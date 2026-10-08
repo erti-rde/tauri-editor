@@ -73,19 +73,41 @@ export function titleKeyOf(csl: Record<string, unknown> | null): string | null {
 	return `${title}|${yearOf(csl.issued) ?? ''}|${firstPerson(csl)}`;
 }
 
+type Titled = { id: string; doi: string | null };
+
+/**
+ * Works with one title key, each with its DOI. All are kept: the first may
+ * have a DOI that rules it out where a later one, with none, still matches.
+ */
+class ByTitle {
+	private works = new Map<string, Titled[]>();
+
+	add(key: string | null, work: Titled) {
+		if (!key) return;
+		const list = this.works.get(key);
+		if (list) list.push(work);
+		else this.works.set(key, [work]);
+	}
+
+	/** The first with this key whose DOI doesn't say it's a different work. */
+	match(key: string | null, doi: string | null): string | undefined {
+		if (!key) return undefined;
+		return this.works.get(key)?.find((work) => !(doi && work.doi))?.id;
+	}
+}
+
 export function dedupe(library: Known[], incoming: ImportEntry[]): Sorted {
 	const byDoi = new Map<string, string>();
-	const byTitle = new Map<string, { id: string; doi: string | null }>();
+	const byTitle = new ByTitle();
 	for (const { id, csl } of library) {
 		const doi = doiOf(csl);
-		const key = titleKeyOf(csl);
 		if (doi && !byDoi.has(doi)) byDoi.set(doi, id);
-		if (key && !byTitle.has(key)) byTitle.set(key, { id, doi });
+		byTitle.add(titleKeyOf(csl), { id, doi });
 	}
 
 	const sorted: Sorted = { fresh: [], known: [], repeated: [] };
 	const seenDoi = new Map<string, string>();
-	const seenTitle = new Map<string, { key: string; doi: string | null }>();
+	const seenTitle = new ByTitle();
 	for (const entry of incoming) {
 		const doi = doiOf(entry.item);
 		const key = titleKeyOf(entry.item);
@@ -95,21 +117,19 @@ export function dedupe(library: Known[], incoming: ImportEntry[]): Sorted {
 			continue;
 		}
 		// A DOI that differs says they're different works, whatever their titles.
-		const titled = key ? byTitle.get(key) : undefined;
-		if (titled && !(doi && titled.doi)) {
-			sorted.known.push({ entry, match: { by: 'title', id: titled.id } });
+		const titled = byTitle.match(key, doi);
+		if (titled) {
+			sorted.known.push({ entry, match: { by: 'title', id: titled } });
 			continue;
 		}
 		// The same rule within the file: different DOIs, different works.
-		const sameTitle = key ? seenTitle.get(key) : undefined;
-		const earlier =
-			(doi && seenDoi.get(doi)) || (sameTitle && !(doi && sameTitle.doi) ? sameTitle.key : null);
+		const earlier = (doi && seenDoi.get(doi)) || seenTitle.match(key, doi);
 		if (earlier) {
 			sorted.repeated.push({ entry, of: earlier });
 			continue;
 		}
 		if (doi) seenDoi.set(doi, entry.key);
-		if (key && !seenTitle.has(key)) seenTitle.set(key, { key: entry.key, doi });
+		seenTitle.add(key, { id: entry.key, doi });
 		sorted.fresh.push(entry);
 	}
 	return sorted;
