@@ -67,6 +67,26 @@ describe('what the library has already', () => {
 		expect(fresh).toHaveLength(1);
 	});
 
+	// M1b-9 AC-4
+	it('a DOI is compared whole, a final full stop and all', () => {
+		const library: Known[] = [{ id: 'w1', csl: { title: 'A', DOI: '10.5555/foo.' } }];
+		const { fresh, known } = dedupe(library, [
+			entry('a', { title: 'B', DOI: '10.5555/foo' }),
+			entry('b', { title: 'C', DOI: 'https://doi.org/10.5555/FOO.' })
+		]);
+		expect(fresh.map((e) => e.key)).toEqual(['a']);
+		expect(known.map((k) => k.entry.key)).toEqual(['b']);
+	});
+
+	it('two entries in the file with one title but different DOIs are both imported', () => {
+		const { fresh, repeated } = dedupe(
+			[],
+			[entry('a', { ...rawls, DOI: '10.5555/one' }), entry('b', { ...rawls, DOI: '10.5555/two' })]
+		);
+		expect(fresh.map((e) => e.key)).toEqual(['a', 'b']);
+		expect(repeated).toEqual([]);
+	});
+
 	it('an entry listed twice in the file is imported once', () => {
 		const { fresh, repeated } = dedupe([], [entry('a', rawls), entry('b', { ...rawls })]);
 		expect(fresh.map((e) => e.key)).toEqual(['a']);

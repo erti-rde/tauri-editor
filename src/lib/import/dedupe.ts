@@ -1,4 +1,3 @@
-import { findDoi } from '$lib/ingest/identifiers';
 import { plainText, yearOf } from './csl';
 import type { ImportEntry } from './types';
 
@@ -45,8 +44,26 @@ function firstPerson(csl: Record<string, unknown>): string {
 	return '';
 }
 
+const RESOLVERS = [
+	'https://doi.org/',
+	'http://doi.org/',
+	'https://dx.doi.org/',
+	'http://dx.doi.org/',
+	'doi:'
+];
+
+/**
+ * A DOI field as the library compares it (`normalise_doi` in queries.rs):
+ * lowercased, without a resolver in front. Nothing else is trimmed: this is a
+ * field that holds a DOI, not prose around one, and a suffix may end in a
+ * full stop that makes it a different DOI.
+ */
 export function doiOf(csl: Record<string, unknown> | null): string | null {
-	return typeof csl?.DOI === 'string' ? findDoi(csl.DOI) : null;
+	if (typeof csl?.DOI !== 'string') return null;
+	const lower = csl.DOI.trim().toLowerCase();
+	const resolver = RESOLVERS.find((prefix) => lower.startsWith(prefix));
+	const bare = (resolver ? lower.slice(resolver.length) : lower).trim();
+	return bare || null;
 }
 
 /** Title, year and first author as one key; null for a work with no title to match on. */
@@ -68,7 +85,7 @@ export function dedupe(library: Known[], incoming: ImportEntry[]): Sorted {
 
 	const sorted: Sorted = { fresh: [], known: [], repeated: [] };
 	const seenDoi = new Map<string, string>();
-	const seenTitle = new Map<string, string>();
+	const seenTitle = new Map<string, { key: string; doi: string | null }>();
 	for (const entry of incoming) {
 		const doi = doiOf(entry.item);
 		const key = titleKeyOf(entry.item);
@@ -83,13 +100,16 @@ export function dedupe(library: Known[], incoming: ImportEntry[]): Sorted {
 			sorted.known.push({ entry, match: { by: 'title', id: titled.id } });
 			continue;
 		}
-		const earlier = (doi && seenDoi.get(doi)) || (key && seenTitle.get(key));
+		// The same rule within the file: different DOIs, different works.
+		const sameTitle = key ? seenTitle.get(key) : undefined;
+		const earlier =
+			(doi && seenDoi.get(doi)) || (sameTitle && !(doi && sameTitle.doi) ? sameTitle.key : null);
 		if (earlier) {
 			sorted.repeated.push({ entry, of: earlier });
 			continue;
 		}
 		if (doi) seenDoi.set(doi, entry.key);
-		if (key) seenTitle.set(key, entry.key);
+		if (key && !seenTitle.has(key)) seenTitle.set(key, { key: entry.key, doi });
 		sorted.fresh.push(entry);
 	}
 	return sorted;
