@@ -7,7 +7,7 @@
 	import { documentsStore } from '$lib/stores/documents.svelte';
 	import { projectSources } from '$lib/stores/db';
 	import { workspaceStore } from '$lib/workspace/workspaceStore';
-	import { applyManualDoi, retryIngest } from '$utils/pdf_handlers';
+	import { applyManualDoi, ingestAll, retryIngest } from '$utils/pdf_handlers';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { open as pickFile } from '@tauri-apps/plugin-dialog';
@@ -19,7 +19,7 @@
 	import { augmentSchema } from './adapterCslZotero';
 	import { attachPdf } from './attach';
 	import type { FromDoi } from './fromDoi';
-	import type { Imported } from './bibliography';
+	import { fileNameOf, type Imported } from './bibliography';
 	import { describeAuthors, describeType } from './sourceRows';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 	import { log } from '$lib/log';
@@ -244,24 +244,49 @@
 		if (typeof path === 'string') importing = path;
 	}
 
-	async function afterImport({ added, skipped }: Imported, toProject: boolean) {
+	async function afterImport(
+		{ added, skipped, attached, unattached }: Imported,
+		toProject: boolean
+	) {
 		importing = null;
-		const n = added.length.toLocaleString('en-GB');
+		const count = (n: number) => n.toLocaleString('en-GB');
+		const n = count(added.length);
 		const sources = added.length === 1 ? 'source' : 'sources';
 		const meanwhile =
 			skipped > 0
-				? ` ${skipped.toLocaleString('en-GB')} more turned out to be in it already, and were left out.`
+				? ` ${count(skipped)} more turned out to be in it already, and were left out.`
+				: '';
+		const reading = attached.filter((file) => file.needs_ingest);
+		const pdfs =
+			attached.length > 0
+				? ` Attached ${count(attached.length)} ${attached.length === 1 ? 'PDF' : 'PDFs'}${reading.length > 0 ? ', which Erti is reading now' : ''}.`
 				: '';
 		// Only this project's sources are listed, so there's only something to
 		// show when they were added to it.
 		if (toProject) {
-			successToast(`Imported ${n} ${sources} into your library and this project.${meanwhile}`);
+			successToast(
+				`Imported ${n} ${sources} into your library and this project.${pdfs}${meanwhile}`
+			);
 			searchQuery = '';
 			if (added.length > 0) importedJustNow = new Set(added);
 		} else {
-			successToast(`Imported ${n} ${sources} into your library.${meanwhile}`);
+			successToast(`Imported ${n} ${sources} into your library.${pdfs}${meanwhile}`);
+		}
+		if (unattached.length > 0) {
+			const [first] = unattached;
+			errorToast(
+				unattached.length === 1
+					? `Could not attach ${fileNameOf(first.path)}: ${first.reason}`
+					: `Could not attach ${count(unattached.length)} PDFs. The first, ${fileNameOf(first.path)}: ${first.reason}`
+			);
 		}
 		await loadSources();
+		// Read as a folder scan reads them, in the background; the rows follow.
+		if (reading.length > 0) {
+			void ingestAll(
+				reading.map((file) => ({ path: file.path, name: file.file_name, sha256: file.sha256 }))
+			).then(loadSources);
+		}
 	}
 
 	async function afterChange() {

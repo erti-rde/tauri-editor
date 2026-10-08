@@ -94,6 +94,8 @@ const now = () => new Date().toISOString();
 
 export interface FakeState {
 	root: string | null;
+	/** What the user picked in a dialog this session, as `scope::Grants` holds it. */
+	granted: string[];
 	libraryOpen: boolean;
 	/** Every source the library knows, by hash. */
 	library: Map<string, LibrarySource>;
@@ -119,6 +121,7 @@ export function stateFrom(fixture: Fixture): FakeState {
 	const library = new Map(fixture.sources.map((s) => [s.sha256, structuredClone(s)]));
 	return {
 		root: null,
+		granted: [],
 		libraryOpen: false,
 		library,
 		project: new Set(library.keys()),
@@ -614,6 +617,20 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			});
 			if (toProject) added.forEach((id) => state.project.add(id));
 			return { added, skipped };
+		},
+		// As `pdfs_found_in`: in the project, a picked folder or a place the
+		// library has a file at, and a PDF.
+		pdfsFound(paths) {
+			if (paths.length > 1000)
+				throw appError('InvalidInput', 'Look for at most 1000 files at a time.');
+			const within = (path: string, folder: string) =>
+				path === folder || path.startsWith(`${folder}/`);
+			return paths.map(
+				(path) =>
+					disk.pdfUrl(path) !== undefined &&
+					([...(state.root ? [state.root] : []), ...state.granted].some((f) => within(path, f)) ||
+						[...state.library.values()].some((s) => s.path === path))
+			);
 		},
 		sourceForDoi(doi) {
 			library();

@@ -6,28 +6,43 @@ const mocks = vi.hoisted(() => ({
 	readTextFile: vi.fn(),
 	previewImport: vi.fn(),
 	importEntries: vi.fn(),
+	locatePdfs: vi.fn(),
+	attachPdfs: vi.fn(),
+	pickFolder: vi.fn(),
 	errorToast: vi.fn()
 }));
 vi.mock('@tauri-apps/plugin-fs', () => ({ readTextFile: mocks.readTextFile }));
+vi.mock('@tauri-apps/plugin-dialog', () => ({ open: mocks.pickFolder }));
 vi.mock('./bibliography', async (real) => ({
 	...(await real<typeof import('./bibliography')>()),
 	previewImport: mocks.previewImport,
-	importEntries: mocks.importEntries
+	importEntries: mocks.importEntries,
+	locatePdfs: mocks.locatePdfs,
+	attachPdfs: mocks.attachPdfs
 }));
 vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
 
 import type { ImportEntry } from '$lib/import';
 import type { AugmentedZoteroSchema } from './adapterCslZotero';
 import ImportBibliography from './ImportBibliography.svelte';
-import { ImportStopped, type Preview } from './bibliography';
+import { ImportStopped, type Imported, type Preview } from './bibliography';
 
 const schema = {} as AugmentedZoteroSchema;
 
-const entry = (key: string): ImportEntry => ({
+const entry = (key: string, files: string[] = []): ImportEntry => ({
 	key,
 	line: 1,
 	item: { type: 'book', title: key },
-	files: []
+	files
+});
+
+const imported = (added: string[], more: Partial<Imported> = {}): Imported => ({
+	added,
+	skipped: 0,
+	pdfs: [],
+	attached: [],
+	unattached: [],
+	...more
 });
 
 const PREVIEW: Preview = {
@@ -44,7 +59,24 @@ const PREVIEW: Preview = {
 			line: 100 + n,
 			reason: 'It has no title.'
 		}))
-	]
+	],
+	pdfs: []
+};
+
+const ZOTERO = '/Users/ako/Zotero/storage';
+/** Two new entries with a PDF each, and one whose PDF isn't where Erti can see. */
+const WITH_PDFS: Preview = {
+	...PREVIEW,
+	total: 3,
+	fresh: [
+		entry('lecun', [`${ZOTERO}/AB12/lecun.pdf`]),
+		entry('ong', [`${ZOTERO}/CD34/ong.pdf`]),
+		entry('sennett', [`${ZOTERO}/EF56/sennett.pdf`])
+	],
+	known: [],
+	repeated: [],
+	unreadable: [],
+	pdfs: [`${ZOTERO}/AB12/lecun.pdf`, `${ZOTERO}/CD34/ong.pdf`, `${ZOTERO}/EF56/sennett.pdf`]
 };
 
 function show(path: string | null = '/Users/ako/Zotero/library.bib') {
@@ -71,7 +103,7 @@ describe('ImportBibliography', () => {
 		const summary = await screen.findByTestId('import-summary');
 		expect(screen.getByRole('dialog', { name: 'Import library.bib' })).toBeInTheDocument();
 		expect(mocks.readTextFile).toHaveBeenCalledWith('/Users/ako/Zotero/library.bib');
-		expect(mocks.previewImport).toHaveBeenCalledWith('library.bib', '@book{…}');
+		expect(mocks.previewImport).toHaveBeenCalledWith('/Users/ako/Zotero/library.bib', '@book{…}');
 		expect(summary).toHaveTextContent(
 			'1,236 entries · 1,200 new · 1 already in your library (matched by DOI or title) · 1 listed twice in the file · 34 unreadable'
 		);
@@ -140,15 +172,14 @@ describe('ImportBibliography', () => {
 			'500'
 		);
 
-		finish({ added: ['erti:a'], skipped: 0 });
-		await vi.waitFor(() =>
-			expect(onimported).toHaveBeenCalledWith({ added: ['erti:a'], skipped: 0 }, true)
-		);
+		finish(imported(['erti:a']));
+		await vi.waitFor(() => expect(onimported).toHaveBeenCalledWith(imported(['erti:a']), true));
+		expect(mocks.attachPdfs).not.toHaveBeenCalled();
 	});
 
 	it('says how far an import got when it stopped, and shows what it added', async () => {
 		mocks.importEntries.mockRejectedValue(
-			new ImportStopped(new Error('The disk is full.'), { added: ['erti:a'], skipped: 0 })
+			new ImportStopped(new Error('The disk is full.'), imported(['erti:a']))
 		);
 		const { onimported } = show();
 
@@ -159,6 +190,86 @@ describe('ImportBibliography', () => {
 				'The import stopped after 1 of 1,200: The disk is full.'
 			)
 		);
-		expect(onimported).toHaveBeenCalledWith({ added: ['erti:a'], skipped: 0 }, false);
+		expect(onimported).toHaveBeenCalledWith(imported(['erti:a']), false);
+	});
+
+	// M1b-9 AC-4
+	it('says which PDFs it will attach and which it can’t find, and looks again in a folder picked', async () => {
+		mocks.previewImport.mockResolvedValue(WITH_PDFS);
+		mocks.locatePdfs.mockResolvedValueOnce({
+			found: new Set([`${ZOTERO}/AB12/lecun.pdf`]),
+			missing: [`${ZOTERO}/CD34/ong.pdf`, `${ZOTERO}/EF56/sennett.pdf`]
+		});
+		mocks.locatePdfs.mockResolvedValueOnce({
+			found: new Set([`${ZOTERO}/AB12/lecun.pdf`, `${ZOTERO}/CD34/ong.pdf`]),
+			missing: [`${ZOTERO}/EF56/sennett.pdf`]
+		});
+		mocks.pickFolder.mockResolvedValue('/Users/ako/Zotero');
+		show();
+
+		const summary = await screen.findByTestId('import-summary');
+		await vi.waitFor(() =>
+			expect(summary).toHaveTextContent(
+				'3 entries · 3 new · 0 already in your library (matched by DOI or title) · 1 with a PDF that will be attached · 2 PDFs not found'
+			)
+		);
+		expect(mocks.locatePdfs).toHaveBeenCalledWith(WITH_PDFS.pdfs);
+		const missing = screen.getByRole('list', { name: 'PDFs not found' });
+		expect(missing).toHaveTextContent(`${ZOTERO}/CD34/ong.pdf`);
+		expect(missing).toHaveTextContent(`${ZOTERO}/EF56/sennett.pdf`);
+
+		await userEvent.click(screen.getByRole('button', { name: 'Choose folder…' }));
+
+		expect(mocks.pickFolder).toHaveBeenCalledWith(
+			expect.objectContaining({ directory: true, recursive: true, defaultPath: ZOTERO })
+		);
+		await vi.waitFor(() =>
+			expect(summary).toHaveTextContent('2 with a PDF that will be attached · 1 PDF not found')
+		);
+		expect(mocks.importEntries).not.toHaveBeenCalled();
+	});
+
+	// M1b-9 AC-4
+	it('attaches the PDFs it found to what it imported, with progress', async () => {
+		const found = new Set([`${ZOTERO}/AB12/lecun.pdf`]);
+		mocks.previewImport.mockResolvedValue(WITH_PDFS);
+		mocks.locatePdfs.mockResolvedValue({ found, missing: [] });
+		const pdfs = [{ work: 'erti:lecun', path: `${ZOTERO}/AB12/lecun.pdf` }];
+		mocks.importEntries.mockResolvedValue(imported(['erti:lecun'], { pdfs }));
+		let report: (done: number, total: number) => void = () => {};
+		let finish: (value: Imported) => void = () => {};
+		mocks.attachPdfs.mockImplementation((_imported, onprogress) => {
+			report = onprogress;
+			return new Promise((resolve) => (finish = resolve));
+		});
+		const { onimported } = show();
+
+		await vi.waitFor(() =>
+			expect(screen.getByTestId('import-summary')).toHaveTextContent('1 with a PDF')
+		);
+		await userEvent.click(screen.getByRole('button', { name: 'Import 3' }));
+
+		expect(mocks.importEntries).toHaveBeenCalledWith(
+			WITH_PDFS.fresh,
+			schema,
+			expect.objectContaining({ found })
+		);
+		await vi.waitFor(() =>
+			expect(mocks.attachPdfs).toHaveBeenCalledWith(
+				imported(['erti:lecun'], { pdfs }),
+				expect.any(Function)
+			)
+		);
+		report(0, 1);
+		expect(
+			await screen.findByRole('button', { name: 'Attaching 0 of 1 PDFs…' })
+		).toBeInTheDocument();
+		expect(screen.getByRole('progressbar', { name: 'Attaching PDFs' })).toBeInTheDocument();
+
+		const done = imported(['erti:lecun'], {
+			attached: [{ sha256: 'abc', path: pdfs[0].path, file_name: 'lecun.pdf', needs_ingest: true }]
+		});
+		finish(done);
+		await vi.waitFor(() => expect(onimported).toHaveBeenCalledWith(done, false));
 	});
 });

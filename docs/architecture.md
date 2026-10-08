@@ -73,7 +73,10 @@ in the Tauri store `settings-store.json`.
   already, by DOI, then by title, year and first author, against `library_works`.
   `metadata-explorer/ImportBibliography.svelte` shows that before anything is written, then
   `bibliography.ts` writes the new ones with `import_sources`, a batch at a time: `erti:<uuid>`
-  works with no file, resolved `'import'`.
+  works with no file, resolved `'import'`. The PDFs their `file` fields name are looked for with
+  `pdfs_found`, which is scoped as `attach_file` is: one outside the project or a folder the user
+  has picked is "not found", and the preview offers **Choose folder…**. Those found are attached
+  with `attach_file` and read with `ingestAll`, as a folder scan reads them.
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
   `export/bibtex.ts` → files → `compile_latex` if TeX exists.
 

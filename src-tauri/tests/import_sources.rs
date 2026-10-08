@@ -3,7 +3,8 @@
 
 use erti_lib::db::{queries, DbState};
 use erti_lib::db_commands::{
-    add_source_by_hand_in, import_sources_in, ImportedSource, IMPORT_BATCH,
+    add_source_by_hand_in, import_sources_in, pdfs_found_in, ImportedSource, FIND_BATCH,
+    IMPORT_BATCH,
 };
 use erti_lib::ipc::ErrorKind;
 use sqlx::Row;
@@ -198,4 +199,42 @@ async fn ten_thousand_import_in_batches_well_inside_the_budget() {
     assert_eq!(in_project(&state).await.len(), 10_000);
     // The whole import has 30 s; writing is the part of it measured here.
     assert!(took.as_secs() < 15, "took {took:?}");
+}
+
+// M1b-9 AC-4: the preview's "PDFs to attach" and "PDFs not found".
+#[tokio::test]
+async fn pdfs_are_found_where_erti_may_look() {
+    let state = opened("found").await;
+    let base = std::env::temp_dir().join(format!("erti-import-found-{}", std::process::id()));
+    let zotero = base.join("Zotero").join("storage");
+    std::fs::create_dir_all(&zotero).unwrap();
+    std::fs::create_dir_all(base.join("project")).unwrap();
+    let in_project = base.join("project").join("ong.pdf");
+    let outside = zotero.join("lecun.pdf");
+    let not_a_pdf = zotero.join("notes.pdf");
+    std::fs::write(&in_project, b"%PDF-1.7").unwrap();
+    std::fs::write(&outside, b"%PDF-1.4").unwrap();
+    std::fs::write(&not_a_pdf, b"hello").unwrap();
+    let paths = || {
+        [&in_project, &outside, &not_a_pdf, &zotero.join("gone.pdf")]
+            .map(|p| p.to_string_lossy().to_string())
+            .to_vec()
+    };
+
+    // A folder the user hasn't shown Erti is "not found", whatever is in it.
+    assert_eq!(
+        pdfs_found_in(&state, paths()).await.unwrap(),
+        [true, false, false, false]
+    );
+
+    // Picked in the folder dialog: what's in it is found, if it's a PDF.
+    state.grants.grant(&base.join("Zotero"));
+    assert_eq!(
+        pdfs_found_in(&state, paths()).await.unwrap(),
+        [true, true, false, false]
+    );
+
+    let too_many = vec![outside.to_string_lossy().to_string(); FIND_BATCH + 1];
+    let refused = pdfs_found_in(&state, too_many).await.unwrap_err();
+    assert_eq!(refused.kind, ErrorKind::InvalidInput);
 }
