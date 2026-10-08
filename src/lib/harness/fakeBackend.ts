@@ -208,9 +208,8 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		return null;
 	}
 
-	/** As `add_work_in`: by hand, or from a DOI, and never a DOI twice. */
-	function addWork(id: string, cslJson: string, zoteroType: string, fromDoi: boolean) {
-		library();
+	/** As `checked_work`: an `erti:` id and a title. The DOI, normalised. */
+	function checkWork(id: string, cslJson: string): string | null {
 		if (!/^erti:[0-9a-f-]{36}$/i.test(id)) {
 			throw appError('InvalidInput', "That isn't an id for a source entered by hand.");
 		}
@@ -218,14 +217,16 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		if (typeof csl.title !== 'string' || !csl.title.trim()) {
 			throw appError('InvalidInput', 'Give the source a title.');
 		}
-		const doi = normaliseDoi(csl.DOI);
-		if (fromDoi && !doi) throw appError('InvalidInput', 'Those details have no DOI.');
-		if (doi && doiOwner(doi)) {
-			throw appError('Conflict', 'A source with that DOI is already in the library.');
-		}
-		if (state.library.has(id)) {
-			throw appError('Conflict', 'A source with that id is already in the library.');
-		}
+		return normaliseDoi(csl.DOI);
+	}
+
+	function insertWork(
+		id: string,
+		cslJson: string,
+		zoteroType: string,
+		doi: string | null,
+		resolvedVia: string
+	) {
 		state.library.set(id, {
 			sha256: id,
 			file_name: '',
@@ -233,10 +234,24 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			csl_json: cslJson,
 			zotero_type: zoteroType,
 			doi,
-			resolved_via: fromDoi ? 'manual' : 'by-hand',
+			resolved_via: resolvedVia,
 			state: 'ready',
 			last_error: null
 		});
+	}
+
+	/** As `add_work_in`: by hand, or from a DOI, and never a DOI twice. */
+	function addWork(id: string, cslJson: string, zoteroType: string, fromDoi: boolean) {
+		library();
+		const doi = checkWork(id, cslJson);
+		if (fromDoi && !doi) throw appError('InvalidInput', 'Those details have no DOI.');
+		if (doi && doiOwner(doi)) {
+			throw appError('Conflict', 'A source with that DOI is already in the library.');
+		}
+		if (state.library.has(id)) {
+			throw appError('Conflict', 'A source with that id is already in the library.');
+		}
+		insertWork(id, cslJson, zoteroType, doi, fromDoi ? 'manual' : 'by-hand');
 		if (state.root !== null) state.project.add(id);
 	}
 	const projectWorks = () => new Set([...state.project].map(canon));
@@ -571,6 +586,34 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 		addSourceFromDoi(id, cslJson, zoteroType) {
 			addWork(id, cslJson, zoteroType, true);
 			return null;
+		},
+		libraryWorks() {
+			return [...library().values()]
+				.filter((s) => s.csl_json !== null || s.doi !== null)
+				.map((s) => ({ id: canon(s.sha256), csl_json: s.csl_json, doi: s.doi }));
+		},
+		// As `import_sources_in`: every source checked before any is written,
+		// and a DOI or id the library has is skipped rather than refused.
+		importSources(sources, toProject) {
+			library();
+			if (sources.length > 500) {
+				throw appError('InvalidInput', 'Import at most 500 sources at a time.');
+			}
+			const dois = sources.map((s) => checkWork(s.id, s.csl_json));
+			if (toProject) root();
+			const added: string[] = [];
+			const skipped: string[] = [];
+			sources.forEach((s, i) => {
+				const doi = dois[i];
+				if ((doi && doiOwner(doi)) || state.library.has(s.id)) {
+					skipped.push(s.id);
+					return;
+				}
+				insertWork(s.id, s.csl_json, s.zotero_type, doi, 'import');
+				added.push(s.id);
+			});
+			if (toProject) added.forEach((id) => state.project.add(id));
+			return { added, skipped };
 		},
 		sourceForDoi(doi) {
 			library();

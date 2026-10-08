@@ -361,21 +361,11 @@ pub fn normalise_doi(doi: &str) -> Option<String> {
     (!bare.is_empty()).then(|| bare.to_string())
 }
 
-/// The work in the library with this DOI, if any (M1b-6 AC-3): its canonical
-/// id, so a PDF attached to a work finds the work (ADR 003).
-///
-/// Compared as `normalise_doi` writes it, on both sides: rows stored before
-/// DOIs were normalised, or with only the details' own `DOI`, may hold any
-/// case or a link. The column is read first, then the details' `DOI`, since a
-/// source added from a manuscript may have only the latter.
-pub async fn source_for_doi(
-    db: impl sqlx::SqliteExecutor<'_>,
-    doi: &str,
-) -> Result<Option<String>, String> {
-    let Some(doi) = normalise_doi(doi) else {
-        return Ok(None);
-    };
-    sqlx::query_scalar(
+/// Every source's DOI as `normalise_doi` writes it, as `bare (sha256,
+/// created_at, doi)`: from the column, or the details' own `DOI` when it has
+/// none. Rows stored before DOIs were normalised may hold any case or a link.
+macro_rules! bare_dois {
+    () => {
         "WITH stored AS (
            SELECT sha256, created_at,
                   lower(trim(COALESCE(doi,
@@ -393,13 +383,33 @@ pub async fn source_for_doi(
                   END) AS doi
              FROM stored WHERE v IS NOT NULL
          )
-         SELECT COALESCE(a.canonical, b.sha256)
+         "
+    };
+}
+
+/// The work in the library with this DOI, if any (M1b-6 AC-3): its canonical
+/// id, so a PDF attached to a work finds the work (ADR 003).
+///
+/// Compared as `normalise_doi` writes it, on both sides: rows stored before
+/// DOIs were normalised, or with only the details' own `DOI`, may hold any
+/// case or a link. The column is read first, then the details' `DOI`, since a
+/// source added from a manuscript may have only the latter.
+pub async fn source_for_doi(
+    db: impl sqlx::SqliteExecutor<'_>,
+    doi: &str,
+) -> Result<Option<String>, String> {
+    let Some(doi) = normalise_doi(doi) else {
+        return Ok(None);
+    };
+    sqlx::query_scalar(concat!(
+        bare_dois!(),
+        "SELECT COALESCE(a.canonical, b.sha256)
            FROM bare b
            LEFT JOIN source_aliases a ON a.alias = b.sha256
           WHERE b.doi = ?
           ORDER BY b.created_at, b.sha256
-          LIMIT 1",
-    )
+          LIMIT 1"
+    ))
     .bind(doi)
     .fetch_optional(db)
     .await
@@ -494,6 +504,144 @@ async fn insert_without_file_on(
         .await
         .map_err(|e| e.to_string())?;
     Ok(Added::Yes)
+}
+
+/// A source from an imported bibliography (M1b-9): an `erti:<uuid>` work with
+/// no file, checked as one entered by hand is.
+pub struct Imported<'a> {
+    pub id: &'a str,
+    pub csl_json: &'a str,
+    pub zotero_type: &'a str,
+    pub doi: Option<&'a str>,
+}
+
+/// Add a batch of imported sources in one transaction, each as
+/// `add_source_by_hand` would (M1b-9 AC-6). Returns what became of each, in
+/// order: a DOI the library has, or an earlier one in the batch has, is
+/// refused, as an id the library has is.
+///
+/// The library's DOIs are read once for the batch rather than once per
+/// source: `source_for_doi` reads every row, and ten thousand of those into
+/// a library of ten thousand took minutes.
+pub async fn import_sources(
+    pool: &SqlitePool,
+    sources: &[Imported<'_>],
+) -> Result<Vec<Added>, String> {
+    let mut conn = pool.acquire().await.map_err(|e| e.to_string())?;
+    // As in `insert_source_without_file`: the lock is taken before the DOIs
+    // are read, and a connection dropped mid-transaction isn't reused.
+    conn.close_on_drop();
+    sqlx::query("BEGIN IMMEDIATE")
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?;
+    let added = import_on(&mut conn, sources).await;
+    if added.is_ok() {
+        sqlx::query("COMMIT")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
+    } else {
+        let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+    }
+    added
+}
+
+async fn import_on(
+    conn: &mut SqliteConnection,
+    sources: &[Imported<'_>],
+) -> Result<Vec<Added>, String> {
+    let wanted: Vec<String> = sources
+        .iter()
+        .filter_map(|s| s.doi.and_then(normalise_doi))
+        .collect();
+    let mut taken: std::collections::HashSet<String> = if wanted.is_empty() {
+        Default::default()
+    } else {
+        let wanted = serde_json::to_string(&wanted).map_err(|e| e.to_string())?;
+        sqlx::query_scalar(concat!(
+            bare_dois!(),
+            "SELECT DISTINCT doi FROM bare WHERE doi IN (SELECT value FROM json_each(?))"
+        ))
+        .bind(wanted)
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .collect()
+    };
+
+    let mut added = Vec::with_capacity(sources.len());
+    for source in sources {
+        let doi = source.doi.and_then(normalise_doi);
+        if doi.as_ref().is_some_and(|doi| taken.contains(doi)) {
+            added.push(Added::DoiTaken);
+            continue;
+        }
+        let outcome = insert_without_file_on(
+            conn,
+            source.id,
+            source.csl_json,
+            Some(source.zotero_type),
+            doi.as_deref(),
+            "import",
+            false,
+        )
+        .await?;
+        if outcome == Added::Yes {
+            if let Some(doi) = doi {
+                taken.insert(doi);
+            }
+        }
+        added.push(outcome);
+    }
+    Ok(added)
+}
+
+/// A work in the library, as matching an import against it needs (M1b-9
+/// AC-4): its canonical id, details and DOI.
+#[derive(Debug, Serialize, Deserialize, specta::Type, PartialEq, Eq)]
+pub struct LibraryWork {
+    pub id: String,
+    pub csl_json: Option<String>,
+    pub doi: Option<String>,
+}
+
+/// Every source in the library with details, under the id of the work it is
+/// (ADR 003): a PDF attached to a work matches as that work.
+pub async fn library_works(pool: &SqlitePool) -> Result<Vec<LibraryWork>, String> {
+    let rows = sqlx::query(
+        "SELECT COALESCE(a.canonical, s.sha256) AS id, s.csl_json, s.doi
+           FROM sources s
+           LEFT JOIN source_aliases a ON a.alias = s.sha256
+          WHERE s.csl_json IS NOT NULL OR s.doi IS NOT NULL
+          ORDER BY s.created_at, s.sha256",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(rows
+        .into_iter()
+        .map(|row| LibraryWork {
+            id: row.get("id"),
+            csl_json: row.get("csl_json"),
+            doi: row.get("doi"),
+        })
+        .collect())
+}
+
+/// Add these sources to the project in one transaction (M1b-9, "Also add them
+/// to this project").
+pub async fn add_all_to_project(project: &SqlitePool, ids: &[String]) -> Result<(), String> {
+    let mut tx = project.begin().await.map_err(|e| e.to_string())?;
+    for id in ids {
+        sqlx::query("INSERT OR IGNORE INTO source_set (sha256) VALUES (?)")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    tx.commit().await.map_err(|e| e.to_string())
 }
 
 pub async fn project_source_hashes(project: &SqlitePool) -> Result<Vec<String>, String> {

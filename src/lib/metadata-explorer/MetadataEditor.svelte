@@ -10,12 +10,16 @@
 	import { applyManualDoi, retryIngest } from '$utils/pdf_handlers';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
-	import { Banner, Button, EmptyState, Loader, Menu, SearchField, TextField } from '$lib/ui';
+	import { open as pickFile } from '@tauri-apps/plugin-dialog';
+	import { EXTENSIONS } from '$lib/import';
+	import { Banner, Button, Chip, EmptyState, Loader, Menu, SearchField, TextField } from '$lib/ui';
 	import AddFromDoi from './AddFromDoi.svelte';
+	import ImportBibliography from './ImportBibliography.svelte';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { augmentSchema } from './adapterCslZotero';
 	import { attachPdf } from './attach';
 	import type { FromDoi } from './fromDoi';
+	import type { Imported } from './bibliography';
 	import { describeAuthors, describeType } from './sourceRows';
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';
 	import { log } from '$lib/log';
@@ -225,19 +229,55 @@
 		);
 	}
 
+	/** The bibliography picked to import, while its dialog is open (M1b-9). */
+	let importing: string | null = $state(null);
+	/** What the last import added, for the "Imported just now" filter (UX-6). */
+	let importedJustNow: Set<string> | null = $state(null);
+
+	async function pickBibliography() {
+		const path = await pickFile({
+			title: 'Import a bibliography',
+			multiple: false,
+			directory: false,
+			filters: [{ name: 'BibTeX, RIS or CSL-JSON', extensions: EXTENSIONS }]
+		});
+		if (typeof path === 'string') importing = path;
+	}
+
+	async function afterImport({ added, skipped }: Imported, toProject: boolean) {
+		importing = null;
+		const n = added.length.toLocaleString('en-GB');
+		const sources = added.length === 1 ? 'source' : 'sources';
+		const meanwhile =
+			skipped > 0
+				? ` ${skipped.toLocaleString('en-GB')} more turned out to be in it already, and were left out.`
+				: '';
+		// Only this project's sources are listed, so there's only something to
+		// show when they were added to it.
+		if (toProject) {
+			successToast(`Imported ${n} ${sources} into your library and this project.${meanwhile}`);
+			searchQuery = '';
+			if (added.length > 0) importedJustNow = new Set(added);
+		} else {
+			successToast(`Imported ${n} ${sources} into your library.${meanwhile}`);
+		}
+		await loadSources();
+	}
+
 	async function afterChange() {
 		sidebar = null;
 		await loadSources();
 	}
 
 	const filteredSources = $derived.by(() => {
+		const shown = importedJustNow ? sources.filter((s) => importedJustNow?.has(s.id)) : sources;
 		return searchQuery
-			? sources.filter(
+			? shown.filter(
 					(s) =>
 						(s.metadata?.title || s.file_name).toLowerCase().includes(searchQuery.toLowerCase()) ||
 						(describeAuthors(s.metadata) || '').toLowerCase().includes(searchQuery.toLowerCase())
 				)
-			: sources;
+			: shown;
 	});
 </script>
 
@@ -258,6 +298,11 @@
 						label: 'From a DOI…',
 						description: 'Looks it up if lookups are on',
 						onSelect: () => (addingFromDoi = true)
+					},
+					{
+						label: 'Import a bibliography…',
+						description: 'BibTeX, RIS or CSL-JSON, from Zotero, Mendeley or EndNote',
+						onSelect: pickBibliography
 					}
 				]}
 			/>
@@ -345,6 +390,16 @@
 						{/each}
 					</div>
 				</Banner>
+			</div>
+		{/if}
+
+		{#if importedJustNow}
+			<!-- UX-6: the result of an import, until the filter is cleared. -->
+			<div class="mb-3 flex items-center gap-2">
+				<Chip tone="accent">Imported just now</Chip>
+				<Button size="sm" variant="ghost" onclick={() => (importedJustNow = null)}>
+					Clear filter
+				</Button>
 			</div>
 		{/if}
 
@@ -486,5 +541,11 @@
 		schema={augmentedSchema}
 		onsource={openFromDoi}
 		onbyhand={(doi) => (sidebar = { mode: 'new', doi })}
+	/>
+	<ImportBibliography
+		path={importing}
+		schema={augmentedSchema}
+		onimported={afterImport}
+		onclose={() => (importing = null)}
 	/>
 {/if}

@@ -70,7 +70,10 @@ in the Tauri store `settings-store.json`.
 - **Importing a bibliography.** `import/index.ts` reads `.bib`, `.ris` or CSL-JSON into CSL
   items through the shape guard (`guard/`). The BibTeX parser is loaded with `import()` on the
   first `.bib`, never at startup (ADR 009). `import/dedupe.ts` says which the library has
-  already, by DOI, then by title, year and first author.
+  already, by DOI, then by title, year and first author, against `library_works`.
+  `metadata-explorer/ImportBibliography.svelte` shows that before anything is written, then
+  `bibliography.ts` writes the new ones with `import_sources`, a batch at a time: `erti:<uuid>`
+  works with no file, resolved `'import'`.
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
   `export/bibtex.ts` → files → `compile_latex` if TeX exists.
 

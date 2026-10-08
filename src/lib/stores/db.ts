@@ -110,6 +110,19 @@ export const addSourceFromDoi = (id: string, cslJson: string, zoteroType: string
 /** The work in the library with this DOI, whatever its case, or null (M1b-6 AC-3). */
 export const sourceForDoi = (doi: string) => call(commands.sourceForDoi(doi));
 
+export type LibraryWork = ipc.LibraryWork;
+export type ImportedSource = ipc.ImportedSource;
+
+/** The library's works, to match an import against before writing (M1b-9 AC-4). */
+export const libraryWorks = () => call(commands.libraryWorks());
+
+/**
+ * Add a batch of imported sources, at most 500, to the library, and to this
+ * project if `toProject` (M1b-9). Says which were added and which skipped.
+ */
+export const importSources = (sources: ImportedSource[], toProject: boolean) =>
+	call(commands.importSources(sources, toProject));
+
 /** What removing a source would delete: its notes and highlights (UX-4). */
 export const sourceRemoval = (id: string) => call(commands.sourceRemoval(id));
 

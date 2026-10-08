@@ -197,6 +197,18 @@ export const commands = {
 	 */
 	sourceForDoi: (doi: string) => typedError<string | null, AppError>(__TAURI_INVOKE("source_for_doi", { doi })),
 	/**
+	 *  The library's works, for an import to be matched against before anything
+	 *  is written (M1b-9 AC-4).
+	 */
+	libraryWorks: () => typedError<LibraryWork[], AppError>(__TAURI_INVOKE("library_works")),
+	/**
+	 *  Add a batch of an imported bibliography's sources to the library, and to
+	 *  the open project if `to_project` (M1b-9, docs/ux.md UX-6). Each is a work
+	 *  with no file, checked as one entered by hand is; a batch with one that
+	 *  isn't is refused whole, before anything is written.
+	 */
+	importSources: (sources: ImportedSource[], toProject: boolean) => typedError<ImportedBatch, AppError>(__TAURI_INVOKE("import_sources", { sources, toProject })),
+	/**
 	 *  Remove a source from the library, with its files' records, marks and
 	 *  notes (M1b-4). The PDFs stay where they are.
 	 */
@@ -352,6 +364,36 @@ export type Hit = { kind: "chunk"; hit: ScoredChunk } | { kind: "annotation"; hi
  *  a mark or a note is a judgement already made (see `search_annotations`).
  */
 export type HitKind = "chunk" | "annotation" | "source_note";
+
+/**  What an `import_sources` call did with its sources. */
+export type ImportedBatch = {
+	/**  Added to the library, and to the project when asked. */
+	added: string[],
+	/**
+	 *  Left out: the library has a work with the DOI, or the id, already.
+	 *  The preview leaves these out too; one is here only when the library
+	 *  gained it between the preview and the import.
+	 */
+	skipped: string[],
+};
+
+/**  One source of a bibliography being imported (M1b-9). */
+export type ImportedSource = {
+	/**  `erti:<uuid>`, made in the webview as one entered by hand is. */
+	id: string,
+	csl_json: string,
+	zotero_type: string,
+};
+
+/**
+ *  A work in the library, as matching an import against it needs (M1b-9
+ *  AC-4): its canonical id, details and DOI.
+ */
+export type LibraryWork = {
+	id: string,
+	csl_json: string | null,
+	doi: string | null,
+};
 
 /**  A source note with its work's name: what the notes export writes out. */
 export type NamedSourceNote = {

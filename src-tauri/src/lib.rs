@@ -171,6 +171,8 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         add_source_by_hand,
         add_source_from_doi,
         source_for_doi,
+        library_works,
+        import_sources,
         remove_source,
         attach_file,
         source_files,
