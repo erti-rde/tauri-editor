@@ -2,21 +2,29 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	libraryWorks: vi.fn(),
-	importSources: vi.fn()
+	importSources: vi.fn(),
+	pdfsFound: vi.fn(),
+	attachFile: vi.fn()
 }));
 vi.mock('$lib/stores/db', () => ({
 	libraryWorks: mocks.libraryWorks,
-	importSources: mocks.importSources
+	importSources: mocks.importSources,
+	pdfsFound: mocks.pdfsFound,
+	attachFile: mocks.attachFile
 }));
 
 import type { ImportEntry } from '$lib/import';
 import type { AugmentedZoteroSchema } from './adapterCslZotero';
 import {
+	attachPdfs,
 	BATCH,
+	commonFolder,
 	fileNameOf,
 	importEntries,
 	ImportStopped,
+	locatePdfs,
 	previewImport,
+	resolvePdf,
 	toSource
 } from './bibliography';
 
@@ -60,12 +68,12 @@ const BIB = `
 }
 `;
 
-function entry(n: number, extra: Record<string, unknown> = {}): ImportEntry {
+function entry(n: number, extra: Record<string, unknown> = {}, files: string[] = []): ImportEntry {
 	return {
 		key: `k${n}`,
 		line: n,
 		item: { type: 'article-journal', title: `Paper ${n}`, ...extra },
-		files: []
+		files
 	};
 }
 
@@ -110,7 +118,34 @@ describe('previewImport', () => {
 		expect(preview.unreadable).toEqual([
 			{ key: 'untitled', line: expect.any(Number), reason: 'It has no title.' }
 		]);
+		expect(preview.pdfs).toEqual([]);
 		expect(mocks.importSources).not.toHaveBeenCalled();
+	});
+
+	// M1b-9 AC-4
+	it('lists the PDFs the new entries name, found from where the file is', async () => {
+		mocks.libraryWorks.mockResolvedValue([
+			{ id: 'erti:old', csl_json: '{"title":"Known"}', doi: '10.1/known' }
+		]);
+		const bib = `
+@article{a, title = {Relative}, file = {Full Text:files/a.pdf:application/pdf}}
+@article{b, title = {Absolute}, file = {:/Users/ako/Zotero/storage/B/b.pdf:pdf}}
+@article{c, title = {Shares one}, file = {:files/a.pdf:PDF}}
+@article{d, title = {Known}, doi = {10.1/known}, file = {:/elsewhere/d.pdf:PDF}}
+`;
+
+		const preview = await previewImport('/Users/ako/Papers/library.bib', bib);
+
+		expect(preview.fresh.map((e) => e.files)).toEqual([
+			['/Users/ako/Papers/files/a.pdf'],
+			['/Users/ako/Zotero/storage/B/b.pdf'],
+			['/Users/ako/Papers/files/a.pdf']
+		]);
+		// Each once; a known entry's PDF isn't imported.
+		expect(preview.pdfs).toEqual([
+			'/Users/ako/Papers/files/a.pdf',
+			'/Users/ako/Zotero/storage/B/b.pdf'
+		]);
 	});
 
 	// M1b-9 AC-1
@@ -123,6 +158,82 @@ describe('previewImport', () => {
 		await expect(previewImport('notes.txt', 'hello')).rejects.toThrow(
 			'notes.txt isn’t a .bib, .ris or .json file.'
 		);
+	});
+});
+
+describe('PDFs', () => {
+	it('finds a relative path from the bibliography’s folder, on either OS', () => {
+		expect(resolvePdf('files/a.pdf', '/Users/ako/Papers')).toBe('/Users/ako/Papers/files/a.pdf');
+		expect(resolvePdf('./a.pdf', '/Users/ako/Papers/')).toBe('/Users/ako/Papers/a.pdf');
+		expect(resolvePdf('/abs/a.pdf', '/Users/ako')).toBe('/abs/a.pdf');
+		expect(resolvePdf('files\\a.pdf', 'C:\\Users\\ako')).toBe('C:\\Users\\ako\\files\\a.pdf');
+		expect(resolvePdf('D:\\a.pdf', 'C:\\Users\\ako')).toBe('D:\\a.pdf');
+		expect(resolvePdf('a.pdf', '')).toBe('a.pdf');
+	});
+
+	// M1b-9 AC-4
+	it('asks which PDFs Erti can attach, a thousand at a time', async () => {
+		const paths = Array.from({ length: 1_500 }, (_, n) => `/z/${n}.pdf`);
+		mocks.pdfsFound.mockImplementation(async (batch: string[]) =>
+			batch.map((path) => !path.endsWith('7.pdf'))
+		);
+
+		const { found, missing } = await locatePdfs(paths);
+
+		expect(mocks.pdfsFound.mock.calls.map(([batch]) => batch.length)).toEqual([1_000, 500]);
+		expect(missing).toHaveLength(150);
+		expect(missing[0]).toBe('/z/7.pdf');
+		expect(found.size).toBe(1_350);
+	});
+
+	it('starts the folder picker where the missing PDFs all are', () => {
+		expect(
+			commonFolder(['/Users/ako/Zotero/storage/A/a.pdf', '/Users/ako/Zotero/storage/B/b.pdf'])
+		).toBe('/Users/ako/Zotero/storage');
+		expect(commonFolder(['/Users/ako/a.pdf', '/Volumes/disk/b.pdf'])).toBe('/');
+		expect(commonFolder(['C:\\Papers\\a.pdf', 'C:\\Papers\\x\\b.pdf'])).toBe('C:\\Papers');
+		expect(commonFolder([])).toBeUndefined();
+	});
+
+	// M1b-9 AC-4
+	it('attaches each PDF found to the source it came with, and goes on past one it can’t', async () => {
+		mocks.attachFile
+			.mockResolvedValueOnce({
+				sha256: 'h1',
+				file_name: 'a.pdf',
+				needs_ingest: true,
+				merged: null,
+				found_again: false
+			})
+			.mockRejectedValueOnce(new Error('That PDF is already attached to “B”.'));
+		const progress: number[] = [];
+
+		const done = await attachPdfs(
+			{
+				added: ['erti:1', 'erti:2'],
+				skipped: 0,
+				pdfs: [
+					{ work: 'erti:1', path: '/z/a.pdf' },
+					{ work: 'erti:2', path: '/z/b.pdf' }
+				],
+				attached: [],
+				unattached: []
+			},
+			(n) => progress.push(n)
+		);
+
+		expect(mocks.attachFile.mock.calls).toEqual([
+			['erti:1', '/z/a.pdf'],
+			['erti:2', '/z/b.pdf']
+		]);
+		expect(done.attached).toEqual([
+			{ sha256: 'h1', path: '/z/a.pdf', file_name: 'a.pdf', needs_ingest: true }
+		]);
+		expect(done.unattached).toEqual([
+			{ path: '/z/b.pdf', reason: 'That PDF is already attached to “B”.' }
+		]);
+		expect(done.pdfs).toEqual([]);
+		expect(progress).toEqual([1, 2]);
 	});
 });
 
@@ -174,6 +285,31 @@ describe('importEntries', () => {
 		]);
 		expect(imported.added).toHaveLength(entries.length);
 		expect(imported.skipped).toBe(0);
+		expect(imported.pdfs).toEqual([]);
+	});
+
+	// M1b-9 AC-4
+	it('keeps the PDFs found for what it added, to attach after', async () => {
+		mocks.importSources.mockImplementation(async (sources: { id: string }[]) => ({
+			// The second turned out to be in the library already.
+			added: [sources[0].id, sources[2].id],
+			skipped: [sources[1].id]
+		}));
+		const entries = [
+			entry(1, {}, ['/z/one.pdf', '/z/gone.pdf']),
+			entry(2, {}, ['/z/two.pdf']),
+			entry(3, {}, ['/z/three.pdf'])
+		];
+
+		const imported = await importEntries(entries, schema, {
+			toProject: false,
+			found: new Set(['/z/one.pdf', '/z/two.pdf', '/z/three.pdf'])
+		});
+
+		expect(imported.pdfs).toEqual([
+			{ work: imported.added[0], path: '/z/one.pdf' },
+			{ work: imported.added[1], path: '/z/three.pdf' }
+		]);
 	});
 
 	it('counts what the library gained since the preview', async () => {

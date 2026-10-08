@@ -122,6 +122,8 @@ export const libraryWorks = () => call(commands.libraryWorks());
  */
 export const importSources = (sources: ImportedSource[], toProject: boolean) =>
 	call(commands.importSources(sources, toProject));
+/** Which of `paths` are PDFs Erti may attach; Rust looks for at most 1,000 at once. */
+export const pdfsFound = (paths: string[]) => call(commands.pdfsFound(paths));
 
 /** What removing a source would delete: its notes and highlights (UX-4). */
 export const sourceRemoval = (id: string) => call(commands.sourceRemoval(id));

@@ -331,7 +331,12 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 		'plugin:path|is_absolute': ({ path }) => String(path).startsWith('/'),
 
 		// Dialogs: answered from the queue, so a journey says what the user picks.
-		'plugin:dialog|open': () => backend.dialogAnswers.shift() ?? null,
+		// A pick is granted for the session, as the dialog plugin's fs scope does.
+		'plugin:dialog|open': () => {
+			const picked = backend.dialogAnswers.shift() ?? null;
+			if (picked) state.granted.push(picked);
+			return picked;
+		},
 		'plugin:dialog|save': () => backend.dialogAnswers.shift() ?? null,
 		'plugin:dialog|message': () => 'Ok',
 		'plugin:dialog|ask': () => true,

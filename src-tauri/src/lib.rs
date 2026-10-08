@@ -173,6 +173,7 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         source_for_doi,
         library_works,
         import_sources,
+        pdfs_found,
         remove_source,
         attach_file,
         source_files,

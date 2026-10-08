@@ -107,8 +107,8 @@ test('shots', async ({ page }) => {
 			'/fake/home/Zotero/library.bib',
 			[
 				'@inproceedings{vaswani2017, title = {Attention is all you need}, author = {Vaswani, Ashish}, year = {2017}}',
-				'@book{ong1982, title = {Orality and Literacy}, author = {Ong, Walter J.}, year = {1982}}',
-				'@article{lecun2015, title = {Deep learning}, author = {LeCun, Yann}, journal = {Nature}, year = {2015}}',
+				'@book{ong1982, title = {Orality and Literacy}, author = {Ong, Walter J.}, year = {1982}, file = {:/Users/ako/Zotero/storage/AB12/Ong - 1982 - Orality and Literacy.pdf:PDF}}',
+				'@article{lecun2015, title = {Deep learning}, author = {LeCun, Yann}, journal = {Nature}, year = {2015}, file = {:/Users/ako/Zotero/storage/CD34/LeCun et al. - 2015 - Deep learning.pdf:PDF}}',
 				'@misc{notes, author = {Nobody}, year = {2001}}'
 			].join('\n\n')
 		);
@@ -117,7 +117,8 @@ test('shots', async ({ page }) => {
 	await page.getByRole('button', { name: 'Add', exact: true }).click();
 	await page.getByRole('menuitem', { name: /Import a bibliography…/ }).click();
 	const importing = page.getByRole('dialog', { name: 'Import library.bib' });
-	await expect(importing.getByRole('button', { name: 'Import 2' })).toBeVisible();
+	await expect(importing.getByRole('button', { name: 'Import 2' })).toBeEnabled();
+	await expect(importing.getByRole('button', { name: 'Choose folder…' })).toBeVisible();
 	await page.screenshot({ ...shot('20-import-preview'), animations: 'disabled' });
 
 	// …and what it added, until the filter is cleared.

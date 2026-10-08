@@ -294,6 +294,9 @@ test('a bibliography is previewed against the library, then imported into the pr
 	await openProject(page);
 	await page.evaluate(() => {
 		const fake = window.__ERTI_FAKE__!;
+		// Zotero keeps its PDFs outside the project, where Erti hasn't been shown.
+		const paper = [...fake.files.keys()].find((p) => p.endsWith('vaswani-2017.pdf'))!;
+		fake.files.set('/fake/home/Zotero/storage/AB12/ong.pdf', fake.files.get(paper)!);
 		fake.files.set(
 			'/fake/home/Zotero/library.bib',
 			`@inproceedings{devlin2019,
@@ -313,7 +316,8 @@ test('a bibliography is previewed against the library, then imported into the pr
   title = {Orality and Literacy},
   author = {Ong, Walter J.},
   publisher = {Methuen},
-  year = {1982}
+  year = {1982},
+  file = {Full Text:storage/AB12/ong.pdf:application/pdf}
 }
 
 @article{lecun2015,
@@ -321,7 +325,8 @@ test('a bibliography is previewed against the library, then imported into the pr
   author = {LeCun, Yann and Bengio, Yoshua and Hinton, Geoffrey},
   journal = {Nature},
   year = {2015},
-  doi = {10.1038/nature14539}
+  doi = {10.1038/nature14539},
+  file = {:/fake/home/Zotero/storage/CD34/lecun.pdf:PDF}
 }
 
 @misc{untitled,
@@ -330,7 +335,7 @@ test('a bibliography is previewed against the library, then imported into the pr
 }
 `
 		);
-		fake.dialogAnswers.push('/fake/home/Zotero/library.bib');
+		fake.dialogAnswers.push('/fake/home/Zotero/library.bib', '/fake/home/Zotero');
 	});
 	await page.getByRole('button', { name: 'Sources' }).click();
 	await expect(page.getByRole('heading', { name: 'Sources (3)' })).toBeVisible();
@@ -340,9 +345,25 @@ test('a bibliography is previewed against the library, then imported into the pr
 	await page.getByRole('menuitem', { name: /Import a bibliography…/ }).click();
 	const dialog = page.getByRole('dialog', { name: 'Import library.bib' });
 	await expect(dialog.getByTestId('import-summary')).toHaveText(
-		'5 entries · 2 new · 2 already in your library (matched by DOI or title) · 1 unreadable'
+		'5 entries · 2 new · 2 already in your library (matched by DOI or title) · 2 PDFs not found · 1 unreadable'
 	);
-	await expect(dialog.getByRole('listitem')).toHaveText([/untitled, line \d+: It has no title\./]);
+	await expect(
+		dialog.getByRole('list', { name: 'Couldn’t read' }).getByRole('listitem')
+	).toHaveText([/untitled, line \d+: It has no title\./]);
+	// AC-4: the PDFs it names, looked for again once Erti is shown their folder.
+	await expect(
+		dialog.getByRole('list', { name: 'PDFs not found' }).getByRole('listitem')
+	).toHaveText([
+		'/fake/home/Zotero/storage/AB12/ong.pdf',
+		'/fake/home/Zotero/storage/CD34/lecun.pdf'
+	]);
+	await dialog.getByRole('button', { name: 'Choose folder…' }).click();
+	await expect(dialog.getByTestId('import-summary')).toHaveText(
+		'5 entries · 2 new · 2 already in your library (matched by DOI or title) · 1 with a PDF that will be attached · 1 PDF not found · 1 unreadable'
+	);
+	await expect(
+		dialog.getByRole('list', { name: 'PDFs not found' }).getByRole('listitem')
+	).toHaveText(['/fake/home/Zotero/storage/CD34/lecun.pdf']);
 	const before = await page.evaluate(() => window.__ERTI_FAKE__!.state.library.size);
 	expect(before).toBe(3);
 
@@ -350,7 +371,9 @@ test('a bibliography is previewed against the library, then imported into the pr
 	await dialog.getByRole('checkbox', { name: 'Also add them to this project' }).click();
 	await dialog.getByRole('button', { name: 'Import 2' }).click();
 	await expect(
-		page.getByText('Imported 2 sources into your library and this project.')
+		page.getByText(
+			'Imported 2 sources into your library and this project. Attached 1 PDF, which Erti is reading now.'
+		)
 	).toBeVisible();
 	await expect(dialog).toBeHidden();
 	await expect(page.getByRole('heading', { name: 'Sources (5)' })).toBeVisible();
@@ -365,6 +388,15 @@ test('a bibliography is previewed against the library, then imported into the pr
 		['book', null],
 		['journalArticle', '10.1038/nature14539']
 	]);
+
+	// AC-4: the PDF is the book's file, read as a scan reads it.
+	await expect(page.getByText('ong.pdf processed successfully')).toBeVisible();
+	await expect(page.getByText('ong.pdf', { exact: true })).toBeVisible();
+	const ong = imported.find((s) => s.zotero_type === 'book')!.sha256;
+	const aliases = await page.evaluate(() =>
+		Object.fromEntries(window.__ERTI_FAKE__!.state.aliases)
+	);
+	expect(Object.values(aliases)).toContain(ong);
 
 	await page.getByRole('button', { name: 'Clear filter' }).click();
 	await expect(page.getByRole('button', { name: /Attention Is All You Need/ })).toBeVisible();

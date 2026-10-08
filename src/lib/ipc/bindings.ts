@@ -209,6 +209,15 @@ export const commands = {
 	 */
 	importSources: (sources: ImportedSource[], toProject: boolean) => typedError<ImportedBatch, AppError>(__TAURI_INVOKE("import_sources", { sources, toProject })),
 	/**
+	 *  Which of `paths` are PDFs Erti may attach (M1b-9 AC-4): ones the import
+	 *  preview lists as to attach, and the rest as not found.
+	 * 
+	 *  Scoped as `attach_file` is, so the answer is the same one attaching would
+	 *  get. Outside the scope a file is "not found" whether it's there or not: the
+	 *  webview learns nothing about a folder the user hasn't shown it.
+	 */
+	pdfsFound: (paths: string[]) => typedError<boolean[], AppError>(__TAURI_INVOKE("pdfs_found", { paths })),
+	/**
 	 *  Remove a source from the library, with its files' records, marks and
 	 *  notes (M1b-4). The PDFs stay where they are.
 	 */

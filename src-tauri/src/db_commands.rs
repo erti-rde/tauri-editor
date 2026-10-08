@@ -729,6 +729,42 @@ async fn is_pdf(path: &str) -> bool {
     }
 }
 
+/// The most paths `pdfs_found` looks for at once.
+pub const FIND_BATCH: usize = 1000;
+
+/// Which of `paths` are PDFs Erti may attach (M1b-9 AC-4): ones the import
+/// preview lists as to attach, and the rest as not found.
+///
+/// Scoped as `attach_file` is, so the answer is the same one attaching would
+/// get. Outside the scope a file is "not found" whether it's there or not: the
+/// webview learns nothing about a folder the user hasn't shown it.
+#[tauri::command]
+#[specta::specta]
+pub async fn pdfs_found(
+    state: State<'_, DbState>,
+    paths: Vec<String>,
+) -> Result<Vec<bool>, AppError> {
+    pdfs_found_in(&state, paths).await
+}
+
+/// `pdfs_found`, reachable from tests.
+pub async fn pdfs_found_in(state: &DbState, paths: Vec<String>) -> Result<Vec<bool>, AppError> {
+    if paths.len() > FIND_BATCH {
+        return Err(AppError::new(
+            crate::ipc::ErrorKind::InvalidInput,
+            format!("Look for at most {FIND_BATCH} files at a time."),
+        ));
+    }
+    let mut found = Vec::with_capacity(paths.len());
+    for path in paths {
+        found.push(match crate::scope::authorise(state, &path).await {
+            Ok(canonical) => is_pdf(&canonical.to_string_lossy()).await,
+            Err(_) => false,
+        });
+    }
+    Ok(found)
+}
+
 /// A work's files, for its sidebar's File tab (M1b-7 AC-3).
 #[tauri::command]
 #[specta::specta]

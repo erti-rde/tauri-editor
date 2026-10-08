@@ -265,41 +265,7 @@ export async function extractAndChunkPdfs(): Promise<void> {
 			type: 'info'
 		});
 
-		let processed = 0;
-
-		// Process PDFs concurrently in batches to avoid overwhelming the system
-		const batchSize = 3;
-		for (let i = 0; i < needsIngest.length; i += batchSize) {
-			const batch = needsIngest.slice(i, i + batchSize);
-			await Promise.all(
-				batch.map(async (file) => {
-					try {
-						await processSinglePdf(file.path, file.name, file.sha256);
-						processed++;
-						setStatus({
-							side: 'left',
-							message: `Processing PDFs: ${processed}/${needsIngest.length}`,
-							type: 'info'
-						});
-					} catch (error) {
-						// Continue with the rest. The failure is recorded against the
-						// source, so it stays visible and can be retried rather than
-						// being skipped forever.
-						log.error(`Could not process ${file.name}`, error);
-					}
-				})
-			);
-		}
-
-		setStatus({
-			side: 'left',
-			message: `Completed processing ${processed} PDF files`,
-			type: 'info'
-		});
-
-		setTimeout(() => {
-			removeStatus();
-		}, 3000);
+		await ingestAll(needsIngest);
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		setStatus({
@@ -309,6 +275,51 @@ export async function extractAndChunkPdfs(): Promise<void> {
 		});
 		log.error('Error processing PDFs', error);
 	}
+}
+
+/**
+ * Read PDFs already registered, a few at a time, saying how far it's got in
+ * the status bar: after a folder scan, and for the PDFs a bibliography import
+ * attached (M1b-9).
+ */
+export async function ingestAll(
+	needsIngest: { path: string; name: string; sha256: string }[]
+): Promise<void> {
+	let processed = 0;
+
+	// Process PDFs concurrently in batches to avoid overwhelming the system
+	const batchSize = 3;
+	for (let i = 0; i < needsIngest.length; i += batchSize) {
+		const batch = needsIngest.slice(i, i + batchSize);
+		await Promise.all(
+			batch.map(async (file) => {
+				try {
+					await processSinglePdf(file.path, file.name, file.sha256);
+					processed++;
+					setStatus({
+						side: 'left',
+						message: `Processing PDFs: ${processed}/${needsIngest.length}`,
+						type: 'info'
+					});
+				} catch (error) {
+					// Continue with the rest. The failure is recorded against the
+					// source, so it stays visible and can be retried rather than
+					// being skipped forever.
+					log.error(`Could not process ${file.name}`, error);
+				}
+			})
+		);
+	}
+
+	setStatus({
+		side: 'left',
+		message: `Completed processing ${processed} PDF files`,
+		type: 'info'
+	});
+
+	setTimeout(() => {
+		removeStatus();
+	}, 3000);
 }
 
 /**
