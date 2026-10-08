@@ -114,6 +114,10 @@ Each recipe ends with what to test. Run `pnpm verify` before opening the PR (CLA
    `#[tauri::command]` and `#[specta::specta]`, returning `Result<T, AppError>`. Run CPU work in
    `spawn_blocking`. **A path from the webview goes through `scope::authorise` first** (M1a-3):
    put the body in a `*_in(&DbState, …)` function the command calls, so tests can reach it.
+   **A write that adds, changes, removes or moves a row with a vector** (a passage, a mark, a
+   source note) then calls `state.refresh_index(&[Changed::…])`, whether or not it succeeded,
+   naming the rows it touched. The index reads them back and swaps them in (M2-2). Test it with
+   `matches_a_rebuild` in `tests/retrieval_index.rs`.
 3. Give the error its kind where it's known: `?` on `state.library()` and friends (already a
    `Conflict` when nothing is open), `.or_database()` on the query layer's string errors,
    `.or_model()` on inference, and `AppError::from_io` for files. `Classify` won't compile on an

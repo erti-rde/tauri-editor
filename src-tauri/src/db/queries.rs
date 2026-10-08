@@ -12,8 +12,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnection, SqlitePool};
 use sqlx::Row;
+use std::collections::BTreeSet;
 
-use super::index::{Filter, HitKind, Index, Key, Row as IndexRow};
+use super::index::{Changed, Filter, HitKind, Index, Key, Row as IndexRow};
 use super::{pack_embedding, unpack_embedding};
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
@@ -1212,15 +1213,16 @@ pub async fn source_removal(library: &SqlitePool, id: &str) -> Result<SourceRemo
 /// corrections keep the id, as every project's do: they're in other
 /// databases, and the manuscripts citing it render from their own copy
 /// (M1a-8) until it's added again.
-pub async fn remove_source(library: &SqlitePool, id: &str) -> Result<(), String> {
-    let group =
-        serde_json::to_string(&work_and_files(library, id).await?).map_err(|e| e.to_string())?;
+///
+/// Resolves to the ids removed: the work's, then its files'.
+pub async fn remove_source(library: &SqlitePool, id: &str) -> Result<Vec<String>, String> {
+    let group = work_and_files(library, id).await?;
     sqlx::query("DELETE FROM sources WHERE sha256 IN (SELECT value FROM json_each(?))")
-        .bind(&group)
+        .bind(serde_json::to_string(&group).map_err(|e| e.to_string())?)
         .execute(library)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(())
+    Ok(group)
 }
 
 /// Rank chunks against a query vector.
@@ -1286,13 +1288,92 @@ pub async fn search_chunks(
 /// No order is asked for, so rows come back as the tables are laid out, which
 /// is the order the scan in `search_similar` read them in before the index.
 pub async fn index_rows(library: &SqlitePool) -> Result<Vec<IndexRow>, String> {
+    vector_rows(library, None).await
+}
+
+/// The rows a write may have changed, as the library has them now (M2-2):
+/// those `changed` covers, and those under `held`, the keys the index holds
+/// for it, wherever they've moved to.
+pub async fn index_rows_for(
+    library: &SqlitePool,
+    changed: &[Changed],
+    held: &[Key],
+) -> Result<Vec<IndexRow>, String> {
+    let mut wanted = Wanted::default();
+    for change in changed {
+        match change {
+            Changed::Owner(o) => {
+                wanted.chunks.insert(o);
+                wanted.marks.owners.insert(o);
+                wanted.notes.owners.insert(o);
+            }
+            Changed::ChunksOf(o) => {
+                wanted.chunks.insert(o);
+            }
+            Changed::AnnotationsOf(o) => {
+                wanted.marks.owners.insert(o);
+            }
+            Changed::SourceNotesOf(o) => {
+                wanted.notes.owners.insert(o);
+            }
+            Changed::Annotation(id) => {
+                wanted.marks.ids.insert(id);
+            }
+            Changed::SourceNote(id) => {
+                wanted.notes.ids.insert(id);
+            }
+        }
+    }
+    for key in held {
+        match key {
+            Key::Chunk { sha256, .. } => wanted.chunks.insert(sha256),
+            Key::Annotation(id) => wanted.marks.ids.insert(id),
+            Key::SourceNote(id) => wanted.notes.ids.insert(id),
+        };
+    }
+    vector_rows(library, Some(&wanted)).await
+}
+
+/// Which rows `vector_rows` reads: chunks by file, and marks and notes by
+/// owner or by id.
+#[derive(Default)]
+struct Wanted<'a> {
+    chunks: BTreeSet<&'a String>,
+    marks: ByOwnerOrId<'a>,
+    notes: ByOwnerOrId<'a>,
+}
+
+#[derive(Default)]
+struct ByOwnerOrId<'a> {
+    owners: BTreeSet<&'a String>,
+    ids: BTreeSet<&'a String>,
+}
+
+fn json(set: &BTreeSet<&String>) -> Result<String, String> {
+    serde_json::to_string(set).map_err(|e| e.to_string())
+}
+
+/// Rows with a vector: all of them, or those `wanted` names.
+async fn vector_rows(
+    library: &SqlitePool,
+    wanted: Option<&Wanted<'_>>,
+) -> Result<Vec<IndexRow>, String> {
     let mut rows = Vec::new();
 
-    for r in sqlx::query("SELECT sha256, idx, embedding FROM chunks")
-        .fetch_all(library)
-        .await
-        .map_err(|e| e.to_string())?
-    {
+    let chunks = "SELECT sha256, idx, embedding FROM chunks";
+    let chunks = match wanted {
+        None => sqlx::query(chunks).fetch_all(library).await,
+        Some(w) if w.chunks.is_empty() => Ok(Vec::new()),
+        Some(w) => {
+            sqlx::query(&format!(
+                "{chunks} WHERE sha256 IN (SELECT value FROM json_each(?))"
+            ))
+            .bind(json(&w.chunks)?)
+            .fetch_all(library)
+            .await
+        }
+    };
+    for r in chunks.map_err(|e| e.to_string())? {
         let sha256: String = r.get("sha256");
         rows.push(IndexRow {
             key: Key::Chunk {
@@ -1304,37 +1385,60 @@ pub async fn index_rows(library: &SqlitePool) -> Result<Vec<IndexRow>, String> {
         });
     }
 
-    for r in sqlx::query(
-        "SELECT a.id, a.sha256, e.embedding
-           FROM annotations a JOIN annotation_embeddings e ON e.id = a.id",
-    )
-    .fetch_all(library)
-    .await
-    .map_err(|e| e.to_string())?
-    {
-        rows.push(IndexRow {
-            key: Key::Annotation(r.get("id")),
-            owner: r.get("sha256"),
-            embedding: unpack_embedding(&r.get::<Vec<u8>, _>("embedding")),
-        });
-    }
-
-    for r in sqlx::query(
-        "SELECT n.id, n.sha256, e.embedding
-           FROM source_notes n JOIN source_note_embeddings e ON e.id = n.id",
-    )
-    .fetch_all(library)
-    .await
-    .map_err(|e| e.to_string())?
-    {
-        rows.push(IndexRow {
-            key: Key::SourceNote(r.get("id")),
-            owner: r.get("sha256"),
-            embedding: unpack_embedding(&r.get::<Vec<u8>, _>("embedding")),
-        });
-    }
-
+    rows.extend(
+        marks_or_notes(
+            library,
+            "SELECT t.id, t.sha256, e.embedding
+               FROM annotations t JOIN annotation_embeddings e ON e.id = t.id",
+            Key::Annotation,
+            wanted.map(|w| &w.marks),
+        )
+        .await?,
+    );
+    rows.extend(
+        marks_or_notes(
+            library,
+            "SELECT t.id, t.sha256, e.embedding
+               FROM source_notes t JOIN source_note_embeddings e ON e.id = t.id",
+            Key::SourceNote,
+            wanted.map(|w| &w.notes),
+        )
+        .await?,
+    );
     Ok(rows)
+}
+
+/// Marks or source notes with a vector, which are read alike: all of them, or
+/// those on the files or works `wanted` names, or with its ids.
+async fn marks_or_notes(
+    library: &SqlitePool,
+    sql: &str,
+    key: fn(String) -> Key,
+    wanted: Option<&ByOwnerOrId<'_>>,
+) -> Result<Vec<IndexRow>, String> {
+    let found = match wanted {
+        None => sqlx::query(sql).fetch_all(library).await,
+        Some(w) if w.owners.is_empty() && w.ids.is_empty() => Ok(Vec::new()),
+        Some(w) => {
+            sqlx::query(&format!(
+                "{sql} WHERE t.sha256 IN (SELECT value FROM json_each(?1))
+                       OR t.id IN (SELECT value FROM json_each(?2))"
+            ))
+            .bind(json(&w.owners)?)
+            .bind(json(&w.ids)?)
+            .fetch_all(library)
+            .await
+        }
+    };
+    Ok(found
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|r| IndexRow {
+            key: key(r.get("id")),
+            owner: r.get("sha256"),
+            embedding: unpack_embedding(&r.get::<Vec<u8>, _>("embedding")),
+        })
+        .collect())
 }
 
 /// A note about a work as a whole (ADR 004).

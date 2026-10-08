@@ -5,10 +5,15 @@
 //! now run on the index unchanged (AC-4). These cover what's new: one index
 //! holding every kind, built when first needed, and one query over it.
 
-use erti_lib::db::index::HitKind;
+use erti_lib::db::index::{self, Changed, Filter, HitKind, Index, IndexState, Key};
 use erti_lib::db::{queries, DbState};
-use erti_lib::db_commands::{search_library_in, store_chunks_in};
+use erti_lib::db_commands::{
+    attach_file_in, delete_annotation_in, delete_imported_annotations_in, delete_source_note_in,
+    embed_annotation_with, embed_pending_annotations_with, embed_source_note_with,
+    remove_source_in, save_annotation_in, save_source_note_in, search_library_in, store_chunks_in,
+};
 use sqlx::SqlitePool;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 fn scratch(name: &str) -> PathBuf {
@@ -255,8 +260,8 @@ async fn a_change_of_model_rebuilds_the_index() {
 
 #[tokio::test]
 async fn storing_a_paper_s_passages_is_seen_by_the_next_search() {
-    // The index is dropped by the write and built again from the library. M2-2
-    // covers every writer; this is the path every search depends on first.
+    // The path every search depends on first. M2-2's tests below cover every
+    // writer against a rebuild.
     let (_dir, state, pool) = library("after-ingest").await;
     search_library_in(&state, &[0.0, 1.0], None, None, None)
         .await
@@ -271,7 +276,7 @@ async fn storing_a_paper_s_passages_is_seen_by_the_next_search() {
     store_chunks_in(&state, "new", &[chunk("new", vec![0.0, 1.0])])
         .await
         .unwrap();
-    assert!(!state.index_is_built());
+    assert!(state.index_is_built(), "updated in place, not dropped");
 
     let hits = search_library_in(
         &state,
@@ -402,4 +407,336 @@ async fn the_width_recorded_for_the_model_is_read_from_the_library() {
         panic!("a passage was asked for")
     };
     assert!(best.similarity > 0.9, "a current row still ranks");
+}
+
+/* ------------------------------------------------- M2-2: every writer */
+
+/// The index the app holds after a write, against one built from the library
+/// now: the same rows, each with the same owner and vector, and the same
+/// answer to every query, filtered every way (M2-2 AC-2). And held: the write
+/// updated it rather than dropping it for the next search to rebuild.
+async fn matches_a_rebuild(state: &DbState) {
+    let held = state.held_index().expect("updated in place, not dropped");
+    let pool = state.library().await.unwrap();
+    let rebuilt = index::load(&pool).await.unwrap();
+    assert_eq!(held.entries(), rebuilt.entries());
+
+    let aliases = queries::alias_map(&pool).await.unwrap();
+    let project = HashSet::from(["mine"]);
+    let kinds: [&[HitKind]; 3] = [
+        &[],
+        &[HitKind::Chunk],
+        &[HitKind::Annotation, HitKind::SourceNote],
+    ];
+    for include_library in [false, true] {
+        for kinds in kinds {
+            let filter = Filter {
+                kinds,
+                project: &project,
+                include_library,
+                aliases: &aliases,
+            };
+            for query in [[1.0, 0.0], [0.0, 1.0], [0.6, 0.8], [-1.0, 0.2]] {
+                let answer = |index: &Index| {
+                    index
+                        .search(&query, &filter, 50)
+                        .into_iter()
+                        .map(|f| {
+                            let source = f.source_id.to_string();
+                            (f.key.clone(), source, f.similarity, f.in_project)
+                        })
+                        .collect::<Vec<_>>()
+                };
+                assert_eq!(answer(&held), answer(&rebuilt), "{query:?} {kinds:?}");
+            }
+        }
+    }
+}
+
+/// `library`, with its index built, as it is once anything has searched.
+async fn searched(name: &str) -> (PathBuf, DbState, SqlitePool) {
+    let (dir, state, pool) = library(name).await;
+    state.index().await.unwrap();
+    (dir, state, pool)
+}
+
+fn model(vector: Vec<f32>) -> impl FnOnce(String) -> Result<Vec<f32>, String> + Send + 'static {
+    move |_| Ok(vector)
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn storing_passages_updates_the_index_in_place() {
+    let (_dir, state, pool) = library("w-chunks").await;
+    let three = [
+        chunk("a", vec![1.0, 0.1]),
+        chunk("b", vec![0.5, 0.5]),
+        chunk("c", vec![0.1, 1.0]),
+    ];
+    store_chunks_in(&state, "mine", &three).await.unwrap();
+    state.index().await.unwrap();
+
+    // Read again, with fewer passages: the ones it no longer has go.
+    store_chunks_in(&state, "mine", &[chunk("a again", vec![0.2, 0.9])])
+        .await
+        .unwrap();
+    matches_a_rebuild(&state).await;
+
+    // A paper read for the first time.
+    queries::register_source(&pool, "new", "/new.pdf", "new.pdf")
+        .await
+        .unwrap();
+    store_chunks_in(&state, "new", &three).await.unwrap();
+    matches_a_rebuild(&state).await;
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn saving_a_mark_updates_the_index_in_place() {
+    let (_dir, state, _pool) = searched("w-save-mark").await;
+
+    // A new mark has no vector yet; an edited one keeps its last.
+    save_annotation_in(&state, &mark("mine-mark-2", "mine"))
+        .await
+        .unwrap();
+    let mut edited = mark("mine-mark", "mine");
+    edited.quote = Some("the effect was weakest".into());
+    save_annotation_in(&state, &edited).await.unwrap();
+
+    matches_a_rebuild(&state).await;
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn embedding_a_mark_updates_the_index_in_place() {
+    let (_dir, state, _pool) = searched("w-embed-mark").await;
+    save_annotation_in(&state, &mark("mine-mark-2", "mine"))
+        .await
+        .unwrap();
+
+    // A new mark's first vector, and an edited mark's next.
+    for (id, vector) in [
+        ("mine-mark-2", vec![0.3, 0.7]),
+        ("theirs-mark", vec![-1.0, 0.0]),
+    ] {
+        assert!(
+            embed_annotation_with(&state, id.into(), format!("{id} said"), model(vector))
+                .await
+                .unwrap()
+        );
+        matches_a_rebuild(&state).await;
+    }
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn deleting_a_mark_updates_the_index_in_place() {
+    let (_dir, state, _pool) = searched("w-delete-mark").await;
+
+    delete_annotation_in(&state, "mine-mark".into())
+        .await
+        .unwrap();
+
+    matches_a_rebuild(&state).await;
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn undoing_an_import_of_marks_updates_the_index_in_place() {
+    let (_dir, state, pool) = library("w-imported").await;
+    for id in ["theirs-imported-1", "theirs-imported-2"] {
+        let mut imported = mark(id, "theirs");
+        imported.origin = Some("imported".into());
+        queries::save_annotation(&pool, &imported).await.unwrap();
+        queries::save_annotation_embedding(&pool, id, &[0.9, 0.1], "hash")
+            .await
+            .unwrap();
+    }
+    state.index().await.unwrap();
+
+    let deleted = delete_imported_annotations_in(&state, "theirs".into())
+        .await
+        .unwrap();
+
+    assert_eq!(deleted, 2);
+    matches_a_rebuild(&state).await;
+}
+
+fn note(id: &str, work: &str, body: &str) -> queries::NewSourceNote {
+    queries::NewSourceNote {
+        id: id.into(),
+        sha256: work.into(),
+        body: body.into(),
+        quote: None,
+        page_label: None,
+        label_id: None,
+    }
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn saving_and_embedding_a_source_note_updates_the_index_in_place() {
+    let (_dir, state, _pool) = searched("w-note").await;
+
+    // Its words change, then its vector.
+    save_source_note_in(&state, note("mine-note", "mine", "Changed my mind."))
+        .await
+        .unwrap();
+    matches_a_rebuild(&state).await;
+    assert!(
+        embed_source_note_with(&state, "mine-note", model(vec![1.0, -0.5]))
+            .await
+            .unwrap()
+    );
+    matches_a_rebuild(&state).await;
+
+    // A new note, and its first vector.
+    save_source_note_in(&state, note("theirs-note-2", "theirs", "Another."))
+        .await
+        .unwrap();
+    matches_a_rebuild(&state).await;
+    assert!(
+        embed_source_note_with(&state, "theirs-note-2", model(vec![0.4, 0.4]))
+            .await
+            .unwrap()
+    );
+    matches_a_rebuild(&state).await;
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn deleting_a_source_note_updates_the_index_in_place() {
+    let (_dir, state, _pool) = searched("w-delete-note").await;
+
+    delete_source_note_in(&state, "theirs-note".into())
+        .await
+        .unwrap();
+
+    matches_a_rebuild(&state).await;
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn preparing_notes_updates_the_index_in_place() {
+    // "Prepare my notes": every mark and note with no vector, in one batch each.
+    let (_dir, state, _pool) = library("w-pending").await;
+    save_annotation_in(&state, &mark("mine-mark-2", "mine"))
+        .await
+        .unwrap();
+    save_source_note_in(&state, note("mine-note-2", "mine", "Unembedded."))
+        .await
+        .unwrap();
+    state.index().await.unwrap();
+
+    let done = embed_pending_annotations_with(&state, |texts: Vec<String>| {
+        Ok(texts.iter().map(|_| vec![0.7, -0.7]).collect())
+    })
+    .await
+    .unwrap();
+
+    // The two new, and the two notes `library` wrote under a hash that isn't
+    // their words'.
+    assert_eq!(done, 4);
+    matches_a_rebuild(&state).await;
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn attaching_a_file_moves_its_notes_in_the_index_too() {
+    // The alias change that touches a vector: a file that was a source of its
+    // own becomes the work's, and its notes go with it (`alias_source`).
+    // Otherwise aliases are read when searched (ADR 005 amendment).
+    let (dir, state, pool) = library("w-attach").await;
+    let pdf = dir.join("project").join("loose.pdf");
+    std::fs::write(&pdf, b"%PDF-1.7 a loose copy").unwrap();
+    let loose = erti_lib::db::hash_file(&pdf).await.unwrap();
+    queries::register_source(&pool, &loose, pdf.to_str().unwrap(), "loose.pdf")
+        .await
+        .unwrap();
+    source_note(&pool, "loose-note", &loose, &[0.5, 0.5]).await;
+    state.index().await.unwrap();
+
+    attach_file_in(&state, "mine", pdf.to_string_lossy().into())
+        .await
+        .unwrap();
+
+    let held = state.held_index().unwrap();
+    let moved = held
+        .entries()
+        .into_iter()
+        .find(|(key, _, _)| key == &Key::SourceNote("loose-note".into()))
+        .map(|(_, owner, _)| owner.to_string());
+    assert_eq!(moved.as_deref(), Some("mine"));
+    matches_a_rebuild(&state).await;
+}
+
+// M2-2 AC-1, AC-2
+#[tokio::test]
+async fn removing_a_source_updates_the_index_in_place() {
+    let (_dir, state, _pool) = searched("w-remove").await;
+
+    remove_source_in(&state, "theirs").await.unwrap();
+
+    matches_a_rebuild(&state).await;
+    let held = state.held_index().unwrap();
+    assert!(held.entries().iter().all(|(_, owner, _)| *owner == "mine"));
+}
+
+#[tokio::test]
+async fn a_search_holding_the_index_keeps_the_one_it_was_handed() {
+    let (_dir, state, _pool) = searched("w-held").await;
+    let (_, during) = state.index().await.unwrap();
+    let rows = during.len();
+
+    delete_annotation_in(&state, "mine-mark".into())
+        .await
+        .unwrap();
+
+    assert_eq!(during.len(), rows, "the search's own copy is untouched");
+    let after = state.held_index().unwrap();
+    assert!(!std::sync::Arc::ptr_eq(&during, &after));
+    assert_eq!(after.len(), rows - 1);
+    matches_a_rebuild(&state).await;
+}
+
+#[tokio::test]
+async fn a_first_paper_in_an_empty_library_rebuilds_the_index() {
+    // The empty library's index has no width; a paper's vectors would all be
+    // zeroed in it. A build now would choose their width, so it's dropped.
+    let dir = scratch("w-first");
+    let state = DbState::default();
+    state.open_library(&dir.join("library.db")).await.unwrap();
+    let pool = state.library().await.unwrap();
+    assert!(state.index().await.unwrap().1.is_empty());
+
+    queries::register_source(&pool, "first", "/first.pdf", "first.pdf")
+        .await
+        .unwrap();
+    store_chunks_in(&state, "first", &[chunk("first", vec![1.0, 0.0])])
+        .await
+        .unwrap();
+
+    assert!(!state.index_is_built());
+    let (_, rebuilt) = state.index().await.unwrap();
+    assert_eq!(rebuilt.len(), 1);
+}
+
+#[tokio::test]
+async fn a_write_while_the_index_is_building_drops_that_build() {
+    // With no index held, a build may be under way that read the library
+    // before the write. It isn't kept, as before M2-2.
+    let (_dir, _state, pool) = library("w-building").await;
+    let index = IndexState::default();
+    let before = index.generation();
+
+    index
+        .refresh(&pool, before, &[Changed::ChunksOf("mine".into())])
+        .await;
+
+    assert!(index.get(&pool, before).await.unwrap().is_none());
+    assert!(index
+        .get(&pool, index.generation())
+        .await
+        .unwrap()
+        .is_some());
 }
