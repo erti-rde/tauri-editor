@@ -8,8 +8,9 @@
 //! product over memory that's already there.
 //!
 //! SQLite stays the source of truth. The index is built from it lazily, on the
-//! first query, and dropped whenever something it holds may have changed, so it
-//! can't drift and needs no migration of its own.
+//! first query, and needs no migration of its own. After that, each command
+//! that writes a vector reads back the rows it touched and swaps them in
+//! (M2-2), so an ingest or a new note doesn't cost the next search a rebuild.
 //!
 //! What's in a result beyond its score (the passage's text, the mark, the note)
 //! is read back from SQLite for the top few only. And a result's work is
@@ -36,7 +37,10 @@ pub enum HitKind {
 }
 
 /// The row a vector came from: the primary key of its table.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// Ordered, so rows that score the same are listed by what they are rather than
+/// by where they happen to sit in the index, which updates in place reorder.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Key {
     Chunk { sha256: String, idx: i64 },
     Annotation(String),
@@ -49,6 +53,36 @@ impl Key {
             Key::Chunk { .. } => HitKind::Chunk,
             Key::Annotation(_) => HitKind::Annotation,
             Key::SourceNote(_) => HitKind::SourceNote,
+        }
+    }
+}
+
+/// Rows a write may have changed: what's held for them is swapped for what the
+/// library has now (M2-2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Changed {
+    /// Every row the file or work owns: its passages, its marks, its notes.
+    Owner(String),
+    /// A file's passages.
+    ChunksOf(String),
+    /// The marks on a file.
+    AnnotationsOf(String),
+    /// The notes on a work.
+    SourceNotesOf(String),
+    Annotation(String),
+    SourceNote(String),
+}
+
+impl Changed {
+    fn covers(&self, key: &Key, owner: &str) -> bool {
+        match (self, key) {
+            (Changed::Owner(o), _) => o == owner,
+            (Changed::ChunksOf(o), Key::Chunk { .. })
+            | (Changed::AnnotationsOf(o), Key::Annotation(_))
+            | (Changed::SourceNotesOf(o), Key::SourceNote(_)) => o == owner,
+            (Changed::Annotation(id), Key::Annotation(k))
+            | (Changed::SourceNote(id), Key::SourceNote(k)) => id == k,
+            _ => false,
         }
     }
 }
@@ -84,6 +118,8 @@ pub struct Found<'a> {
     pub in_project: bool,
 }
 
+/// Cloned only when a write lands while a search still holds the index.
+#[derive(Clone)]
 pub struct Index {
     dims: usize,
     /// `keys.len()` rows of `dims`, each of length 1 (or 0, see `build`).
@@ -94,6 +130,14 @@ pub struct Index {
     /// out once per file per query, not once per row.
     owner_of: Vec<u32>,
     owners: Vec<String>,
+    /// Where each owner is in `owners`, so a row added later joins its file.
+    owner_ix: HashMap<String, u32>,
+    /// Each row's width as stored, and how many rows have each: the width a
+    /// build would choose now, so an update that would change it is noticed.
+    widths: Vec<usize>,
+    width_counts: HashMap<usize, usize>,
+    /// The width `embedding_meta` records for the model, if any.
+    recorded: Option<usize>,
     /// The model the vectors came from (`embedding_meta`), so a change of
     /// model is noticed and the index rebuilt.
     model: Option<String>,
@@ -109,7 +153,8 @@ fn normalise(v: &mut [f32]) {
 }
 
 /// The width the index is built at: the current model's (`embedding_meta`)
-/// when some row has it, else the width most rows have.
+/// when some row has it, else the width most rows have. `counts` is how many
+/// rows have each width.
 ///
 /// Not the first row's: after a change of model, a library can still hold
 /// vectors from the last one, and rows come in no particular order. Taking an
@@ -118,19 +163,15 @@ fn normalise(v: &mut [f32]) {
 ///
 /// The recorded width counts only when a row has it, so a bad one can't size
 /// a matrix that holds nothing: every row would be zeroed anyway.
-fn width(rows: &[Row], recorded: Option<usize>) -> usize {
-    if let Some(dims) = recorded.filter(|&d| rows.iter().any(|r| r.embedding.len() == d)) {
+fn width(counts: &HashMap<usize, usize>, recorded: Option<usize>) -> usize {
+    if let Some(dims) = recorded.filter(|d| counts.contains_key(d)) {
         return dims;
-    }
-    let mut counts: HashMap<usize, usize> = HashMap::new();
-    for row in rows {
-        *counts.entry(row.embedding.len()).or_default() += 1;
     }
     // Ties to the wider, so the same library always gets the same width.
     counts
-        .into_iter()
-        .max_by_key(|&(dims, count)| (count, dims))
-        .map_or(0, |(dims, _)| dims)
+        .iter()
+        .max_by_key(|&(&dims, &count)| (count, dims))
+        .map_or(0, |(&dims, _)| dims)
 }
 
 impl Index {
@@ -139,38 +180,127 @@ impl Index {
     /// A row of another width came from another model; it's kept, as a zero
     /// vector, so it's still found by a filter and scores 0, which is what
     /// comparing vectors of different lengths gave.
-    pub fn build(rows: Vec<Row>, model: Option<String>, dims: Option<usize>) -> Index {
-        let dims = width(&rows, dims);
-        let mut vectors = Vec::with_capacity(rows.len() * dims);
-        let mut keys = Vec::with_capacity(rows.len());
-        let mut owner_of = Vec::with_capacity(rows.len());
-        let mut owners: Vec<String> = Vec::new();
-        let mut owner_ix: HashMap<String, u32> = HashMap::new();
-
-        for row in rows {
-            let start = vectors.len();
-            if row.embedding.len() == dims {
-                vectors.extend_from_slice(&row.embedding);
-                normalise(&mut vectors[start..]);
-            } else {
-                vectors.resize(start + dims, 0.0);
-            }
-            let ix = *owner_ix.entry(row.owner).or_insert_with_key(|owner| {
-                owners.push(owner.clone());
-                (owners.len() - 1) as u32
-            });
-            owner_of.push(ix);
-            keys.push(row.key);
+    pub fn build(rows: Vec<Row>, model: Option<String>, recorded: Option<usize>) -> Index {
+        let mut counts: HashMap<usize, usize> = HashMap::new();
+        for row in &rows {
+            *counts.entry(row.embedding.len()).or_default() += 1;
         }
-
-        Index {
+        let dims = width(&counts, recorded);
+        let mut index = Index {
             dims,
-            vectors,
-            keys,
-            owner_of,
-            owners,
+            vectors: Vec::with_capacity(rows.len() * dims),
+            keys: Vec::with_capacity(rows.len()),
+            owner_of: Vec::with_capacity(rows.len()),
+            owners: Vec::new(),
+            owner_ix: HashMap::new(),
+            widths: Vec::with_capacity(rows.len()),
+            width_counts: HashMap::new(),
+            recorded,
             model,
+        };
+        for row in rows {
+            index.push(row);
         }
+        index
+    }
+
+    /// Add a row at the end, at the index's width.
+    fn push(&mut self, row: Row) {
+        let start = self.vectors.len();
+        if row.embedding.len() == self.dims {
+            self.vectors.extend_from_slice(&row.embedding);
+            normalise(&mut self.vectors[start..]);
+        } else {
+            self.vectors.resize(start + self.dims, 0.0);
+        }
+        let owners = &mut self.owners;
+        let ix = *self.owner_ix.entry(row.owner).or_insert_with_key(|owner| {
+            owners.push(owner.clone());
+            (owners.len() - 1) as u32
+        });
+        self.owner_of.push(ix);
+        *self.width_counts.entry(row.embedding.len()).or_default() += 1;
+        self.widths.push(row.embedding.len());
+        self.keys.push(row.key);
+    }
+
+    /// Take out row `i`, moving the last row into its place: rows are in no
+    /// order that matters, and this moves one row rather than all after it.
+    fn swap_remove(&mut self, i: usize) {
+        let last = self.keys.len() - 1;
+        let d = self.dims;
+        if i != last {
+            self.vectors.copy_within(last * d..(last + 1) * d, i * d);
+        }
+        self.vectors.truncate(last * d);
+        self.keys.swap_remove(i);
+        self.owner_of.swap_remove(i);
+        let w = self.widths.swap_remove(i);
+        if let Some(count) = self.width_counts.get_mut(&w) {
+            *count -= 1;
+            if *count == 0 {
+                self.width_counts.remove(&w);
+            }
+        }
+    }
+
+    /// The rows held now that `changed` covers. Read again with what changed,
+    /// so a row that moved to another owner (a note, when its work becomes
+    /// another's file) is found where it went.
+    pub fn covered(&self, changed: &[Changed]) -> Vec<Key> {
+        self.keys
+            .iter()
+            .zip(&self.owner_of)
+            .filter(|(key, &o)| {
+                let owner = &self.owners[o as usize];
+                changed.iter().any(|c| c.covers(key, owner))
+            })
+            .map(|(key, _)| key.clone())
+            .collect()
+    }
+
+    /// Swap the rows `changed` covers, and any row held under a key in `rows`,
+    /// for `rows`: what the library has for them now (M2-2).
+    ///
+    /// False when the index is no longer the one a build would give, because
+    /// a build now would choose another width (a first paper in an empty
+    /// library, or the last of a model's rows gone): the caller drops it.
+    pub fn replace(&mut self, changed: &[Changed], rows: Vec<Row>) -> bool {
+        let gone: Vec<usize> = {
+            let fresh: HashSet<&Key> = rows.iter().map(|r| &r.key).collect();
+            (0..self.keys.len())
+                .filter(|&i| {
+                    let owner = &self.owners[self.owner_of[i] as usize];
+                    fresh.contains(&self.keys[i])
+                        || changed.iter().any(|c| c.covers(&self.keys[i], owner))
+                })
+                .collect()
+        };
+        // From the end, so the row moved into a gap is never one still to go.
+        for &i in gone.iter().rev() {
+            self.swap_remove(i);
+        }
+        for row in rows {
+            self.push(row);
+        }
+        width(&self.width_counts, self.recorded) == self.dims
+    }
+
+    /// Every row as held, in key order: its key, its owner and its vector.
+    /// For tests: an index updated in place should hold what a build would.
+    pub fn entries(&self) -> Vec<(Key, &str, &[f32])> {
+        let d = self.dims;
+        let mut rows: Vec<_> = self
+            .keys
+            .iter()
+            .enumerate()
+            .map(|(i, key)| {
+                let owner = self.owners[self.owner_of[i] as usize].as_str();
+                (key.clone(), owner, &self.vectors[i * d..(i + 1) * d])
+            })
+            .collect();
+        rows.sort_by(|a, b| a.0.cmp(&b.0));
+        rows
     }
 
     pub fn len(&self) -> usize {
@@ -236,10 +366,13 @@ impl Index {
             scored.push((i, similarity, in_project));
         }
 
-        // Project first, then the closest; ties in the order rows were read, so
-        // the same library always gives the same list.
+        // Project first, then the closest; ties by the row's key, so the same
+        // library always gives the same list, however its rows came to be
+        // where they are in the index.
         let order = |a: &(usize, f32, bool), b: &(usize, f32, bool)| {
-            b.2.cmp(&a.2).then(b.1.total_cmp(&a.1)).then(a.0.cmp(&b.0))
+            b.2.cmp(&a.2)
+                .then(b.1.total_cmp(&a.1))
+                .then_with(|| self.keys[a.0].cmp(&self.keys[b.0]))
         };
         if scored.len() > limit {
             scored.select_nth_unstable_by(limit - 1, order);
@@ -281,23 +414,35 @@ async fn load_under(library: &SqlitePool, meta: Option<(String, i64)>) -> Result
         .map_err(|e| e.to_string())
 }
 
-/// The open library's index, built on first use and dropped when it may be
-/// out of date.
+/// The open library's index, built on first use, kept current by the writers,
+/// and dropped when it can't be.
 ///
-/// `generation` counts invalidations. A build that started before one isn't
-/// kept: what it read may already be gone.
+/// `generation` counts drops. A build that started before one isn't kept:
+/// what it read may already be gone.
 #[derive(Default)]
 pub struct IndexState {
     slot: std::sync::Mutex<Slot>,
     /// One build at a time: queries that arrive during a build wait for it
     /// rather than each reading the whole library again.
     building: tokio::sync::Mutex<()>,
+    /// One update at a time, each reading the library after its write. The
+    /// last update to read then follows the last write, whatever order two
+    /// writers finish in, so a slower one can't put back what a faster one
+    /// replaced.
+    updating: tokio::sync::Mutex<()>,
 }
 
 #[derive(Default)]
 struct Slot {
     generation: u64,
     index: Option<Arc<Index>>,
+}
+
+impl Slot {
+    fn drop_index(&mut self) {
+        self.generation += 1;
+        self.index = None;
+    }
 }
 
 impl IndexState {
@@ -310,6 +455,12 @@ impl IndexState {
         self.slot().index.is_some()
     }
 
+    /// The index held now, if any. For tests: to see that a write updated it
+    /// rather than dropping it.
+    pub fn held(&self) -> Option<Arc<Index>> {
+        self.slot().index.clone()
+    }
+
     /// How many times the index has been dropped. Read before choosing which
     /// library to build from, and handed to `get`.
     pub fn generation(&self) -> u64 {
@@ -318,15 +469,50 @@ impl IndexState {
 
     /// Forget the index. The next query builds a new one.
     pub fn invalidate(&self) {
+        self.slot().drop_index();
+    }
+
+    /// Bring the index up to date with a write to `library`: what `changed`
+    /// covers is read again and swapped in (M2-2).
+    ///
+    /// `generation` is `self.generation()` as it was before the caller picked
+    /// `library`, after the write. If the index has been dropped since,
+    /// whatever is built next reads the library afresh, and nothing is done.
+    /// With no index held, a build may be under way that read the library
+    /// before the write, so it's dropped, as before M2-2. If the rows can't be
+    /// read, the index is dropped too: it's never left holding a guess.
+    pub async fn refresh(&self, library: &SqlitePool, generation: u64, changed: &[Changed]) {
+        let _one = self.updating.lock().await;
+        let held = {
+            let mut slot = self.slot();
+            if slot.generation != generation {
+                return;
+            }
+            match &slot.index {
+                Some(index) => index.covered(changed),
+                None => return slot.drop_index(),
+            }
+        };
+
+        let rows = queries::index_rows_for(library, changed, &held).await;
         let mut slot = self.slot();
-        slot.generation += 1;
-        slot.index = None;
+        if slot.generation != generation {
+            return;
+        }
+        let (Ok(rows), Some(index)) = (rows, slot.index.as_mut()) else {
+            return slot.drop_index();
+        };
+        // In place unless a search is still holding this index, which keeps
+        // the one it was handed.
+        if !Arc::make_mut(index).replace(changed, rows) {
+            slot.drop_index();
+        }
     }
 
     /// The index for `library`, building it if there isn't a current one.
     ///
     /// A different model in `embedding_meta` than the index was built from
-    /// means its vectors are from another space: it's rebuilt.
+    /// means its vectors are from another space: it's dropped and rebuilt.
     ///
     /// `generation` is `self.generation()` as it was before the caller picked
     /// `library`. If anything was dropped since, `library` may be one that has
@@ -346,11 +532,21 @@ impl IndexState {
         let meta = queries::embedding_meta(library).await?;
         let model = meta.as_ref().map(|(model, _)| model.as_str());
         let current = |state: &Self| {
-            let slot = state.slot();
+            let mut slot = state.slot();
             if slot.generation != generation {
                 return Err(());
             }
-            Ok(slot.index.clone().filter(|index| index.model() == model))
+            match &slot.index {
+                Some(index) if index.model() != model => {
+                    // Dropped, not replaced at this generation: an update
+                    // racing the rebuild would otherwise land on the old
+                    // index and be lost when the new one, read before the
+                    // write, took its place.
+                    slot.drop_index();
+                    Err(())
+                }
+                index => Ok(index.clone()),
+            }
         };
 
         match current(self) {
@@ -589,5 +785,61 @@ mod tests {
 
         let other_model = index.search(&[1.0, 0.0, 0.0], &filter, 5);
         assert!(other_model.iter().all(|f| f.similarity == 0.0));
+    }
+
+    // M2-2 AC-2
+    #[test]
+    fn rows_swapped_in_place_hold_what_a_build_of_the_result_would() {
+        let start = || {
+            vec![
+                row(chunk("a", 0), "a", &[1.0, 0.0]),
+                row(chunk("a", 1), "a", &[0.0, 1.0]),
+                row(Key::Annotation("m1".into()), "a", &[1.0, 1.0]),
+                row(chunk("b", 0), "b", &[3.0, 4.0]),
+                row(Key::SourceNote("n1".into()), "b", &[0.0, 2.0]),
+            ]
+        };
+        let mut index = Index::build(start(), None, None);
+
+        // `a` read again with one passage, `m1` gone, and `n1` moved to `a`.
+        let changed = [
+            Changed::ChunksOf("a".into()),
+            Changed::Annotation("m1".into()),
+        ];
+        let fresh = vec![
+            row(chunk("a", 0), "a", &[0.5, 0.5]),
+            row(Key::SourceNote("n1".into()), "a", &[0.0, 2.0]),
+        ];
+        assert!(index.replace(&changed, fresh));
+
+        let built = Index::build(
+            vec![
+                row(chunk("b", 0), "b", &[3.0, 4.0]),
+                row(chunk("a", 0), "a", &[0.5, 0.5]),
+                row(Key::SourceNote("n1".into()), "a", &[0.0, 2.0]),
+            ],
+            None,
+            None,
+        );
+        assert_eq!(index.entries(), built.entries());
+    }
+
+    // M2-2
+    #[test]
+    fn an_update_that_would_change_the_width_asks_for_a_build() {
+        // Two rows of an old model's width, one of the current; a build takes
+        // the width most rows have. Losing the old rows changes that.
+        let mut index = Index::build(
+            vec![
+                row(chunk("old", 0), "old", &[1.0, 0.0, 0.0]),
+                row(chunk("old", 1), "old", &[0.0, 1.0, 0.0]),
+                row(chunk("new", 0), "new", &[1.0, 0.0]),
+            ],
+            None,
+            None,
+        );
+        assert_eq!(index.dims, 3);
+
+        assert!(!index.replace(&[Changed::Owner("old".into())], Vec::new()));
     }
 }

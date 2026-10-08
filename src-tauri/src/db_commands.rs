@@ -8,7 +8,7 @@
 use std::path::PathBuf;
 use tauri::State;
 
-use crate::db::index::HitKind;
+use crate::db::index::{Changed, HitKind};
 use crate::db::{queries, salvage, DbState};
 use crate::ipc::{AppError, Classify};
 
@@ -488,8 +488,9 @@ pub async fn store_chunks_in(
     chunks: &[queries::NewChunk],
 ) -> Result<(), AppError> {
     let stored = queries::store_chunks(&state.library().await?, sha256, chunks).await;
-    // Whatever happened: a failed write may still have changed something.
-    state.invalidate_index();
+    state
+        .refresh_index(&[Changed::ChunksOf(sha256.to_string())])
+        .await;
     stored.or_database()
 }
 
@@ -611,8 +612,15 @@ pub async fn remove_source_in(state: &DbState, id: &str) -> Result<(), AppError>
     })?;
     let removed = queries::remove_source(&state.library().await?, id).await;
     // Its passages, marks and notes had vectors, and the cascade took them.
-    state.invalidate_index();
-    removed.or_database()
+    match &removed {
+        Ok(group) => {
+            let changed: Vec<Changed> = group.iter().cloned().map(Changed::Owner).collect();
+            state.refresh_index(&changed).await;
+        }
+        // Which rows went isn't known.
+        Err(_) => state.invalidate_index(),
+    }
+    removed.map(drop).or_database()
 }
 
 /// A file attached to a work, and what's left to do with it (M1b-7).
@@ -669,9 +677,14 @@ pub async fn attach_file_in(
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| path.clone());
 
-    let attached = queries::attach_file(&state.library().await?, work, &sha256, &path, &file_name)
-        .await
-        .or_database()?;
+    let attached =
+        queries::attach_file(&state.library().await?, work, &sha256, &path, &file_name).await;
+    // A file that was a source of its own takes its notes to the work it's
+    // now part of (`alias_source`). Read again from where they went.
+    state
+        .refresh_index(&[Changed::SourceNotesOf(sha256.clone())])
+        .await;
+    let attached = attached.or_database()?;
     match attached {
         queries::Attach::Attached {
             needs_ingest,
@@ -965,9 +978,21 @@ pub async fn save_annotation(
     state: State<'_, DbState>,
     annotation: queries::NewAnnotation,
 ) -> Result<(), AppError> {
-    queries::save_annotation(&state.library().await?, &annotation)
-        .await
-        .or_database()
+    save_annotation_in(&state, &annotation).await
+}
+
+pub async fn save_annotation_in(
+    state: &DbState,
+    annotation: &queries::NewAnnotation,
+) -> Result<(), AppError> {
+    let saved = queries::save_annotation(&state.library().await?, annotation).await;
+    // Its vector is `embed_annotation`'s to write, and a save keeps the mark
+    // on its file. Read again all the same: one row, and the index then holds
+    // whatever the save left, not what it's expected to.
+    state
+        .refresh_index(&[Changed::Annotation(annotation.id.clone())])
+        .await;
+    saved.or_database()
 }
 
 #[tauri::command]
@@ -1000,8 +1025,12 @@ pub async fn all_annotations(
 #[tauri::command]
 #[specta::specta]
 pub async fn delete_annotation(state: State<'_, DbState>, id: String) -> Result<(), AppError> {
+    delete_annotation_in(&state, id).await
+}
+
+pub async fn delete_annotation_in(state: &DbState, id: String) -> Result<(), AppError> {
     let deleted = queries::delete_annotation(&state.library().await?, &id).await;
-    state.invalidate_index();
+    state.refresh_index(&[Changed::Annotation(id)]).await;
     deleted.or_database()
 }
 
@@ -1081,8 +1110,12 @@ pub async fn save_source_note_in(
 
     let library = state.library().await?;
     let saved = queries::save_source_note(&library, &note).await;
-    // The note's words may have changed, and the index holds what they were.
-    state.invalidate_index();
+    // Its vector is `embed_source_note`'s to write, and stays the last words'
+    // until then, in the library as in the index. Read again all the same, as
+    // a mark is.
+    state
+        .refresh_index(&[Changed::SourceNote(note.id.clone())])
+        .await;
     if !saved.or_database()? {
         return Err(AppError::new(
             crate::ipc::ErrorKind::NotFound,
@@ -1100,7 +1133,7 @@ pub async fn delete_source_note(state: State<'_, DbState>, id: String) -> Result
 
 pub async fn delete_source_note_in(state: &DbState, id: String) -> Result<(), AppError> {
     let deleted = queries::delete_source_note(&state.library().await?, &id).await;
-    state.invalidate_index();
+    state.refresh_index(&[Changed::SourceNote(id)]).await;
     deleted.or_database()
 }
 
@@ -1148,7 +1181,9 @@ pub async fn embed_source_note_with(
         .or_model()?;
 
     let saved = queries::save_source_note_embedding(&library, &note, &embedding).await;
-    state.invalidate_index();
+    state
+        .refresh_index(&[Changed::SourceNote(id.to_string())])
+        .await;
     saved.or_database()
 }
 
@@ -1169,8 +1204,15 @@ pub async fn delete_imported_annotations(
     state: State<'_, DbState>,
     sha256: String,
 ) -> Result<u32, AppError> {
+    delete_imported_annotations_in(&state, sha256).await
+}
+
+pub async fn delete_imported_annotations_in(
+    state: &DbState,
+    sha256: String,
+) -> Result<u32, AppError> {
     let deleted = queries::delete_imported_annotations(&state.library().await?, &sha256).await;
-    state.invalidate_index();
+    state.refresh_index(&[Changed::AnnotationsOf(sha256)]).await;
     deleted.or_database().map(count)
 }
 
@@ -1302,6 +1344,22 @@ pub async fn embed_annotation(
     id: String,
     text: String,
 ) -> Result<bool, AppError> {
+    embed_annotation_with(&state, id, text, |text| {
+        crate::commands::embed_texts(&[text], true)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "the mark produced no embedding".to_string())
+    })
+    .await
+}
+
+/// `embed_annotation` with the model passed in, so tests needn't load one.
+pub async fn embed_annotation_with(
+    state: &DbState,
+    id: String,
+    text: String,
+    embed: impl FnOnce(String) -> Result<Vec<f32>, String> + Send + 'static,
+) -> Result<bool, AppError> {
     let library = state.library().await?;
 
     let hash = queries::text_hash(&text);
@@ -1320,17 +1378,13 @@ pub async fn embed_annotation(
 
     // spawn_blocking for the same reason search_sources does it: inference has no
     // await points and would hold an async worker for its whole duration.
-    let embedding =
-        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&[text], true))
-            .await
-            .or_internal()?
-            .or_model()?
-            .into_iter()
-            .next()
-            .ok_or_else(|| AppError::model("the mark produced no embedding"))?;
+    let embedding = tokio::task::spawn_blocking(move || embed(text))
+        .await
+        .or_internal()?
+        .or_model()?;
 
     let saved = queries::save_annotation_embedding(&library, &id, &embedding, &hash).await;
-    state.invalidate_index();
+    state.refresh_index(&[Changed::Annotation(id)]).await;
     saved.or_database()?;
 
     Ok(true)
@@ -1349,20 +1403,33 @@ pub async fn embed_annotation(
 #[tauri::command]
 #[specta::specta]
 pub async fn embed_pending_annotations(state: State<'_, DbState>) -> Result<u32, AppError> {
+    embed_pending_annotations_with(&state, |texts| crate::commands::embed_texts(&texts, true)).await
+}
+
+/// `embed_pending_annotations` with the model passed in, so tests needn't load
+/// one.
+pub async fn embed_pending_annotations_with<E>(state: &DbState, embed: E) -> Result<u32, AppError>
+where
+    E: Fn(Vec<String>) -> Result<Vec<Vec<f32>>, String> + Clone + Send + 'static,
+{
     let library = state.library().await?;
 
     // Bounded: a first run over a large library should take a moment and finish,
     // not hold the model for a minute. Running it again picks up the rest.
-    let marks = embed_pending_marks(state.inner(), &library).await?;
+    let marks = embed_pending_marks(state, &library, embed.clone()).await?;
     // Source notes too (M1b-8 AC-4): "Prepare my notes" means all of them.
     // After the marks, which are kept by now, so a note that fails to embed
     // can't cost a mark its vector.
-    let notes = embed_pending_source_notes(state.inner(), &library).await?;
+    let notes = embed_pending_source_notes(state, &library, embed).await?;
     Ok(count(marks + notes))
 }
 
 /// Embed the marks that have no vector, in one batch.
-async fn embed_pending_marks(state: &DbState, library: &sqlx::SqlitePool) -> Result<u64, AppError> {
+async fn embed_pending_marks(
+    state: &DbState,
+    library: &sqlx::SqlitePool,
+    embed: impl FnOnce(Vec<String>) -> Result<Vec<Vec<f32>>, String> + Send + 'static,
+) -> Result<u64, AppError> {
     let pending = queries::annotations_needing_embedding(library, 500)
         .await
         .or_database()?;
@@ -1374,21 +1441,26 @@ async fn embed_pending_marks(state: &DbState, library: &sqlx::SqlitePool) -> Res
 
     // One batch rather than one inference per mark: the model is loaded once and
     // the tokeniser pads the whole set together.
-    let embeddings =
-        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&texts, true))
-            .await
-            .or_internal()?
-            .or_model()?;
+    let embeddings = tokio::task::spawn_blocking(move || embed(texts))
+        .await
+        .or_internal()?
+        .or_model()?;
 
     let mut done = 0;
+    let mut saved = Ok(());
     for (id, embedding) in ids.iter().zip(embeddings.iter()) {
         // A hash of nothing: these are backfills, and the next real edit
         // re-embeds them under the hash of whatever it then says.
-        let saved = queries::save_annotation_embedding(library, id, embedding, "backfilled").await;
-        state.invalidate_index();
-        saved.or_database()?;
+        saved = queries::save_annotation_embedding(library, id, embedding, "backfilled").await;
+        if saved.is_err() {
+            break;
+        }
         done += 1;
     }
+    // Once for the batch, after it, failed or not.
+    let changed: Vec<Changed> = ids.into_iter().map(Changed::Annotation).collect();
+    state.refresh_index(&changed).await;
+    saved.or_database()?;
     Ok(done)
 }
 
@@ -1397,6 +1469,7 @@ async fn embed_pending_marks(state: &DbState, library: &sqlx::SqlitePool) -> Res
 async fn embed_pending_source_notes(
     state: &DbState,
     library: &sqlx::SqlitePool,
+    embed: impl FnOnce(Vec<String>) -> Result<Vec<Vec<f32>>, String> + Send + 'static,
 ) -> Result<u64, AppError> {
     let pending = queries::source_notes_needing_embedding(library, 500)
         .await
@@ -1405,21 +1478,33 @@ async fn embed_pending_source_notes(
         return Ok(0);
     }
     let texts: Vec<String> = pending.iter().map(|note| note.text.clone()).collect();
-    let embeddings =
-        tokio::task::spawn_blocking(move || crate::commands::embed_texts(&texts, true))
-            .await
-            .or_internal()?
-            .or_model()?;
+    let embeddings = tokio::task::spawn_blocking(move || embed(texts))
+        .await
+        .or_internal()?
+        .or_model()?;
 
     let mut done = 0;
+    let mut failed = None;
     for (note, embedding) in pending.iter().zip(embeddings.iter()) {
         // Not counted when the note changed while the batch ran: its own
         // save's embedding has the words that stand.
-        let saved = queries::save_source_note_embedding(library, note, embedding).await;
-        state.invalidate_index();
-        if saved.or_database()? {
-            done += 1;
+        match queries::save_source_note_embedding(library, note, embedding).await {
+            Ok(true) => done += 1,
+            Ok(false) => {}
+            Err(e) => {
+                failed = Some(e);
+                break;
+            }
         }
+    }
+    // Once for the batch, after it, failed or not.
+    let changed: Vec<Changed> = pending
+        .iter()
+        .map(|note| Changed::SourceNote(note.id.clone()))
+        .collect();
+    state.refresh_index(&changed).await;
+    if let Some(e) = failed {
+        return Err(e).or_database();
     }
     Ok(done)
 }

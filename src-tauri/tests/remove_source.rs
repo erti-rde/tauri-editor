@@ -193,8 +193,8 @@ async fn removing_by_an_attached_file_s_hash_removes_the_whole_work() {
 
 #[tokio::test]
 async fn a_removed_source_is_gone_from_the_next_search() {
-    // The cascade took rows with vectors, so the index (M2-1) built before it
-    // is dropped, and the next search is built from what's left.
+    // The cascade took rows with vectors, and the index (M2-1) built before it
+    // lets them go too: updated in place, not dropped (M2-2).
     let (_dir, state, _library, _pdf) = library("index").await;
     let before = search_library_in(&state, &[1.0, 0.0], None, None, Some(true))
         .await
@@ -203,7 +203,7 @@ async fn a_removed_source_is_gone_from_the_next_search() {
 
     remove_source_in(&state, "erti:book").await.unwrap();
 
-    assert!(!state.index_is_built());
+    assert!(state.index_is_built());
     let after = search_library_in(&state, &[1.0, 0.0], None, None, Some(true))
         .await
         .unwrap();

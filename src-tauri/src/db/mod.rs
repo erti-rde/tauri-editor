@@ -333,10 +333,29 @@ impl DbState {
         Ok((library, std::sync::Arc::new(index)))
     }
 
-    /// Drop the index after a write it may not reflect. Every command that
-    /// writes a vector, or removes a row that has one, calls this.
+    /// Bring the index up to date after a write: the rows `changed` covers are
+    /// read again and swapped in (M2-2). Every command that writes a vector,
+    /// or removes or moves a row that has one, calls this, whether or not its
+    /// write succeeded: a failed write may still have changed something.
+    pub async fn refresh_index(&self, changed: &[index::Changed]) {
+        // Before the pool, as in `index`.
+        let generation = self.index.generation();
+        match self.library().await {
+            Ok(library) => self.index.refresh(&library, generation, changed).await,
+            Err(_) => self.index.invalidate(),
+        }
+    }
+
+    /// Drop the index: the next query builds a new one. For a change that
+    /// isn't a few rows, such as another model.
     pub fn invalidate_index(&self) {
         self.index.invalidate();
+    }
+
+    /// The index held now, if any. For tests: a write should update it in
+    /// place, not drop it.
+    pub fn held_index(&self) -> Option<std::sync::Arc<index::Index>> {
+        self.index.held()
     }
 
     /// Whether the index is built. For tests: it's built lazily.
