@@ -204,17 +204,110 @@ pub async fn source_for_doi_in(state: &DbState, doi: String) -> Result<Option<St
     queries::source_for_doi(&library, &doi).await.or_database()
 }
 
-/// A work with no file, by hand or from a DOI. The DOI is read from the
-/// details either way, so that a DOI typed into the form is found later too,
-/// and a work the library has under it already is refused: the second copy
-/// would split the citations between them.
-async fn add_work_in(
+/// The library's works, for an import to be matched against before anything
+/// is written (M1b-9 AC-4).
+#[tauri::command]
+#[specta::specta]
+pub async fn library_works(
+    state: State<'_, DbState>,
+) -> Result<Vec<queries::LibraryWork>, AppError> {
+    let library = state.library().await?;
+    queries::library_works(&library).await.or_database()
+}
+
+/// The most sources one `import_sources` call takes: enough that ten thousand
+/// is a few dozen calls, few enough that each is quick to report progress by.
+pub const IMPORT_BATCH: usize = 500;
+
+/// One source of a bibliography being imported (M1b-9).
+#[derive(Debug, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct ImportedSource {
+    /// `erti:<uuid>`, made in the webview as one entered by hand is.
+    pub id: String,
+    pub csl_json: String,
+    pub zotero_type: String,
+}
+
+/// What an `import_sources` call did with its sources.
+#[derive(Debug, serde::Serialize, serde::Deserialize, specta::Type, PartialEq, Eq)]
+pub struct ImportedBatch {
+    /// Added to the library, and to the project when asked.
+    pub added: Vec<String>,
+    /// Left out: the library has a work with the DOI, or the id, already.
+    /// The preview leaves these out too; one is here only when the library
+    /// gained it between the preview and the import.
+    pub skipped: Vec<String>,
+}
+
+/// Add a batch of an imported bibliography's sources to the library, and to
+/// the open project if `to_project` (M1b-9, docs/ux.md UX-6). Each is a work
+/// with no file, checked as one entered by hand is; a batch with one that
+/// isn't is refused whole, before anything is written.
+#[tauri::command]
+#[specta::specta]
+pub async fn import_sources(
+    state: State<'_, DbState>,
+    sources: Vec<ImportedSource>,
+    to_project: bool,
+) -> Result<ImportedBatch, AppError> {
+    import_sources_in(&state, sources, to_project).await
+}
+
+pub async fn import_sources_in(
     state: &DbState,
-    id: String,
-    csl_json: String,
-    zotero_type: String,
-    from_doi: bool,
-) -> Result<(), AppError> {
+    sources: Vec<ImportedSource>,
+    to_project: bool,
+) -> Result<ImportedBatch, AppError> {
+    if sources.len() > IMPORT_BATCH {
+        return Err(AppError::new(
+            crate::ipc::ErrorKind::InvalidInput,
+            format!("Import at most {IMPORT_BATCH} sources at a time."),
+        ));
+    }
+    let dois = sources
+        .iter()
+        .map(|s| checked_work(&s.id, &s.csl_json, &s.zotero_type))
+        .collect::<Result<Vec<_>, _>>()?;
+    let rows: Vec<queries::Imported> = sources
+        .iter()
+        .zip(&dois)
+        .map(|(s, doi)| queries::Imported {
+            id: &s.id,
+            csl_json: &s.csl_json,
+            zotero_type: &s.zotero_type,
+            doi: doi.as_deref(),
+        })
+        .collect();
+
+    let library = state.library().await?;
+    let outcomes = queries::import_sources(&library, &rows)
+        .await
+        .or_database()?;
+    let mut batch = ImportedBatch {
+        added: Vec::new(),
+        skipped: Vec::new(),
+    };
+    for (source, outcome) in sources.into_iter().zip(outcomes) {
+        match outcome {
+            queries::Added::Yes => batch.added.push(source.id),
+            _ => batch.skipped.push(source.id),
+        }
+    }
+    if to_project {
+        // In the library either way: that's what importing is, and adding to
+        // the project is what the box asks for as well.
+        let project = state.project().await?;
+        queries::add_all_to_project(&project, &batch.added)
+            .await
+            .or_database()?;
+    }
+    Ok(batch)
+}
+
+/// The DOI of a work with no file, as the library stores it, once its id and
+/// details are checked: an `erti:<uuid>` id, a title, and a CSL and Zotero
+/// type. By hand, from a DOI, or imported (M1b-5, M1b-6, M1b-9).
+fn checked_work(id: &str, csl_json: &str, zotero_type: &str) -> Result<Option<String>, AppError> {
     let invalid = |message: &str| AppError::new(crate::ipc::ErrorKind::InvalidInput, message);
     let uuid = id.strip_prefix("erti:").unwrap_or_default();
     let shaped = uuid.len() == 36
@@ -226,7 +319,7 @@ async fn add_work_in(
         return Err(invalid("That isn't an id for a source entered by hand."));
     }
     let csl: serde_json::Map<String, serde_json::Value> =
-        serde_json::from_str(&csl_json).map_err(|_| invalid("Those details aren't a source."))?;
+        serde_json::from_str(csl_json).map_err(|_| invalid("Those details aren't a source."))?;
     let titled = csl
         .get("title")
         .and_then(|v| v.as_str())
@@ -249,9 +342,27 @@ async fn add_work_in(
         .get("DOI")
         .and_then(|v| v.as_str())
         .and_then(queries::normalise_doi);
+    Ok(doi)
+}
+
+/// A work with no file, by hand or from a DOI. The DOI is read from the
+/// details either way, so that a DOI typed into the form is found later too,
+/// and a work the library has under it already is refused: the second copy
+/// would split the citations between them.
+async fn add_work_in(
+    state: &DbState,
+    id: String,
+    csl_json: String,
+    zotero_type: String,
+    from_doi: bool,
+) -> Result<(), AppError> {
+    let doi = checked_work(&id, &csl_json, &zotero_type)?;
     let doi = doi.as_deref();
     if from_doi && doi.is_none() {
-        return Err(invalid("Those details have no DOI."));
+        return Err(AppError::new(
+            crate::ipc::ErrorKind::InvalidInput,
+            "Those details have no DOI.",
+        ));
     }
 
     let library = state.library().await?;

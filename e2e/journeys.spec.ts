@@ -286,6 +286,90 @@ test('with lookups off, a DOI is entered by hand, filled in', async ({ page }) =
 });
 
 // M1b-7, UX-2 and UX-3
+// M1b-9 AC-1, AC-4, AC-6, UX-6
+test('a bibliography is previewed against the library, then imported into the project', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await page.evaluate(() => {
+		const fake = window.__ERTI_FAKE__!;
+		fake.files.set(
+			'/fake/home/Zotero/library.bib',
+			`@inproceedings{devlin2019,
+  title = {{BERT}: Pre-training of Deep Bidirectional Transformers for Language Understanding},
+  author = {Devlin, Jacob},
+  year = {2019},
+  doi = {https://doi.org/10.18653/V1/N19-1423}
+}
+
+@inproceedings{vaswani2017,
+  title = {Attention is all you need},
+  author = {Vaswani, Ashish and Shazeer, Noam},
+  year = {2017}
+}
+
+@book{ong1982,
+  title = {Orality and Literacy},
+  author = {Ong, Walter J.},
+  publisher = {Methuen},
+  year = {1982}
+}
+
+@article{lecun2015,
+  title = {Deep learning},
+  author = {LeCun, Yann and Bengio, Yoshua and Hinton, Geoffrey},
+  journal = {Nature},
+  year = {2015},
+  doi = {10.1038/nature14539}
+}
+
+@misc{untitled,
+  author = {Nobody},
+  year = {2001}
+}
+`
+		);
+		fake.dialogAnswers.push('/fake/home/Zotero/library.bib');
+	});
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await expect(page.getByRole('heading', { name: 'Sources (3)' })).toBeVisible();
+
+	// AC-1, AC-4: what's new and what the library has, before anything is written.
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /Import a bibliography…/ }).click();
+	const dialog = page.getByRole('dialog', { name: 'Import library.bib' });
+	await expect(dialog.getByTestId('import-summary')).toHaveText(
+		'5 entries · 2 new · 2 already in your library (matched by DOI or title) · 1 unreadable'
+	);
+	await expect(dialog.getByRole('listitem')).toHaveText([/untitled, line \d+: It has no title\./]);
+	const before = await page.evaluate(() => window.__ERTI_FAKE__!.state.library.size);
+	expect(before).toBe(3);
+
+	// AC-6: written, into the project as asked, and listed as imported just now.
+	await dialog.getByRole('checkbox', { name: 'Also add them to this project' }).click();
+	await dialog.getByRole('button', { name: 'Import 2' }).click();
+	await expect(
+		page.getByText('Imported 2 sources into your library and this project.')
+	).toBeVisible();
+	await expect(dialog).toBeHidden();
+	await expect(page.getByRole('heading', { name: 'Sources (5)' })).toBeVisible();
+	await expect(page.getByText('Imported just now')).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Book Orality and Literacy/ })).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Paper Deep learning/ })).toBeVisible();
+	await expect(page.getByRole('button', { name: /Attention Is All You Need/ })).toHaveCount(0);
+	const imported = await page.evaluate(() =>
+		[...window.__ERTI_FAKE__!.state.library.values()].filter((s) => s.resolved_via === 'import')
+	);
+	expect(imported.map((s) => [s.zotero_type, s.doi])).toEqual([
+		['book', null],
+		['journalArticle', '10.1038/nature14539']
+	]);
+
+	await page.getByRole('button', { name: 'Clear filter' }).click();
+	await expect(page.getByRole('button', { name: /Attention Is All You Need/ })).toBeVisible();
+});
+
 test('a PDF attached to a source is read, and its File tab says where it lives', async ({
 	page
 }) => {

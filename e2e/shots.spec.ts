@@ -100,6 +100,33 @@ test('shots', async ({ page }) => {
 	await page.keyboard.press('Escape');
 	await expect(fromDoi).toBeHidden();
 
+	// Importing a bibliography: the preview before anything is written (UX-6)…
+	await page.evaluate(() => {
+		const fake = window.__ERTI_FAKE__!;
+		fake.files.set(
+			'/fake/home/Zotero/library.bib',
+			[
+				'@inproceedings{vaswani2017, title = {Attention is all you need}, author = {Vaswani, Ashish}, year = {2017}}',
+				'@book{ong1982, title = {Orality and Literacy}, author = {Ong, Walter J.}, year = {1982}}',
+				'@article{lecun2015, title = {Deep learning}, author = {LeCun, Yann}, journal = {Nature}, year = {2015}}',
+				'@misc{notes, author = {Nobody}, year = {2001}}'
+			].join('\n\n')
+		);
+		fake.dialogAnswers.push('/fake/home/Zotero/library.bib');
+	});
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /Import a bibliography…/ }).click();
+	const importing = page.getByRole('dialog', { name: 'Import library.bib' });
+	await expect(importing.getByRole('button', { name: 'Import 2' })).toBeVisible();
+	await page.screenshot({ ...shot('20-import-preview'), animations: 'disabled' });
+
+	// …and what it added, until the filter is cleared.
+	await importing.getByRole('checkbox', { name: 'Also add them to this project' }).click();
+	await importing.getByRole('button', { name: 'Import 2' }).click();
+	await expect(page.getByText('Imported just now')).toBeVisible();
+	await page.screenshot({ ...shot('21-imported-just-now'), animations: 'disabled' });
+	await page.getByRole('button', { name: 'Clear filter' }).click();
+
 	// A source's notes, with one being written, above the marks in its PDF (UX-3).
 	await page.getByRole('tab', { name: /^Notes/ }).click();
 	await page.getByRole('button', { name: 'New note' }).click();
