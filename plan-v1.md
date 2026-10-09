@@ -198,7 +198,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 ### M2 — Retrieval index _(M)_ · [spec](docs/specs/M2.md)
 
 - [x] **M2-1** In-memory index (ADR-5) (#221)
-- [ ] **M2-2** Index consistent with every writer
+- [x] **M2-2** Index consistent with every writer (#235)
 - [ ] **M2-3** Note-matching eval set
 - [ ] **M2-4** Latency and memory budget measured
 
