@@ -1,5 +1,5 @@
 {
-	"_readme": "Labelled retrieval pairs. `easy` are the original 25: near-quotes carrying the paper's own distinctive vocabulary, kept so the recorded baseline stays comparable. `hard` are paraphrased claims whose gold paper sits beside near-identical neighbours in this corpus \u2014 BERT against RoBERTa and ELMo, LayerNorm against BatchNorm, DPR against RAG \u2014 and which avoid the signature terms that made the easy set trivially separable. Recall@5 saturated at 100% on the easy set alone, so it could not tell two embedding models apart; that is what the hard set exists to fix.",
+	"_readme": "Labelled retrieval pairs. `easy` are the original 25: near-quotes carrying the paper's own distinctive vocabulary, kept so the recorded baseline stays comparable. `hard` are paraphrased claims whose gold paper sits beside near-identical neighbours in this corpus — BERT against RoBERTa and ELMo, LayerNorm against BatchNorm, DPR against RAG — and which avoid the signature terms that made the easy set trivially separable. Recall@5 saturated at 100% on the easy set alone, so it could not tell two embedding models apart; that is what the hard set exists to fix. `notes` and `note_queries` are the note-matching set (M2-3): notes a reader wrote on these papers, as a mark (a highlighted quote, perhaps with a comment) or a source note, and paragraphs written later that each note was written to support. A paragraph is ranked against the notes alone, as the Notes panel ranks Your notes, and `gold` names a note. Notes with no paragraph are decoys: other points from the same papers.",
 	"queries": [
 		{
 			"query": "Replacing recurrence entirely with self-attention allows sequence models to be trained with far more parallelism.",
@@ -325,6 +325,395 @@
 			"query": "Removing an auxiliary pretraining objective turned out to help rather than hurt downstream performance.",
 			"gold": "1907.11692v1",
 			"difficulty": "hard"
+		}
+	],
+	"notes": [
+		{
+			"id": "n01",
+			"source": "1706.03762v7",
+			"kind": "source_note",
+			"body": "Whole architecture is attention only, no recurrence or convolution. Selling point is that every position is computed at once, so training parallelises far better than an RNN and is much cheaper. Use in ch. 2 when explaining why everyone moved off LSTMs."
+		},
+		{
+			"id": "n02",
+			"source": "1706.03762v7",
+			"kind": "source_note",
+			"body": "Attention by itself has no sense of word order, so they add sine/cosine signals of different frequencies to the input embeddings. Learned position embeddings gave almost the same results; sinusoids picked because they might extrapolate to longer sequences."
+		},
+		{
+			"id": "n03",
+			"source": "1706.03762v7",
+			"kind": "mark",
+			"quote": "pushing the softmax function into regions where it has extremely small gradients",
+			"body": "why the dot products get divided by √d_k"
+		},
+		{
+			"id": "n04",
+			"source": "1706.03762v7",
+			"kind": "source_note",
+			"body": "Label smoothing of 0.1 makes perplexity worse but improves accuracy and BLEU. Odd trade-off, maybe a footnote."
+		},
+		{
+			"id": "n05",
+			"source": "1810.04805v2",
+			"kind": "source_note",
+			"body": "Masked LM: pick 15% of tokens; of those 80% become [MASK], 10% a random token, 10% left alone, so the model can’t rely on seeing [MASK], which never appears at fine-tuning time."
+		},
+		{
+			"id": "n06",
+			"source": "1810.04805v2",
+			"kind": "source_note",
+			"body": "NSP: binary task, is sentence B the real next sentence? Claimed to help QA and NLI. Worth contrasting with RoBERTa, which drops it."
+		},
+		{
+			"id": "n07",
+			"source": "1810.04805v2",
+			"kind": "source_note",
+			"body": "Fine-tuning just adds one output layer and trains everything end to end. No task-specific architecture needed: the big practical win."
+		},
+		{
+			"id": "n08",
+			"source": "1907.11692v1",
+			"kind": "mark",
+			"quote": "BERT was significantly undertrained",
+			"body": "the main claim: longer training, bigger batches, more data. Gains come from the recipe, not a new architecture."
+		},
+		{
+			"id": "n09",
+			"source": "1907.11692v1",
+			"kind": "source_note",
+			"body": "Dynamic masking: new mask each time a sequence is fed in, instead of fixing masks once during preprocessing. Small gain."
+		},
+		{
+			"id": "n10",
+			"source": "1802.05365v2",
+			"kind": "source_note",
+			"body": "Representations are a learned, task-specific weighted sum of all the biLM’s layers, not just the top. Lower layers carry syntax (POS), higher ones word sense."
+		},
+		{
+			"id": "n11",
+			"source": "1802.05365v2",
+			"kind": "source_note",
+			"body": "Adding these vectors to existing models improved the state of the art on six NLP tasks, including SQuAD and SNLI."
+		},
+		{
+			"id": "n12",
+			"source": "2005.14165v4",
+			"kind": "mark",
+			"quote": "applied without any gradient updates or fine-tuning",
+			"body": "in-context learning: the task is specified by a few examples in the prompt"
+		},
+		{
+			"id": "n13",
+			"source": "2005.14165v4",
+			"kind": "source_note",
+			"body": "They admit some test sets leaked into the Common Crawl training data; a bug meant the overlaps weren’t removed. Results on affected benchmarks are flagged."
+		},
+		{
+			"id": "n14",
+			"source": "1301.3781v3",
+			"kind": "source_note",
+			"body": "Word vectors encode analogies as offsets: vector(king) − vector(man) + vector(woman) lands nearest queen. Two cheap architectures (CBOW, skip-gram) trained on billions of words."
+		},
+		{
+			"id": "n15",
+			"source": "1301.3781v3",
+			"kind": "source_note",
+			"body": "Trained on 1.6 billion words in under a day; compared against the NNLM and RNNLM, which are much slower."
+		},
+		{
+			"id": "n16",
+			"source": "1512.03385v1",
+			"kind": "mark",
+			"quote": "with the network depth increasing, accuracy gets saturated",
+			"body": "and then degrades, on training error too, so it isn’t overfitting"
+		},
+		{
+			"id": "n17",
+			"source": "1512.03385v1",
+			"kind": "source_note",
+			"body": "Shortcuts are identity mappings: they add no parameters and no computation, and the stacked layers learn the residual F(x) = H(x) − x. Lets them train 152 layers."
+		},
+		{
+			"id": "n18",
+			"source": "1409.1556v6",
+			"kind": "source_note",
+			"body": "Only 3×3 filters throughout. Three stacked 3×3 layers see the same area as one 7×7 but with fewer weights and three non-linearities instead of one."
+		},
+		{
+			"id": "n19",
+			"source": "2010.11929v2",
+			"kind": "mark",
+			"quote": "Transformers lack some of the inductive biases",
+			"body": "inherent to CNNs (locality, translation equivariance), so on mid-sized data ViT loses to ResNets; with JFT-300M pre-training it wins"
+		},
+		{
+			"id": "n20",
+			"source": "2010.11929v2",
+			"kind": "source_note",
+			"body": "Image cut into 16×16 patches, each flattened and linearly projected, plus position embeddings and a [class] token, then a standard Transformer encoder, almost unmodified."
+		},
+		{
+			"id": "n21",
+			"source": "1502.03167v3",
+			"kind": "mark",
+			"quote": "We refer to this phenomenon as internal covariate shift",
+			"body": "each layer’s input distribution keeps changing as earlier layers train; normalising over the mini-batch fixes it and allows much higher learning rates"
+		},
+		{
+			"id": "n22",
+			"source": "1502.03167v3",
+			"kind": "source_note",
+			"body": "Side effect: acts as a regulariser, because each example’s normalisation depends on the others in its batch. In some cases Dropout can be removed."
+		},
+		{
+			"id": "n23",
+			"source": "1607.06450v1",
+			"kind": "mark",
+			"quote": "from all of the summed inputs to the neurons in a layer on a single training case",
+			"body": "no dependence on the batch, so it works for RNNs and batch size 1, and the computation is the same at training and test time"
+		},
+		{
+			"id": "n24",
+			"source": "1607.06450v1",
+			"kind": "source_note",
+			"body": "Invariance analysis: LN is invariant to re-scaling and re-centring the whole weight matrix, BN to re-scaling individual weight vectors. Table 1."
+		},
+		{
+			"id": "n25",
+			"source": "1412.6980v9",
+			"kind": "source_note",
+			"body": "Keeps running averages of the gradient and its square, giving each parameter its own step size. Both averages start at zero, so they’re biased early on; the bias correction fixes that."
+		},
+		{
+			"id": "n26",
+			"source": "1412.6980v9",
+			"kind": "source_note",
+			"body": "Effective step is roughly bounded by α and invariant to rescaling the gradient, which makes the learning rate easier to set."
+		},
+		{
+			"id": "n27",
+			"source": "1406.2661v1",
+			"kind": "source_note",
+			"body": "Two-player minimax: generator vs discriminator. With enough capacity, the unique optimum has G recovering the data distribution and D = 1/2 everywhere."
+		},
+		{
+			"id": "n28",
+			"source": "1406.2661v1",
+			"kind": "mark",
+			"quote": "In this case, log(1 − D(G(z))) saturates",
+			"body": "early on D wins easily; train G to maximise log D(G(z)) instead: same fixed point, stronger gradients"
+		},
+		{
+			"id": "n29",
+			"source": "1503.02531v1",
+			"kind": "source_note",
+			"body": "Soft targets: raise the softmax temperature so the teacher’s small probabilities on wrong classes become visible. Those ratios say how the big model generalises (a BMW is more like a garbage truck than a carrot)."
+		},
+		{
+			"id": "n30",
+			"source": "1503.02531v1",
+			"kind": "source_note",
+			"body": "Specialist models for confusable classes, trained alongside a generalist on JFT."
+		},
+		{
+			"id": "n31",
+			"source": "1908.10084v1",
+			"kind": "source_note",
+			"body": "Siamese/triplet fine-tuned BERT producing fixed sentence embeddings compared by cosine. Most-similar-pair search over 10k sentences drops from ~65 h with a cross-encoder to ~5 s."
+		},
+		{
+			"id": "n32",
+			"source": "1908.10084v1",
+			"kind": "source_note",
+			"body": "Out-of-the-box BERT embeddings ([CLS] or mean of the outputs) are bad for semantic similarity, worse than averaged GloVe vectors."
+		},
+		{
+			"id": "n33",
+			"source": "2004.04906v3",
+			"kind": "source_note",
+			"body": "Dense dual encoder, trained only on question–passage pairs, beats BM25 by 9–19% in top-20 passage retrieval accuracy. No extra pre-training needed."
+		},
+		{
+			"id": "n34",
+			"source": "2004.04906v3",
+			"kind": "mark",
+			"quote": "In-batch negatives",
+			"body": "reuse the other questions’ gold passages in the batch as negatives: B² pairs for free"
+		},
+		{
+			"id": "n35",
+			"source": "2005.11401v4",
+			"kind": "mark",
+			"quote": "non-parametric memory",
+			"body": "seq2seq generator (BART) plus a dense index of Wikipedia retrieved with DPR; world knowledge can be changed by swapping the index"
+		},
+		{
+			"id": "n36",
+			"source": "2005.11401v4",
+			"kind": "source_note",
+			"body": "Human evaluators found the retrieval-augmented outputs more factual and more specific than the BART baseline on Jeopardy question generation."
+		},
+		{
+			"id": "n37",
+			"source": "1802.03426v3",
+			"kind": "mark",
+			"quote": "arguably preserves more of the global structure with superior run time performance",
+			"body": "vs t-SNE"
+		},
+		{
+			"id": "n38",
+			"source": "1609.02907v4",
+			"kind": "mark",
+			"quote": "a localized first-order approximation of spectral graph convolutions",
+			"body": "the GCN propagation rule; semi-supervised node classification with very few labelled nodes (citation networks)"
+		},
+		{
+			"id": "n39",
+			"source": "1207.7214v2",
+			"kind": "mark",
+			"quote": "a significance of 5.9 standard deviations",
+			"body": "excess near 126 GeV; the discovery claim"
+		},
+		{
+			"id": "n40",
+			"source": "1207.7214v2",
+			"kind": "source_note",
+			"body": "Decay channels combined: H→γγ, H→ZZ(*)→4ℓ, H→WW(*)→eνμν."
+		}
+	],
+	"note_queries": [
+		{
+			"query": "Recurrent encoders process a sentence one token after another, and that sequential dependency is what made them slow to train on long inputs. The architectures that displaced them dropped recurrence altogether, relating every position to every other in a single step, which let the computation for a whole sequence run concurrently on modern hardware.",
+			"gold": "n01"
+		},
+		{
+			"query": "Because a model built purely from attention treats its input as an unordered set, something has to tell it where each token sits. The usual remedy is to inject a fixed periodic signal into each token’s representation, varying in frequency across dimensions, and the original authors chose it partly in the hope that it would generalise to sequences longer than any seen during training.",
+			"gold": "n02"
+		},
+		{
+			"query": "One detail of the attention computation is easy to overlook. When the vectors being compared are high-dimensional, their inner products grow large, and a softmax over large values becomes almost one-hot, so learning stalls. Rescaling the scores by the square root of the dimension keeps them in a range where the gradient still carries information.",
+			"gold": "n03"
+		},
+		{
+			"query": "Hiding words and asking the network to recover them gives a training signal that can use context on both sides at once. The difficulty is that the placeholder symbol used for hiding never occurs in real downstream text, so the procedure deliberately leaves some selected positions unchanged and swaps others for random words, narrowing the gap between what the model sees in pre-training and in use.",
+			"gold": "n05"
+		},
+		{
+			"query": "Alongside word-level prediction, the original recipe trained the encoder to judge whether two segments really followed each other in the source document, on the grounds that tasks such as question answering and inference depend on relationships between sentences rather than within them.",
+			"gold": "n06"
+		},
+		{
+			"query": "A practical attraction of the pre-trained encoders is how little has to be built for each new problem. A single classification layer is placed on top, and all the weights, including those learned during pre-training, are then adjusted on the labelled data, rather than designing a bespoke model per task.",
+			"gold": "n07"
+		},
+		{
+			"query": "Some of the apparent progress among successors to the original pre-trained encoder came not from new objectives but from training the same architecture for longer, with larger batches and on considerably more text. Once that was controlled for, the original design matched or exceeded models published after it, which suggests that comparisons in this literature should be read with the training budget in mind.",
+			"gold": "n08"
+		},
+		{
+			"query": "Deep language models do not store all their knowledge at the final layer. Probing work found that lower layers of a bidirectional recurrent model encode mostly syntactic information, such as part of speech, while higher layers capture meaning in context, which is why combining the layers with weights learned for each downstream task outperformed using the top layer alone.",
+			"gold": "n10"
+		},
+		{
+			"query": "A striking result from the largest language models is that a task can be specified simply by writing a handful of worked examples into the input. The weights are never changed; the model infers what is being asked from the demonstrations and continues the pattern, and this ability improves markedly as the model grows.",
+			"gold": "n12"
+		},
+		{
+			"query": "Evaluations of web-scale models carry a particular risk: benchmark questions may already appear in the scraped training text. The authors of one prominent study acknowledged that their filtering for such overlap failed, and reported results on the affected datasets with that caveat rather than retraining.",
+			"gold": "n13"
+		},
+		{
+			"query": "Even shallow models trained to predict nearby words produce vectors with a surprising geometry: relations such as gender or capital-of correspond to roughly constant directions, so simple vector arithmetic recovers the answer to many analogy questions.",
+			"gold": "n14"
+		},
+		{
+			"query": "It is tempting to assume that adding layers to a network can only help, since the extra layers could in principle learn the identity. In practice, plain deep networks became harder to optimise as they grew: beyond a certain depth even the error on the training set rose, so the problem was one of optimisation rather than overfitting.",
+			"gold": "n16"
+		},
+		{
+			"query": "The fix that made very deep image classifiers trainable was structurally modest. Each block’s input is added back to its output through a parameter-free path, so the layers in between only need to model a correction to what they were given, and networks of well over a hundred layers could then be trained.",
+			"gold": "n17"
+		},
+		{
+			"query": "Rather than relying on large convolution kernels, later image networks built their field of view out of many very small filters stacked in sequence. A stack covers the same region of the image as a single large filter but uses fewer parameters and interleaves more nonlinear activations, making the decision function more discriminative.",
+			"gold": "n18"
+		},
+		{
+			"query": "Convolutional networks build in assumptions about images: that nearby pixels matter together, and that a pattern means the same thing wherever it appears. A model without those assumptions has to learn them from data, which is why attention-based image classifiers trail convolutional ones on modest datasets and only overtake them after pre-training on hundreds of millions of images.",
+			"gold": "n19"
+		},
+		{
+			"query": "Applying a text architecture to vision required only a change of input. The picture is divided into a grid of small square tiles, each tile is flattened into a vector and projected, and the resulting sequence is processed exactly as a sentence of words would be.",
+			"gold": "n20"
+		},
+		{
+			"query": "Training is complicated by the fact that each layer’s inputs keep moving as the parameters of the layers below are updated. Standardising those inputs using statistics computed over the current mini-batch stabilised the process enough that networks could be trained with far larger learning rates and were less sensitive to initialisation.",
+			"gold": "n21"
+		},
+		{
+			"query": "Normalisation layers can also reduce overfitting. Since an example is normalised with statistics drawn from whichever other examples share its mini-batch, its activations carry a small amount of noise during training, and in some image models this was enough to make dropout unnecessary.",
+			"gold": "n22"
+		},
+		{
+			"query": "Normalising across the mini-batch is awkward for recurrent networks and impossible when examples arrive one at a time. Computing the statistics instead over all the units of a layer for each individual example removes the dependence on other examples entirely, so the same computation applies in training and at inference and suits sequence models.",
+			"gold": "n23"
+		},
+		{
+			"query": "Adaptive optimisers give each parameter its own effective learning rate by tracking how large and how consistent its recent gradients have been. Because these running estimates are initialised at zero, they understate the true values during the first steps, and the widely used variant divides out that bias explicitly.",
+			"gold": "n25"
+		},
+		{
+			"query": "A related convenience is that the size of each update is approximately capped by the chosen learning rate and does not change if the loss is multiplied by a constant, so the hyperparameter has an intuitive scale and needs less tuning across problems.",
+			"gold": "n26"
+		},
+		{
+			"query": "Adversarial training sets two networks against each other, one producing samples and one judging whether they are real. In theory, if both have enough capacity, the contest ends when the samples are indistinguishable from the data and the judge can do no better than chance.",
+			"gold": "n27"
+		},
+		{
+			"query": "In practice the original objective gives the generator almost no gradient at the start of training, when its samples are poor and easily rejected. The standard workaround is to change what the generator maximises, the log-probability that its samples are judged real, which has the same equilibrium but much stronger gradients early on.",
+			"gold": "n28"
+		},
+		{
+			"query": "A large model’s output contains more than its top prediction. The relative probabilities it assigns to incorrect classes reveal which categories it considers similar, and by softening those outputs a smaller model can be trained to imitate this structure, learning more per example than it could from hard labels.",
+			"gold": "n29"
+		},
+		{
+			"query": "Comparing every pair of sentences with a cross-encoder is prohibitively slow for search: each comparison needs a full forward pass. Encoding each sentence once into a fixed vector and comparing vectors with cosine similarity turns a computation of days into one of seconds, at a small cost in accuracy.",
+			"gold": "n31"
+		},
+		{
+			"query": "It does not follow that a strong pre-trained encoder yields good sentence vectors for free. Taking its special classification token, or averaging its output states, produced representations that did worse on semantic similarity benchmarks than simply averaging static word embeddings.",
+			"gold": "n32"
+		},
+		{
+			"query": "For open-domain question answering, the first stage is finding candidate passages, which was long done with sparse term-matching methods such as BM25. Learned dense representations, with separate encoders for questions and passages trained on a modest number of question–answer pairs, retrieved the right passage substantially more often.",
+			"gold": "n33"
+		},
+		{
+			"query": "Training a retriever requires examples of irrelevant passages as well as relevant ones. A cheap source is the batch itself: the correct passages for the other questions in the same batch serve as negatives for each question, giving many training pairs without extra encoding.",
+			"gold": "n34"
+		},
+		{
+			"query": "Rather than storing all facts in its weights, a generator can consult an external text collection at inference time, retrieving relevant documents and conditioning its output on them. A useful consequence is that what the system knows can be updated by replacing the document index, without retraining.",
+			"gold": "n35"
+		},
+		{
+			"query": "Grounding generation in retrieved text also changes its quality. In human evaluations, outputs produced with access to retrieved documents were judged more factual and more specific than those of an otherwise identical model generating from its parameters alone.",
+			"gold": "n36"
+		},
+		{
+			"query": "For visualising high-dimensional embeddings, neighbour-embedding methods remain the standard. The newer manifold-based technique produces maps of similar quality to the established one, but runs faster and keeps the relative placement of distant clusters more faithful.",
+			"gold": "n37"
+		},
+		{
+			"query": "When only a few nodes in a graph are labelled, a network can propagate information along edges, letting each node’s representation draw on its neighbours. The simplified graph convolution behind this approach was derived by truncating the spectral formulation to immediate neighbours, which keeps each layer linear in the number of edges.",
+			"gold": "n38"
+		},
+		{
+			"query": "Particle physics sets a demanding threshold for discovery. The new boson was announced only when the excess of events near a mass of 126 GeV reached a statistical significance beyond five standard deviations, the conventional bar for ruling out a background fluctuation.",
+			"gold": "n39"
 		}
 	]
 }

@@ -135,3 +135,58 @@ reading any bake-off result as a decision.
 
 `eval_retrieval` writes per-query ranks to `last-run.json` so two runs can
 actually be compared that way, rather than by their summary lines.
+
+---
+
+## The note-matching set (M2-3) — 2026-10-09
+
+The companion's "Your notes" list (M3-1) ranks a reader's marks and source notes against
+the paragraph being written. The paper set above can't measure that: its queries are
+claims, and it ranks papers, not notes. So `queries.json` also holds:
+
+- **`notes`**: 40 notes written on 20 papers, as a reader writes them. 13 are marks: a
+  quote highlighted from the paper, with a short comment. 27 are source notes: terse,
+  in the reader's own shorthand ("NSP: binary task…", "Use in ch. 2…").
+- **`note_queries`**: 33 paragraphs, each written for a manuscript and labelled with the
+  note it draws on. A paragraph argues in its own words and doesn't reuse the note's
+  wording, as a writer working from their notes wouldn't.
+- **7 decoys**: notes no paragraph is about, on the same papers as the labelled ones
+  (label smoothing beside attention, dynamic masking beside masked LM).
+
+A paragraph is ranked against **the notes alone**, because the kinds filter applies
+before scoring (M2-1 AC-3), so passages never compete. Notes are embedded as the app
+embeds them, as quote — body (`source_note_text`). This set is reported on its own
+line and isn't counted in "all", so the paper numbers above stay comparable.
+
+| set   | n   | R@1    | R@5    | R@10  | MRR   |
+| ----- | --- | ------ | ------ | ----- | ----- |
+| notes | 33  | 63.6 % | 93.9 % | 100 % | 0.765 |
+
+The paper set is unchanged by this: all 65 queries rank exactly as they did before.
+
+### Reading these numbers
+
+- **It isn't saturated.** Recall@1 sits well below the paper set's and Recall@5 is under
+  100 %, so a better model has room to show itself on all three metrics.
+- **Most misses are near ones, but not all for a good reason.** Of 12 misses, 7 rank 2nd
+  or 3rd. Three lose to another note on the same paper, for example residual shortcuts
+  behind the degradation problem. More lose to a note on an unrelated paper that shares
+  the paragraph's register rather than its subject. The masked-LM paragraph ranks a
+  BatchNorm note first, and the GAN paragraph a ResNet one. A terse note full of method
+  words, such as DPR's "trained only on question–passage pairs", comes first for two BERT
+  and RoBERTa paragraphs.
+- **Marks that are only a phrase do worst.** "In-batch negatives" ranks 7th for the
+  paragraph about it. A short quote gives the model little to match.
+- **No decoy is ever ranked first.** The 7 notes with no paragraph never come top.
+- **Hand-written, by one author.** The notes and paragraphs were written for this set,
+  not collected from users, and one writer's voice runs through both. They are a proxy
+  for real notes, and a real set from beta users (M6) should replace them.
+- **Paragraphs are short.** They run 35–66 words, under the 128-token limit. A real
+  paragraph is often longer, and text past the limit is dropped before embedding, so
+  the companion will need to choose what it sends (M3).
+- **The detectable difference is large.** With 12 misses at Recall@1, a challenger
+  has to fix about six of them without breaking any for McNemar's test to reach
+  p < 0.05, the same order as the paper set.
+
+`last-run.json` records each paragraph's rank and the note ranked first, under
+`note_queries`.
