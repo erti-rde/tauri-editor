@@ -516,6 +516,11 @@ export type ScoredChunk = {
 	text: string,
 	page_start: number | null,
 	section: string | null,
+	/**
+	 *  What to call the source: its work's title, else the file's, else the
+	 *  file's name. None only for a row read in the moment it was removed.
+	 */
+	title: string | null,
 	similarity: number | null,
 	/**  False when the chunk comes from outside the current project's source set. */
 	in_project: boolean,

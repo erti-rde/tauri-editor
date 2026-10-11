@@ -740,3 +740,46 @@ async fn a_write_while_the_index_is_building_drops_that_build() {
         .unwrap()
         .is_some());
 }
+
+// M3-1 AC-2: "From your papers" says which paper a passage is from.
+#[tokio::test]
+async fn a_passage_is_named_by_its_works_title_else_its_files_name() {
+    let (_dir, state, pool) = library("passage-title").await;
+    queries::set_source_metadata(
+        &pool,
+        "mine",
+        r#"{"title":"Orality and Literacy"}"#,
+        None,
+        None,
+        "manual",
+    )
+    .await
+    .unwrap();
+    state.invalidate_index();
+
+    let hits = search_library_in(
+        &state,
+        &[1.0, 0.3],
+        Some(vec![HitKind::Chunk]),
+        None,
+        Some(true),
+    )
+    .await
+    .unwrap();
+
+    let titles: Vec<(String, Option<String>)> = hits
+        .iter()
+        .map(|hit| match hit {
+            queries::Hit::Chunk(c) => (c.source_id.clone(), c.title.clone()),
+            _ => panic!("asked for passages only"),
+        })
+        .collect();
+    assert_eq!(
+        titles,
+        [
+            ("mine".into(), Some("Orality and Literacy".into())),
+            // No metadata: the name the file was found under.
+            ("theirs".into(), Some("f.pdf".into())),
+        ]
+    );
+}

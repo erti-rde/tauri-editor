@@ -324,6 +324,7 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 					text: chunk.text,
 					page_start: chunk.page_start ?? null,
 					section: chunk.section ?? null,
+					title: titleOf(source_id) ?? titleOf(sha256) ?? fileName(sha256),
 					similarity: overlap(query, chunk.text),
 					in_project
 				})
