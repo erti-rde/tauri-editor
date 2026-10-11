@@ -25,6 +25,9 @@ test('shots', async ({ page }) => {
 	await page.getByRole('button', { name: 'Outline' }).click();
 	await page.screenshot(shot('04-outline'));
 
+	// Following, the panel lists what's close to the paragraph the cursor is
+	// in (M3-5), so the cursor goes to the one the marks are about.
+	await page.locator('.ProseMirror p', { hasText: 'Sequence models built on recurrence' }).click();
 	await page.getByRole('button', { name: 'Notes' }).click();
 	await expect(page.getByText('Core claim; contrast with the RNN section')).toBeVisible();
 	await page.screenshot(shot('05-notes'));
@@ -160,4 +163,29 @@ test('shots', async ({ page }) => {
 	await search.press('Enter');
 	await expect(page.getByText('The contrast I need for §3.')).toBeVisible();
 	await page.screenshot({ ...shot('19-notes-find-source-note'), animations: 'disabled' });
+});
+
+// M3-5: two of the Notes panel's states, in their own words.
+test('shots of the Notes panel saying what happened', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+
+	await page.getByRole('button', { name: 'Notes' }).click();
+	await expect(page.getByText(/^No manuscript open/)).toBeVisible();
+	await page.screenshot(shot('23-notes-no-manuscript'));
+
+	await page.getByRole('button', { name: 'Files' }).click();
+	await openManuscript(page);
+	const last = page.locator('.ProseMirror p', { hasText: 'Pre-trained bidirectional encoders' });
+	await last.click();
+	await page.keyboard.press('End');
+	await page.keyboard.press('Enter');
+	await page.keyboard.type(
+		'Prune the roses in late winter, cutting each stem back to an outward-facing bud so the centre stays open.'
+	);
+	await page.getByRole('button', { name: 'Notes' }).click();
+	await expect(
+		page.getByText('Nothing in your notes or papers is close to this paragraph.')
+	).toBeVisible();
+	await page.screenshot(shot('24-notes-nothing-close'));
 });

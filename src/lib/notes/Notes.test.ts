@@ -205,10 +205,10 @@ describe('when there is nothing to show', () => {
 		db.allAnnotations.mockResolvedValue([MARK]);
 
 		render(Notes);
-		await user.type(screen.getByLabelText('Search your notes'), 'attention');
-		await user.click(screen.getByRole('radio', { name: 'Words' }));
+		await user.type(screen.getByLabelText('Search your notes'), 'attention{Enter}');
 
 		expect(await screen.findByText('Nothing matches that.')).toBeInTheDocument();
+		expect(db.searchNotes).toHaveBeenLastCalledWith('attention', { semantic: false, limit: 100 });
 		expect(screen.queryByRole('button', { name: 'Prepare my notes' })).not.toBeInTheDocument();
 	});
 });
@@ -546,18 +546,6 @@ describe('following the paragraph', () => {
 		stopWriting();
 	});
 
-	it('says when nothing is close, in its own words', async () => {
-		following([], []);
-		db.searchNotes.mockResolvedValue([]);
-		render(Notes);
-		draftContext.report({ paragraph: PARAGRAPH });
-
-		expect(
-			await screen.findByText('Nothing in your notes or papers is close to this paragraph.')
-		).toBeInTheDocument();
-		stopWriting();
-	});
-
 	it('lists every note again when switched off', async () => {
 		const user = userEvent.setup();
 		following([hit(MARK)], []);
@@ -668,5 +656,146 @@ describe('the follow switch, remembered', () => {
 		await waitFor(() => expect(db.searchNotes).toHaveBeenLastCalledWith('', { limit: 100 }));
 		expect(screen.queryByRole('heading', { name: /Your notes/ })).not.toBeInTheDocument();
 		stopWriting();
+	});
+});
+
+// M3-5: what the panel says when it has nothing to show, each in its own words.
+describe('saying what happened', () => {
+	const NO_NOTES = "No notes on this project's sources yet.";
+	const NOTHING_CLOSE = 'Nothing in your notes or papers is close to this paragraph.';
+	const NO_MANUSCRIPT = /No manuscript open/;
+
+	// M3-5 AC-1, AC-2: no notes on this project's sources yet.
+	describe('with no notes yet', () => {
+		it('says so, and how to make one, rather than an empty list', async () => {
+			render(Notes);
+
+			expect(await screen.findByText(NO_NOTES)).toBeInTheDocument();
+			expect(
+				screen.getByText('Highlight in a PDF, or add a note to a source.')
+			).toBeInTheDocument();
+			expect(screen.queryByText(NOTHING_CLOSE)).not.toBeInTheDocument();
+		});
+
+		it('says so while following, not that nothing is close', async () => {
+			// Nothing to find is not the paragraph's fault, and saying it was
+			// would send the writer rewording a paragraph to no end.
+			following([], []);
+			draftContext.report({ paragraph: PARAGRAPH, cite: async () => {} });
+			render(Notes);
+
+			expect(await screen.findByText(NO_NOTES)).toBeInTheDocument();
+			expect(screen.queryByText(NOTHING_CLOSE)).not.toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: 'Prepare my notes' })).not.toBeInTheDocument();
+			stopWriting();
+		});
+
+		it('says so beside the passages, when the papers had something', async () => {
+			following([], [passageHit(PASSAGE)]);
+			draftContext.report({ paragraph: PARAGRAPH, cite: async () => {} });
+			render(Notes);
+
+			expect(await screen.findByRole('heading', { name: 'Your notes (0)' })).toBeInTheDocument();
+			expect(screen.getByText(new RegExp(NO_NOTES))).toBeInTheDocument();
+			expect(screen.getByRole('heading', { name: 'From your papers (1)' })).toBeInTheDocument();
+			stopWriting();
+		});
+
+		it('says so above notes from other projects, which are still listed', async () => {
+			db.searchNotes.mockResolvedValue([hit({ ...MARK, in_project: false })]);
+			render(Notes);
+
+			expect(await screen.findByText(NO_NOTES)).toBeInTheDocument();
+			expect(
+				screen.getByRole('heading', { name: 'Elsewhere in your library' })
+			).toBeInTheDocument();
+			expect(screen.getByText('the effect was strongest')).toBeInTheDocument();
+		});
+	});
+
+	// M3-5 AC-1, AC-2: nothing close to this paragraph.
+	describe('with nothing close to the paragraph', () => {
+		it('says so, rather than listing the nearest however far', async () => {
+			// The index always answers with its nearest rows. A paragraph on
+			// something no note is about shouldn't be shown notes on other things.
+			following(
+				[hit({ ...MARK, similarity: 0.12 })],
+				[passageHit({ ...PASSAGE, similarity: 0.3 })]
+			);
+			draftContext.report({ paragraph: PARAGRAPH, cite: async () => {} });
+			render(Notes);
+
+			expect(await screen.findByText(NOTHING_CLOSE)).toBeInTheDocument();
+			expect(screen.queryByText(NO_NOTES)).not.toBeInTheDocument();
+			expect(screen.queryByText('the effect was strongest')).not.toBeInTheDocument();
+			// A note was found, so nothing is waiting to be prepared.
+			expect(screen.queryByRole('button', { name: 'Prepare my notes' })).not.toBeInTheDocument();
+			stopWriting();
+		});
+
+		it('lists what is close and leaves out what is not', async () => {
+			following(
+				[hit(MARK), noteHit({ ...SOURCE_NOTE, similarity: 0.2 })],
+				[passageHit(PASSAGE), passageHit({ ...PASSAGE, idx: 8, similarity: 0.3 })]
+			);
+			draftContext.report({ paragraph: PARAGRAPH, cite: async () => {} });
+			render(Notes);
+
+			expect(await screen.findByRole('heading', { name: 'Your notes (1)' })).toBeInTheDocument();
+			expect(screen.getByRole('heading', { name: 'From your papers (1)' })).toBeInTheDocument();
+			expect(screen.queryByText('Additive rather than subordinative.')).not.toBeInTheDocument();
+			stopWriting();
+		});
+	});
+
+	// M3-5 AC-1, AC-2: the search failed, with the reason.
+	describe('when the search fails', () => {
+		it('says so while following, with the reason', async () => {
+			db.searchLibrary.mockRejectedValue(new Error('The index is still being built.'));
+			draftContext.report({ paragraph: PARAGRAPH, cite: async () => {} });
+			render(Notes);
+
+			expect(await screen.findByText('That search could not be run.')).toBeInTheDocument();
+			expect(screen.getByText('The index is still being built.')).toBeInTheDocument();
+			expect(screen.queryByText(NOTHING_CLOSE)).not.toBeInTheDocument();
+			expect(screen.queryByText(NO_NOTES)).not.toBeInTheDocument();
+			stopWriting();
+		});
+	});
+
+	// M3-5 AC-1, AC-2: no manuscript open.
+	describe('with no manuscript open', () => {
+		it('says there is nothing to follow, and still lists the notes', async () => {
+			db.searchNotes.mockResolvedValue([hit(MARK)]);
+			render(Notes);
+
+			expect(await screen.findByText(NO_MANUSCRIPT)).toBeInTheDocument();
+			expect(await screen.findByText('the effect was strongest')).toBeInTheDocument();
+			expect(db.searchLibrary).not.toHaveBeenCalled();
+		});
+
+		it('says nothing of it once a manuscript is open', async () => {
+			draftContext.report({ cite: async () => {} });
+			render(Notes);
+			await waitFor(() => expect(db.searchNotes).toHaveBeenCalled());
+
+			expect(screen.queryByText(NO_MANUSCRIPT)).not.toBeInTheDocument();
+			stopWriting();
+		});
+
+		it('says nothing of it when not following', async () => {
+			await followSetting.setEnabled(false);
+			render(Notes);
+			await waitFor(() => expect(db.searchNotes).toHaveBeenCalled());
+
+			expect(screen.queryByText(NO_MANUSCRIPT)).not.toBeInTheDocument();
+		});
+	});
+
+	it('says each in different words', async () => {
+		// Four situations, four things to do about them: words shared between
+		// two would leave the reader guessing which one this is.
+		const said = [NO_NOTES, NOTHING_CLOSE, 'That search could not be run.', 'No manuscript open.'];
+		expect(new Set(said).size).toBe(4);
 	});
 });

@@ -1,0 +1,18 @@
+{
+	"words": 5000,
+	"keystrokes": {
+		"following": 348,
+		"not": 348
+	},
+	"p50_ms": {
+		"following": 5.5,
+		"not": 4.4
+	},
+	"p95_ms": {
+		"following": 16.7,
+		"not": 17.1
+	},
+	"budget_ms": 8,
+	"browser": "chromium 153.0.8010.12",
+	"measured": "2026-10-11"
+}

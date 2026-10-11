@@ -250,6 +250,28 @@ export function nudgeFor(
 export const NUDGE_THRESHOLD = 0.55;
 
 /**
+ * How close a result has to be to show at all while following (M3-5).
+ *
+ * The index always answers with its nearest rows, however far they are, so
+ * without a floor "nothing is close to this paragraph" could never be said:
+ * a paragraph about pruning roses would list the nearest notes on attention.
+ * Measured on the retrieval eval set (`tests/fixtures/retrieval`) with
+ * twelve paragraphs on unrelated subjects added:
+ *
+ * - notes: an unrelated paragraph's nearest note scored at most 0.25, and a
+ *   paragraph's nearest note on its subject at least 0.33;
+ * - passages: an unrelated paragraph's nearest passage scored at most 0.40,
+ *   a paragraph's nearest related one at least 0.57.
+ *
+ * Apart, because a short note doesn't score comparably against a long
+ * passage. Each sits between the two, nearer the unrelated side: leaving out
+ * a note the writer wanted is worse than listing one they didn't. Lower than
+ * the nudge's bar, which decides what to mention unasked; this decides what's
+ * worth listing when the writer looks.
+ */
+export const SHOWN_FLOOR = { note: 0.3, passage: 0.45 } as const;
+
+/**
  * Which of the papers found are worth a mark in the margin.
  *
  * A paper the paragraph already cites is not news — the writer has plainly seen

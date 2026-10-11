@@ -3,7 +3,7 @@
 	import { get } from 'svelte/store';
 
 	import Icon from '$lib/icon/Icon.svelte';
-	import { Button, Item, LabelChip, RadioGroup, SearchField, Switch } from '$lib/ui';
+	import { Button, EmptyState, Item, LabelChip, RadioGroup, SearchField, Switch } from '$lib/ui';
 	import Loader from '$lib/loader/Loader.svelte';
 	import { annotationsStore, pageLabelOf } from '$lib/stores/annotations.svelte';
 	import {
@@ -22,7 +22,7 @@
 	import { canonical } from '$lib/citations/aliases';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { toMarkdown, toSidecar } from './export';
-	import { draftContext, draftMatches, firstWords, matchesFrom } from './draftContext';
+	import { draftContext, draftMatches, firstWords, matchesFrom, SHOWN_FLOOR } from './draftContext';
 	import { followSetting } from './writingSettings';
 	import { log } from '$lib/log';
 
@@ -42,6 +42,10 @@
 	 * Results put the open project first and the wider library after, the same
 	 * ordering the citation search uses, so the two surfaces behave alike.
 	 */
+
+	/** What to say when there are no notes to show or search (M3-5 AC-1, docs/ux.md UX-5). */
+	const NO_NOTES = "No notes on this project's sources yet.";
+	const NO_NOTES_DETAIL = 'Highlight in a PDF, or add a note to a source.';
 
 	let query = $state('');
 	let semantic = $state(false);
@@ -67,6 +71,8 @@
 	let shown = $state<'following' | 'notes'>('notes');
 	let loading = $state(false);
 	let ran = $state(false);
+	/** What's listed is every note, nothing having been asked for. */
+	let browsing = $state(true);
 
 	/**
 	 * Which search is the latest. An answer to an older one is dropped: a
@@ -86,6 +92,12 @@
 
 	/** A search by meaning found nothing, and there are marks it could not see. */
 	let unprepared = $state(false);
+	/**
+	 * Following found no note because there are none to find (M3-5 AC-1): a
+	 * different thing to say from "nothing is close", which is about the
+	 * paragraph rather than the library.
+	 */
+	let noNotes = $state(false);
 	let preparing = $state(false);
 
 	onMount(async () => {
@@ -161,18 +173,25 @@
 			]);
 			if (ticket !== generation) return;
 
-			results = notes.filter((row): row is NoteHit => row.kind !== 'chunk');
-			passages = papers.flatMap((row) => (row.kind === 'chunk' ? [row.hit] : []));
+			// The index answers with its nearest rows however far they are, so
+			// what's too far to be about this paragraph is left out (M3-5).
+			const found = notes.filter((row): row is NoteHit => row.kind !== 'chunk');
+			results = found.filter(({ hit }) => hit.similarity >= SHOWN_FLOOR.note);
+			passages = papers.flatMap((row) =>
+				row.kind === 'chunk' && row.hit.similarity >= SHOWN_FLOOR.passage ? [row.hit] : []
+			);
 			failure = null;
 			shown = 'following';
 			ran = true;
 
-			// As for a search by meaning: no notes may mean none are prepared.
-			const none = results.length === 0 && (await anyNotes());
+			// As for a search by meaning: finding no note at all, however far, may
+			// mean none are prepared, or that there are none yet.
+			const exist = found.length === 0 ? await anyNotes() : true;
 			// Asked again while that was answered: what's on screen is the newer
 			// search's, and so are the matches the nudge reads.
 			if (ticket !== generation) return;
-			unprepared = none;
+			unprepared = found.length === 0 && exist;
+			noNotes = !exist;
 
 			draftMatches.set(matchesFrom(paragraph, results));
 		} catch (thrown) {
@@ -192,6 +211,7 @@
 		loading = true;
 		failure = null;
 		unprepared = false;
+		noNotes = false;
 		try {
 			const asked = query.trim();
 			const found = asked
@@ -205,6 +225,7 @@
 			passages = [];
 			shown = 'notes';
 			ran = true;
+			browsing = !asked;
 
 			// A search by meaning matches against vectors, and a mark made while the
 			// model was unavailable has none — so an empty answer here may mean
@@ -234,6 +255,8 @@
 		passages = [];
 		shown = 'notes';
 		ran = true;
+		unprepared = false;
+		noNotes = false;
 		failure = thrown instanceof Error ? thrown.message : String(thrown);
 	}
 
@@ -566,10 +589,22 @@
 			checked={following}
 			onCheckedChange={(checked) => void followSetting.setEnabled(checked)}
 		/>
-		{#if following && shown === 'following' && followed && !query.trim()}
-			<p class="text-caption text-ink-muted truncate">
-				Related to: <em>{firstWords(followed)}</em>
-			</p>
+		{#if following && !query.trim()}
+			{#if !$draftContext.cite && !$draftContext.paragraph}
+				<!--
+					Following has nothing to follow (M3-5 AC-1). Said, because the list
+					below is every note, and without this it would pass for what's close
+					to a paragraph nobody can see.
+				-->
+				<p class="text-caption text-ink-muted">
+					No manuscript open. Open one, and what's close to the paragraph you're writing appears
+					here.
+				</p>
+			{:else if shown === 'following' && followed}
+				<p class="text-caption text-ink-muted truncate">
+					Related to: <em>{firstWords(followed)}</em>
+				</p>
+			{/if}
 		{/if}
 
 		<!--
@@ -602,24 +637,26 @@
 	</div>
 
 	<div class="min-h-0 grow overflow-auto">
+		<!--
+			Four ways for there to be nothing to show, each in its own words (M3-5):
+			no manuscript to follow (above, under the switch), no notes yet, nothing
+			close to the paragraph, and a search that failed. A panel that goes blank
+			for different reasons gives the reader no way to tell which happened.
+		-->
 		{#if loading}
 			<div class="flex justify-center p-6"><Loader /></div>
 		{:else if failure}
-			<!--
-				Said, rather than shown as an empty list. A panel that goes blank when
-				a search fails and blank when a search finds nothing gives the reader
-				no way to tell which happened.
-			-->
-			<div class="p-3 text-xs">
-				<p class="text-ink">That search could not be run.</p>
-				<p class="text-ink-muted mt-1">{failure}</p>
-				<p class="text-ink-muted mt-1">If no project is open yet, there is no library to search.</p>
-			</div>
+			<EmptyState message="That search could not be run." detail={failure} />
+		{:else if !ran}
+			<!-- Nothing asked yet: the first answer is on its way. -->
 		{:else if shown === 'following'}
-			{#if results.length === 0 && passages.length === 0 && !unprepared}
-				<p class="text-ink-muted p-3 text-xs">
-					Nothing in your notes or papers is close to this paragraph.
-				</p>
+			{#if yourNotes.length === 0 && fromPapers.length === 0 && !unprepared}
+				<EmptyState
+					message={noNotes
+						? NO_NOTES
+						: 'Nothing in your notes or papers is close to this paragraph.'}
+					detail={noNotes ? NO_NOTES_DETAIL : undefined}
+				/>
 			{:else}
 				<h3
 					class="text-caption text-ink-muted bg-surface-sunken sticky top-0 px-3 py-1 font-medium"
@@ -631,6 +668,8 @@
 				{:else}
 					{#if unprepared}
 						{@render unpreparedNotes()}
+					{:else if noNotes}
+						<p class="text-ink-muted px-3 py-2 text-xs">{NO_NOTES} {NO_NOTES_DETAIL}</p>
 					{:else}
 						<p class="text-ink-muted px-3 py-2 text-xs">None close to this paragraph.</p>
 					{/if}
@@ -649,13 +688,13 @@
 			{/if}
 		{:else if results.length === 0 && unprepared}
 			{@render unpreparedNotes()}
-		{:else if results.length === 0}
-			<p class="text-ink-muted p-3 text-xs">
-				{ran && query.trim()
-					? 'Nothing matches that.'
-					: 'Nothing marked yet. Highlight a passage while reading and it will appear here.'}
-			</p>
+		{:else if results.length === 0 && !browsing}
+			<EmptyState message="Nothing matches that." />
 		{:else}
+			{#if browsing && inProject.length === 0}
+				<!-- Every note was asked for, and none is on this project's sources. -->
+				<EmptyState message={NO_NOTES} detail={NO_NOTES_DETAIL} />
+			{/if}
 			{#each [{ title: 'In this project', rows: inProject }, { title: 'Elsewhere in your library', rows: elsewhere }] as group (group.title)}
 				{#if group.rows.length > 0}
 					<h3

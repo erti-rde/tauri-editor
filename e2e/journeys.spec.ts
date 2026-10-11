@@ -45,6 +45,9 @@ test('each rail panel opens', async ({ page }) => {
 		'Introduction'
 	);
 
+	// Following, the panel lists what's close to the paragraph the cursor is
+	// in (M3-5), so the cursor goes to the one the marks are about.
+	await page.locator('.ProseMirror p', { hasText: 'Sequence models built on recurrence' }).click();
 	await page.getByRole('button', { name: 'Notes' }).click();
 	await expect(page.getByRole('searchbox', { name: 'Search your notes' })).toBeVisible();
 	await expect(page.getByText('Core claim; contrast with the RNN section')).toBeVisible();

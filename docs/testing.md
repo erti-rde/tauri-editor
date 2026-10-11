@@ -94,7 +94,8 @@ checklist.
 
 - Queries fire on paragraph exit or idle, never per keystroke (fake timers + a spy).
 - A typing-latency benchmark with the companion on vs off, in the app-in-browser layer (long
-  document, scripted typing), and a recorded threshold.
+  document, scripted typing), and a recorded threshold: `pnpm e2e:typing`, recorded in
+  `e2e/typing-latency.json`.
 - It never takes focus; its empty and failure states are distinct (component tests).
 
 **M4 — attribution check**

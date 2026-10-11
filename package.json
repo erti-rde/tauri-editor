@@ -24,6 +24,7 @@
 		"harness:build": "pnpm sync:pdf-assets && vite build --mode harness",
 		"e2e": "playwright test",
 		"e2e:shots": "ERTI_SHOTS=1 playwright test shots",
+		"e2e:typing": "ERTI_TYPING=1 playwright test typing",
 		"e2e:app": "wdio run e2e-app/wdio.conf.mjs"
 	},
 	"devDependencies": {
