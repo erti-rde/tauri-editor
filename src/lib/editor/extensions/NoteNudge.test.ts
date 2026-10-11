@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Editor } from '$lib/editor/core/Editor';
 import { editorExtensions } from '$lib/editor/core/extensions';
 import { nudgeKey, showNudge } from './NoteNudge';
+import { matchesFrom, nudgeFor } from '$lib/notes/draftContext';
+import type { NoteHit } from '$lib/stores/db';
 
 /**
  * The mark in the margin is a decoration, and the point of it being one is that
@@ -133,6 +135,70 @@ describe('the mark in the margin', () => {
 
 		showNudge(instance.view, { pos: second, count: 1 });
 		instance.commands.setContent('<p>Something else entirely.</p>');
+
+		expect(marks(instance)).toBe(0);
+	});
+});
+
+// M3-3: what the Notes panel found, as the margin reads it.
+describe('a note on a source, in the margin', () => {
+	const WRITTEN = 'Oral cultures add one thing to another rather than subordinating them.';
+	const canonical = (id: string) => ({ 'sha-ong-pdf': 'erti:ong' })[id] ?? id;
+
+	/** A source note as the panel's search returns it (M1b-8). */
+	const sourceNote = (source_id: string, similarity = 0.7) =>
+		({ kind: 'source_note', hit: { source_id, similarity } }) as unknown as NoteHit;
+	const mark = (source_id: string, similarity = 0.7) =>
+		({ kind: 'annotation', hit: { source_id, similarity } }) as unknown as NoteHit;
+
+	const citing = (id: string) =>
+		`<span data-type="citation" data-id="${JSON.stringify([id]).replace(/"/g, '&quot;')}" data-label="(Ong 1982)"></span>`;
+
+	function nudge(instance: Editor, notes: NoteHit[]) {
+		const { doc } = instance.state;
+		showNudge(instance.view, nudgeFor(doc, 1, matchesFrom(WRITTEN, notes), canonical));
+	}
+
+	// M3-3 AC-1, AC-2
+	it('counts a source note toward the mark', () => {
+		const instance = makeEditor(`<p>${WRITTEN}</p>`);
+
+		nudge(instance, [sourceNote('erti:ong')]);
+
+		expect(marks(instance)).toBe(1);
+		expect(instance.view.dom.querySelector('.erti-nudge')?.getAttribute('aria-label')).toBe(
+			'You have a note that bears on this paragraph'
+		);
+	});
+
+	// M3-3 AC-1: still one ring for the paragraph, however many notes.
+	it('counts it with the marks, in one mark for the paragraph', () => {
+		const instance = makeEditor(`<p>${WRITTEN}</p><p>Another paragraph.</p>`);
+
+		nudge(instance, [mark('sha-1'), sourceNote('erti:ong'), mark('sha-2')]);
+
+		expect(marks(instance)).toBe(1);
+		expect(nudgeKey.getState(instance.state)).toEqual({ pos: 0, count: 3 });
+	});
+
+	// M3-3 AC-1: a book already cited here isn't news, whichever id cites it.
+	it('leaves out a source note on a work the paragraph already cites', () => {
+		const instance = makeEditor(`<p>${WRITTEN} ${citing('sha-ong-pdf')}</p>`);
+		const { doc } = instance.state;
+		const written = doc.child(0).textContent.trim();
+
+		showNudge(
+			instance.view,
+			nudgeFor(doc, 1, matchesFrom(written, [sourceNote('erti:ong')]), canonical)
+		);
+
+		expect(marks(instance)).toBe(0);
+	});
+
+	it('leaves out a source note too faint to mention', () => {
+		const instance = makeEditor(`<p>${WRITTEN}</p>`);
+
+		nudge(instance, [sourceNote('erti:ong', 0.2)]);
 
 		expect(marks(instance)).toBe(0);
 	});

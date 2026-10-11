@@ -2,7 +2,6 @@
 	import { onDestroy, onMount, untrack } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
-	import { addToProject } from '$lib/stores/db';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
@@ -14,6 +13,7 @@
 
 	import { createAutosave } from './autosave';
 	import { cursorMemory, cursorPosition, waitingCite } from './citeLater';
+	import { citeWork } from './citeWork';
 	import { createManuscriptSession } from '$lib/manuscript/io';
 	import { citedIds, snapshotSources } from '$lib/manuscript/format';
 	import AwayCitationTip from './AwayCitationTip.svelte';
@@ -43,15 +43,9 @@
 	import { autoReferences } from './references/referencesStore';
 	import { readOutline, headingAt, sameOutline } from '$lib/outline/outline';
 	import { outlineStore } from '$lib/outline/outlineStore';
-	import {
-		citedSources,
-		createFollower,
-		draftContext,
-		draftMatches,
-		worthNudging
-	} from '$lib/notes/draftContext';
+	import { createFollower, draftContext, draftMatches, nudgeFor } from '$lib/notes/draftContext';
 	import { showNudge } from './extensions/NoteNudge';
-	import { nudgeSetting } from '$lib/notes/nudgeSetting';
+	import { nudgeSetting } from '$lib/notes/writingSettings';
 
 	import type { EditorState } from '@tiptap/pm/state';
 	import type { Readable } from 'svelte/store';
@@ -717,37 +711,10 @@
 	 * the source joins the project if it was not in it, the engine is reloaded
 	 * before the citation is inserted, and a source with no resolved metadata is
 	 * refused with something to do about it rather than a citation that renders
-	 * as removed. `locator` is the page cited, as printed (M1b-8).
+	 * as removed (`citeWork`).
 	 */
-	async function citeSource(id: string, locator?: string) {
-		// The work, whichever of its ids the note was given (ADR 003).
-		const sha256 = citationStore.canonicalId(id);
-		try {
-			if (!citationStore.getAllSourcesAsJson()[sha256]) {
-				await addToProject(sha256);
-				await citationStore.initializeCitationStore();
-			}
-
-			if (!citationStore.getAllSourcesAsJson()[sha256]) {
-				errorToast(
-					'That paper has no citation details yet, so it cannot be cited. It has been added to this project — open the metadata explorer to paste a DOI or enter the details.'
-				);
-				return;
-			}
-
-			// The page, as printed, goes with the work (M1b-8), trimmed as the
-			// render and the LaTeX export read it.
-			const page = locator?.trim();
-			const locators = page ? { [sha256]: page } : null;
-			$editor.commands.insertCitation({
-				id: JSON.stringify([sha256]),
-				label: citationStore.previewCitation([sha256], locators ?? {}),
-				locators
-			});
-		} catch (failure) {
-			log.error('Could not cite that paper', failure);
-			errorToast('Could not cite that paper.');
-		}
+	function citeSource(id: string, locator?: string) {
+		return citeWork($editor, id, locator);
 	}
 
 	/**
@@ -770,21 +737,12 @@
 			const view = $editor.view;
 			const { doc, selection } = view.state;
 
-			const resolved = doc.resolve(selection.from);
-			const paragraph = resolved.parent;
-
-			if (!$nudgeSetting || paragraph.textContent.trim() !== matches.paragraph) {
-				showNudge(view, { pos: null, count: 0 });
-				return;
-			}
-
-			const cited = new Set([...citedSources(paragraph)].map(citationStore.canonicalId));
-			const worth = worthNudging(matches.sources, cited);
-
-			showNudge(view, {
-				pos: worth.length > 0 ? resolved.before(resolved.depth) : null,
-				count: worth.length
-			});
+			showNudge(
+				view,
+				$nudgeSetting
+					? nudgeFor(doc, selection.from, matches, citationStore.canonicalId)
+					: { pos: null, count: 0 }
+			);
 		});
 	});
 

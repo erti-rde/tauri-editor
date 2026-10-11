@@ -3,6 +3,8 @@ import { writable } from 'svelte/store';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 
 import { parseCitationIds } from '$lib/citations/document';
+import type { NudgeState } from '$lib/editor/extensions/NoteNudge';
+import type { NoteHit } from '$lib/stores/db';
 
 /**
  * What the writer is working on, for the panel beside them.
@@ -198,6 +200,43 @@ export interface DraftMatches {
  * already cites — decides whether that is worth a mark in the margin.
  */
 export const draftMatches = writable<DraftMatches>({ paragraph: '', sources: [] });
+
+/**
+ * What the panel reports from the notes it found: each by its work, which is
+ * what the paragraph's citations resolve to. Marks and source notes alike
+ * (M3-3): a note on a book is as much a note as a highlight in a PDF.
+ */
+export function matchesFrom(paragraph: string, notes: NoteHit[]): DraftMatches {
+	return {
+		paragraph,
+		sources: notes.map(({ hit }) => ({ sha256: hit.source_id, similarity: hit.similarity }))
+	};
+}
+
+/**
+ * The mark the margin should show for the paragraph at `pos`: one ring at most,
+ * at the paragraph's start, counting the notes worth mentioning (M3-3 AC-1).
+ *
+ * Nothing when the matches were found for other words, which is how a set left
+ * over from the paragraph the cursor just left is recognised.
+ */
+export function nudgeFor(
+	doc: ProseMirrorNode,
+	pos: number,
+	matches: DraftMatches,
+	canonical: (id: string) => string
+): NudgeState {
+	const resolved = doc.resolve(pos);
+	const paragraph = resolved.parent;
+	if (paragraph.textContent.trim() !== matches.paragraph) return { pos: null, count: 0 };
+
+	const cited = new Set([...citedSources(paragraph)].map(canonical));
+	const worth = worthNudging(matches.sources, cited);
+	return {
+		pos: worth.length > 0 ? resolved.before(resolved.depth) : null,
+		count: worth.length
+	};
+}
 
 /**
  * How close a note has to be before it is worth mentioning unasked.

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { get } from 'svelte/store';
 
 	import Icon from '$lib/icon/Icon.svelte';
@@ -22,7 +22,8 @@
 	import { canonical } from '$lib/citations/aliases';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { toMarkdown, toSidecar } from './export';
-	import { draftContext, draftMatches, firstWords } from './draftContext';
+	import { draftContext, draftMatches, firstWords, matchesFrom } from './draftContext';
+	import { followSetting } from './writingSettings';
 	import { log } from '$lib/log';
 
 	/**
@@ -54,7 +55,9 @@
 	 * want to. Typing a query takes over, because an explicit question beats a
 	 * guess at one.
 	 */
-	let following = $state(true);
+	const following = $derived($followSetting);
+	/** The setting has been read, so following, or not, is what the writer chose (M3-4). */
+	let settled = $state(false);
 	/** The paragraph the results on screen were found for, if they were. */
 	let followed = $state('');
 	let results = $state<NoteHit[]>([]);
@@ -85,10 +88,35 @@
 	let unprepared = $state(false);
 	let preparing = $state(false);
 
-	onMount(() => {
+	onMount(async () => {
 		void annotationsStore.loadLabels();
+		await followSetting.load();
+		settled = true;
 		// Following has a paragraph to go on, and the effect below asks about it.
-		if (!(following && get(draftContext).paragraph)) void run();
+		if (!(get(followSetting) && get(draftContext).paragraph)) void run();
+	});
+
+	/**
+	 * Turned on or off, here or in Settings: either way, what's on screen was
+	 * answering the other question.
+	 */
+	let wasFollowing: boolean | null = null;
+	$effect(() => {
+		const on = following;
+		if (!settled) return;
+		untrack(() => {
+			if (wasFollowing === null || on === wasFollowing) {
+				wasFollowing = on;
+				return;
+			}
+			wasFollowing = on;
+			followed = '';
+			if (on) return;
+			// Not following, so nothing found for a paragraph stands: the margin
+			// shouldn't keep pointing at it either.
+			draftMatches.set({ paragraph: '', sources: [] });
+			void run();
+		});
 	});
 
 	/**
@@ -103,7 +131,7 @@
 	 */
 	$effect(() => {
 		const paragraph = $draftContext.paragraph;
-		if (!following || query.trim() || !paragraph || paragraph === followed) return;
+		if (!settled || !following || query.trim() || !paragraph || paragraph === followed) return;
 
 		followed = paragraph;
 		void follow(paragraph);
@@ -146,11 +174,7 @@
 			if (ticket !== generation) return;
 			unprepared = none;
 
-			draftMatches.set({
-				paragraph,
-				// By work, which is what the paragraph's citations resolve to.
-				sources: results.map(({ hit }) => ({ sha256: hit.source_id, similarity: hit.similarity }))
-			});
+			draftMatches.set(matchesFrom(paragraph, results));
 		} catch (thrown) {
 			if (ticket !== generation) return;
 			log.error('Could not follow the writing', thrown);
@@ -413,16 +437,19 @@
 					needs somewhere to go. A note carries the work its paper
 					belongs to, so this is the same insertion the citation panel
 					makes from a search result. Show in PDF, above, keeps the
-					file's own hash: the work may be a book with no file.
+					file's own hash: the work may be a book with no file. The page
+					goes with it (M3-2 AC-1): the one the paper prints when it is
+					known, else the sheet, as everywhere a mark's page is shown.
 				-->
 				{#if $draftContext.cite}
+					{@const page = pageLabelOf(hit)}
 					<Button
 						variant="ghost"
 						size="sm"
-						onclick={() => void $draftContext.cite?.(hit.source_id)}
+						onclick={() => void $draftContext.cite?.(hit.source_id, page)}
 					>
 						<Icon icon="Quote" size="s" />
-						Cite
+						Cite with p. {page}
 					</Button>
 				{/if}
 			{/snippet}
@@ -492,14 +519,19 @@
 				<Icon icon="BookOpen" size="s" />
 				Show in PDF
 			</Button>
+			<!--
+				A passage knows only its sheet: the page the paper prints isn't
+				stored with it (M3-2 AC-1 allows the sheet, plan §5 the rest).
+			-->
 			{#if $draftContext.cite}
+				{@const page = passage.page_start ? String(passage.page_start) : undefined}
 				<Button
 					variant="ghost"
 					size="sm"
-					onclick={() => void $draftContext.cite?.(passage.source_id)}
+					onclick={() => void $draftContext.cite?.(passage.source_id, page)}
 				>
 					<Icon icon="Quote" size="s" />
-					Cite
+					{page ? `Cite with p. ${page}` : 'Cite'}
 				</Button>
 			{/if}
 		{/snippet}
@@ -531,11 +563,8 @@
 		-->
 		<Switch
 			label="Follow my writing"
-			bind:checked={following}
-			onCheckedChange={(checked) => {
-				followed = '';
-				if (!checked) void run();
-			}}
+			checked={following}
+			onCheckedChange={(checked) => void followSetting.setEnabled(checked)}
 		/>
 		{#if following && shown === 'following' && followed && !query.trim()}
 			<p class="text-caption text-ink-muted truncate">
