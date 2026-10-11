@@ -662,6 +662,7 @@ describe('the follow switch, remembered', () => {
 // M3-5: what the panel says when it has nothing to show, each in its own words.
 describe('saying what happened', () => {
 	const NO_NOTES = "No notes on this project's sources yet.";
+	const NO_NOTES_DETAIL = 'Highlight in a PDF, or add a note to a source.';
 	const NOTHING_CLOSE = 'Nothing in your notes or papers is close to this paragraph.';
 	const NO_MANUSCRIPT = /No manuscript open/;
 
@@ -671,9 +672,7 @@ describe('saying what happened', () => {
 			render(Notes);
 
 			expect(await screen.findByText(NO_NOTES)).toBeInTheDocument();
-			expect(
-				screen.getByText('Highlight in a PDF, or add a note to a source.')
-			).toBeInTheDocument();
+			expect(screen.getByText(NO_NOTES_DETAIL)).toBeInTheDocument();
 			expect(screen.queryByText(NOTHING_CLOSE)).not.toBeInTheDocument();
 		});
 
@@ -696,7 +695,8 @@ describe('saying what happened', () => {
 			render(Notes);
 
 			expect(await screen.findByRole('heading', { name: 'Your notes (0)' })).toBeInTheDocument();
-			expect(screen.getByText(new RegExp(NO_NOTES))).toBeInTheDocument();
+			// One line under the heading, the message and what to do about it.
+			expect(screen.getByText(`${NO_NOTES} ${NO_NOTES_DETAIL}`)).toBeInTheDocument();
 			expect(screen.getByRole('heading', { name: 'From your papers (1)' })).toBeInTheDocument();
 			stopWriting();
 		});
