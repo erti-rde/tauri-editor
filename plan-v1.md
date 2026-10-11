@@ -325,9 +325,10 @@ source removed from the library, so the next scan of a project folder holding it
 add it back (found in M1b-4, whose dialog says that it will; the maintainer may want it in 1.0) ·
 importing a notes sidecar into the library: the sidecar is read back and guarded, marks and
 source notes alike, but nothing in the app writes it in yet (found in M1b-8 AC-5; it needs a
-rule for notes on papers the library hasn't got) · building the retrieval index by reading
-vectors straight into its matrix, rather than collecting every row first: a build peaks about
-50 MB above the 88 MB it keeps (found in M2-4; the budget holds without it).
+rule for notes on papers the library hasn't got) · building the retrieval index by unpacking
+each row's vector straight into its matrix as SQLite returns it, rather than fetching every row
+first: a build's footprint peaks about 30 MiB above what it then holds (found in M2-4; the
+budget holds without it).
 
 ---
 

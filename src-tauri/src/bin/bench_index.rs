@@ -2,7 +2,8 @@
 //!
 //! ADR 005 set a budget for the 1.0 target of 200 papers, about 56,000 rows: a
 //! single-paragraph query under 50 ms, a build under 2 s, and about 86 MB
-//! resident. This generates that library, the same one from the same seed on
+//! resident (56,000 × 384 × 4 B: 86 MB, or 82 MiB). Memory here is printed in
+//! MiB, as `ps` and `vmmap` count it. This generates that library, the same one from the same seed on
 //! every machine, writes it through the app's own writers into a fresh library
 //! on disk, and measures each of the three.
 //!
@@ -43,8 +44,9 @@ const ROWS: usize = FILES * CHUNKS_PER_FILE + MARKS + NOTES;
 const FINGERPRINT: &str = "b3ab4a4880995b377b8f8295a98f5a5ca5ce447f0ccbc8dd7bdcf2f2b2fcdd4a";
 
 /// splitmix64: small, and the same sequence on every platform. Only integer
-/// arithmetic and exact float operations follow from it, never a libm call
-/// whose last bit may differ between systems.
+/// arithmetic and IEEE 754 additions and divisions follow from it, which round
+/// the same everywhere (Rust never fuses them into an FMA unasked), never a
+/// libm call whose last bit may differ between systems.
 struct Rng(u64);
 
 impl Rng {
@@ -367,22 +369,29 @@ async fn write(library: &Library, dir: &Path) -> Result<DbState, String> {
     Ok(state)
 }
 
-/// This process's memory, in MB: the resident set as `ps` reports it, and on
+/// This process's memory, in MiB: the resident set as `ps` reports it, and on
 /// macOS the physical footprint and its peak, as `vmmap` does. The footprint
 /// is what Activity Monitor shows; the resident set also counts pages the
 /// allocator has freed and the system hasn't taken back yet.
 struct Memory {
-    resident: f64,
+    /// None where there's no `ps`, as on Windows.
+    resident: Option<f64>,
     footprint: Option<(f64, f64)>,
 }
 
 fn memory() -> Memory {
     let pid = std::process::id().to_string();
-    let out = std::process::Command::new("ps")
+    let resident = std::process::Command::new("ps")
         .args(["-o", "rss=", "-p", &pid])
         .output()
-        .expect("ps");
-    let kb: f64 = String::from_utf8_lossy(&out.stdout).trim().parse().unwrap();
+        .ok()
+        .and_then(|out| {
+            String::from_utf8_lossy(&out.stdout)
+                .trim()
+                .parse::<f64>()
+                .ok()
+        })
+        .map(|kib| kib / 1024.0);
 
     // "Physical footprint:         216.6M", and the same "(peak)".
     let footprint = std::process::Command::new("vmmap")
@@ -393,12 +402,12 @@ fn memory() -> Memory {
             let text = String::from_utf8_lossy(&out.stdout).into_owned();
             let field = |name: &str| {
                 let value = text.lines().find_map(|l| l.strip_prefix(name))?.trim();
-                let (n, unit) = value.split_at(value.len() - 1);
-                let n: f64 = n.parse().ok()?;
+                let unit = value.chars().last()?;
+                let n: f64 = value[..value.len() - unit.len_utf8()].parse().ok()?;
                 Some(match unit {
-                    "K" => n / 1024.0,
-                    "M" => n,
-                    "G" => n * 1024.0,
+                    'K' => n / 1024.0,
+                    'M' => n,
+                    'G' => n * 1024.0,
                     _ => return None,
                 })
             };
@@ -408,14 +417,17 @@ fn memory() -> Memory {
             ))
         });
     Memory {
-        resident: kb / 1024.0,
+        resident,
         footprint,
     }
 }
 
 impl std::fmt::Display for Memory {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:>8.1}", self.resident)?;
+        match self.resident {
+            Some(resident) => write!(f, "{resident:>8.1}")?,
+            None => write!(f, "{:>8}", "-")?,
+        }
         match self.footprint {
             Some((now, peak)) => write!(f, " {now:>9.1} {peak:>8.1}"),
             None => Ok(()),
@@ -521,9 +533,9 @@ async fn prepare(dir: &Path, n_queries: usize) -> Result<(), Box<dyn std::error:
     let state = write(&library, dir).await?;
     state.library().await?.close().await;
     state.project().await?.close().await;
-    let on_disk = std::fs::metadata(dir.join("library.db"))?.len() as f64 / 1e6;
+    let on_disk = std::fs::metadata(dir.join("library.db"))?.len() as f64 / (1024.0 * 1024.0);
     println!(
-        "written   : {on_disk:.0} MB on disk, in {:.1} s",
+        "written   : {on_disk:.0} MiB on disk, in {:.1} s",
         started.elapsed().as_secs_f64()
     );
     let paragraphs = paragraphs(&library, n_queries);
@@ -596,7 +608,7 @@ async fn measure(dir: &Path, builds: usize) -> Result<(), Box<dyn std::error::Er
     report("  read every vector from SQLite", reads);
     report("  normalise and pack", packs);
 
-    println!("\nmemory (MB)                              resident footprint     peak");
+    println!("\nmemory (MiB)                             resident footprint     peak");
     println!("  before the first build                 {before}");
     println!("  every vector read, not yet packed      {read}");
     println!("  packed: the index held                 {held}");
@@ -605,7 +617,7 @@ async fn measure(dir: &Path, builds: usize) -> Result<(), Box<dyn std::error::Er
         "  after {:<3} more builds, none held      {after_builds}",
         2 * builds
     );
-    println!("\nthe index's own heap (MB, counted)");
+    println!("\nthe index's own heap (MiB, counted)");
     println!(
         "  matrix: {ROWS} rows × {DIMS} × 4 B        {:>8.1}",
         mb(matrix)

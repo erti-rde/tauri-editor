@@ -4,9 +4,10 @@ ADR 005 budgeted the in-memory index for the 1.0 target of 200 papers, about 56,
 
 - a single-paragraph query under 50 ms;
 - a build under 2 s;
-- about 86 MB resident.
+- about 86 MB resident: 56,000 × 384 × 4 B, the matrix alone. That's 82.0 MiB.
 
-These are the measurements (M2-4). Every later change to the index, the row count it's sized for
+Memory below is in MiB (1,024²), as `ps`, `vmmap` and Activity Monitor count it. These are the
+measurements (M2-4). Every later change to the index, the row count it's sized for
 or the model's width is compared against them.
 
 ## How to reproduce
@@ -52,7 +53,7 @@ generated : b3ab4a4880995b377b8f8295a98f5a5ca5ce447f0ccbc8dd7bdcf2f2b2fcdd4a
 
 Apple M2 Pro, macOS, release build. The table shows three runs of `bench_index` with the
 defaults. Each figure is from the first run. The headline figures also give, in brackets,
-the range over all three.
+the range over all three. A build is timed 10 times a run, so its p95 is the slowest of the 10.
 
 | measure                                      | budget  | p50                     | p95                     |
 | -------------------------------------------- | ------- | ----------------------- | ----------------------- |
@@ -66,7 +67,7 @@ the range over all three.
 | build: reading every vector from SQLite      |         | 151 ms                  | 156 ms                  |
 | build: normalising and packing               |         | 40 ms                   | 43 ms                   |
 
-| memory (MB)                       | resident (`ps`) | physical footprint  |
+| memory (MiB)                      | resident (`ps`) | physical footprint  |
 | --------------------------------- | --------------- | ------------------- |
 | before the first build            | 17.2            | 11.9                |
 | every vector read, not yet packed | 139.3           | 70.7                |
@@ -75,8 +76,8 @@ the range over all three.
 | after 20 more builds, none held   | 392.0           | 40.6                |
 | peak, over the whole run          |                 | 144.8 (143.3–151.2) |
 
-The index's own heap, counted rather than observed, is **87.7 MB**: an 82.0 MB matrix (56,000 ×
-384 × 4 B), plus 5.7 MB of keys, owners and widths.
+The index's own heap, counted rather than observed, is **87.7 MiB**: the 82.0 MiB matrix ADR 005
+budgeted (56,000 × 384 × 4 B), plus 5.7 MiB of keys, owners and widths that its estimate left out.
 
 ## Reading these numbers
 
@@ -85,18 +86,26 @@ The index's own heap, counted rather than observed, is **87.7 MB**: an 82.0 MB m
     embedding the paragraph. The query alone uses under a third of its 50 ms.
   - **Build:** a tenth of its 2 s. Most of it is reading the vectors out of SQLite, not packing
     them.
-- **Holding the index costs what ADR 005 estimated.** Dropping it frees 87.3 MB of physical
-  footprint (85.1 and 89.0 in the other runs), against the 87.7 MB counted and the 86 MB
-  budgeted. So AC-3's int8 index with an f32 re-rank isn't built.
-- **A build briefly needs about 50 MB more than it keeps.** The footprint peaks at about 145 MB
-  while every row is read, then falls to 116 MB once the rows are packed. The rows exist twice
-  for a moment: once as they're read, and once as the matrix. Reading straight into the matrix
-  would remove that. That idea is in plan-v1.md §5, since the budget doesn't call for it.
+- **Holding the index costs what ADR 005 estimated, plus its bookkeeping.** Dropping it frees
+  87.3 MiB of physical footprint (85.1 and 89.0 in the other runs), against the 87.7 MiB counted.
+  The matrix is the 82.0 MiB (86 MB) budgeted. The rest, 5.7 MiB, is a key, an owner and a width
+  per row: 7% over an estimate that counted only the vectors. So AC-3's int8 index with an f32
+  re-rank isn't built.
+- **When it would be.** The matrix grows with rows × width. More than 56,000 rows at 384 wide,
+  or a wider model, takes it past ADR 005's 86 MB. Either change re-runs `bench_index`, and if
+  the index held is then well over budget, AC-3's int8 matrix (about 21 MB, re-ranking the top
+  200 in f32) is built and measured the same way.
+- **A build briefly needs about 30 MiB more than it keeps.** The footprint peaks at about
+  145 MiB, reached (or nearly) by the time every row is read, before anything is packed. It
+  then sits at 116 MiB with the index held. The peak is in the read: `vector_rows` fetches
+  every row from SQLite, blobs and all, before unpacking any into a vector, so for a moment each
+  vector is held twice. Unpacking each row as it arrives, straight into the matrix, would remove
+  that. That idea is in plan-v1.md §5, since the budget doesn't call for it.
 - **Repeated builds don't accumulate.** After 20 more builds, the footprint with no index held
-  is back to 41 MB. The resident set `ps` reports keeps growing, to 392 MB, but that's pages the
+  is back to 41 MiB. The resident set `ps` reports keeps growing, to 392 MiB, but that's pages the
   allocator has freed and macOS hasn't taken back yet. Physical footprint is what Activity
-  Monitor shows, and it doesn't count them. So on macOS, read the footprint column. Elsewhere,
-  where `vmmap` doesn't exist, only the resident set is printed.
+  Monitor shows, and it doesn't count them. So on macOS, read the footprint column. On Linux,
+  where `vmmap` doesn't exist, only the resident set is printed. On Windows, neither is.
 - **No `rayon`.** ADR 005's amendment left it until measurements called for it. A sequential
   scan of every row takes 13 ms, so they don't.
 - **The filter does the work.** "Your notes" (M3-1) scores only marks and source notes: 2,000
