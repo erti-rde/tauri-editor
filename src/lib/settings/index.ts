@@ -118,6 +118,13 @@ export const SETTINGS = {
 		where: 'global',
 		accepts: boolean
 	}),
+	/** Whether the Notes panel follows the paragraph being written. On unless turned off. */
+	followWriting: define<boolean>({
+		key: 'followWriting',
+		default: true,
+		where: 'global',
+		accepts: boolean
+	}),
 	/** Whether a reference list follows the first citation. On unless turned off. */
 	autoReferences: define<boolean>({
 		key: 'autoReferences',

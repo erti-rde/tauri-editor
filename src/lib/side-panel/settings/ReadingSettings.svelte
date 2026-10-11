@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import Icon from '$lib/icon/Icon.svelte';
+	import Trash from '~icons/lucide/trash-2';
+
+	import { Button, IconButton, Switch, TextField } from '$lib/ui';
 	import { annotationsStore } from '$lib/stores/annotations.svelte';
-	import { nudgeSetting } from '$lib/notes/nudgeSetting';
+	import { followSetting, nudgeSetting } from '$lib/notes/writingSettings';
 	import {
 		deleteLabel,
 		nameLabelsAfterColours,
@@ -33,7 +35,6 @@
 	// nothing to catch here: an unopened library means an empty pane, not an error.
 	onMount(() => {
 		void annotationsStore.loadLabels();
-		void nudgeSetting.load();
 	});
 
 	/**
@@ -155,21 +156,26 @@
 	}
 </script>
 
-<label class="border-line mb-6 flex items-start gap-2 rounded border p-3 text-sm">
-	<input
-		type="checkbox"
-		class="mt-0.5"
-		checked={$nudgeSetting}
-		onchange={(event) => void nudgeSetting.setEnabled(event.currentTarget.checked)}
+<h4 class="text-ink mb-2 text-sm font-medium">While writing</h4>
+
+<!--
+	Both on unless turned off, and both take effect at once (M3-4). Neither ever
+	interrupts: the panel only shows, and the mark only sits in the margin.
+-->
+<div class="mb-6 flex flex-col gap-3">
+	<Switch
+		label="Follow my writing"
+		description="The Notes panel shows your notes and passages from your papers that are close to the paragraph you are writing."
+		checked={$followSetting}
+		onCheckedChange={(checked) => void followSetting.setEnabled(checked)}
 	/>
-	<span>
-		<span class="text-ink">Point out notes I have not used</span>
-		<span class="text-ink-muted block text-xs">
-			While writing, a small mark appears in the margin beside a paragraph you have already made a
-			note about and not cited. It never interrupts, and clicking it opens your notes.
-		</span>
-	</span>
-</label>
+	<Switch
+		label="Margin nudge"
+		description="A small mark appears in the margin beside a paragraph you have already made a note about and not cited. Clicking it opens your notes."
+		checked={$nudgeSetting}
+		onCheckedChange={(checked) => void nudgeSetting.setEnabled(checked)}
+	/>
+</div>
 
 <h4 class="text-ink mb-2 text-sm font-medium">Labels</h4>
 
@@ -193,39 +199,37 @@
 				}}
 			/>
 
-			<input
-				class="border-line bg-surface-sunken text-ink grow rounded border px-2 py-1 text-sm"
-				aria-label="Name for this label"
-				value={label.name}
-				onblur={(event) => {
-					const name = event.currentTarget.value.trim();
-					if (!name || name === label.name) return;
-					labels[index].name = name;
+			<div class="grow">
+				<TextField
+					label="Name for this label"
+					hideLabel
+					value={label.name}
+					onblur={(event) => {
+						const name = event.currentTarget.value.trim();
+						if (!name || name === label.name) return;
+						labels[index].name = name;
+						void persist(labels[index]);
+					}}
+				/>
+			</div>
+
+			<Switch
+				label="Show"
+				checked={label.enabled}
+				onCheckedChange={(checked) => {
+					labels[index].enabled = checked;
 					void persist(labels[index]);
 				}}
 			/>
 
-			<label class="text-ink-muted flex items-center gap-1 text-xs">
-				<input
-					type="checkbox"
-					checked={label.enabled}
-					onchange={(event) => {
-						labels[index].enabled = event.currentTarget.checked;
-						void persist(labels[index]);
-					}}
-				/>
-				Show
-			</label>
-
-			<button
-				class="text-ink-muted hover:text-danger hover:bg-surface-hover rounded p-1 disabled:opacity-40"
+			<!-- Highlights filed under it are kept, without a label. -->
+			<IconButton
+				label="Remove the label {label.name}"
+				icon={Trash}
+				size="sm"
 				disabled={saving === label.id}
 				onclick={() => remove(label)}
-				aria-label="Remove the label {label.name}"
-				title="Remove. Highlights filed under it are kept, without a label."
-			>
-				<Icon icon="Trash" size="s" />
-			</button>
+			/>
 		</li>
 	{/each}
 </ul>
@@ -237,22 +241,22 @@
 	</p>
 
 	<div class="flex shrink-0 items-center gap-2">
-		<button
-			class="border-line hover:bg-surface-hover rounded border px-2 py-1 text-xs"
+		<Button
+			size="sm"
 			onclick={() => void useColourNames()}
 			title="Rename every label after the colour it is — Yellow, Red, Green, and so on"
 		>
 			Name them after their colours
-		</button>
+		</Button>
 
 		{#if labels.length < 8}
-			<button
-				class="border-line hover:bg-surface-hover rounded border px-2 py-1 text-xs"
+			<Button
+				size="sm"
 				onclick={() => void restore()}
 				title="Put back any of the eight defaults that are missing, leaving your own edits alone"
 			>
 				Restore the defaults
-			</button>
+			</Button>
 		{/if}
 	</div>
 </div>

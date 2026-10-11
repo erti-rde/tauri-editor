@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { get } from 'svelte/store';
 
 import Notes from './Notes.svelte';
 import { draftContext, draftMatches } from './draftContext';
+import { followSetting } from './writingSettings';
 import { showInPdf } from '$lib/pdfreader/showInPdf';
 
 /**
@@ -30,6 +32,9 @@ const db = vi.hoisted(() => ({
 }));
 vi.mock('$lib/stores/db', () => db);
 
+/** The settings file: what the writer chose last time, if anything. */
+const stored = vi.hoisted(() => new Map<string, unknown>());
+
 const files = vi.hoisted(() => ({
 	save: vi.fn<() => Promise<string | null>>(async () => null),
 	writeTextFile: vi.fn<(path: string, contents: string) => Promise<void>>(async () => {})
@@ -37,7 +42,11 @@ const files = vi.hoisted(() => ({
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save: files.save }));
 vi.mock('@tauri-apps/plugin-fs', () => ({ writeTextFile: files.writeTextFile }));
 vi.mock('@tauri-apps/plugin-store', () => ({
-	load: vi.fn(async () => ({ get: vi.fn(async () => undefined), set: vi.fn(), save: vi.fn() }))
+	load: vi.fn(async () => ({
+		get: vi.fn(async (key: string) => stored.get(key)),
+		set: vi.fn(async (key: string, value: unknown) => void stored.set(key, value)),
+		save: vi.fn()
+	}))
 }));
 vi.mock('$lib/pdfreader/showInPdf', () => ({ showInPdf: vi.fn(async () => true) }));
 
@@ -55,7 +64,7 @@ const MARK = {
 	char_end: null,
 	note: null,
 	style: 'fill' as const,
-	page_label: null,
+	page_label: null as string | null,
 	origin: 'erti' as const,
 	created_at: '2026-01-01',
 	updated_at: '2026-01-01',
@@ -72,7 +81,7 @@ const SOURCE_NOTE = {
 	sha256: 'erti:ong',
 	body: 'Additive rather than subordinative.',
 	quote: 'Oral structures look to pragmatics.',
-	page_label: '37',
+	page_label: '37' as string | null,
 	label_id: null,
 	created_at: '2026-01-02',
 	updated_at: '2026-01-02',
@@ -110,7 +119,9 @@ function stopWriting() {
 	draftContext.report({ paragraph: '', cited: [], cite: null });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+	// Following is on unless a test turns it off, as on a first launch.
+	await followSetting.setEnabled(true);
 	vi.clearAllMocks();
 	db.allAnnotations.mockResolvedValue([]);
 	db.allSourceNotes.mockResolvedValue([]);
@@ -261,8 +272,8 @@ describe('a mark on a file attached to a work', () => {
 
 		render(Notes);
 
-		await user.click(await screen.findByRole('button', { name: 'Cite' }));
-		expect(cite).toHaveBeenCalledWith('erti:book');
+		await user.click(await screen.findByRole('button', { name: 'Cite with p. 4' }));
+		expect(cite).toHaveBeenCalledWith('erti:book', '4');
 
 		await user.click(screen.getByRole('button', { name: 'Show in PDF' }));
 		expect(showInPdf).toHaveBeenCalledWith(expect.objectContaining({ sha256: 'sha-1', page: 4 }));
@@ -402,8 +413,8 @@ describe('following the paragraph', () => {
 			page: 2,
 			selector: { quote: PASSAGE.text }
 		});
-		await user.click(screen.getByRole('button', { name: 'Cite' }));
-		expect(cite).toHaveBeenCalledWith('erti:vaswani');
+		await user.click(screen.getByRole('button', { name: 'Cite with p. 2' }));
+		expect(cite).toHaveBeenCalledWith('erti:vaswani', '2');
 		stopWriting();
 	});
 
@@ -556,6 +567,104 @@ describe('following the paragraph', () => {
 
 		await user.click(screen.getByRole('switch', { name: 'Follow my writing' }));
 
+		await waitFor(() => expect(db.searchNotes).toHaveBeenLastCalledWith('', { limit: 100 }));
+		expect(screen.queryByRole('heading', { name: /Your notes/ })).not.toBeInTheDocument();
+		// And the margin stops pointing at what following found.
+		expect(get(draftMatches)).toEqual({ paragraph: '', sources: [] });
+		stopWriting();
+	});
+});
+
+// M3-2: Cite on a note, a mark or a passage takes its page.
+describe('citing at a page', () => {
+	// M3-2 AC-1: the page the paper prints, when the mark knows it.
+	it('cites a mark at the page its paper prints', async () => {
+		const user = userEvent.setup();
+		const cite = vi.fn(async () => {});
+		following([hit({ ...MARK, page: 4, page_label: '846' })], []);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH, cite });
+
+		await user.click(await screen.findByRole('button', { name: 'Cite with p. 846' }));
+		expect(cite).toHaveBeenCalledWith('sha-1', '846');
+		stopWriting();
+	});
+
+	// M3-2 AC-1: else the sheet, for a mark and for a passage alike.
+	it('cites a mark or a passage at its sheet when nothing printed is known', async () => {
+		const user = userEvent.setup();
+		const cite = vi.fn(async () => {});
+		following([hit(MARK)], [passageHit({ ...PASSAGE, page_start: 5 })]);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH, cite });
+
+		await user.click(await screen.findByRole('button', { name: 'Cite with p. 4' }));
+		expect(cite).toHaveBeenLastCalledWith('sha-1', '4');
+		await user.click(screen.getByRole('button', { name: 'Cite with p. 5' }));
+		expect(cite).toHaveBeenLastCalledWith('erti:vaswani', '5');
+		stopWriting();
+	});
+
+	// M3-2 AC-1: a source note with no page cites the work alone.
+	it('cites a source note with no page as the work alone', async () => {
+		const user = userEvent.setup();
+		const cite = vi.fn(async () => {});
+		following([noteHit({ ...SOURCE_NOTE, page_label: null })], []);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH, cite });
+
+		await user.click(await screen.findByRole('button', { name: 'Cite' }));
+		expect(cite).toHaveBeenCalledWith('erti:ong', undefined);
+		stopWriting();
+	});
+
+	// M3-2 AC-2: a note from elsewhere in the library is offered too, and
+	// citing it is the editor's (citeWork.test.ts adds it to the project).
+	it('offers to cite a note from outside the project', async () => {
+		const user = userEvent.setup();
+		const cite = vi.fn(async () => {});
+		following([noteHit({ ...SOURCE_NOTE, in_project: false })], []);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH, cite });
+
+		await user.click(await screen.findByRole('button', { name: 'Cite with p. 37' }));
+		expect(cite).toHaveBeenCalledWith('erti:ong', '37');
+		stopWriting();
+	});
+});
+
+// M3-4: whether the panel follows is remembered.
+describe('the follow switch, remembered', () => {
+	// M3-4 AC-1
+	it('stays off once turned off, for the next time the panel opens', async () => {
+		const user = userEvent.setup();
+		following([hit(MARK)], []);
+		const first = render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+		await screen.findByRole('heading', { name: 'Your notes (1)' });
+
+		await user.click(screen.getByRole('switch', { name: 'Follow my writing' }));
+		await waitFor(() => expect(stored.get('followWriting')).toBe(false));
+		first.unmount();
+
+		db.searchLibrary.mockClear();
+		render(Notes);
+		expect(await screen.findByRole('switch', { name: 'Follow my writing' })).not.toBeChecked();
+		await waitFor(() => expect(db.searchNotes).toHaveBeenLastCalledWith('', { limit: 100 }));
+		expect(db.searchLibrary).not.toHaveBeenCalled();
+		stopWriting();
+	});
+
+	// M3-4 AC-1: turned off in Settings, the open panel stops following too.
+	it('follows the setting when it changes elsewhere', async () => {
+		following([hit(MARK)], []);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+		await screen.findByRole('heading', { name: 'Your notes (1)' });
+
+		await followSetting.setEnabled(false);
+
+		expect(await screen.findByRole('switch', { name: 'Follow my writing' })).not.toBeChecked();
 		await waitFor(() => expect(db.searchNotes).toHaveBeenLastCalledWith('', { limit: 100 }));
 		expect(screen.queryByRole('heading', { name: /Your notes/ })).not.toBeInTheDocument();
 		stopWriting();

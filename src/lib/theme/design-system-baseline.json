@@ -135,8 +135,7 @@
 		"textPx": 7
 	},
 	"src/lib/side-panel/settings/ReadingSettings.svelte": {
-		"button": 3,
-		"input": 4
+		"input": 1
 	},
 	"src/lib/side-panel/settings/Settings.svelte": {
 		"input": 5,

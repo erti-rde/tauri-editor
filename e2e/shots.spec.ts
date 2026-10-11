@@ -49,6 +49,10 @@ test('shots', async ({ page }) => {
 	await page.getByRole('button', { name: 'Settings' }).click();
 	await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
 	await page.screenshot(shot('09-settings'));
+	// M3-4: whether the reading reaches into the writing, above the labels.
+	await page.getByRole('tab', { name: 'Reading' }).click();
+	await expect(page.getByRole('switch', { name: 'Follow my writing' })).toBeChecked();
+	await page.screenshot(shot('22-settings-reading'));
 	await page.keyboard.press('Escape');
 
 	// Asked before, never undone by accident (UX-4). Cancelled: later shots

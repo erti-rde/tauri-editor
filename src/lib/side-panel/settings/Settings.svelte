@@ -497,9 +497,7 @@
 				</div>
 			{:else if tab === 'reading'}
 				<div class="mb-8">
-					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
-						Highlight labels
-					</h3>
+					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Reading</h3>
 
 					<ReadingSettings />
 				</div>
