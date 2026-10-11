@@ -505,6 +505,36 @@ describe('following the paragraph', () => {
 		stopWriting();
 	});
 
+	it('lets a newer paragraph keep the margin when an older one answers late', async () => {
+		const LATER = 'Attention lets every token look at every other token at once.';
+		db.searchLibrary.mockImplementation(async (query, options) =>
+			query === LATER && !(options as { kinds: string[] }).kinds.includes('chunk')
+				? [hit(MARK)]
+				: []
+		);
+		// The first paragraph finds no notes, so it asks whether any exist, and
+		// that answer is held back until the next paragraph has been answered.
+		let answer: (found: unknown[]) => void = () => {};
+		db.searchNotes.mockImplementation(
+			() => new Promise<unknown[]>((resolve) => (answer = resolve))
+		);
+		const reported = vi.fn();
+		const stop = draftMatches.subscribe(reported);
+
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+		await waitFor(() => expect(db.searchNotes).toHaveBeenCalledWith('', { limit: 1 }));
+		draftContext.report({ paragraph: LATER });
+		await screen.findByRole('heading', { name: 'Your notes (1)' });
+		answer([hit(MARK)]);
+		await new Promise((settle) => setTimeout(settle, 20));
+
+		expect(reported).toHaveBeenLastCalledWith(expect.objectContaining({ paragraph: LATER }));
+		expect(screen.queryByRole('button', { name: 'Prepare my notes' })).not.toBeInTheDocument();
+		stop();
+		stopWriting();
+	});
+
 	it('says when nothing is close, in its own words', async () => {
 		following([], []);
 		db.searchNotes.mockResolvedValue([]);
