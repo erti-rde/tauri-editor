@@ -204,7 +204,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 
 ### M3 — Writing companion _(M)_ · [spec](docs/specs/M3.md)
 
-- [ ] **M3-1** Notes and passages follow the paragraph (UX-5)
+- [x] **M3-1** Notes and passages follow the paragraph (UX-5)
 - [ ] **M3-2** One-click cite with a pinpoint
 - [ ] **M3-3** Nudge covers source notes
 - [ ] **M3-4** Settings: follow and nudge switches
@@ -328,7 +328,12 @@ source notes alike, but nothing in the app writes it in yet (found in M1b-8 AC-5
 rule for notes on papers the library hasn't got) · building the retrieval index by unpacking
 each row's vector straight into its matrix as SQLite returns it, rather than fetching every row
 first: a build's footprint peaks about 30 MiB above what it then holds (found in M2-4; the
-budget holds without it).
+budget holds without it) · the page a paper prints, stored with each passage when it's
+indexed, so **Cite** on a passage gives "p. 846" rather than the sheet, as a mark does (found
+in M3-2; it needs a migration and re-indexing every paper) · the margin nudge searching for
+itself: it shows only what the Notes panel found, so it appears only while that panel is open
+and following, and **Margin nudge** on with **Follow my writing** off shows nothing (found in
+M3-4; it means moving the search out of the panel).
 
 ---
 
