@@ -140,7 +140,11 @@
 			ran = true;
 
 			// As for a search by meaning: no notes may mean none are prepared.
-			unprepared = results.length === 0 && (await anyNotes());
+			const none = results.length === 0 && (await anyNotes());
+			// Asked again while that was answered: what's on screen is the newer
+			// search's, and so are the matches the nudge reads.
+			if (ticket !== generation) return;
+			unprepared = none;
 
 			draftMatches.set({
 				paragraph,
@@ -182,7 +186,10 @@
 			// model was unavailable has none — so an empty answer here may mean
 			// "nothing is about that" or "nothing has been prepared", and only one
 			// of those is the reader's to solve.
-			if (results.length === 0 && semantic) unprepared = await anyNotes();
+			if (results.length === 0 && semantic) {
+				const none = await anyNotes();
+				if (ticket === generation) unprepared = none;
+			}
 		} catch (thrown) {
 			if (ticket !== generation) return;
 			log.error('Could not search the marks', thrown);

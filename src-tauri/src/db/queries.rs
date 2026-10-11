@@ -1476,9 +1476,6 @@ pub struct ScoredSourceNote {
     pub title: Option<String>,
 }
 
-/// The columns a source note search reads, with the work's name alongside.
-/// `json_valid` first: `json_extract` on a malformed record is an error, and
-/// one bad record would sink the whole search.
 /// A passage, named as a note on its source is: by its work's title, then
 /// its own file's (a PDF can carry metadata its work hasn't), then the name
 /// the file was found under. Binds the work, then the file and the index.
@@ -1492,6 +1489,9 @@ const CHUNK_SEARCH_SELECT: &str = "SELECT c.text, c.page_start, c.section,
                 ORDER BY l.last_seen DESC LIMIT 1)) AS title
        FROM chunks c WHERE c.sha256 = ?2 AND c.idx = ?3";
 
+/// The columns a source note search reads, with the work's name alongside.
+/// `json_valid` first: `json_extract` on a malformed record is an error, and
+/// one bad record would sink the whole search.
 const SOURCE_NOTE_SEARCH_SELECT: &str = "SELECT n.id, n.sha256, n.body, n.quote, n.page_label,
             n.label_id, n.created_at, n.updated_at,
             COALESCE(
