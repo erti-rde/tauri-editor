@@ -205,9 +205,9 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 ### M3 — Writing companion _(M)_ · [spec](docs/specs/M3.md)
 
 - [x] **M3-1** Notes and passages follow the paragraph (UX-5)
-- [ ] **M3-2** One-click cite with a pinpoint
-- [ ] **M3-3** Nudge covers source notes
-- [ ] **M3-4** Settings: follow and nudge switches
+- [x] **M3-2** One-click cite with a pinpoint
+- [x] **M3-3** Nudge covers source notes
+- [x] **M3-4** Settings: follow and nudge switches
 - [ ] **M3-5** States that say what happened
 
 ### M4 — Attribution check _(L; moves to 1.1 if M1b overruns by half)_ · [spec](docs/specs/M4.md)
