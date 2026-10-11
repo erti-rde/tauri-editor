@@ -483,7 +483,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let builds = opt("builds", 10).max(1);
     let args: Vec<String> = std::env::args().collect();
     if let Some(i) = args.iter().position(|a| a == "--measure") {
-        let dir = PathBuf::from(&args[i + 1]);
+        // Passed only by the parent process below, but a hand-typed run
+        // without a directory gets a message rather than a panic.
+        let dir = PathBuf::from(args.get(i + 1).ok_or("--measure needs a directory")?);
         return rt.block_on(measure(&dir, builds));
     }
 
