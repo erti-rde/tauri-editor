@@ -200,7 +200,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M2-1** In-memory index (ADR-5) (#221)
 - [x] **M2-2** Index consistent with every writer (#235)
 - [x] **M2-3** Note-matching eval set (#236)
-- [ ] **M2-4** Latency and memory budget measured
+- [x] **M2-4** Latency and memory budget measured (#237)
 
 ### M3 — Writing companion _(M)_ · [spec](docs/specs/M3.md)
 
