@@ -22,6 +22,7 @@ const db = vi.hoisted(() => ({
 	allAnnotations: vi.fn<(...args: unknown[]) => Promise<unknown[]>>(async () => []),
 	allSourceNotes: vi.fn<() => Promise<unknown[]>>(async () => []),
 	searchNotes: vi.fn<(...args: unknown[]) => Promise<unknown[]>>(async () => []),
+	searchLibrary: vi.fn<(...args: unknown[]) => Promise<unknown[]>>(async () => []),
 	embedPendingAnnotations: vi.fn<() => Promise<number>>(async () => 0),
 	projectSources: vi.fn<() => Promise<unknown[]>>(async () => []),
 	sourceAliases: vi.fn<() => Promise<Record<string, string>>>(async () => ({})),
@@ -82,11 +83,39 @@ const SOURCE_NOTE = {
 };
 const noteHit = (note: typeof SOURCE_NOTE) => ({ kind: 'source_note', hit: note });
 
+const PASSAGE = {
+	sha256: 'sha-3',
+	source_id: 'erti:vaswani',
+	idx: 7,
+	text: 'The Transformer allows for significantly more parallelisation.',
+	page_start: 2,
+	section: null,
+	title: 'Attention Is All You Need',
+	similarity: 0.6,
+	in_project: true
+};
+const passageHit = (passage: typeof PASSAGE) => ({ kind: 'chunk', hit: passage });
+
+const PARAGRAPH = 'Sequence models built on recurrence process one token at a time.';
+
+/** What following finds: notes when asked for notes, passages when asked for passages. */
+function following(notes: unknown[], passages: unknown[]) {
+	db.searchLibrary.mockImplementation(async (_query, options) =>
+		(options as { kinds: string[] }).kinds.includes('chunk') ? passages : notes
+	);
+}
+
+/** Leave the shared channel as the next test expects to find it. */
+function stopWriting() {
+	draftContext.report({ paragraph: '', cited: [], cite: null });
+}
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	db.allAnnotations.mockResolvedValue([]);
 	db.allSourceNotes.mockResolvedValue([]);
 	db.searchNotes.mockResolvedValue([]);
+	db.searchLibrary.mockResolvedValue([]);
 	db.annotationLabels.mockResolvedValue([]);
 });
 
@@ -193,13 +222,19 @@ describe('browsing, with nothing asked', () => {
 });
 
 describe('following the writing', () => {
-	it('says what it does, not how it works', async () => {
+	// M3-1 AC-1
+	it('is a switch in the header, saying which paragraph it follows', async () => {
+		following([hit(MARK)], []);
 		render(Notes);
 
-		expect(await screen.findByText("Show notes about the paragraph I'm in")).toBeInTheDocument();
-		expect(
-			screen.getByText('Updates as you write, by meaning. Typing a search here takes over.')
-		).toBeInTheDocument();
+		const toggle = await screen.findByRole('switch', { name: 'Follow my writing' });
+		expect(toggle).toBeChecked();
+		expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+
+		draftContext.report({ paragraph: PARAGRAPH });
+		expect(await screen.findByText('Sequence models built on recurrence…')).toBeInTheDocument();
+		expect(screen.getByText(/Related to:/)).toBeInTheDocument();
+		stopWriting();
 	});
 
 	it('turns off the words-or-meaning choice while it is the one deciding', async () => {
@@ -259,7 +294,7 @@ describe('a note on a source', () => {
 	});
 
 	it('is in the follow list, and its work is reported to the margin', async () => {
-		db.searchNotes.mockResolvedValue([noteHit(SOURCE_NOTE)]);
+		following([noteHit(SOURCE_NOTE)], []);
 		const reported = vi.fn();
 		const stop = draftMatches.subscribe(reported);
 
@@ -267,20 +302,20 @@ describe('a note on a source', () => {
 		draftContext.report({ paragraph: 'Oral cultures add rather than subordinate.' });
 
 		await waitFor(() =>
-			expect(db.searchNotes).toHaveBeenCalledWith('Oral cultures add rather than subordinate.', {
-				semantic: true,
-				limit: 20
+			expect(db.searchLibrary).toHaveBeenCalledWith('Oral cultures add rather than subordinate.', {
+				kinds: ['annotation', 'source_note'],
+				limit: 20,
+				includeLibrary: true
 			})
 		);
-		expect(await screen.findByText('Related to what you are writing')).toBeInTheDocument();
-		expect(screen.getByText('Additive rather than subordinative.')).toBeInTheDocument();
+		expect(await screen.findByText('Additive rather than subordinative.')).toBeInTheDocument();
 		await waitFor(() =>
 			expect(reported).toHaveBeenLastCalledWith(
 				expect.objectContaining({ sources: [{ sha256: 'erti:ong', similarity: 0.7 }] })
 			)
 		);
 		stop();
-		draftContext.report({ paragraph: '' });
+		stopWriting();
 	});
 
 	it('counts as a note a search by meaning could not see', async () => {
@@ -323,5 +358,176 @@ describe('exporting the notes', () => {
 
 		await waitFor(() => expect(files.writeTextFile).toHaveBeenCalled());
 		expect(files.writeTextFile.mock.calls[0][1]).toContain('> Oral structures look to pragmatics.');
+	});
+});
+
+// M3-1: notes and passages follow the paragraph.
+describe('following the paragraph', () => {
+	// M3-1 AC-2
+	it('shows your notes and passages from your papers, each counted, with source and page', async () => {
+		following(
+			[hit(MARK), noteHit(SOURCE_NOTE)],
+			[passageHit(PASSAGE), passageHit({ ...PASSAGE, idx: 8, page_start: 5, text: 'Another.' })]
+		);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+
+		expect(await screen.findByRole('heading', { name: 'Your notes (2)' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'From your papers (2)' })).toBeInTheDocument();
+		// A mark: its paper and page. A source note: its work and page.
+		expect(screen.getByText(/paper\.pdf/)).toBeInTheDocument();
+		expect(screen.getByText('· p. 4')).toBeInTheDocument();
+		expect(screen.getByText('· Orality and Literacy')).toBeInTheDocument();
+		expect(screen.getByText('· p. 37')).toBeInTheDocument();
+		// A passage: its work and page, and the passage itself.
+		expect(screen.getAllByText('Attention Is All You Need')).toHaveLength(2);
+		expect(screen.getByText('· p. 2')).toBeInTheDocument();
+		expect(screen.getByText('· p. 5')).toBeInTheDocument();
+		expect(screen.getByText(PASSAGE.text)).toBeInTheDocument();
+		stopWriting();
+	});
+
+	// M3-1 AC-2
+	it('opens a passage in its PDF, and cites its work', async () => {
+		const user = userEvent.setup();
+		const cite = vi.fn(async () => {});
+		following([], [passageHit(PASSAGE)]);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH, cite });
+
+		await screen.findByText(PASSAGE.text);
+		await user.click(screen.getByRole('button', { name: 'Show in PDF' }));
+		expect(showInPdf).toHaveBeenCalledWith({
+			sha256: 'sha-3',
+			page: 2,
+			selector: { quote: PASSAGE.text }
+		});
+		await user.click(screen.getByRole('button', { name: 'Cite' }));
+		expect(cite).toHaveBeenCalledWith('erti:vaswani');
+		stopWriting();
+	});
+
+	// M3-1 AC-3: the editor decides when (draftContext.test.ts); the panel asks
+	// once for each paragraph it's told of, and not again for the same one.
+	it('searches once per paragraph it is told of, never again for the same words', async () => {
+		following([hit(MARK)], []);
+		render(Notes);
+
+		draftContext.report({ paragraph: PARAGRAPH });
+		await screen.findByRole('heading', { name: 'Your notes (1)' });
+		draftContext.report({ paragraph: PARAGRAPH, cited: [] });
+		draftContext.report({ paragraph: PARAGRAPH });
+		await new Promise((settle) => setTimeout(settle, 20));
+
+		// Notes and passages: one search each.
+		expect(db.searchLibrary).toHaveBeenCalledTimes(2);
+		expect(db.searchLibrary.mock.calls.map(([query]) => query)).toEqual([PARAGRAPH, PARAGRAPH]);
+		stopWriting();
+	});
+
+	// M3-1 AC-4
+	it('marks what the paragraph already cites, and puts it last', async () => {
+		following(
+			[
+				hit({ ...MARK, id: 'cited-mark', source_id: 'erti:cited', file_name: 'cited.pdf' }),
+				hit(MARK)
+			],
+			[
+				passageHit({ ...PASSAGE, source_id: 'erti:cited', title: 'Already cited' }),
+				passageHit({ ...PASSAGE, idx: 9, text: 'Not yet cited.' })
+			]
+		);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH, cited: ['erti:cited'] });
+
+		await screen.findByRole('heading', { name: 'Your notes (2)' });
+		const rows = (text: RegExp) =>
+			screen.getAllByText(text).map((el) => el.closest('.border-b')?.textContent ?? '');
+		const notes = rows(/\.pdf$/);
+		expect(notes[0]).toContain('paper.pdf');
+		expect(notes[1]).toContain('cited.pdf');
+		expect(notes[1]).toContain('cited here');
+		expect(notes[0]).not.toContain('cited here');
+
+		const papers = rows(/^(Already cited|Attention Is All You Need)$/);
+		expect(papers[0]).toContain('Not yet cited.');
+		expect(papers[1]).toContain('Already cited');
+		expect(papers[1]).toContain('cited here');
+		expect(screen.getAllByText('· cited here')).toHaveLength(2);
+		stopWriting();
+	});
+
+	// M3-1 AC-4: citing from the panel marks the result without searching again.
+	it('marks a result once it is cited, without searching again', async () => {
+		following([hit(MARK)], []);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+		await screen.findByRole('heading', { name: 'Your notes (1)' });
+		expect(screen.queryByText('· cited here')).not.toBeInTheDocument();
+
+		draftContext.report({ cited: ['sha-1'] });
+
+		expect(await screen.findByText('· cited here')).toBeInTheDocument();
+		expect(db.searchLibrary).toHaveBeenCalledTimes(2);
+		stopWriting();
+	});
+
+	// M3-1 AC-5
+	it('gives way to a typed search, and follows again once the search is cleared', async () => {
+		const user = userEvent.setup();
+		following([hit(MARK)], [passageHit(PASSAGE)]);
+		db.searchNotes.mockResolvedValue([
+			hit({ ...MARK, id: 'typed', file_name: 'typed.pdf', in_project: true })
+		]);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+		await screen.findByRole('heading', { name: 'From your papers (1)' });
+
+		await user.type(screen.getByLabelText('Search your notes'), 'attention{Enter}');
+		expect(await screen.findByText(/typed\.pdf/)).toBeInTheDocument();
+		expect(screen.queryByRole('heading', { name: /From your papers/ })).not.toBeInTheDocument();
+		expect(screen.queryByText(/Related to:/)).not.toBeInTheDocument();
+		// The writing moving on doesn't take the search away.
+		draftContext.report({ paragraph: `${PARAGRAPH} And more.` });
+		await new Promise((settle) => setTimeout(settle, 20));
+		expect(db.searchLibrary).toHaveBeenCalledTimes(2);
+
+		await user.clear(screen.getByLabelText('Search your notes'));
+
+		expect(
+			await screen.findByRole('heading', { name: 'From your papers (1)' })
+		).toBeInTheDocument();
+		expect(db.searchLibrary).toHaveBeenLastCalledWith(`${PARAGRAPH} And more.`, {
+			kinds: ['chunk'],
+			limit: 10,
+			includeLibrary: true
+		});
+		stopWriting();
+	});
+
+	it('says when nothing is close, in its own words', async () => {
+		following([], []);
+		db.searchNotes.mockResolvedValue([]);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+
+		expect(
+			await screen.findByText('Nothing in your notes or papers is close to this paragraph.')
+		).toBeInTheDocument();
+		stopWriting();
+	});
+
+	it('lists every note again when switched off', async () => {
+		const user = userEvent.setup();
+		following([hit(MARK)], []);
+		render(Notes);
+		draftContext.report({ paragraph: PARAGRAPH });
+		await screen.findByRole('heading', { name: 'Your notes (1)' });
+
+		await user.click(screen.getByRole('switch', { name: 'Follow my writing' }));
+
+		await waitFor(() => expect(db.searchNotes).toHaveBeenLastCalledWith('', { limit: 100 }));
+		expect(screen.queryByRole('heading', { name: /Your notes/ })).not.toBeInTheDocument();
+		stopWriting();
 	});
 });

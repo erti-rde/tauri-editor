@@ -373,3 +373,26 @@ export const searchNotes = (query: string, options: { limit?: number; semantic?:
 	call(commands.searchNotes(query, options.limit ?? null, options.semantic ?? false)) as Promise<
 		NoteHit[]
 	>;
+
+/** One result from the index, whatever kind of row it is (ADR 005). */
+export type LibraryHit = NoteHit | { kind: 'chunk'; hit: ScoredChunk };
+
+/**
+ * Search everything by meaning: passages, marks and source notes, each saying
+ * which. `kinds` narrows it before scoring, so a narrower search still fills
+ * `limit`; a caller that shows kinds apart asks for each on its own, since a
+ * short note doesn't score comparably against a long passage. The project's
+ * results come first.
+ */
+export const searchLibrary = (
+	query: string,
+	options: { kinds?: ipc.HitKind[]; limit?: number; includeLibrary?: boolean } = {}
+) =>
+	call(
+		commands.searchLibrary(
+			query,
+			options.kinds ?? null,
+			options.limit ?? null,
+			options.includeLibrary ?? null
+		)
+	) as Promise<LibraryHit[]>;

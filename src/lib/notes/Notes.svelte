@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	import Icon from '$lib/icon/Icon.svelte';
-	import { Button, Checkbox, Item, LabelChip, RadioGroup, SearchField } from '$lib/ui';
+	import { Button, Item, LabelChip, RadioGroup, SearchField, Switch } from '$lib/ui';
 	import Loader from '$lib/loader/Loader.svelte';
 	import { annotationsStore, pageLabelOf } from '$lib/stores/annotations.svelte';
 	import {
 		allAnnotations,
 		allSourceNotes,
 		embedPendingAnnotations,
+		searchLibrary,
 		searchNotes,
-		type NoteHit
+		type NoteHit,
+		type ScoredChunk
 	} from '$lib/stores/db';
 	import { showInPdf } from '$lib/pdfreader/showInPdf';
 	import { save } from '@tauri-apps/plugin-dialog';
@@ -19,7 +22,7 @@
 	import { canonical } from '$lib/citations/aliases';
 	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
 	import { toMarkdown, toSidecar } from './export';
-	import { draftContext, draftMatches } from './draftContext';
+	import { draftContext, draftMatches, firstWords } from './draftContext';
 	import { log } from '$lib/log';
 
 	/**
@@ -52,10 +55,21 @@
 	 * guess at one.
 	 */
 	let following = $state(true);
+	/** The paragraph the results on screen were found for, if they were. */
 	let followed = $state('');
 	let results = $state<NoteHit[]>([]);
+	/** Passages from the papers themselves, found only while following (M3-1 AC-2). */
+	let passages = $state<ScoredChunk[]>([]);
+	/** What's on screen: notes and passages for a paragraph, or a list or search of notes. */
+	let shown = $state<'following' | 'notes'>('notes');
 	let loading = $state(false);
 	let ran = $state(false);
+
+	/**
+	 * Which search is the latest. An answer to an older one is dropped: a
+	 * paragraph left behind can answer after the one the cursor is in now.
+	 */
+	let generation = 0;
 
 	/**
 	 * What went wrong, said out loud.
@@ -73,25 +87,80 @@
 
 	onMount(() => {
 		void annotationsStore.loadLabels();
-		void run();
+		// Following has a paragraph to go on, and the effect below asks about it.
+		if (!(following && get(draftContext).paragraph)) void run();
 	});
 
 	/**
-	 * Re-run whenever the writing moves on, unless a question has been typed.
+	 * Follow the writing whenever it moves on, unless a question has been typed
+	 * (M3-1 AC-5).
 	 *
-	 * Guarded on the paragraph actually changing: the editor already waits for a
-	 * pause before publishing, and repeating a search for text that has not
-	 * changed would cost an embedding for nothing.
+	 * The editor decides when it has moved on (AC-3): when the cursor leaves a
+	 * paragraph, or after a pause in one. Guarded on the paragraph actually
+	 * changing, since repeating a search for text that hasn't would cost an
+	 * embedding for nothing. A typed search clears `followed`, so clearing the
+	 * box asks about the paragraph again.
 	 */
 	$effect(() => {
 		const paragraph = $draftContext.paragraph;
 		if (!following || query.trim() || !paragraph || paragraph === followed) return;
 
 		followed = paragraph;
-		void run(paragraph);
+		void follow(paragraph);
 	});
 
-	async function run(context?: string) {
+	/**
+	 * Notes and passages close to a paragraph, as two groups (M3-1 AC-2).
+	 *
+	 * Asked for apart: a short note doesn't score comparably against a long
+	 * passage, so in one ranked list the passages would crowd the notes out.
+	 * Both reach past the open project, which comes first: a note taken last year
+	 * for another project is the one most likely to be forgotten.
+	 */
+	async function follow(paragraph: string) {
+		const ticket = ++generation;
+		// The last paragraph's results stay until this one's arrive, so the panel
+		// doesn't blink each time the writer pauses.
+		if (shown !== 'following') loading = true;
+		try {
+			const [notes, papers] = await Promise.all([
+				searchLibrary(paragraph, {
+					kinds: ['annotation', 'source_note'],
+					limit: 20,
+					includeLibrary: true
+				}),
+				searchLibrary(paragraph, { kinds: ['chunk'], limit: 10, includeLibrary: true })
+			]);
+			if (ticket !== generation) return;
+
+			results = notes.filter((row): row is NoteHit => row.kind !== 'chunk');
+			passages = papers.flatMap((row) => (row.kind === 'chunk' ? [row.hit] : []));
+			failure = null;
+			shown = 'following';
+			ran = true;
+
+			// As for a search by meaning: no notes may mean none are prepared.
+			unprepared = results.length === 0 && (await anyNotes());
+
+			draftMatches.set({
+				paragraph,
+				// By work, which is what the paragraph's citations resolve to.
+				sources: results.map(({ hit }) => ({ sha256: hit.source_id, similarity: hit.similarity }))
+			});
+		} catch (thrown) {
+			if (ticket !== generation) return;
+			log.error('Could not follow the writing', thrown);
+			fail(thrown);
+		} finally {
+			if (ticket === generation) loading = false;
+		}
+	}
+
+	async function run() {
+		const ticket = ++generation;
+		// What's shown next isn't about the paragraph, so clearing the search
+		// will ask about it again.
+		followed = '';
 		loading = true;
 		failure = null;
 		unprepared = false;
@@ -99,43 +168,42 @@
 			const asked = query.trim();
 			const found = asked
 				? await searchNotes(asked, { semantic, limit: 100 })
-				: context
-					? await searchNotes(context, { semantic: true, limit: 20 })
-					: // Nothing asked: every note, newest first, each with its paper and
-						// whether it's in this project. The plain list used to be cast to
-						// this type without those, so every mark read "unknown paper".
-						await searchNotes('', { limit: 100 });
+				: // Nothing asked: every note, newest first, each with its paper and
+					// whether it's in this project. The plain list used to be cast to
+					// this type without those, so every mark read "unknown paper".
+					await searchNotes('', { limit: 100 });
+			if (ticket !== generation) return;
 			results = Array.isArray(found) ? found : [];
+			passages = [];
+			shown = 'notes';
 			ran = true;
 
 			// A search by meaning matches against vectors, and a mark made while the
 			// model was unavailable has none — so an empty answer here may mean
 			// "nothing is about that" or "nothing has been prepared", and only one
 			// of those is the reader's to solve.
-			if (results.length === 0 && (semantic || context)) unprepared = await anyNotes();
-
-			// Report back only for a search that followed the writing. A typed
-			// query is the writer asking a question, and answering it should not
-			// also put a mark in their margin.
-			if (context && !asked) {
-				draftMatches.set({
-					paragraph: context,
-					// By work, which is what the paragraph's citations resolve to.
-					sources: results.map(({ hit }) => ({ sha256: hit.source_id, similarity: hit.similarity }))
-				});
-			}
+			if (results.length === 0 && semantic) unprepared = await anyNotes();
 		} catch (thrown) {
-			// Before a project is open there is no library to ask, which is an
-			// ordinary state for a panel that can be opened at any time — but it is
-			// still said, because a panel that goes blank for two different reasons
-			// cannot be acted on.
+			if (ticket !== generation) return;
 			log.error('Could not search the marks', thrown);
-			results = [];
-			ran = true;
-			failure = thrown instanceof Error ? thrown.message : String(thrown);
+			fail(thrown);
 		} finally {
-			loading = false;
+			if (ticket === generation) loading = false;
 		}
+	}
+
+	/**
+	 * Before a project is open there is no library to ask, which is an ordinary
+	 * state for a panel that can be opened at any time — but it is still said,
+	 * because a panel that goes blank for two different reasons cannot be acted
+	 * on.
+	 */
+	function fail(thrown: unknown) {
+		results = [];
+		passages = [];
+		shown = 'notes';
+		ran = true;
+		failure = thrown instanceof Error ? thrown.message : String(thrown);
 	}
 
 	/** Embed the marks that were never embedded, and ask again. */
@@ -148,7 +216,9 @@
 					? 'Every note was already prepared.'
 					: `Prepared ${done} ${done === 1 ? 'note' : 'notes'}.`
 			);
-			await run();
+			// Asked again, the same question: the paragraph, if that's what was shown.
+			if (shown === 'following' && followed) await follow(followed);
+			else await run();
 		} catch (thrown) {
 			log.error('Could not prepare the notes', thrown);
 			errorToast('Could not prepare the notes for searching by meaning.');
@@ -169,6 +239,34 @@
 
 	const inProject = $derived(results.filter(({ hit }) => hit.in_project !== false));
 	const elsewhere = $derived(results.filter(({ hit }) => hit.in_project === false));
+
+	/**
+	 * The works the followed paragraph already cites (M3-1 AC-4). Read from the
+	 * editor as it changes, so citing from here marks the result at once without
+	 * searching again, and only while it's the paragraph the results are for.
+	 */
+	const cited = $derived(
+		shown === 'following' && $draftContext.paragraph === followed
+			? new Set($draftContext.cited)
+			: new Set<string>()
+	);
+
+	/**
+	 * A result the paragraph already cites isn't news: it goes last, keeping
+	 * the order otherwise (M3-1 AC-4).
+	 */
+	function citedLast<T extends { hit: { source_id: string } } | { source_id: string }>(
+		rows: T[]
+	): T[] {
+		const id = (row: T) => ('hit' in row ? row.hit.source_id : row.source_id);
+		return [
+			...rows.filter((row) => !cited.has(id(row))),
+			...rows.filter((row) => cited.has(id(row)))
+		];
+	}
+
+	const yourNotes = $derived(citedLast(results));
+	const fromPapers = $derived(citedLast(passages));
 
 	/**
 	 * Write the notes out.
@@ -247,6 +345,160 @@
 	}
 </script>
 
+{#snippet citedHere(id: string)}
+	<!-- In words, not only by place in the list (M3-1 AC-4). -->
+	{#if cited.has(id)}<span class="shrink-0">· cited here</span>{/if}
+{/snippet}
+
+{#snippet unpreparedNotes()}
+	<!--
+		The one empty answer the reader can do something about: marks exist,
+		but they carry no vectors, so a search by meaning cannot see them.
+		Embedding happens when a mark is made and can fail quietly — before a
+		library is open, or while the model is loading.
+	-->
+	<div class="p-3 text-xs">
+		<p class="text-ink">Nothing found by meaning.</p>
+		<p class="text-ink-muted mt-1">
+			Some of your notes have not been prepared for this yet, so searching by meaning cannot see
+			them. Searching by words still works.
+		</p>
+		<Button
+			variant="primary"
+			size="sm"
+			class="mt-2"
+			loading={preparing}
+			onclick={() => void prepare()}
+		>
+			{preparing ? 'Preparing…' : 'Prepare my notes'}
+		</Button>
+	</div>
+{/snippet}
+
+{#snippet note(row: NoteHit)}
+	{#if row.kind === 'annotation'}
+		{@const hit = row.hit}
+		<Item text={hit.note ?? undefined} quote={hit.quote ?? undefined}>
+			{#snippet meta()}
+				<LabelChip name={nameOf(hit.label_id)} colour={colourOf(hit.label_id)} />
+				<span class="truncate">· {hit.file_name ?? 'unknown paper'}</span>
+				<span class="shrink-0">· p. {pageLabelOf(hit)}</span>
+				{@render citedHere(hit.source_id)}
+			{/snippet}
+
+			{#snippet actions()}
+				<Button
+					variant="ghost"
+					size="sm"
+					onclick={() =>
+						void showInPdf({
+							sha256: hit.sha256,
+							page: hit.page,
+							selector: hit.quote ? { quote: hit.quote } : undefined
+						})}
+				>
+					<Icon icon="BookOpen" size="s" />
+					Show in PDF
+				</Button>
+
+				<!--
+					Offered only when a manuscript is open, because a citation
+					needs somewhere to go. A note carries the work its paper
+					belongs to, so this is the same insertion the citation panel
+					makes from a search result. Show in PDF, above, keeps the
+					file's own hash: the work may be a book with no file.
+				-->
+				{#if $draftContext.cite}
+					<Button
+						variant="ghost"
+						size="sm"
+						onclick={() => void $draftContext.cite?.(hit.source_id)}
+					>
+						<Icon icon="Quote" size="s" />
+						Cite
+					</Button>
+				{/if}
+			{/snippet}
+		</Item>
+	{:else}
+		{@const hit = row.hit}
+		<!--
+			A note on the work as a whole (M1b-8): named by the work, since a
+			book entered by hand has no file, and said to be a note, so the
+			two kinds tell apart without the label's colour.
+		-->
+		<Item text={hit.body || undefined} quote={hit.quote ?? undefined}>
+			{#snippet meta()}
+				{#if hit.label_id}
+					<LabelChip name={nameOf(hit.label_id)} colour={colourOf(hit.label_id)} />
+				{:else}
+					<span class="shrink-0">Note</span>
+				{/if}
+				<span class="truncate">· {hit.title ?? 'unknown source'}</span>
+				{#if hit.page_label}
+					<span class="shrink-0">· p. {hit.page_label}</span>
+				{/if}
+				{@render citedHere(hit.source_id)}
+			{/snippet}
+
+			{#snippet actions()}
+				{#if $draftContext.cite}
+					<Button
+						variant="ghost"
+						size="sm"
+						onclick={() => void $draftContext.cite?.(hit.source_id, hit.page_label ?? undefined)}
+					>
+						<Icon icon="Quote" size="s" />
+						{hit.page_label ? `Cite with p. ${hit.page_label}` : 'Cite'}
+					</Button>
+				{/if}
+			{/snippet}
+		</Item>
+	{/if}
+{/snippet}
+
+<!--
+	A passage from a paper (M3-1 AC-2): one line of source and page, then the
+	passage in two lines, which open to the whole of it.
+-->
+{#snippet paper(passage: ScoredChunk)}
+	<Item quote={passage.text} clamp>
+		{#snippet meta()}
+			<span class="truncate">{passage.title ?? 'unknown paper'}</span>
+			{#if passage.page_start}
+				<span class="shrink-0">· p. {passage.page_start}</span>
+			{/if}
+			{@render citedHere(passage.source_id)}
+		{/snippet}
+
+		{#snippet actions()}
+			<Button
+				variant="ghost"
+				size="sm"
+				onclick={() =>
+					void showInPdf({
+						sha256: passage.sha256,
+						page: passage.page_start ?? 1,
+						selector: { quote: passage.text }
+					})}
+			>
+				<Icon icon="BookOpen" size="s" />
+				Show in PDF
+			</Button>
+			{#if $draftContext.cite}
+				<Button
+					variant="ghost"
+					size="sm"
+					onclick={() => void $draftContext.cite?.(passage.source_id)}
+				>
+					<Icon icon="Quote" size="s" />
+					Cite
+				</Button>
+			{/if}
+		{/snippet}
+	</Item>
+{/snippet}
+
 <div class="flex h-full flex-col">
 	<div class="border-line flex flex-col gap-2 border-b p-2">
 		<SearchField
@@ -256,27 +508,33 @@
 			onkeydown={(event) => {
 				if (event.key === 'Enter') void run();
 			}}
-			onclear={() => void run()}
+			onclear={() => {
+				// Following resumes on its own (AC-5): the effect asks about the
+				// paragraph again once the box is empty.
+				followed = '';
+				if (!(following && $draftContext.paragraph)) void run();
+			}}
 		/>
 
 		<!--
-			Named for what it does rather than for what it is.
-
-			"Follow what I am writing" described the mechanism and left the reader to
-			work out the consequence — which is that with nothing typed here, the
-			panel keeps showing notes about the paragraph the cursor is in. The
-			second line says that outright, because a checkbox whose effect you have
-			to discover by experiment is one you switch off.
+			Named for what it does rather than for what it is (M3-1 AC-1). With
+			nothing typed here, the panel shows what's close to the paragraph the
+			cursor is in, and the line under it says which paragraph that is, so the
+			reader never has to work out what the list is answering.
 		-->
-		<Checkbox
-			label="Show notes about the paragraph I'm in"
-			description="Updates as you write, by meaning. Typing a search here takes over."
+		<Switch
+			label="Follow my writing"
 			bind:checked={following}
 			onCheckedChange={(checked) => {
 				followed = '';
 				if (!checked) void run();
 			}}
 		/>
+		{#if following && shown === 'following' && followed && !query.trim()}
+			<p class="text-caption text-ink-muted truncate">
+				Related to: <em>{firstWords(followed)}</em>
+			</p>
+		{/if}
 
 		<!--
 			Only meaningful for a typed question. Following the writing always
@@ -321,29 +579,40 @@
 				<p class="text-ink-muted mt-1">{failure}</p>
 				<p class="text-ink-muted mt-1">If no project is open yet, there is no library to search.</p>
 			</div>
-		{:else if results.length === 0 && unprepared}
-			<!--
-				The one empty answer the reader can do something about: marks exist,
-				but they carry no vectors, so a search by meaning cannot see them.
-				Embedding happens when a mark is made and can fail quietly — before a
-				library is open, or while the model is loading.
-			-->
-			<div class="p-3 text-xs">
-				<p class="text-ink">Nothing found by meaning.</p>
-				<p class="text-ink-muted mt-1">
-					Some of your notes have not been prepared for this yet, so searching by meaning cannot see
-					them. Searching by words still works.
+		{:else if shown === 'following'}
+			{#if results.length === 0 && passages.length === 0 && !unprepared}
+				<p class="text-ink-muted p-3 text-xs">
+					Nothing in your notes or papers is close to this paragraph.
 				</p>
-				<Button
-					variant="primary"
-					size="sm"
-					class="mt-2"
-					loading={preparing}
-					onclick={() => void prepare()}
+			{:else}
+				<h3
+					class="text-caption text-ink-muted bg-surface-sunken sticky top-0 px-3 py-1 font-medium"
 				>
-					{preparing ? 'Preparing…' : 'Prepare my notes'}
-				</Button>
-			</div>
+					Your notes ({yourNotes.length})
+				</h3>
+				{#each yourNotes as row (`${row.kind}:${row.hit.id}`)}
+					{@render note(row)}
+				{:else}
+					{#if unprepared}
+						{@render unpreparedNotes()}
+					{:else}
+						<p class="text-ink-muted px-3 py-2 text-xs">None close to this paragraph.</p>
+					{/if}
+				{/each}
+
+				<h3
+					class="text-caption text-ink-muted bg-surface-sunken sticky top-0 px-3 py-1 font-medium"
+				>
+					From your papers ({fromPapers.length})
+				</h3>
+				{#each fromPapers as passage (`${passage.sha256}#${passage.idx}`)}
+					{@render paper(passage)}
+				{:else}
+					<p class="text-ink-muted px-3 py-2 text-xs">None close to this paragraph.</p>
+				{/each}
+			{/if}
+		{:else if results.length === 0 && unprepared}
+			{@render unpreparedNotes()}
 		{:else if results.length === 0}
 			<p class="text-ink-muted p-3 text-xs">
 				{ran && query.trim()
@@ -351,12 +620,6 @@
 					: 'Nothing marked yet. Highlight a passage while reading and it will appear here.'}
 			</p>
 		{:else}
-			{#if following && !query.trim() && followed}
-				<p class="text-caption text-ink-muted bg-surface-sunken border-line border-b px-3 py-1">
-					Related to what you are writing
-				</p>
-			{/if}
-
 			{#each [{ title: 'In this project', rows: inProject }, { title: 'Elsewhere in your library', rows: elsewhere }] as group (group.title)}
 				{#if group.rows.length > 0}
 					<h3
@@ -366,84 +629,7 @@
 					</h3>
 
 					{#each group.rows as row (`${row.kind}:${row.hit.id}`)}
-						{#if row.kind === 'annotation'}
-							{@const hit = row.hit}
-							<Item text={hit.note ?? undefined} quote={hit.quote ?? undefined}>
-								{#snippet meta()}
-									<LabelChip name={nameOf(hit.label_id)} colour={colourOf(hit.label_id)} />
-									<span class="truncate">· {hit.file_name ?? 'unknown paper'}</span>
-									<span class="shrink-0">· p. {pageLabelOf(hit)}</span>
-								{/snippet}
-
-								{#snippet actions()}
-									<Button
-										variant="ghost"
-										size="sm"
-										onclick={() =>
-											void showInPdf({
-												sha256: hit.sha256,
-												page: hit.page,
-												selector: hit.quote ? { quote: hit.quote } : undefined
-											})}
-									>
-										<Icon icon="BookOpen" size="s" />
-										Show in PDF
-									</Button>
-
-									<!--
-										Offered only when a manuscript is open, because a citation
-										needs somewhere to go. A note carries the work its paper
-										belongs to, so this is the same insertion the citation panel
-										makes from a search result. Show in PDF, above, keeps the
-										file's own hash: the work may be a book with no file.
-									-->
-									{#if $draftContext.cite}
-										<Button
-											variant="ghost"
-											size="sm"
-											onclick={() => void $draftContext.cite?.(hit.source_id)}
-										>
-											<Icon icon="Quote" size="s" />
-											Cite
-										</Button>
-									{/if}
-								{/snippet}
-							</Item>
-						{:else}
-							{@const hit = row.hit}
-							<!--
-								A note on the work as a whole (M1b-8): named by the work, since a
-								book entered by hand has no file, and said to be a note, so the
-								two kinds tell apart without the label's colour.
-							-->
-							<Item text={hit.body || undefined} quote={hit.quote ?? undefined}>
-								{#snippet meta()}
-									{#if hit.label_id}
-										<LabelChip name={nameOf(hit.label_id)} colour={colourOf(hit.label_id)} />
-									{:else}
-										<span class="shrink-0">Note</span>
-									{/if}
-									<span class="truncate">· {hit.title ?? 'unknown source'}</span>
-									{#if hit.page_label}
-										<span class="shrink-0">· p. {hit.page_label}</span>
-									{/if}
-								{/snippet}
-
-								{#snippet actions()}
-									{#if $draftContext.cite}
-										<Button
-											variant="ghost"
-											size="sm"
-											onclick={() =>
-												void $draftContext.cite?.(hit.source_id, hit.page_label ?? undefined)}
-										>
-											<Icon icon="Quote" size="s" />
-											{hit.page_label ? `Cite with p. ${hit.page_label}` : 'Cite'}
-										</Button>
-									{/if}
-								{/snippet}
-							</Item>
-						{/if}
+						{@render note(row)}
 					{/each}
 				{/if}
 			{/each}

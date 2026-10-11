@@ -20,6 +20,11 @@ export interface DraftContext {
 	/** The paragraph holding the cursor. Empty when there is nothing to go on. */
 	paragraph: string;
 	/**
+	 * The works that paragraph already cites, by canonical id (ADR 003), so the
+	 * panel can say "cited here" and put those last (M3-1 AC-4).
+	 */
+	cited: string[];
+	/**
 	 * Insert a citation for a paper, provided by the editor while one is open.
 	 *
 	 * Handed over rather than re-derived, because only the editor holds the
@@ -30,7 +35,7 @@ export interface DraftContext {
 	cite: ((sha256: string, locator?: string) => Promise<void>) | null;
 }
 
-const EMPTY: DraftContext = { paragraph: '', cite: null };
+const EMPTY: DraftContext = { paragraph: '', cited: [], cite: null };
 
 function createDraftContext() {
 	const { subscribe, set, update } = writable<DraftContext>(EMPTY);
@@ -79,6 +84,94 @@ export function paragraphAt(doc: ProseMirrorNode, pos: number): string {
 	const text = resolved.parent.textContent.trim();
 
 	return text.length >= MINIMUM_CONTEXT ? text : '';
+}
+
+/* ---------------------------------------------------------------- following */
+
+/**
+ * How long the writer pauses before the panel looks again (M3-1 AC-3).
+ *
+ * Long enough that a sentence is finished rather than half typed, and short
+ * enough that the notes are there by the time the writer looks across.
+ */
+export const FOLLOW_IDLE_MS = 600;
+
+/** A paragraph to follow: its words and what it already cites. */
+export type Followed = Pick<DraftContext, 'paragraph' | 'cited'>;
+
+/**
+ * When to tell the panel what is being written (M3-1 AC-3).
+ *
+ * Not per keystroke: each publish costs the panel an embedding and a search,
+ * and results that change while a sentence is still being made are noise. So
+ * the panel hears of a paragraph when the cursor leaves the one it was in, at
+ * once, and otherwise after a pause in the same one.
+ *
+ * `update` is called on every transaction, edits and cursor moves alike.
+ * `canonical` names a cited work by its canonical id, as search results do.
+ */
+export function createFollower(
+	publish: (followed: Followed) => void,
+	idleMs: number = FOLLOW_IDLE_MS
+) {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	/** Where the paragraph the cursor was last in starts, or null before the first. */
+	let at: number | null = null;
+	/**
+	 * Where the cursor was last, to read that paragraph if it's needed. The
+	 * document is kept, not its text: it's immutable, so this is still that
+	 * paragraph as it was, and a keystroke costs one lookup. Nothing is read
+	 * until there's something to publish.
+	 */
+	let last: { doc: ProseMirrorNode; pos: number } | null = null;
+
+	function read(doc: ProseMirrorNode, pos: number, canonical: (id: string) => string): Followed {
+		return {
+			paragraph: paragraphAt(doc, pos),
+			cited: [...new Set([...citedSources(doc.resolve(pos).parent)].map(canonical))]
+		};
+	}
+
+	return {
+		update(doc: ProseMirrorNode, pos: number, canonical: (id: string) => string = (id) => id) {
+			clearTimeout(timer);
+			if (pos < 0 || pos > doc.content.size) return;
+
+			const start = doc.resolve(pos).start();
+			const left = last;
+			last = { doc, pos };
+
+			if (start !== at) {
+				// Arrived in a paragraph, or left one. A new one too short to search
+				// on, as Enter leaves, isn't what's being written about: the one just
+				// finished is, and it may never have paused long enough to be heard.
+				at = start;
+				const here = read(doc, pos, canonical);
+				const now = here.paragraph || !left ? here : read(left.doc, left.pos, canonical);
+				if (now.paragraph) publish(now);
+				return;
+			}
+
+			timer = setTimeout(() => {
+				const here = read(doc, pos, canonical);
+				if (here.paragraph) publish(here);
+			}, idleMs);
+		},
+
+		/** The editor is going: nothing more to say. */
+		stop() {
+			clearTimeout(timer);
+		}
+	};
+}
+
+/**
+ * The first few words of a paragraph, to say what the panel is following:
+ * "Related to: _Sequence models built on…_" (M3-1 AC-1).
+ */
+export function firstWords(paragraph: string, count = 5): string {
+	const words = paragraph.trim().split(/\s+/).filter(Boolean);
+	return words.length > count ? `${words.slice(0, count).join(' ')}…` : words.join(' ');
 }
 
 /* ------------------------------------------------------------------ nudging */

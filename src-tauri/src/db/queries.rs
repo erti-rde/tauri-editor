@@ -80,6 +80,9 @@ pub struct ScoredChunk {
     #[specta(type = Option<specta_typescript::Number>)]
     pub page_start: Option<i64>,
     pub section: Option<String>,
+    /// What to call the source: its work's title, else the file's, else the
+    /// file's name. None only for a row read in the moment it was removed.
+    pub title: Option<String>,
     pub similarity: f32,
     /// False when the chunk comes from outside the current project's source set.
     pub in_project: bool,
@@ -1476,6 +1479,19 @@ pub struct ScoredSourceNote {
 /// The columns a source note search reads, with the work's name alongside.
 /// `json_valid` first: `json_extract` on a malformed record is an error, and
 /// one bad record would sink the whole search.
+/// A passage, named as a note on its source is: by its work's title, then
+/// its own file's (a PDF can carry metadata its work hasn't), then the name
+/// the file was found under. Binds the work, then the file and the index.
+const CHUNK_SEARCH_SELECT: &str = "SELECT c.text, c.page_start, c.section,
+            COALESCE(
+              (SELECT json_extract(s.csl_json, '$.title') FROM sources s
+                WHERE s.sha256 = ?1 AND json_valid(s.csl_json)),
+              (SELECT json_extract(s.csl_json, '$.title') FROM sources s
+                WHERE s.sha256 = c.sha256 AND json_valid(s.csl_json)),
+              (SELECT l.file_name FROM locations l WHERE l.sha256 = c.sha256
+                ORDER BY l.last_seen DESC LIMIT 1)) AS title
+       FROM chunks c WHERE c.sha256 = ?2 AND c.idx = ?3";
+
 const SOURCE_NOTE_SEARCH_SELECT: &str = "SELECT n.id, n.sha256, n.body, n.quote, n.page_label,
             n.label_id, n.created_at, n.updated_at,
             COALESCE(
@@ -1552,26 +1568,27 @@ pub async fn search_index(
     for found in index.search(query_embedding, &filter, limit) {
         let source_id = found.source_id.to_string();
         let hit = match found.key {
-            Key::Chunk { sha256, idx } => sqlx::query(
-                "SELECT text, page_start, section FROM chunks WHERE sha256 = ? AND idx = ?",
-            )
-            .bind(sha256)
-            .bind(idx)
-            .fetch_optional(library)
-            .await
-            .map_err(|e| e.to_string())?
-            .map(|r| {
-                Hit::Chunk(ScoredChunk {
-                    sha256: sha256.clone(),
-                    source_id,
-                    idx: *idx,
-                    text: r.get("text"),
-                    page_start: r.get("page_start"),
-                    section: r.get("section"),
-                    similarity: found.similarity,
-                    in_project: found.in_project,
-                })
-            }),
+            Key::Chunk { sha256, idx } => sqlx::query(CHUNK_SEARCH_SELECT)
+                .bind(source_id.as_str())
+                .bind(sha256)
+                .bind(idx)
+                .fetch_optional(library)
+                .await
+                .map_err(|e| e.to_string())?
+                .map(|r| {
+                    Hit::Chunk(ScoredChunk {
+                        sha256: sha256.clone(),
+                        source_id,
+                        idx: *idx,
+                        text: r.get("text"),
+                        page_start: r.get("page_start"),
+                        section: r.get("section"),
+                        // A title that isn't a string is no name at all.
+                        title: r.try_get::<Option<String>, _>("title").ok().flatten(),
+                        similarity: found.similarity,
+                        in_project: found.in_project,
+                    })
+                }),
             Key::Annotation(id) => {
                 sqlx::query(&format!("{ANNOTATION_SEARCH_SELECT} WHERE a.id = ?"))
                     .bind(id)

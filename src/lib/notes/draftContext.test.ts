@@ -1,11 +1,14 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 
 import { Editor } from '$lib/editor/core/Editor';
 import { editorExtensions } from '$lib/editor/core/extensions';
 import {
 	citedSources,
+	createFollower,
 	draftContext,
+	firstWords,
+	FOLLOW_IDLE_MS,
 	MINIMUM_CONTEXT,
 	NUDGE_THRESHOLD,
 	paragraphAt,
@@ -89,7 +92,7 @@ describe('the channel to the panel', () => {
 		draftContext.report({ paragraph: LONG, cite: async () => {} });
 		draftContext.clear();
 
-		expect(get(draftContext)).toEqual({ paragraph: '', cite: null });
+		expect(get(draftContext)).toEqual({ paragraph: '', cited: [], cite: null });
 	});
 });
 
@@ -147,5 +150,128 @@ describe('what a paragraph already cites', () => {
 		const html = `<p>Prose <span data-type="citation" data-id="${ids}" data-label="(Smith 2020; Jones 2019)"></span></p>`;
 
 		expect([...citedSources(paragraphOf(html))].sort()).toEqual(['sha-1', 'sha-2']);
+	});
+});
+
+// M3-1 AC-3: when the panel hears about the writing.
+describe('following the writing', () => {
+	const SECOND = 'Another paragraph entirely, also long enough to be worth searching on.';
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	/** An editor and a follower watching it, as the editor's own hooks call it. */
+	function watched(html: string) {
+		vi.useFakeTimers();
+		docOf(html);
+		const publish = vi.fn();
+		const follower = createFollower(publish);
+		const update = () => follower.update(editor!.state.doc, editor!.state.selection.from);
+		return { publish, follower, update, editor: editor! };
+	}
+
+	it('never asks per keystroke: typing in a paragraph asks once, after 600 ms idle', () => {
+		const { publish, update, editor } = watched(`<p>${LONG}</p>`);
+		editor.commands.setTextSelection(10);
+		update();
+		// Arriving in a paragraph says so at once.
+		expect(publish).toHaveBeenCalledTimes(1);
+
+		for (const letter of 'and so on') {
+			editor.commands.insertContent(letter);
+			update();
+			vi.advanceTimersByTime(100);
+		}
+		expect(publish).toHaveBeenCalledTimes(1);
+
+		vi.advanceTimersByTime(FOLLOW_IDLE_MS - 100 - 1);
+		expect(publish).toHaveBeenCalledTimes(1);
+		vi.advanceTimersByTime(1);
+		expect(publish).toHaveBeenCalledTimes(2);
+		expect(publish).toHaveBeenLastCalledWith({
+			paragraph: editor.state.doc.child(0).textContent,
+			cited: []
+		});
+		expect(FOLLOW_IDLE_MS).toBe(600);
+	});
+
+	it('asks at once when the cursor leaves a paragraph', () => {
+		const { publish, update, editor } = watched(`<p>${LONG}</p><p>${SECOND}</p>`);
+		editor.commands.setTextSelection(3);
+		update();
+
+		editor.commands.setTextSelection(editor.state.doc.content.size - 3);
+		update();
+
+		expect(publish).toHaveBeenCalledTimes(2);
+		expect(publish).toHaveBeenLastCalledWith({ paragraph: SECOND, cited: [] });
+		// And not again when the pause after the move runs out.
+		vi.advanceTimersByTime(FOLLOW_IDLE_MS * 2);
+		expect(publish).toHaveBeenCalledTimes(2);
+	});
+
+	it('asks about the paragraph just finished when Enter leaves it for an empty one', () => {
+		// Typed without a pause, it was never asked about; the new line has
+		// nothing to go on yet.
+		const { publish, update, editor } = watched(`<p>Short</p>`);
+		editor.commands.setTextSelection(6);
+		update();
+		expect(publish).not.toHaveBeenCalled();
+
+		for (const word of LONG.split(' ')) {
+			editor.commands.insertContent(` ${word}`);
+			update();
+		}
+		editor.commands.splitBlock();
+		update();
+
+		expect(publish).toHaveBeenCalledTimes(1);
+		expect(publish.mock.calls[0][0].paragraph).toBe(`Short ${LONG}`);
+	});
+
+	it('says nothing while the cursor is in a fragment', () => {
+		const { publish, update, editor } = watched(`<p>Short</p>`);
+		editor.commands.setTextSelection(3);
+		update();
+		vi.advanceTimersByTime(FOLLOW_IDLE_MS);
+
+		expect(publish).not.toHaveBeenCalled();
+	});
+
+	it('says what the paragraph already cites, by canonical id', () => {
+		const ids = JSON.stringify(['file-hash', 'erti:book']).replace(/"/g, '&quot;');
+		const { publish, follower, editor } = watched(
+			`<p>${LONG} <span data-type="citation" data-id="${ids}" data-label="(Ong 1982)"></span></p>`
+		);
+		const canonical = (id: string) => (id === 'file-hash' ? 'erti:book' : id);
+
+		follower.update(editor.state.doc, 3, canonical);
+
+		expect(publish).toHaveBeenCalledWith({ paragraph: expect.any(String), cited: ['erti:book'] });
+	});
+
+	it('stops when the editor goes', () => {
+		const { publish, follower, update, editor } = watched(`<p>${LONG}</p>`);
+		update();
+		editor.commands.insertContent('x');
+		update();
+		follower.stop();
+		vi.advanceTimersByTime(FOLLOW_IDLE_MS);
+
+		expect(publish).toHaveBeenCalledTimes(1);
+	});
+});
+
+// M3-1 AC-1: "Related to: Sequence models built on…"
+describe('naming the paragraph followed', () => {
+	it('gives its first words, and says there are more', () => {
+		expect(firstWords('Sequence models built on recurrence dominated for years.')).toBe(
+			'Sequence models built on recurrence…'
+		);
+	});
+
+	it('gives a short paragraph whole', () => {
+		expect(firstWords('  Attention is all  ')).toBe('Attention is all');
 	});
 });

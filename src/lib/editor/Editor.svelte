@@ -45,9 +45,9 @@
 	import { outlineStore } from '$lib/outline/outlineStore';
 	import {
 		citedSources,
+		createFollower,
 		draftContext,
 		draftMatches,
-		paragraphAt,
 		worthNudging
 	} from '$lib/notes/draftContext';
 	import { showNudge } from './extensions/NoteNudge';
@@ -380,7 +380,7 @@
 		// The panel outlives the editor too, and a stale `navigate` would call into
 		// a destroyed view.
 		outlineStore.clear();
-		clearTimeout(draftTimer);
+		follower.stop();
 		draftContext.clear();
 		// The bar outlives the editor, so a closed manuscript must not leave a
 		// stale count sitting in it.
@@ -682,26 +682,18 @@
 	// Typed by what it reads rather than by our Editor subclass: the callbacks
 	// hand back TipTap's own Editor, which has no `contentElement`.
 	/**
-	 * Tell the notes panel what is being written, once the writer pauses.
+	 * Tell the notes panel what is being written (M3-1 AC-3).
 	 *
-	 * On idle rather than on every transaction. Publishing per keystroke would
-	 * re-run a search — and an embedding — for every character typed, and the
-	 * panel would churn through half-formed matches while a sentence is still
-	 * being made. Waiting for a pause is also closer to when the question
+	 * When the cursor leaves a paragraph, and otherwise after a pause in it,
+	 * never per keystroke: each publish costs the panel an embedding and a
+	 * search, and it would churn through half-formed matches while a sentence is
+	 * still being made. Waiting for a pause is also closer to when the question
 	 * "have I read anything about this" actually occurs to someone.
 	 */
-	const DRAFT_IDLE_MS = 400;
-
-	let draftTimer: ReturnType<typeof setTimeout> | undefined;
+	const follower = createFollower((followed) => draftContext.report(followed));
 
 	function publishDraftContext(instance: { state: EditorState }) {
-		clearTimeout(draftTimer);
-
-		draftTimer = setTimeout(() => {
-			draftContext.report({
-				paragraph: paragraphAt(instance.state.doc, instance.state.selection.from)
-			});
-		}, DRAFT_IDLE_MS);
+		follower.update(instance.state.doc, instance.state.selection.from, citationStore.canonicalId);
 	}
 
 	function publishOutline(instance: { state: EditorState }) {
