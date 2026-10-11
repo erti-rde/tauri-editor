@@ -12,6 +12,7 @@ import {
 	MINIMUM_CONTEXT,
 	NUDGE_THRESHOLD,
 	paragraphAt,
+	SHOWN_FLOOR,
 	worthNudging
 } from './draftContext';
 
@@ -125,6 +126,12 @@ describe('deciding whether a note is worth mentioning', () => {
 
 	it('has nothing to say when nothing was found', () => {
 		expect(worthNudging([], new Set())).toEqual([]);
+	});
+
+	// M3-5: what is listed when the writer looks is wider than what is
+	// mentioned unasked, so a note in the margin is always one in the panel.
+	it('mentions only what the panel would list', () => {
+		expect(SHOWN_FLOOR.note).toBeLessThan(NUDGE_THRESHOLD);
 	});
 });
 

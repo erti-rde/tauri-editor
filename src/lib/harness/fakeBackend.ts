@@ -74,14 +74,21 @@ function words(text: string): Set<string> {
 	return new Set(text.toLowerCase().match(/[a-z0-9]{3,}/g) ?? []);
 }
 
-/** Share of the query's words found in the text: 0 to 1, like cosine here. */
+/**
+ * The cosine of the two texts' sets of words: 0 to 1, as the model's is.
+ *
+ * A cosine rather than the share of the query's words found, because the
+ * panel leaves out what scores under a floor measured on the real model's
+ * cosines (M3-5). A paragraph shares only a few of its words with a short note,
+ * so the share alone put every note under it.
+ */
 export function overlap(query: string, text: string): number {
 	const q = words(query);
-	if (q.size === 0) return 0;
 	const t = words(text);
+	if (q.size === 0 || t.size === 0) return 0;
 	let hits = 0;
 	for (const w of q) if (t.has(w)) hits++;
-	return hits / q.size;
+	return hits / Math.sqrt(q.size * t.size);
 }
 
 /** A vector with the model's dimensions, stable for the same text. */
