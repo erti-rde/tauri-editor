@@ -208,7 +208,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M3-2** One-click cite with a pinpoint
 - [x] **M3-3** Nudge covers source notes
 - [x] **M3-4** Settings: follow and nudge switches
-- [ ] **M3-5** States that say what happened
+- [x] **M3-5** States that say what happened
 
 ### M4 — Attribution check _(L; moves to 1.1 if M1b overruns by half)_ · [spec](docs/specs/M4.md)
 
