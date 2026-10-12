@@ -182,9 +182,20 @@ function segmentBySection(pages: ExtractedPage[], options: Required<ChunkOptions
  * everywhere in academic prose and would otherwise shatter sentences.
  */
 export function splitSentences(text: string): string[] {
-	// Periods that do not end a sentence are swapped for a sentinel, split on, then
-	// restored — so "Smith et al. showed" and "J. R. R. Tolkien" stay whole without
-	// losing their punctuation.
+	return sentenceRanges(text).map(([start, end]) => text.slice(start, end));
+}
+
+/**
+ * Where `splitSentences` would split, as `[start, end)` offsets into `text`,
+ * trimmed of surrounding space.
+ *
+ * Offsets rather than strings so the attribution check (M4-2) can point at a
+ * sentence in the manuscript, by the same rules ingest splits the corpus with.
+ */
+export function sentenceRanges(text: string): Array<[number, number]> {
+	// Periods that do not end a sentence are swapped for a sentinel of the same
+	// length, so "Smith et al. showed" and "J. R. R. Tolkien" stay whole, and an
+	// offset into the masked text is an offset into the original.
 	const SENTINEL = '\u0000';
 
 	const masked = text
@@ -198,10 +209,21 @@ export function splitSentences(text: string): string[] {
 		// Decimals: "explained 0.95 of the variance".
 		.replace(/(\d)\.(?=\d)/g, `$1${SENTINEL}`);
 
-	return masked
-		.split(/(?<=[.!?])\s+(?=[A-Z(“"'])/)
-		.map((sentence) => sentence.split(SENTINEL).join('.').trim())
-		.filter((sentence) => sentence.length > 0);
+	const ranges: Array<[number, number]> = [];
+	const push = (start: number, end: number) => {
+		while (start < end && /\s/.test(text[start])) start++;
+		while (end > start && /\s/.test(text[end - 1])) end--;
+		if (end > start) ranges.push([start, end]);
+	};
+
+	let start = 0;
+	for (const gap of masked.matchAll(/(?<=[.!?])\s+(?=[A-Z(“"'])/g)) {
+		push(start, gap.index);
+		start = gap.index + gap[0].length;
+	}
+	push(start, text.length);
+
+	return ranges;
 }
 
 /**
