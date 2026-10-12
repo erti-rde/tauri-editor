@@ -134,14 +134,15 @@ export function quotations(text: string): Array<[number, number]> {
 		}
 		if (c in CLOSERS && !(SINGLE.has(c) && letterAt(i - 1))) {
 			open = { mark: c, from: i + 1 };
-		} else if (CLOSING_DOUBLE.has(c) && out.length === 0 && i > 0) {
+		} else if (CLOSING_DOUBLE.has(c) && out.length === 0) {
 			// Closing a quotation from an earlier sentence. Only a double mark:
 			// a lone ’ is far more often an apostrophe ("the models’ outputs").
 			out.push([0, at[i]]);
 		}
 	}
 	if (open) out.push([at[open.from], text.length]);
-	return out;
+	// A pair of marks with nothing between quotes nothing.
+	return out.filter(([start, end]) => start < end);
 }
 
 /** A quotation's words in the sentence, as a `[start, end)` range of words. */

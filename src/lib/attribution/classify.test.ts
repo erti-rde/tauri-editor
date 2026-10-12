@@ -125,8 +125,9 @@ describe('finding quotations', () => {
 	it('finds single marks at the very edges of a sentence, but not after a letter', () => {
 		expect(quoted('‘Secondary orality’')).toEqual(['Secondary orality']);
 		expect(quoted("'Secondary orality'")).toEqual(['Secondary orality']);
-		// A ‘ typed for an apostrophe opens nothing.
+		// A ‘ typed for an apostrophe opens nothing, even after the first letter.
 		expect(quoted('the authors‘ claim stands')).toEqual([]);
+		expect(quoted('s‘ claim stands')).toEqual([]);
 	});
 
 	// M4-4 AC-1
@@ -153,8 +154,10 @@ describe('finding quotations', () => {
 	});
 
 	// M4-4 AC-1
-	it('finds nothing in a sentence without quotation marks', () => {
+	it('finds nothing in a sentence without quotation marks, or between empty ones', () => {
 		expect(quotations('')).toEqual([]);
+		expect(quotations('He said “” and left.')).toEqual([]);
+		expect(quotations('He said “')).toEqual([]);
 		expect(quotations('Plain words, nothing quoted.')).toEqual([]);
 	});
 
