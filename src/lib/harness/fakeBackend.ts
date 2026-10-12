@@ -1,6 +1,8 @@
 import type {
 	commands,
 	Annotation,
+	AttributionMatches,
+	MatchedPassage,
 	AnnotationLabel,
 	AppError,
 	ErrorKind,
@@ -14,6 +16,9 @@ import type {
 	SourceNote
 } from '$lib/ipc';
 
+import { words as normalisedWords } from '$lib/attribution/normalise';
+
+import { manuscriptParagraphs, matchSpans } from './fakeMatcher';
 import type { Fixture, LibrarySource } from './fixture';
 
 /**
@@ -165,6 +170,8 @@ export interface Disk {
 	has(path: string): boolean;
 	/** The URL a PDF is served from, when the path is one. */
 	pdfUrl(path: string): string | undefined;
+	/** A text file's contents, when the path is one. */
+	text(path: string): string | undefined;
 }
 
 const NOT_OPEN_LIBRARY = appError('Conflict', "The library isn't open yet.");
@@ -1029,6 +1036,95 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 				}
 			}
 			return hits.sort((a, b) => projectFirst(a.hit, b.hit)).slice(0, limit ?? 20);
+		},
+
+		// As `check_attribution_in`: marks' and notes' quotes, then the project's
+		// other manuscripts by name, then every chunk, through the same matcher.
+		checkAttribution(document, sentences): AttributionMatches {
+			const projectRoot = root();
+			// No sentence long enough to share a shingle: nothing is read.
+			if (!sentences.some((s) => normalisedWords(s).length >= 6)) {
+				return { spans: [], passages: [], read: 0 };
+			}
+
+			const fed: MatchedPassage[] = [];
+			const sources: string[] = [];
+			const feed = (source: string, passage: MatchedPassage) => {
+				sources.push(source);
+				fed.push(passage);
+			};
+			const passage = (
+				p: Partial<MatchedPassage> & Pick<MatchedPassage, 'kind' | 'work' | 'text'>
+			) => ({
+				file: null,
+				id: null,
+				page: null,
+				pageLabel: null,
+				...p
+			});
+
+			for (const m of state.marks.values()) {
+				if (!m.quote?.trim()) continue;
+				const work = canon(m.sha256);
+				feed(
+					work,
+					passage({ kind: 'mark', work, file: m.sha256, id: m.id, page: m.page, text: m.quote })
+				);
+			}
+			for (const n of state.sourceNotes.values()) {
+				if (!n.quote?.trim()) continue;
+				const work = canon(n.sha256);
+				feed(
+					work,
+					passage({ kind: 'note', work, id: n.id, pageLabel: n.page_label, text: n.quote })
+				);
+			}
+			const prefix = `${projectRoot}/`;
+			const manuscripts = disk
+				.list()
+				.filter((path) => path.startsWith(prefix) && !path.slice(prefix.length).includes('/'))
+				.map((path) => path.slice(prefix.length))
+				.filter((name) => name.endsWith('.erti.json') || name === 'magnum_opus.json')
+				.filter((name) => name !== document)
+				.sort();
+			for (const name of manuscripts) {
+				let doc: unknown;
+				try {
+					doc = JSON.parse(disk.text(prefix + name) ?? '');
+				} catch {
+					continue;
+				}
+				for (const text of manuscriptParagraphs(doc)) {
+					feed(`document:${name}`, passage({ kind: 'document', work: name, text }));
+				}
+			}
+			for (const [sha256, chunks] of state.chunks) {
+				const work = canon(sha256);
+				for (const chunk of chunks) {
+					feed(
+						work,
+						passage({
+							kind: 'chunk',
+							work,
+							file: sha256,
+							page: chunk.page_start ?? null,
+							text: chunk.text
+						})
+					);
+				}
+			}
+
+			const spans = matchSpans(
+				sentences,
+				fed.map((p, i) => ({ source: sources[i], text: p.text }))
+			);
+			const used = [...new Set(spans.map((s) => s.passage))].sort((a, b) => a - b);
+			const index = new Map(used.map((fedAt, i) => [fedAt, i]));
+			return {
+				spans: spans.map((s) => ({ ...s, passage: index.get(s.passage)! })),
+				passages: used.map((i) => fed[i]),
+				read: fed.length
+			};
 		},
 
 		restoreDefaultLabels: () => (library(), 0),

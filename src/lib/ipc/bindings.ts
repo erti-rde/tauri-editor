@@ -167,6 +167,17 @@ export const commands = {
 	 */
 	searchNotes: (query: string, limit: number | null, semantic: boolean | null) => typedError<Hit[], AppError>(__TAURI_INVOKE("search_notes", { query, limit, semantic })),
 	/**
+	 *  Find where a manuscript's sentences share words with the corpus (M4-3,
+	 *  ADR 006): every paper's text, the quotes of marks and source notes, and the
+	 *  project's other manuscripts.
+	 * 
+	 *  `sentences` are the manuscript's, from the sentence walk; spans name them
+	 *  by index. `document` is the manuscript's file name, so it isn't matched
+	 *  against itself. Nothing is stored: a check is a function of the manuscript
+	 *  and the corpus as they are now.
+	 */
+	checkAttribution: (document: string | null, sentences: string[]) => typedError<AttributionMatches, AppError>(__TAURI_INVOKE("check_attribution", { document, sentences })),
+	/**
 	 *  Search everything in the library by meaning: passages, marks and source
 	 *  notes, in one ranked list, each result saying which it is (ADR 005).
 	 * 
@@ -307,6 +318,15 @@ export type AttachedFile = {
 	found_again: boolean,
 };
 
+/**  The result of a check: every span, and the passages they name. */
+export type AttributionMatches = {
+	/**  `span.passage` is an index into `passages`. */
+	spans: Span[],
+	passages: MatchedPassage[],
+	/**  How many passages were read, matched or not. */
+	read: number,
+};
+
 export type CompileResult = {
 	ok: boolean,
 	/**  Path to the PDF, when one was produced. */
@@ -404,6 +424,25 @@ export type LibraryWork = {
 	doi: string | null,
 };
 
+/**  What a span was matched against. */
+export type MatchedPassage = {
+	kind: PassageKind,
+	/**
+	 *  The work it belongs to, by canonical id (ADR 003). For a document, its
+	 *  file name.
+	 */
+	work: string,
+	/**  The file to open it in, by hash: set for chunks and marks. */
+	file: string | null,
+	/**  The mark's or note's id. */
+	id: string | null,
+	/**  The page it starts on, counted from 1. */
+	page: number | null,
+	/**  The page as printed, for a note. */
+	pageLabel: string | null,
+	text: string,
+};
+
 /**  A source note with its work's name: what the notes export writes out. */
 export type NamedSourceNote = {
 	/**
@@ -466,6 +505,17 @@ export type NotedFile = {
 	sha256: string,
 	file_name: string,
 };
+
+/**  Which kind of text a passage is. */
+export type PassageKind = 
+/**  A paper's text, as ingest chunked it. */
+"chunk" | 
+/**  The quote of a highlight. */
+"mark" | 
+/**  The quote of a source note. */
+"note" | 
+/**  A paragraph of another manuscript in the project. */
+"document";
 
 export type SalvageReport = {
 	/**  Rows carried forward. */
@@ -622,6 +672,37 @@ export type SourceRemoval = {
 	 *  one's: any inside the project folder is read again by the next scan.
 	 */
 	paths: string[],
+};
+
+/**  A run of one sentence's words shared with one passage. */
+export type Span = {
+	/**  The sentence, by its index in what was checked. */
+	sentence: number,
+	/**
+	 *  The passage, by the index it was fed with. In a check's result, its
+	 *  index in `passages`.
+	 */
+	passage: number,
+	/**
+	 *  The span's first word in the sentence, and one past its last, counted
+	 *  in normalised words.
+	 */
+	sentenceWords: [number, number],
+	/**  The same in the passage. */
+	passageWords: [number, number],
+	/**  How many of the sentence's words in the span are in a shared shingle. */
+	sharedWords: number,
+	/**
+	 *  `shared_words` over the span's length on the sentence side: 1 when the
+	 *  words run unbroken, less where words were changed between runs.
+	 */
+	verbatimScore: number | null,
+	/**
+	 *  For each distinct shingle the span shares, how many sources hold it,
+	 *  in no particular order. Stock phrasing is in many; a borrowing from one
+	 *  paper is in one.
+	 */
+	sources: number[],
 };
 
 export type TexToolchain = {

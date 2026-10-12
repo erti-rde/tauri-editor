@@ -2777,3 +2777,100 @@ pub async fn restore_default_labels(pool: &SqlitePool) -> Result<u64, String> {
 
     Ok(restored)
 }
+
+/// A passage the attribution check reads: a chunk of a paper, the quote of a
+/// mark, or the quote of a source note (M4-3, ADR 006).
+#[derive(Debug, Clone)]
+pub struct CorpusPassage {
+    /// Where the row sits in its table, for reading the next page after it.
+    pub rowid: i64,
+    pub kind: crate::attribution::PassageKind,
+    /// The `sha256` column: a file's hash for chunks and marks, the work's id
+    /// for a note.
+    pub sha256: String,
+    /// The mark's or note's id. None for a chunk.
+    pub id: Option<String>,
+    pub page: Option<i64>,
+    pub page_label: Option<String>,
+    pub text: String,
+}
+
+/// The next page of chunks after `after`, in table order.
+///
+/// Paged by rowid rather than read whole, so a library of 56k chunks is never
+/// all in memory at once: the check reads each page, probes it, and lets it go.
+pub async fn chunk_passages_after(
+    pool: &SqlitePool,
+    after: i64,
+    limit: i64,
+) -> Result<Vec<CorpusPassage>, String> {
+    let rows = sqlx::query_as::<_, (i64, String, Option<i64>, String)>(
+        "SELECT rowid, sha256, page_start, text FROM chunks
+         WHERE rowid > ? ORDER BY rowid LIMIT ?",
+    )
+    .bind(after)
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(rowid, sha256, page, text)| CorpusPassage {
+            rowid,
+            kind: crate::attribution::PassageKind::Chunk,
+            sha256,
+            id: None,
+            page,
+            page_label: None,
+            text,
+        })
+        .collect())
+}
+
+/// Every quote a reader has marked or noted. A writer's own selection of a
+/// source's words is the likeliest to turn up in their manuscript (ADR 006).
+/// These are a few thousand rows at most, so they're read at once.
+pub async fn quote_passages(pool: &SqlitePool) -> Result<Vec<CorpusPassage>, String> {
+    let marks = sqlx::query_as::<_, (i64, String, String, i64, String)>(
+        "SELECT rowid, sha256, id, page, quote FROM annotations
+         WHERE quote IS NOT NULL AND trim(quote) <> '' ORDER BY rowid",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let notes = sqlx::query_as::<_, (i64, String, String, Option<String>, String)>(
+        "SELECT rowid, sha256, id, page_label, quote FROM source_notes
+         WHERE quote IS NOT NULL AND trim(quote) <> '' ORDER BY rowid",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(marks
+        .into_iter()
+        .map(|(rowid, sha256, id, page, text)| CorpusPassage {
+            rowid,
+            kind: crate::attribution::PassageKind::Mark,
+            sha256,
+            id: Some(id),
+            page: Some(page),
+            page_label: None,
+            text,
+        })
+        .chain(
+            notes
+                .into_iter()
+                .map(|(rowid, sha256, id, page_label, text)| CorpusPassage {
+                    rowid,
+                    kind: crate::attribution::PassageKind::Note,
+                    sha256,
+                    id: Some(id),
+                    page: None,
+                    page_label,
+                    text,
+                }),
+        )
+        .collect())
+}

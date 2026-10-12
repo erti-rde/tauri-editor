@@ -167,6 +167,7 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         embed_annotation,
         embed_pending_annotations,
         search_notes,
+        check_attribution,
         search_library,
         source_removal,
         add_source_by_hand,
