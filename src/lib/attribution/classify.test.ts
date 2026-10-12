@@ -82,7 +82,9 @@ const sentence = (text: string, cites: string[] = [], quoted = false): CheckedSe
 const matches = (spans: Span[], passages: MatchedPassage[]): AttributionMatches => ({
 	spans,
 	passages,
-	read: passages.length
+	read: passages.length,
+	sources: new Set(passages.map((p) => p.work)).size,
+	documents: 0
 });
 
 const kinds = (sentences: CheckedSentence[], m: AttributionMatches, t?: Thresholds) =>

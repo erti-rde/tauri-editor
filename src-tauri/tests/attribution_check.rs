@@ -195,6 +195,9 @@ async fn finds_each_kind_of_corpus_text_in_one_pass() {
 
     // Three chunks, a mark, a note, and one paragraph of the other chapter.
     assert_eq!(found.read, 6);
+    // M4-5 AC-2: what the scope line says was read. The scan's chunks count
+    // as the book's, and the mark is on the paper: two works.
+    assert_eq!((found.sources, found.documents), (2, 1));
     // Only the five passages a span names cross back, not the unrelated chunk.
     assert_eq!(found.passages.len(), 5);
 }
@@ -247,6 +250,7 @@ async fn reads_nothing_when_no_sentence_is_long_enough_to_match() {
     let w = world("short").await;
     let found = check(&w, &["Too short.", "Five words are not enough."]).await;
     assert_eq!(found.read, 0);
+    assert_eq!((found.sources, found.documents), (0, 0));
     assert!(found.spans.is_empty());
 }
 

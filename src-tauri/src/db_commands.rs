@@ -1627,6 +1627,8 @@ pub async fn check_attribution_in(
             spans: Vec::new(),
             passages: Vec::new(),
             read: 0,
+            sources: 0,
+            documents: 0,
         });
     }
 
@@ -1640,15 +1642,25 @@ pub async fn check_attribution_in(
         let mut matcher = Matcher::new(&sentences);
         let mut kept: Vec<(u32, MatchedPassage)> = Vec::new();
         let mut read: u32 = 0;
+        // Counted here rather than asked of the database: what was read is what
+        // the scope line may claim, aliases already resolved.
+        let mut works = std::collections::HashSet::new();
+        let mut documents = std::collections::HashSet::new();
         while let Some(page) = receive.blocking_recv() {
             for fed in page {
+                if fed.passage.kind == PassageKind::Document {
+                    documents.insert(fed.work.clone());
+                } else {
+                    works.insert(fed.work.clone());
+                }
                 if matcher.feed(read, &fed.work, &fed.passage.text) {
                     kept.push((read, fed.passage));
                 }
                 read += 1;
             }
         }
-        (matcher.finish(), kept, read)
+        let counts = (works.len() as u32, documents.len() as u32);
+        (matcher.finish(), kept, read, counts)
     });
 
     let passage = |row: queries::CorpusPassage| {
@@ -1720,7 +1732,7 @@ pub async fn check_attribution_in(
     .await;
     drop(send);
 
-    let (spans, kept, read) = matching.await.or_internal()?;
+    let (spans, kept, read, (sources, documents)) = matching.await.or_internal()?;
     fed?;
 
     // Only the passages a span still names cross back. A passage that shared
@@ -1750,6 +1762,8 @@ pub async fn check_attribution_in(
         spans,
         passages: kept.into_iter().map(|(_, p)| p).collect(),
         read,
+        sources,
+        documents,
     })
 }
 

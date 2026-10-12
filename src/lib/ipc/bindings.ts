@@ -325,6 +325,13 @@ export type AttributionMatches = {
 	passages: MatchedPassage[],
 	/**  How many passages were read, matched or not. */
 	read: number,
+	/**
+	 *  How many works those passages came from, so the panel can say what the
+	 *  check covered (UX-7's scope line). Every work read, matched or not.
+	 */
+	sources: number,
+	/**  How many of the project's other documents were read. */
+	documents: number,
 };
 
 export type CompileResult = {

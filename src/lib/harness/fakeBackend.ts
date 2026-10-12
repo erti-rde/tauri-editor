@@ -1044,7 +1044,7 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			const projectRoot = root();
 			// No sentence long enough to share a shingle: nothing is read.
 			if (!sentences.some((s) => normalisedWords(s).length >= 6)) {
-				return { spans: [], passages: [], read: 0 };
+				return { spans: [], passages: [], read: 0, sources: 0, documents: 0 };
 			}
 
 			const fed: MatchedPassage[] = [];
@@ -1123,7 +1123,9 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			return {
 				spans: spans.map((s) => ({ ...s, passage: index.get(s.passage)! })),
 				passages: used.map((i) => fed[i]),
-				read: fed.length
+				read: fed.length,
+				sources: new Set(fed.filter((p) => p.kind !== 'document').map((p) => p.work)).size,
+				documents: new Set(fed.filter((p) => p.kind === 'document').map((p) => p.work)).size
 			};
 		},
 
