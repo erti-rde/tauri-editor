@@ -1,5 +1,5 @@
 import type { Span } from '$lib/ipc';
-import { words } from '$lib/attribution/normalise';
+import { words } from '../attribution/normalise';
 
 /**
  * `attribution::matcher` in TypeScript, for the fake backend (M4-3).
@@ -160,7 +160,7 @@ function collapse(passage: number, hits: Hit[]): Array<[Span, string[]]> {
 		let shared = 0;
 		for (let w = start; w < end; w++) if (covered.some(([a, b]) => a <= w && w < b)) shared++;
 		span.sharedWords = shared;
-		span.verbatimScore = Math.fround(shared / (end - start));
+		span.verbatimScore = shared / (end - start);
 		return [span, [...new Set(grams)].sort()];
 	});
 }

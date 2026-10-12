@@ -11,14 +11,33 @@ node scripts/eval/extract-chunks.mjs      # chunked by the app's own ingest
 pnpm eval:attribution                     # confusion matrix, written to last-run.json
 ```
 
+`pnpm eval:attribution` runs the app's own matcher (`eval_attribution match`, a Rust bin, so it
+needs `cargo`) over the labelled sentences and the corpus, classifies its spans with
+`src/lib/attribution/classify.ts`, and prints:
+
+- a sweep of the classifier's thresholds, the chosen ones marked;
+- the confusion matrix for the chosen thresholds;
+- how many sentences the naive baseline got right, for comparison.
+
+`last-run.json` records all three.
+
 **The harness refuses to score when a label no longer matches the corpus.** For example, a
 change to extraction or chunking might move a copied sentence or repair an artefact. It then
 lists each label that no longer holds. A number measured against the wrong text would mislead.
+
+It also refuses when the TypeScript normaliser disagrees with the Rust one about any word of the
+real extracted corpus, or the fake backend's matcher with the Rust one about any span. The
+classifier reads the matcher's word indices, and the browser harness's journeys rely on the fake.
+
+The check's speed is measured separately, through the command and a library on disk:
+`cargo run --release --bin eval_attribution -- bench`, recorded in `speed.json`.
 
 `pnpm test` checks that the labels are consistent with each other, without the corpus, and that
 `last-run.json` covers the set as it stands.
 
 ## What's here
+
+`normalise.json` holds the cases both normalisers are tested against (M4-3).
 
 `sentences.json` holds:
 

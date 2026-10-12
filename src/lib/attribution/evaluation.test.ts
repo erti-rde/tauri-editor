@@ -4,10 +4,16 @@ import corpus from '../../../tests/fixtures/retrieval/corpus.json';
 import fixtureJson from '../../../tests/fixtures/attribution/sentences.json';
 import lastRun from '../../../tests/fixtures/attribution/last-run.json';
 
+import type { Span } from '$lib/ipc';
+
+import { THRESHOLDS } from './classify';
 import {
 	CATEGORIES,
 	KINDS,
+	asMatched,
 	baselineCheck,
+	classifierCheck,
+	sweep,
 	checkAgainstCorpus,
 	checkLabels,
 	fixtureFingerprint,
@@ -368,6 +374,79 @@ describe('the baseline', () => {
 
 	it('says nothing when fewer than six words run together', () => {
 		expect(check('Every index is an argument, and readers will want to find it.')).toBe('none');
+	});
+});
+
+describe('the classifier in the harness', () => {
+	const source =
+		'Every index is an argument about what a reader will want to find, made before the reader arrives.';
+	const passages = asMatched([{ source: 'p1', kind: 'chunk', text: source }]);
+	const copied = 'Every index is an argument about what a reader will want to find.';
+	// The matcher's span for the copied sentence: its first twelve words.
+	const spans: Span[] = [
+		{
+			sentence: 0,
+			passage: 0,
+			sentenceWords: [0, 12],
+			passageWords: [0, 12],
+			sharedWords: 12,
+			verbatimScore: 1,
+			sources: [1, 1, 1, 1, 1, 1, 1]
+		}
+	];
+
+	// M4-4 AC-2
+	it('reads the harness’s passages as the check returns them', () => {
+		expect(passages[0]).toMatchObject({ kind: 'chunk', work: 'p1', text: source });
+	});
+
+	// M4-4 AC-2
+	it('gives each labelled sentence the verdict of its findings', () => {
+		const verdicts = classifierCheck(
+			[
+				{ id: 'a', text: copied, cites: [] },
+				{ id: 'b', text: copied, cites: ['p1'] },
+				{ id: 'c', text: copied, cites: ['p2'] }
+			],
+			passages,
+			[0, 1, 2].map((sentence) => ({ ...spans[0], sentence }))
+		);
+		expect([...verdicts]).toEqual([
+			['a', 'uncited'],
+			['b', 'none'],
+			['c', 'wrong_source']
+		]);
+	});
+
+	// M4-4 AC-2
+	it('sweeps every combination of the candidate thresholds', () => {
+		const rows = sweep([sentence({ id: 'a', text: copied })], passages, spans, {
+			minSharedWords: [8, 13],
+			commonIn: [5],
+			commonShare: [0.5, 1]
+		});
+		expect(
+			rows.map((r) => [r.thresholds.minSharedWords, r.thresholds.commonShare, r.right])
+		).toEqual([
+			[8, 0.5, 1],
+			[8, 1, 1],
+			[13, 0.5, 0],
+			[13, 1, 0]
+		]);
+		expect(rows[0].precision.uncited).toBe(1);
+		expect(rows[2].recall.uncited).toBe(0);
+	});
+
+	// M4-4 AC-2
+	it('is recorded in last-run.json with the thresholds the check ships with', () => {
+		expect(lastRun.checker).toBe('classifier');
+		expect(lastRun.thresholds).toEqual(THRESHOLDS);
+		const chosen = lastRun.sweep.find(
+			(row) => JSON.stringify(row.thresholds) === JSON.stringify(THRESHOLDS)
+		);
+		expect(chosen?.right).toBe(lastRun.sentences - lastRun.wrong.length);
+		// No combination tried did better than the one chosen.
+		expect(Math.max(...lastRun.sweep.map((row) => row.right))).toBe(chosen?.right);
 	});
 });
 
