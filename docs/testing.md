@@ -105,8 +105,12 @@ checklist.
   manuscripts, stock phrase in ≥ 10 sources, clean paraphrase, PDF-artefact text (hyphenation,
   ligatures). The harness reports a confusion matrix per category, committed like
   `last-run.json`: `pnpm eval:attribution`, over `tests/fixtures/attribution`.
-- Normalisation idempotence and extractor/manuscript agreement (property tests).
-- The whole check on a 10k-word manuscript over a 56k-chunk corpus under its budget.
+- Normalisation idempotence and extractor/manuscript agreement (property tests). The Rust and
+  TypeScript normalisers agree on `tests/fixtures/attribution/normalise.json`, and the harness
+  refuses to score if they disagree on any word of the real extracted corpus.
+- The whole check on a 10k-word manuscript over a 56k-chunk corpus under its budget (1 s),
+  through the command and a library on disk: `cargo run --release --bin eval_attribution --
+bench`, recorded in `tests/fixtures/attribution/speed.json`.
 - **Mutation testing** (Stryker) on the classifier module: its thresholds decide what a
   researcher is told, so a surviving mutant is a real risk.
 

@@ -17,15 +17,17 @@ planned item lands, it says so.
 │ lib/citations         PURE: citeproc engine, whole-document render, sanitize                   │
 │ lib/export            PURE: LaTeX, BibTeX              lib/theme      tokens, palettes, contrast│
 │ lib/import            PURE: .bib, .ris, CSL-JSON → CSL items; what the library has already      │
+│ lib/attribution       PURE: sentence walk, normalisation, classification (M4, ADR 006)         │
 │ lib/ui                primitives (M1c grows these)     lib/stores     app state + IPC wrappers  │
 └───────────────────────────────────────┬───────────────────────────────────────────────────────┘
-                                        │ lib/ipc: 58 typed commands (ADR 011); only results cross, never vectors
+                                        │ lib/ipc: 62 typed commands (ADR 011); only results cross, never vectors
 ┌─────────────────────────────── Rust core (src-tauri/src) ─────────────────────────────────────┐
 │ lib.rs            plugins, managed state, the command list (generate_handler!)                │
 │ db_commands.rs    commands over the two databases        commands.rs   fs listing, embedding   │
 │ db/schema.rs      migrations (frozen)  db/queries.rs     every SQL statement                   │
 │ db/index.rs       vectors in memory, search by meaning (ADR 005)                               │
 │ ml/mod.rs         ONNX session (all-MiniLM-L6-v2)        latex.rs      detect + compile TeX    │
+│ attribution/      shingle matcher (ADR 006): manuscript indexed, corpus streamed past it       │
 │ fs_errors.rs      human messages for OS errors                                                 │
 └───────────────┬──────────────────────────────────────┬────────────────────────────────────────┘
         ~/Erti/library.db                        <project>/.erti/project.db
@@ -77,6 +79,12 @@ in the Tauri store `settings-store.json`.
   `pdfs_found`, which is scoped as `attach_file` is: one outside the project or a folder the user
   has picked is "not found", and the preview offers **Choose folder…**. Those found are attached
   with `attach_file` and read with `ingestAll`, as a folder scan reads them.
+- **Checking attribution (M4, ADR 006).** `attribution/sentences.ts` walks the manuscript into
+  sentences → `check_attribution` (Rust indexes their word 6-grams, then streams every chunk,
+  the quotes of marks and source notes, and the project's other manuscripts past them, in one
+  pass) → spans and the passages they name → `attribution/classify.ts` says what each span is.
+  Both sides normalise words alike: `attribution/normalise.rs` and `normalise.ts` agree on
+  `tests/fixtures/attribution/normalise.json`.
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
   `export/bibtex.ts` → files → `compile_latex` if TeX exists.
 

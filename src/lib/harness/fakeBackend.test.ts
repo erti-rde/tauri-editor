@@ -31,7 +31,8 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 		const fake = fakeCommands(stateFrom(defaultFixture()), {
 			list: () => [],
 			has: () => false,
-			pdfUrl: () => undefined
+			pdfUrl: () => undefined,
+			text: () => undefined
 		});
 		expect(Object.keys(fake).sort()).toEqual(Object.keys(commands).sort());
 	});

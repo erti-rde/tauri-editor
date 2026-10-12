@@ -186,6 +186,10 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 		pdfUrl: (path) => {
 			const entry = files.get(path);
 			return entry && typeof entry === 'object' && 'pdf' in entry ? entry.pdf : undefined;
+		},
+		text: (path) => {
+			const entry = files.get(path);
+			return typeof entry === 'string' ? entry : undefined;
 		}
 	});
 

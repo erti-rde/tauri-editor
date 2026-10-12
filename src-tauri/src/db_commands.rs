@@ -1579,3 +1579,198 @@ pub async fn name_labels_after_colours(state: State<'_, DbState>) -> Result<u32,
         .or_database()
         .map(count)
 }
+
+/// Chunks read per page while the check streams the library.
+const CHECK_PAGE: i64 = 2000;
+
+/// Find where a manuscript's sentences share words with the corpus (M4-3,
+/// ADR 006): every paper's text, the quotes of marks and source notes, and the
+/// project's other manuscripts.
+///
+/// `sentences` are the manuscript's, from the sentence walk; spans name them
+/// by index. `document` is the manuscript's file name, so it isn't matched
+/// against itself. Nothing is stored: a check is a function of the manuscript
+/// and the corpus as they are now.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_attribution(
+    state: State<'_, DbState>,
+    document: Option<String>,
+    sentences: Vec<String>,
+) -> Result<crate::attribution::AttributionMatches, AppError> {
+    check_attribution_in(&state, document, sentences).await
+}
+
+/// One passage on its way to the matcher, with what the result says about it.
+struct Fed {
+    work: String,
+    passage: crate::attribution::MatchedPassage,
+}
+
+pub async fn check_attribution_in(
+    state: &DbState,
+    document: Option<String>,
+    sentences: Vec<String>,
+) -> Result<crate::attribution::AttributionMatches, AppError> {
+    use crate::attribution::{AttributionMatches, MatchedPassage, Matcher, PassageKind};
+
+    let library = state.library().await?;
+    let root = state.project_root().await?;
+
+    // No sentence long enough to share a shingle: there is nothing to read for.
+    let shingle = crate::attribution::matcher::SHINGLE;
+    if !sentences
+        .iter()
+        .any(|s| crate::attribution::normalise::words(s).len() >= shingle)
+    {
+        return Ok(AttributionMatches {
+            spans: Vec::new(),
+            passages: Vec::new(),
+            read: 0,
+        });
+    }
+
+    let aliases = queries::alias_map(&library).await.or_database()?;
+
+    // The matching is CPU work with no await points, so it runs on a blocking
+    // thread and the reads feed it a page at a time, as `search_sources` keeps
+    // inference off the async workers.
+    let (send, mut receive) = tokio::sync::mpsc::channel::<Vec<Fed>>(2);
+    let matching = tokio::task::spawn_blocking(move || {
+        let mut matcher = Matcher::new(&sentences);
+        let mut kept: Vec<(u32, MatchedPassage)> = Vec::new();
+        let mut read: u32 = 0;
+        while let Some(page) = receive.blocking_recv() {
+            for fed in page {
+                if matcher.feed(read, &fed.work, &fed.passage.text) {
+                    kept.push((read, fed.passage));
+                }
+                read += 1;
+            }
+        }
+        (matcher.finish(), kept, read)
+    });
+
+    let passage = |row: queries::CorpusPassage| {
+        let work = queries::resolve(&aliases, &row.sha256).to_owned();
+        Fed {
+            passage: MatchedPassage {
+                kind: row.kind,
+                work: work.clone(),
+                file: (row.kind != PassageKind::Note).then(|| row.sha256.clone()),
+                id: row.id,
+                page: row.page.and_then(|p| u32::try_from(p).ok()),
+                page_label: row.page_label,
+                text: row.text,
+            },
+            work,
+        }
+    };
+
+    // Feeding stops early only if the matcher has gone, which `matching.await`
+    // then reports.
+    let fed = async {
+        let quotes = queries::quote_passages(&library).await.or_database()?;
+        if send
+            .send(quotes.into_iter().map(passage).collect())
+            .await
+            .is_err()
+        {
+            return Ok(());
+        }
+
+        for (name, paragraphs) in other_manuscripts(&root, document.as_deref()).await {
+            let page = paragraphs
+                .into_iter()
+                .map(|text| Fed {
+                    work: format!("document:{name}"),
+                    passage: MatchedPassage {
+                        kind: PassageKind::Document,
+                        work: name.clone(),
+                        file: None,
+                        id: None,
+                        page: None,
+                        page_label: None,
+                        text,
+                    },
+                })
+                .collect();
+            if send.send(page).await.is_err() {
+                return Ok(());
+            }
+        }
+
+        let mut after = 0;
+        loop {
+            let rows = queries::chunk_passages_after(&library, after, CHECK_PAGE)
+                .await
+                .or_database()?;
+            let Some(last) = rows.last() else { break };
+            after = last.rowid;
+            if send
+                .send(rows.into_iter().map(passage).collect())
+                .await
+                .is_err()
+            {
+                break;
+            }
+        }
+        Ok::<(), AppError>(())
+    }
+    .await;
+    drop(send);
+
+    let (spans, kept, read) = matching.await.or_internal()?;
+    fed?;
+
+    // Renumber spans by the passages kept, so the result carries only those.
+    let index: std::collections::HashMap<u32, u32> = kept
+        .iter()
+        .enumerate()
+        .map(|(i, (fed, _))| (*fed, i as u32))
+        .collect();
+    let spans = spans
+        .into_iter()
+        .map(|mut span| {
+            span.passage = index[&span.passage];
+            span
+        })
+        .collect();
+
+    Ok(AttributionMatches {
+        spans,
+        passages: kept.into_iter().map(|(_, p)| p).collect(),
+        read,
+    })
+}
+
+/// The project's other manuscripts, by file name, as paragraphs.
+///
+/// Read from the project folder, which is where documents live (the folder is
+/// the source of truth). One that can't be read or parsed is passed over: a
+/// half-written file mustn't stop the check of another document.
+async fn other_manuscripts(
+    root: &std::path::Path,
+    skip: Option<&str>,
+) -> Vec<(String, Vec<String>)> {
+    let mut found = Vec::new();
+    let Ok(mut entries) = tokio::fs::read_dir(root).await else {
+        return found;
+    };
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let is_manuscript = name.ends_with(".erti.json") || name == "magnum_opus.json";
+        if !is_manuscript || Some(name.as_str()) == skip {
+            continue;
+        }
+        let Ok(text) = tokio::fs::read_to_string(entry.path()).await else {
+            continue;
+        };
+        let Ok(doc) = serde_json::from_str::<serde_json::Value>(&text) else {
+            continue;
+        };
+        found.push((name, crate::attribution::manuscript_paragraphs(&doc)));
+    }
+    found.sort();
+    found
+}
