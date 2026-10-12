@@ -1,0 +1,125 @@
+{
+	"_readme": "Shared by src-tauri/src/attribution/normalise.rs and src/lib/attribution/normalise.ts (M4-3 AC-1). Each text, normalised, gives these words; both implementations are tested against every case, so a word index from the Rust matcher means the same word to the TypeScript classifier.",
+	"cases": [
+		{
+			"why": "plain",
+			"text": "The Transformer, based solely on attention.",
+			"words": ["the", "transformer", "based", "solely", "on", "attention"]
+		},
+		{
+			"why": "ligatures",
+			"text": "ﬁnal ﬂow eﬀect oﬃce",
+			"words": ["final", "flow", "effect", "office"]
+		},
+		{
+			"why": "full-width",
+			"text": "ＢＥＲＴ ｍｏｄｅｌ",
+			"words": ["bert", "model"]
+		},
+		{
+			"why": "no-break space",
+			"text": "attention mechanisms",
+			"words": ["attention", "mechanisms"]
+		},
+		{
+			"why": "soft hyphen inside a word",
+			"text": "net­works",
+			"words": ["networks"]
+		},
+		{
+			"why": "soft hyphen at a line break",
+			"text": "net­ works",
+			"words": ["networks"]
+		},
+		{
+			"why": "zero-width characters",
+			"text": "atten​tion is‍ all﻿",
+			"words": ["attention", "is", "all"]
+		},
+		{
+			"why": "line-break hyphen",
+			"text": "recur- rence and convo-\nlutions",
+			"words": ["recurrence", "and", "convolutions"]
+		},
+		{
+			"why": "a compound stays two words",
+			"text": "state-of-the-art self-attention",
+			"words": ["state", "of", "the", "art", "self", "attention"]
+		},
+		{
+			"why": "a hyphen before a capital is not a break",
+			"text": "BERT- Large",
+			"words": ["bert", "large"]
+		},
+		{
+			"why": "non-breaking hyphen",
+			"text": "self‑attention",
+			"words": ["self", "attention"]
+		},
+		{
+			"why": "dashes separate",
+			"text": "attention—not recurrence–nor 1–2",
+			"words": ["attention", "not", "recurrence", "nor", "1", "2"]
+		},
+		{
+			"why": "curly and straight quotes",
+			"text": "“superior in quality” and \"superior in quality\"",
+			"words": ["superior", "in", "quality", "and", "superior", "in", "quality"]
+		},
+		{
+			"why": "apostrophes of both kinds",
+			"text": "the model’s output, the model's output",
+			"words": ["the", "model", "s", "output", "the", "model", "s", "output"]
+		},
+		{
+			"why": "decimals and numbers",
+			"text": "28.4 BLEU on WMT 2014",
+			"words": ["28", "4", "bleu", "on", "wmt", "2014"]
+		},
+		{
+			"why": "accents, composed or not",
+			"text": "café café naïve",
+			"words": ["café", "café", "naïve"]
+		},
+		{
+			"why": "sharp s folds",
+			"text": "Straße STRASSE",
+			"words": ["strasse", "strasse"]
+		},
+		{
+			"why": "final sigma folds",
+			"text": "ΟΔΟΣ οδος",
+			"words": ["οδοσ", "οδοσ"]
+		},
+		{
+			"why": "other scripts",
+			"text": "ქართული ენა 日本語",
+			"words": ["ქართული", "ენა", "日本語"]
+		},
+		{
+			"why": "superscripts become digits",
+			"text": "x² and 10³",
+			"words": ["x2", "and", "103"]
+		},
+		{
+			"why": "ellipsis",
+			"text": "attention… is all",
+			"words": ["attention", "is", "all"]
+		},
+		{
+			"why": "brackets and footnote marks",
+			"text": "attention [12] (Vaswani, 2017)*",
+			"words": ["attention", "12", "vaswani", "2017"]
+		},
+		{
+			"why": "nothing but punctuation",
+			"text": " — “ ” … ",
+			"words": []
+		},
+		{
+			"why": "empty",
+			"text": "",
+			"words": []
+		}
+	]
+}
