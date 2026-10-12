@@ -1,0 +1,265 @@
+{
+	"measured": "2026-10-12",
+	"chunking": {
+		"targetChars": 380,
+		"overlap": 0.15,
+		"excludeReferences": true,
+		"splitter": "structure-aware"
+	},
+	"passages": 5624,
+	"checker": "baseline",
+	"sentences": 129,
+	"categories": {
+		"verbatim_uncited": {
+			"n": 21,
+			"got": {
+				"none": 0,
+				"uncited": 21,
+				"drifted_quote": 0,
+				"wrong_source": 0,
+				"self_reuse": 0
+			},
+			"right": 21
+		},
+		"verbatim_cited_unquoted": {
+			"n": 12,
+			"got": {
+				"none": 12,
+				"uncited": 0,
+				"drifted_quote": 0,
+				"wrong_source": 0,
+				"self_reuse": 0
+			},
+			"right": 12
+		},
+		"quoted_cited_exact": {
+			"n": 15,
+			"got": {
+				"none": 13,
+				"uncited": 0,
+				"drifted_quote": 2,
+				"wrong_source": 0,
+				"self_reuse": 0
+			},
+			"right": 13
+		},
+		"drifted_quote": {
+			"n": 15,
+			"got": {
+				"none": 1,
+				"uncited": 0,
+				"drifted_quote": 14,
+				"wrong_source": 0,
+				"self_reuse": 0
+			},
+			"right": 14
+		},
+		"wrong_source": {
+			"n": 12,
+			"got": {
+				"none": 0,
+				"uncited": 0,
+				"drifted_quote": 0,
+				"wrong_source": 12,
+				"self_reuse": 0
+			},
+			"right": 12
+		},
+		"self_reuse": {
+			"n": 10,
+			"got": {
+				"none": 0,
+				"uncited": 0,
+				"drifted_quote": 0,
+				"wrong_source": 0,
+				"self_reuse": 10
+			},
+			"right": 10
+		},
+		"stock_phrase": {
+			"n": 12,
+			"got": {
+				"none": 0,
+				"uncited": 12,
+				"drifted_quote": 0,
+				"wrong_source": 0,
+				"self_reuse": 0
+			},
+			"right": 0
+		},
+		"clean_paraphrase": {
+			"n": 15,
+			"got": {
+				"none": 15,
+				"uncited": 0,
+				"drifted_quote": 0,
+				"wrong_source": 0,
+				"self_reuse": 0
+			},
+			"right": 15
+		},
+		"pdf_artefact": {
+			"n": 17,
+			"got": {
+				"none": 4,
+				"uncited": 12,
+				"drifted_quote": 1,
+				"wrong_source": 0,
+				"self_reuse": 0
+			},
+			"right": 12
+		}
+	},
+	"kinds": {
+		"uncited": {
+			"labelled": 37,
+			"reported": 45,
+			"right": 33,
+			"precision": 0.733,
+			"recall": 0.892
+		},
+		"drifted_quote": {
+			"labelled": 15,
+			"reported": 17,
+			"right": 14,
+			"precision": 0.824,
+			"recall": 0.933
+		},
+		"wrong_source": {
+			"labelled": 12,
+			"reported": 12,
+			"right": 12,
+			"precision": 1,
+			"recall": 1
+		},
+		"self_reuse": {
+			"labelled": 10,
+			"reported": 10,
+			"right": 10,
+			"precision": 1,
+			"recall": 1
+		}
+	},
+	"wrong": [
+		{
+			"id": "qce-06",
+			"category": "quoted_cited_exact",
+			"expected": "none",
+			"got": "drifted_quote"
+		},
+		{
+			"id": "qce-12",
+			"category": "quoted_cited_exact",
+			"expected": "none",
+			"got": "drifted_quote"
+		},
+		{
+			"id": "dq-13",
+			"category": "drifted_quote",
+			"expected": "drifted_quote",
+			"got": "none"
+		},
+		{
+			"id": "sp-01",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-02",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-03",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-04",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-05",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-06",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-07",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-08",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-09",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-10",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-11",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "sp-12",
+			"category": "stock_phrase",
+			"expected": "none",
+			"got": "uncited"
+		},
+		{
+			"id": "pa-12",
+			"category": "pdf_artefact",
+			"expected": "uncited",
+			"got": "none"
+		},
+		{
+			"id": "pa-13",
+			"category": "pdf_artefact",
+			"expected": "uncited",
+			"got": "none"
+		},
+		{
+			"id": "pa-14",
+			"category": "pdf_artefact",
+			"expected": "uncited",
+			"got": "none"
+		},
+		{
+			"id": "pa-15",
+			"category": "pdf_artefact",
+			"expected": "uncited",
+			"got": "none"
+		},
+		{
+			"id": "pa-17",
+			"category": "pdf_artefact",
+			"expected": "none",
+			"got": "drifted_quote"
+		}
+	]
+}
