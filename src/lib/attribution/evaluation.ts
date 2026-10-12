@@ -9,9 +9,13 @@
  * `tests/fixtures/attribution/README.md` for the set and how it was labelled.
  *
  * Nothing here ships. It sits beside the check so the two are typechecked and
- * tested together, and it imports nothing but types, so Node can run it as it
- * stands.
+ * tested together. Node runs it with `scripts/eval/resolve-ts.mjs`, which lets
+ * the imports below leave off their `.ts` as the app's do.
  */
+
+import type { MatchedPassage, Span } from '$lib/ipc';
+
+import { classify, verdictOf, type Thresholds } from './classify';
 
 /* ---------------------------------------------------------------- the labels */
 
@@ -522,4 +526,80 @@ export function baselineCheck(
 		verdicts.set(s.id, s.cites.includes(match.source) ? 'none' : 'wrong_source');
 	});
 	return verdicts;
+}
+
+/* ------------------------------------------------------------ the classifier */
+
+/** The harness's passages as the check returns them: the source is the work. */
+export function asMatched(passages: Passage[]): MatchedPassage[] {
+	return passages.map((p) => ({
+		kind: p.kind,
+		work: p.source,
+		file: null,
+		id: null,
+		page: null,
+		pageLabel: null,
+		text: p.text
+	}));
+}
+
+/**
+ * The real check's verdicts: the matcher's spans (from `eval_attribution
+ * match`, indexed by passage) classified with `thresholds`. Each labelled
+ * sentence is checked with its own citations, outside any block quotation.
+ */
+export function classifierCheck(
+	sentences: Pick<LabelledSentence, 'id' | 'text' | 'cites'>[],
+	passages: MatchedPassage[],
+	spans: Span[],
+	thresholds?: Thresholds
+): Map<string, Verdict> {
+	const findings = classify(
+		sentences.map((s) => ({ text: s.text, cites: s.cites, quoted: false })),
+		{ spans, passages, read: passages.length },
+		thresholds
+	);
+	return new Map(
+		sentences.map((s, i) => [s.id, verdictOf(findings.filter((f) => f.sentence === i))])
+	);
+}
+
+export interface SweepRow {
+	thresholds: Thresholds;
+	/** Sentences given the verdict they're labelled with. */
+	right: number;
+	precision: Record<Kind, number | null>;
+	recall: Record<Kind, number | null>;
+}
+
+/** Every combination of the candidate thresholds, scored. */
+export function sweep(
+	sentences: LabelledSentence[],
+	passages: MatchedPassage[],
+	spans: Span[],
+	candidates: { [K in keyof Thresholds]: readonly number[] }
+): SweepRow[] {
+	const rows: SweepRow[] = [];
+	for (const minSharedWords of candidates.minSharedWords)
+		for (const commonIn of candidates.commonIn)
+			for (const commonShare of candidates.commonShare) {
+				const thresholds = { minSharedWords, commonIn, commonShare };
+				const report = score(
+					'sweep',
+					sentences,
+					classifierCheck(sentences, passages, spans, thresholds)
+				);
+				const by = (pick: (k: KindScore) => number | null) =>
+					Object.fromEntries(KINDS.map((k) => [k, pick(report.kinds[k])])) as Record<
+						Kind,
+						number | null
+					>;
+				rows.push({
+					thresholds,
+					right: report.sentences - report.wrong.length,
+					precision: by((k) => k.precision),
+					recall: by((k) => k.recall)
+				});
+			}
+	return rows;
 }
