@@ -213,7 +213,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 ### M4 — Attribution check _(L; moves to 1.1 if M1b overruns by half)_ · [spec](docs/specs/M4.md)
 
 - [x] **M4-1** Fixtures and harness, before any UI
-- [ ] **M4-2** Sentence walk
+- [x] **M4-2** Sentence walk
 - [ ] **M4-3** Shingle matching (ADR-6)
 - [ ] **M4-4** Classification, mutation-tested
 - [ ] **M4-5** Check panel (UX-7)
