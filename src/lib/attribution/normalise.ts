@@ -21,8 +21,11 @@ const WORD_CHAR = /[\p{Alphabetic}\p{N}]/u;
 const LETTER = /\p{Alphabetic}/u;
 const LOWER = /\p{Lowercase}/u;
 const SPACE = /\p{White_Space}/u;
-const JOINERS = new Set(['­', '​', '‌', '‍', '⁠', '﻿']);
-const HYPHENS = new Set(['-', '‐', '­']);
+// Written as escapes: the characters themselves are invisible, and an editor
+// that dropped one would leave every test passing.
+const SOFT_HYPHEN = '\u00AD';
+const JOINERS = new Set([SOFT_HYPHEN, '\u200B', '\u200C', '\u200D', '\u2060', '\uFEFF']);
+const HYPHENS = new Set(['-', '\u2010', SOFT_HYPHEN]);
 
 function fold(token: string): string {
 	return token.toLowerCase().replace(/ß/g, 'ss').replace(/ς/g, 'σ');
@@ -53,7 +56,7 @@ export function words(text: string): string[] {
 				continue;
 			}
 			// A soft hyphen inside a word is dropped; any other hyphen ends it.
-			if (c !== '­') emit();
+			if (c !== SOFT_HYPHEN) emit();
 		} else if (JOINERS.has(c)) {
 			// Inside a word it is dropped; between words there is nothing to drop.
 		} else {

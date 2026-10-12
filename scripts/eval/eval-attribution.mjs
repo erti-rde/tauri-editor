@@ -114,7 +114,10 @@ passages.forEach((p, i) =>
 if (disagreements.length > 0) {
 	console.error(`The normalisers disagree on ${disagreements.length} texts:`);
 	for (const { label, ts, rust } of disagreements.slice(0, 10)) {
-		const at = ts.findIndex((w, i) => w !== rust[i]);
+		// Up to the longer of the two, so a word only one of them has is named.
+		const at = Array.from({ length: Math.max(ts.length, rust.length) }, (_, i) => i).find(
+			(i) => ts[i] !== rust[i]
+		);
 		console.error(
 			`  ${label}: word ${at}: ts ${JSON.stringify(ts[at])}, rust ${JSON.stringify(rust[at])}`
 		);
