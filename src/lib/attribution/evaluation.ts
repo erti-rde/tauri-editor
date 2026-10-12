@@ -556,7 +556,7 @@ export function classifierCheck(
 ): Map<string, Verdict> {
 	const findings = classify(
 		sentences.map((s) => ({ text: s.text, cites: s.cites, quoted: false })),
-		{ spans, passages, read: passages.length },
+		{ spans, passages, read: passages.length, sources: 0, documents: 0 },
 		thresholds
 	);
 	return new Map(

@@ -106,6 +106,11 @@ pub struct AttributionMatches {
     pub passages: Vec<MatchedPassage>,
     /// How many passages were read, matched or not.
     pub read: u32,
+    /// How many works those passages came from, so the panel can say what the
+    /// check covered (UX-7's scope line). Every work read, matched or not.
+    pub sources: u32,
+    /// How many of the project's other documents were read.
+    pub documents: u32,
 }
 
 #[cfg(test)]
