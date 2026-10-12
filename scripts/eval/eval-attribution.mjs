@@ -6,6 +6,8 @@
  * when a label no longer matches the corpus, since a number measured against
  * the wrong text is worse than none. Records the result in last-run.json.
  *
+ * Node 22.18 or later runs the TypeScript it imports as it stands.
+ *
  * Usage:
  *   ./scripts/fetch-retrieval-corpus.sh
  *   node scripts/eval/extract-chunks.mjs
@@ -20,6 +22,7 @@ import {
 	baselineCheck,
 	checkAgainstCorpus,
 	checkLabels,
+	fixtureFingerprint,
 	formatReport,
 	passagesFrom,
 	score
@@ -71,6 +74,7 @@ writeFileSync(
 	`${JSON.stringify(
 		{
 			measured: new Date().toISOString().slice(0, 10),
+			fixture: fixtureFingerprint(fixture),
 			chunking: params,
 			passages: passages.length,
 			...report
