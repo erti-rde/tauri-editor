@@ -43,7 +43,7 @@ blocked in the app while every test passed (PR #109).
 | Design system (new)      | Catalogue route + harness screenshots; rendered-contrast check; ratchet guard (vitest)              | every PR                      | every primitive in every state, 7 palettes × 2 densities; no hand-styled controls creeping back (ADR 010)                                                                         |
 | **App-in-browser**       | Playwright over `/harness`: the real `+page.svelte` on the typed in-memory fake (`src/lib/harness`) | every PR                      | full UI flows: project, manuscript, panels, settings, the reader. Fails on any console error or unhandled command. The same fake serves vitest through `useFakeBackend()` (M1a-1) |
 | **Real app E2E** (new)   | WebdriverIO + `tauri-driver` on Linux (xvfb)                                                        | every PR to main, release     | a handful of journeys through the real Rust backend, real webview, real CSP                                                                                                       |
-| Harnesses                | `eval_retrieval`, metadata-health, new: attribution, companion latency, scale                       | CI (corpus) + milestone gates | quality and performance numbers                                                                                                                                                   |
+| Harnesses                | `eval_retrieval`, metadata-health, `pnpm eval:attribution`, companion latency, scale                | CI (corpus) + milestone gates | quality and performance numbers                                                                                                                                                   |
 | Manual release checklist | a person, per platform                                                                              | each release                  | what automation can't reach: macOS webview, installers, first-open, updater                                                                                                       |
 
 `tauri-driver` supports Linux and Windows; macOS has no WKWebView WebDriver. So the real-app
@@ -104,7 +104,7 @@ checklist.
   quoted-and-cited exact, drifted quote, wrong-source citation, self-reuse across project
   manuscripts, stock phrase in ≥ 10 sources, clean paraphrase, PDF-artefact text (hyphenation,
   ligatures). The harness reports a confusion matrix per category, committed like
-  `last-run.json`.
+  `last-run.json`: `pnpm eval:attribution`, over `tests/fixtures/attribution`.
 - Normalisation idempotence and extractor/manuscript agreement (property tests).
 - The whole check on a 10k-word manuscript over a 56k-chunk corpus under its budget.
 - **Mutation testing** (Stryker) on the classifier module: its thresholds decide what a

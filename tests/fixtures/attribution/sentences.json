@@ -1,0 +1,1358 @@
+{
+	"_readme": "Labelled manuscript sentences for the attribution check (M4-1). See README.md beside this file.",
+	"sources": [
+		{
+			"id": "book-hartley-2019",
+			"title": "Reading Machines: A History of Text Retrieval (Hartley, 2019). Invented for this set; no file."
+		},
+		{
+			"id": "book-osei-2021",
+			"title": "Writing with Sources (Osei, 2021). Invented for this set; no file."
+		},
+		{
+			"id": "stock-01",
+			"title": "Sparse Sketches for Streaming Graph Clustering. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of clustering graphs that arrive as a stream of edges. Experimental results show that the proposed method sets a new state of the art on the road network benchmarks and achieves state of the art performance on the social graph collections. A full treatment of adversarial edge orderings is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-02",
+			"title": "Learned Index Structures for Time Series. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of learned indexes over sensor time series. Experimental results show that the proposed method sets a new state of the art on the industrial telemetry archive and achieves state of the art performance on two public weather datasets. A full treatment of concept drift in the indexed data is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-03",
+			"title": "Contrastive Pretraining for Protein Contact Maps. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of contrastive pretraining for predicting protein contacts. Experimental results show that the proposed method sets a new state of the art on the held-out protein families and achieves state of the art performance on the membrane protein subset. A full treatment of multiple sequence alignment quality is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-04",
+			"title": "Robust Keypoint Matching under Motion Blur. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of keypoint matching in blurred video. Experimental results show that the proposed method sets a new state of the art on the handheld capture benchmark and achieves state of the art performance on the drone footage set. A full treatment of rolling shutter distortion is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-05",
+			"title": "Federated Topic Models for Clinical Notes. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of topic models trained across hospitals without pooling notes. Experimental results show that the proposed method sets a new state of the art on the discharge summary corpus and achieves state of the art performance on the radiology report corpus. A full treatment of differential privacy accounting is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-06",
+			"title": "Efficient Beam Search for Speech Recognition. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of pruning strategies for speech recognition beam search. Experimental results show that the proposed method sets a new state of the art on the read speech benchmark and achieves state of the art performance on the conversational telephone set. A full treatment of language model fusion is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-07",
+			"title": "Causal Discovery from Irregular Event Logs. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of causal discovery from irregularly sampled event logs. Experimental results show that the proposed method sets a new state of the art on the manufacturing logs and achieves state of the art performance on the simulated supply chain. A full treatment of latent confounders is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-08",
+			"title": "Graph Neural Networks for Power Grid Faults. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of locating faults in power grids with graph neural networks. Experimental results show that the proposed method sets a new state of the art on the regional transmission model and achieves state of the art performance on the distribution feeder set. A full treatment of cascading failures is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-09",
+			"title": "Low-Rank Adapters for Legal Text Classification. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of low-rank adapters for classifying legal judgments. Experimental results show that the proposed method sets a new state of the art on the appellate court corpus and achieves state of the art performance on the contract clause benchmark. A full treatment of cross-jurisdiction transfer is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-10",
+			"title": "Self-Supervised Depth from Endoscopic Video. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of self-supervised depth estimation in endoscopy. Experimental results show that the proposed method sets a new state of the art on the colonoscopy recordings and achieves state of the art performance on the synthetic phantom set. A full treatment of specular highlights on tissue is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-11",
+			"title": "Active Learning for Coral Reef Imagery. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of active learning for labelling coral reef photographs. Experimental results show that the proposed method sets a new state of the art on the reef survey archive and achieves state of the art performance on the citizen science uploads. A full treatment of seasonal changes in water colour is beyond the scope of this paper. The rest of this paper is organized as follows."
+		},
+		{
+			"id": "stock-12",
+			"title": "Compressing Recommendation Embeddings with Hashing. Invented for this set: stock phrasing in ten sources and more.",
+			"text": "To the best of our knowledge, this is the first study of hashing to compress recommendation embeddings. Experimental results show that the proposed method sets a new state of the art on the retail click logs and achieves state of the art performance on the music listening sessions. A full treatment of cold start for new items is beyond the scope of this paper. The rest of this paper is organized as follows."
+		}
+	],
+	"notes": [
+		{
+			"id": "n1",
+			"source": "book-hartley-2019",
+			"kind": "source_note",
+			"page": "41",
+			"quote": "Every index is an argument about what a reader will want to find, made before the reader arrives.",
+			"body": "Good framing for the introduction."
+		},
+		{
+			"id": "n2",
+			"source": "book-hartley-2019",
+			"kind": "source_note",
+			"page": "88",
+			"quote": "The card catalogue did not disappear because it failed; it disappeared because it could not be searched from a desk at home.",
+			"body": "Convenience, not quality, as the reason for change."
+		},
+		{
+			"id": "n3",
+			"source": "book-osei-2021",
+			"kind": "source_note",
+			"page": "17",
+			"quote": "A quotation is a promise that these are the author's words, in the author's order, and nothing else.",
+			"body": "Why drifted quotations matter."
+		},
+		{
+			"id": "n4",
+			"source": "book-osei-2021",
+			"kind": "source_note",
+			"page": "52",
+			"quote": "Paraphrase is not a disguise for quotation but a test of whether the writer has understood the source.",
+			"body": "Use in the methods chapter."
+		},
+		{
+			"id": "n5",
+			"source": "book-hartley-2019",
+			"kind": "source_note",
+			"page": "120",
+			"quote": "Relevance was always a judgement about a person, not a property of a document.",
+			"body": "Contrast with similarity scores."
+		},
+		{
+			"id": "n6",
+			"source": "1706.03762v7",
+			"kind": "mark",
+			"page": "4",
+			"quote": "pushing the softmax function into regions where it has extremely small gradients",
+			"body": "why the dot products get divided by the square root of d_k"
+		},
+		{
+			"id": "n7",
+			"source": "book-osei-2021",
+			"kind": "source_note",
+			"page": "63",
+			"quote": "Most borrowed sentences are not stolen; they are forgotten, left in a draft long after the writer stopped knowing where they came from.",
+			"body": "The case for keeping provenance in the editor."
+		},
+		{
+			"id": "n8",
+			"source": "book-hartley-2019",
+			"kind": "source_note",
+			"page": "203",
+			"quote": "A search engine answers the question it was asked, which is rarely the question the reader meant.",
+			"body": "Query intent."
+		},
+		{
+			"id": "n9",
+			"source": "book-hartley-2019",
+			"kind": "source_note",
+			"page": "77",
+			"quote": "The history of retrieval is a history of deciding which words count.",
+			"body": "Chapter 1 epigraph?"
+		}
+	],
+	"documents": [
+		{
+			"id": "chapter-1",
+			"title": "Chapter 1 (draft)",
+			"text": "Retrieval systems have always encoded a view of what their users need. Early search tools ranked documents by the words they shared with a query, and that habit shaped how a generation of researchers wrote their abstracts. Neural models changed the unit of comparison from the word to the passage. What a model counts as similar is therefore a design decision with consequences for which papers get read. This chapter traces that decision from inverted indexes to dense retrieval."
+		},
+		{
+			"id": "workshop-abstract",
+			"title": "Workshop abstract",
+			"text": "We study how researchers move between their reading notes and their drafts. Across twelve interviews, participants described losing track of which sentences they had copied and which they had written themselves. Most kept quotations in a separate file and rarely went back to it while drafting. We argue that a writing tool should keep the source of every copied sentence within reach rather than asking the writer to remember it."
+		}
+	],
+	"sentences": [
+		{
+			"id": "vu-01",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Vaswani and colleagues introduced a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.",
+			"cites": [],
+			"from": "1706.03762v7",
+			"copied": "a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely"
+		},
+		{
+			"id": "vu-02",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Optimizing D to completion in the inner loop of training is computationally prohibitive, and on finite datasets would result in overfitting.",
+			"cites": [],
+			"from": "1406.2661v1",
+			"copied": "Optimizing D to completion in the inner loop of training is computationally prohibitive, and on finite datasets would result in overfitting"
+		},
+		{
+			"id": "vu-03",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "There are situations where simple scaling up of the basic techniques will not result in any significant progress, and we have to focus on more advanced techniques.",
+			"cites": [],
+			"from": "1301.3781v3",
+			"copied": "There are situations where simple scaling up of the basic techniques will not result in any significant progress, and we have to focus on more advanced techniques"
+		},
+		{
+			"id": "vu-04",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Multi-GPU training exploits data parallelism, and is carried out by splitting each batch of training images into several GPU batches, processed in parallel on each GPU.",
+			"cites": [],
+			"from": "1409.1556v6",
+			"copied": "Multi-GPU training exploits data parallelism, and is carried out by splitting each batch of training images into several GPU batches, processed in parallel on each GPU"
+		},
+		{
+			"id": "vu-05",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Although our convergence analysis does not apply to non-convex problems, we empirically found that Adam often outperforms other methods in such cases.",
+			"cites": [],
+			"from": "1412.6980v9",
+			"copied": "Although our convergence analysis does not apply to non-convex problems, we empirically found that Adam often outperforms other methods in such cases"
+		},
+		{
+			"id": "vu-06",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Batch normalisation is a novel mechanism for dramatically accelerating the training of deep networks.",
+			"cites": [],
+			"from": "1502.03167v3",
+			"copied": "a novel mechanism for dramatically accelerating the training of deep networks"
+		},
+		{
+			"id": "vu-07",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "The relative probabilities of incorrect answers tell us a lot about how the cumbersome model tends to generalize.",
+			"cites": [],
+			"from": "1503.02531v1",
+			"copied": "The relative probabilities of incorrect answers tell us a lot about how the cumbersome model tends to generalize"
+		},
+		{
+			"id": "vu-08",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Here the identity shortcuts are never closed, and all information is always passed through, with additional residual functions to be learned.",
+			"cites": [],
+			"from": "1512.03385v1",
+			"copied": "identity shortcuts are never closed, and all information is always passed through, with additional residual functions to be learned"
+		},
+		{
+			"id": "vu-09",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Applying either weight normalization or batch normalization using expected statistics is equivalent to have a different parameterization of the original feed-forward neural network.",
+			"cites": [],
+			"from": "1607.06450v1",
+			"copied": "Applying either weight normalization or batch normalization using expected statistics is equivalent to have a different parameterization of the original feed-forward neural network"
+		},
+		{
+			"id": "vu-10",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "For all these methods, however, a multistep pipeline including random walk generation and semi-supervised training is required where each step has to be optimized separately.",
+			"cites": [],
+			"from": "1609.02907v4",
+			"copied": "For all these methods, however, a multistep pipeline including random walk generation and semi-supervised training is required where each step has to be optimized separately"
+		},
+		{
+			"id": "vu-11",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Most supervised NLP models share a common architecture at the lowest layers, which is what makes the approach easy to adopt.",
+			"cites": [],
+			"from": "1802.05365v2",
+			"copied": "Most supervised NLP models share a common architecture at the lowest layers"
+		},
+		{
+			"id": "vu-12",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "In order to train a deep bidirectional representation, we simply mask some percentage of the input tokens at random, and then predict those masked tokens.",
+			"cites": [],
+			"from": "1810.04805v2",
+			"copied": "In order to train a deep bidirectional representation, we simply mask some percentage of the input tokens at random, and then predict those masked tokens"
+		},
+		{
+			"id": "vu-13",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Dynamic masking is comparable or slightly better than static masking, which is why later models adopted it.",
+			"cites": [],
+			"from": "1907.11692v1",
+			"copied": "Dynamic masking is comparable or slightly better than static masking"
+		},
+		{
+			"id": "vu-14",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Sentences with similar lengths are grouped together and are only padded to the longest element in a mini-batch.",
+			"cites": [],
+			"from": "1908.10084v1",
+			"copied": "Sentences with similar lengths are grouped together and are only padded to the longest element in a mini-batch"
+		},
+		{
+			"id": "vu-15",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Such approaches complement the sparse vector methods as they can potentially give high similarity scores to semantically relevant text pairs, even without exact token matching.",
+			"cites": [],
+			"from": "2004.04906v3",
+			"copied": "Such approaches complement the sparse vector methods as they can potentially give high similarity scores to semantically relevant text pairs, even without exact token matching"
+		},
+		{
+			"id": "vu-16",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "We compare two RAG formulations, one which conditions on the same retrieved passages across the whole generated sequence, and another which can use different passages per token.",
+			"cites": [],
+			"from": "2005.11401v4",
+			"copied": "We compare two RAG formulations, one which conditions on the same retrieved passages across the whole generated sequence, and another which can use different passages per token"
+		},
+		{
+			"id": "vu-17",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Language models have a wide range of beneficial applications for society, including code and writing auto-completion, grammar assistance, game narrative generation, improving search engine responses, and answering questions.",
+			"cites": [],
+			"from": "2005.14165v4",
+			"copied": "Language models have a wide range of beneficial applications for society, including code and writing auto-completion, grammar assistance, game narrative generation, improving search engine responses, and answering questions"
+		},
+		{
+			"id": "vu-18",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "The electron impact parameter is affected by bremsstrahlung and thus has a broader distribution.",
+			"cites": [],
+			"from": "1207.7214v2",
+			"copied": "The electron impact parameter is affected by bremsstrahlung and thus has a broader distribution"
+		},
+		{
+			"id": "vu-19",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Every index is an argument about what a reader will want to find, made before the reader arrives.",
+			"cites": [],
+			"from": "note:n1",
+			"copied": "Every index is an argument about what a reader will want to find, made before the reader arrives"
+		},
+		{
+			"id": "vu-20",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "The card catalogue lost out because it could not be searched from a desk at home.",
+			"cites": [],
+			"from": "note:n2",
+			"copied": "it could not be searched from a desk at home"
+		},
+		{
+			"id": "vu-21",
+			"category": "verbatim_uncited",
+			"expect": "uncited",
+			"text": "Large dot products risk pushing the softmax function into regions where it has extremely small gradients.",
+			"cites": [],
+			"from": "note:n6",
+			"copied": "pushing the softmax function into regions where it has extremely small gradients"
+		},
+		{
+			"id": "vcu-01",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "This allows every position in the decoder to attend over all positions in the input sequence.",
+			"cites": ["1706.03762v7"],
+			"from": "1706.03762v7",
+			"copied": "This allows every position in the decoder to attend over all positions in the input sequence"
+		},
+		{
+			"id": "vcu-02",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "These improvements are based on deep features and thus should benefit from residual learning.",
+			"cites": ["1512.03385v1"],
+			"from": "1512.03385v1",
+			"copied": "These improvements are based on deep features and thus should benefit from residual learning"
+		},
+		{
+			"id": "vcu-03",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "Compared to GSNs, the adversarial nets framework does not require a Markov chain for sampling.",
+			"cites": ["1406.2661v1"],
+			"from": "1406.2661v1",
+			"copied": "Compared to GSNs, the adversarial nets framework does not require a Markov chain for sampling"
+		},
+		{
+			"id": "vcu-04",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "Adam is a versatile algorithm that scales to large-scale high-dimensional machine learning problems.",
+			"cites": ["1412.6980v9"],
+			"from": "1412.6980v9",
+			"copied": "Adam is a versatile algorithm that scales to large-scale high-dimensional machine learning problems"
+		},
+		{
+			"id": "vcu-05",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "The authors did not decrease the learning rate for the pre-initialised layers, allowing them to change during learning.",
+			"cites": ["1409.1556v6"],
+			"from": "1409.1556v6",
+			"copied": "did not decrease the learning rate for the pre-initialised layers, allowing them to change during learning"
+		},
+		{
+			"id": "vcu-06",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "With Batch Normalization, backpropagation through a layer is unaffected by the scale of its parameters.",
+			"cites": ["1502.03167v3"],
+			"from": "1502.03167v3",
+			"copied": "With Batch Normalization, backpropagation through a layer is unaffected by the scale of its parameters"
+		},
+		{
+			"id": "vcu-07",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "The softmax of this type of specialist can be made much smaller by combining all of the classes it does not care about into a single dustbin class.",
+			"cites": ["1503.02531v1"],
+			"from": "1503.02531v1",
+			"copied": "The softmax of this type of specialist can be made much smaller by combining all of the classes it does not care about into a single dustbin class"
+		},
+		{
+			"id": "vcu-08",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "Each replica synchronizes its gradient updates through a centralized server that keeps all the parameters.",
+			"cites": ["1301.3781v3"],
+			"from": "1301.3781v3",
+			"copied": "Each replica synchronizes its gradient updates through a centralized server that keeps all the parameters"
+		},
+		{
+			"id": "vcu-09",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "Their approach requires to learn node degree-specific weight matrices which does not scale to large graphs with wide node degree distributions.",
+			"cites": ["1609.02907v4"],
+			"from": "1609.02907v4",
+			"copied": "Their approach requires to learn node degree-specific weight matrices which does not scale to large graphs with wide node degree distributions"
+		},
+		{
+			"id": "vcu-10",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "UMAP comes with a sound mathematical theory grounding the technique and a practical scalable algorithm that applies to real world data.",
+			"cites": ["1802.03426v3"],
+			"from": "1802.03426v3",
+			"copied": "a sound mathematical theory grounding the technique and a practical scalable algorithm that applies to real world data"
+		},
+		{
+			"id": "vcu-11",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "They set aside standard open-domain QA tasks, which typically consist of short, simple questions, in favour of Jeopardy questions.",
+			"cites": ["2005.11401v4"],
+			"from": "2005.11401v4",
+			"copied": "standard open-domain QA tasks, which typically consist of short, simple questions"
+		},
+		{
+			"id": "vcu-12",
+			"category": "verbatim_cited_unquoted",
+			"expect": "none",
+			"text": "Both approaches benefit from large datasets, although the MT approach is limited by the size of parallel corpora.",
+			"cites": ["1802.05365v2"],
+			"from": "1802.05365v2",
+			"copied": "benefit from large datasets, although the MT approach is limited by the size of parallel corpora"
+		},
+		{
+			"id": "qce-01",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "Self-attention is “an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence”.",
+			"cites": ["1706.03762v7"],
+			"from": "1706.03762v7",
+			"copied": "an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence"
+		},
+		{
+			"id": "qce-02",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "Its authors set out to “demonstrate the importance of bidirectional pre-training for language representations”.",
+			"cites": ["1810.04805v2"],
+			"from": "1810.04805v2",
+			"copied": "demonstrate the importance of bidirectional pre-training for language representations"
+		},
+		{
+			"id": "qce-03",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "They argue that this is “because the zero-padded dimensions in A indeed have no residual learning”.",
+			"cites": ["1512.03385v1"],
+			"from": "1512.03385v1",
+			"copied": "because the zero-padded dimensions in A indeed have no residual learning"
+		},
+		{
+			"id": "qce-04",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "Training alternates “between k steps of optimizing D and one step of optimizing G”.",
+			"cites": ["1406.2661v1"],
+			"from": "1406.2661v1",
+			"copied": "between k steps of optimizing D and one step of optimizing G"
+		},
+		{
+			"id": "qce-05",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "Kingma and Ba found Adam “robust and well-suited to a wide range of non-convex optimization problems”.",
+			"cites": ["1412.6980v9"],
+			"from": "1412.6980v9",
+			"copied": "robust and well-suited to a wide range of non-convex optimization problems"
+		},
+		{
+			"id": "qce-06",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "They suggest that “in the VOC dataset the objects appear over a variety of scales, so there is no particular scale-specific semantics … a classifier could exploit”.",
+			"cites": ["1409.1556v6"],
+			"from": "1409.1556v6",
+			"copied": [
+				"in the VOC dataset the objects appear over a variety of scales, so there is no particular scale-specific semantics",
+				"a classifier could exploit"
+			],
+			"why": "An ellipsis marks words left out, as quoting allows."
+		},
+		{
+			"id": "qce-07",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "“Waiting for several years to train an ensemble of models was not an option,” so the authors needed a faster way to improve the baseline.",
+			"cites": ["1503.02531v1"],
+			"from": "1503.02531v1",
+			"copied": "Waiting for several years to train an ensemble of models was not an option"
+		},
+		{
+			"id": "qce-08",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "Here, “the layer normalized DRAW converges almost twice as fast than the baseline model”.",
+			"cites": ["1607.06450v1"],
+			"from": "1607.06450v1",
+			"copied": "the layer normalized DRAW converges almost twice as fast than the baseline model",
+			"why": "Quoted as printed, the source's grammar included."
+		},
+		{
+			"id": "qce-09",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "Kipf and Welling report that their model “compares favorably both in classification accuracy and efficiency”.",
+			"cites": ["1609.02907v4"],
+			"from": "1609.02907v4",
+			"copied": "compares favorably both in classification accuracy and efficiency"
+		},
+		{
+			"id": "qce-10",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "“We have introduced a general approach for learning high-quality deep context-dependent representations from biLMs,” the authors conclude.",
+			"cites": ["1802.05365v2"],
+			"from": "1802.05365v2",
+			"copied": "We have introduced a general approach for learning high-quality deep context-dependent representations from biLMs"
+		},
+		{
+			"id": "qce-11",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "The authors “leave further exploration of the limits of large batch training to future work”.",
+			"cites": ["1907.11692v1"],
+			"from": "1907.11692v1",
+			"copied": "leave further exploration of the limits of large batch training to future work"
+		},
+		{
+			"id": "qce-12",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "“For instance, passages relevant to a question may be given in a QA dataset, or … found using the answer.”",
+			"cites": ["2004.04906v3"],
+			"from": "2004.04906v3",
+			"copied": [
+				"For instance, passages relevant to a question may be given in a QA dataset, or",
+				"found using the answer"
+			],
+			"why": "An ellipsis marks words left out, as quoting allows."
+		},
+		{
+			"id": "qce-13",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "As Osei puts it, “a quotation is a promise that these are the author’s words, in the author’s order, and nothing else”.",
+			"cites": ["book-osei-2021"],
+			"from": "note:n3",
+			"copied": "a quotation is a promise that these are the author’s words, in the author’s order, and nothing else",
+			"why": "Capital and apostrophe differ from the note; neither is a change to the words."
+		},
+		{
+			"id": "qce-14",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "“Paraphrase is not a disguise for quotation but a test of whether the writer has understood the source.”",
+			"cites": ["book-osei-2021"],
+			"from": "note:n4",
+			"copied": "Paraphrase is not a disguise for quotation but a test of whether the writer has understood the source"
+		},
+		{
+			"id": "qce-15",
+			"category": "quoted_cited_exact",
+			"expect": "none",
+			"text": "Hartley reminds us that “relevance was always a judgement about a person, not a property of a document”.",
+			"cites": ["book-hartley-2019"],
+			"from": "note:n5",
+			"copied": "relevance was always a judgement about a person, not a property of a document"
+		},
+		{
+			"id": "dq-01",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "Vaswani et al. report that their models were “superior in quality while being more parallel and requiring far less time to train”.",
+			"cites": ["1706.03762v7"],
+			"from": "1706.03762v7",
+			"copied": "superior in quality while being more parallelizable and requiring significantly less time to train",
+			"why": "Two words changed."
+		},
+		{
+			"id": "dq-02",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“We add a learned embedding to each token indicating whether it belongs to sentence A or B.”",
+			"cites": ["1810.04805v2"],
+			"from": "1810.04805v2",
+			"copied": "we add a learned embedding to every token indicating whether it belongs to sentence A or sentence B",
+			"why": "A word changed and one dropped."
+		},
+		{
+			"id": "dq-03",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“Although the above notation is about fully-connected layers for simplicity, it is applicable to convolutional layers.”",
+			"cites": ["1512.03385v1"],
+			"from": "1512.03385v1",
+			"copied": "although the above notations are about fully-connected layers for simplicity, they are applicable to convolutional layers",
+			"why": "Number changed throughout."
+		},
+		{
+			"id": "dq-04",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "Some methods “do not involve defining a probability distribution explicitly, but instead train a generative model to draw samples from the target distribution”.",
+			"cites": ["1406.2661v1"],
+			"from": "1406.2661v1",
+			"copied": "do not involve defining a probability distribution explicitly, but rather train a generative machine to draw samples from the desired distribution",
+			"why": "Three words changed."
+		},
+		{
+			"id": "dq-05",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“An exponential moving average over the parameters can be used, giving more weight to recent parameter values.”",
+			"cites": ["1412.6980v9"],
+			"from": "1412.6980v9",
+			"copied": "an exponential moving average over the parameters can be used, giving higher weight to more recent parameter values",
+			"why": "A word changed and one dropped."
+		},
+		{
+			"id": "dq-06",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“When several localisation networks are used, we first take the union of their bounding box predictions and then run the merging procedure on it.”",
+			"cites": ["1409.1556v6"],
+			"from": "1409.1556v6",
+			"copied": "When several localisation ConvNets are used, we first take the union of their sets of bounding box predictions, and then run the merging procedure on the union",
+			"why": "Several small changes."
+		},
+		{
+			"id": "dq-07",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“In the batch setting, where each step is based on the entire training set, we would use the whole set to normalize activations.”",
+			"cites": ["1502.03167v3"],
+			"from": "1502.03167v3",
+			"copied": "In the batch setting where each training step is based on the entire training set, we would use the whole set to normalize activations",
+			"why": "A word dropped."
+		},
+		{
+			"id": "dq-08",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“When the correct labels are known for the transfer set, this method can be greatly improved by also training the distilled model to produce the correct labels.”",
+			"cites": ["1503.02531v1"],
+			"from": "1503.02531v1",
+			"copied": "When the correct labels are known for all or some of the transfer set, this method can be significantly improved by also training the distilled model to produce the correct labels",
+			"why": "Words dropped and changed."
+		},
+		{
+			"id": "dq-09",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“Further progress can be achieved by incorporating information about the morphology of words, especially for syntactic questions.”",
+			"cites": ["1301.3781v3"],
+			"from": "1301.3781v3",
+			"copied": "Further progress can be achieved by incorporating information about structure of words, especially for the syntactic questions",
+			"why": "A word replaced."
+		},
+		{
+			"id": "dq-10",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "Ba et al. stress that “layer normalization is not a re-parameterization of the original neural network”.",
+			"cites": ["1607.06450v1"],
+			"from": "1607.06450v1",
+			"copied": "Our proposed layer normalization method, however, is not a re-parameterization of the original neural network",
+			"why": "The subject rewritten inside the quotation marks."
+		},
+		{
+			"id": "dq-11",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“The use of UMAP in many scientific fields demonstrates the strength of the algorithm.”",
+			"cites": ["1802.03426v3"],
+			"from": "1802.03426v3",
+			"copied": "The use and effectiveness of UMAP in various scientific fields demonstrates the strength of the algorithm",
+			"why": "Words dropped and changed."
+		},
+		{
+			"id": "dq-12",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "NSP is “a binary classification loss for predicting whether two sentences follow each other in the original text”.",
+			"cites": ["1907.11692v1"],
+			"from": "1907.11692v1",
+			"copied": "a binary classification loss for predicting whether two segments follow each other in the original text",
+			"why": "One word changed."
+		},
+		{
+			"id": "dq-13",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“We experimented with two setups: training only on STSb, and training first on NLI and then on STSb.”",
+			"cites": ["1908.10084v1"],
+			"from": "1908.10084v1",
+			"copied": "We experimented with two setups: Only training on STSb, and first training on NLI, then training on STSb",
+			"why": "Reordered."
+		},
+		{
+			"id": "dq-14",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "Osei observes that “most borrowed sentences are not stolen but forgotten, left in a draft long after the writer stopped knowing where they came from”.",
+			"cites": ["book-osei-2021"],
+			"from": "note:n7",
+			"copied": "most borrowed sentences are not stolen; they are forgotten, left in a draft long after the writer stopped knowing where they came from",
+			"why": "Two words changed."
+		},
+		{
+			"id": "dq-15",
+			"category": "drifted_quote",
+			"expect": "drifted_quote",
+			"text": "“A search engine answers the question it is asked, which is seldom the question the reader meant.”",
+			"cites": ["book-hartley-2019"],
+			"from": "note:n8",
+			"copied": "A search engine answers the question it was asked, which is rarely the question the reader meant",
+			"why": "Two words changed."
+		},
+		{
+			"id": "ws-01",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "The authors were “excited about the future of attention-based models and plan to apply them to other tasks”.",
+			"cites": ["1810.04805v2"],
+			"from": "1706.03762v7",
+			"copied": "excited about the future of attention-based models and plan to apply them to other tasks"
+		},
+		{
+			"id": "ws-02",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "Generalizing these findings to deep bidirectional architectures allowed the same pre-trained model to successfully tackle a broad set of NLP tasks.",
+			"cites": ["1802.05365v2"],
+			"from": "1810.04805v2",
+			"copied": "the same pre-trained model to successfully tackle a broad set of NLP tasks"
+		},
+		{
+			"id": "ws-03",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "On this dataset one image usually contains a single dominate object, and the proposal regions highly overlap with each other.",
+			"cites": ["1409.1556v6"],
+			"from": "1512.03385v1",
+			"copied": "one image usually contains a single dominate object, and the proposal regions highly overlap with each other"
+		},
+		{
+			"id": "ws-04",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "Both of these require the learned probability density to be analytically specified up to a normalization constant.",
+			"cites": ["1412.6980v9"],
+			"from": "1406.2661v1",
+			"copied": "Both of these require the learned probability density to be analytically specified up to a normalization constant"
+		},
+		{
+			"id": "ws-05",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "As for the first moment, “the derivation for the first moment estimate is completely analogous”.",
+			"cites": ["1502.03167v3"],
+			"from": "1412.6980v9",
+			"copied": "the derivation for the first moment estimate is completely analogous"
+		},
+		{
+			"id": "ws-06",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "Moreover, larger weights lead to smaller gradients, and Batch Normalization will stabilize the parameter growth.",
+			"cites": ["1607.06450v1"],
+			"from": "1502.03167v3",
+			"copied": "Moreover, larger weights lead to smaller gradients, and Batch Normalization will stabilize the parameter growth"
+		},
+		{
+			"id": "ws-07",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "We trained two models: the baseline order-embedding model as well as the same model with layer normalization applied to the GRU.",
+			"cites": ["1502.03167v3"],
+			"from": "1607.06450v1",
+			"copied": "We trained two models: the baseline order-embedding model as well as the same model with layer normalization applied to the GRU"
+		},
+		{
+			"id": "ws-08",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "They hoped “our comprehensive test set will help the research community to improve the existing techniques for estimating the word vectors”.",
+			"cites": ["1802.05365v2"],
+			"from": "1301.3781v3",
+			"copied": "our comprehensive test set will help the research community to improve the existing techniques for estimating the word vectors"
+		},
+		{
+			"id": "ws-09",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "The GLUE organizers provide training and development data splits as well as a submission server and leaderboard that allows participants to evaluate and compare their systems on private held-out test data.",
+			"cites": ["1810.04805v2"],
+			"from": "1907.11692v1",
+			"copied": "The GLUE organizers provide training and development data splits as well as a submission server and leaderboard that allows participants to evaluate and compare their systems on private held-out test data"
+		},
+		{
+			"id": "ws-10",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "The question is how many training examples are needed to achieve good passage retrieval performance.",
+			"cites": ["2005.11401v4"],
+			"from": "2004.04906v3",
+			"copied": "how many training examples are needed to achieve good passage retrieval performance"
+		},
+		{
+			"id": "ws-11",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "RAG-Token may do best on Jeopardy because “it can generate responses that combine content from several documents”.",
+			"cites": ["2004.04906v3"],
+			"from": "2005.11401v4",
+			"copied": "it can generate responses that combine content from several documents"
+		},
+		{
+			"id": "ws-12",
+			"category": "wrong_source",
+			"expect": "wrong_source",
+			"text": "As Osei argues, “the history of retrieval is a history of deciding which words count”.",
+			"cites": ["book-osei-2021"],
+			"from": "note:n9",
+			"copied": "the history of retrieval is a history of deciding which words count"
+		},
+		{
+			"id": "sr-01",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "Retrieval systems have always encoded a view of what their users need.",
+			"cites": [],
+			"from": "doc:chapter-1",
+			"copied": "Retrieval systems have always encoded a view of what their users need"
+		},
+		{
+			"id": "sr-02",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "Early search tools ranked documents by the words they shared with a query, and that habit shaped how a generation of researchers wrote their abstracts.",
+			"cites": [],
+			"from": "doc:chapter-1",
+			"copied": "Early search tools ranked documents by the words they shared with a query, and that habit shaped how a generation of researchers wrote their abstracts"
+		},
+		{
+			"id": "sr-03",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "In short, what a model counts as similar is therefore a design decision with consequences for which papers get read.",
+			"cites": [],
+			"from": "doc:chapter-1",
+			"copied": "what a model counts as similar is therefore a design decision with consequences for which papers get read"
+		},
+		{
+			"id": "sr-04",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "Neural models changed the unit of comparison from the word to the passage, as the next section shows.",
+			"cites": [],
+			"from": "doc:chapter-1",
+			"copied": "Neural models changed the unit of comparison from the word to the passage"
+		},
+		{
+			"id": "sr-05",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "This chapter traces that decision from inverted indexes to dense retrieval.",
+			"cites": [],
+			"from": "doc:chapter-1",
+			"copied": "This chapter traces that decision from inverted indexes to dense retrieval"
+		},
+		{
+			"id": "sr-06",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "We study how researchers move between their reading notes and their drafts.",
+			"cites": [],
+			"from": "doc:workshop-abstract",
+			"copied": "We study how researchers move between their reading notes and their drafts"
+		},
+		{
+			"id": "sr-07",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "Across twelve interviews, participants described losing track of which sentences they had copied and which they had written themselves.",
+			"cites": [],
+			"from": "doc:workshop-abstract",
+			"copied": "Across twelve interviews, participants described losing track of which sentences they had copied and which they had written themselves"
+		},
+		{
+			"id": "sr-08",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "Most kept quotations in a separate file and rarely went back to it while drafting.",
+			"cites": [],
+			"from": "doc:workshop-abstract",
+			"copied": "Most kept quotations in a separate file and rarely went back to it while drafting"
+		},
+		{
+			"id": "sr-09",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "A writing tool should keep the source of every copied sentence within reach rather than asking the writer to remember it.",
+			"cites": [],
+			"from": "doc:workshop-abstract",
+			"copied": "A writing tool should keep the source of every copied sentence within reach rather than asking the writer to remember it"
+		},
+		{
+			"id": "sr-10",
+			"category": "self_reuse",
+			"expect": "self_reuse",
+			"text": "Participants described losing track of which sentences they had copied and which they had written themselves, a pattern this thesis returns to.",
+			"cites": [],
+			"from": "doc:workshop-abstract",
+			"copied": "Participants described losing track of which sentences they had copied and which they had written themselves"
+		},
+		{
+			"id": "sp-01",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "To the best of our knowledge, no one has asked doctoral students how they file their quotations.",
+			"cites": [],
+			"stock": "to the best of our knowledge"
+		},
+		{
+			"id": "sp-02",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "To the best of our knowledge, the interview data used here have not been analysed before.",
+			"cites": [],
+			"stock": "to the best of our knowledge"
+		},
+		{
+			"id": "sp-03",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "The rest of this paper is organized as follows: the next section describes the interviews and the one after it the tool.",
+			"cites": [],
+			"stock": "the rest of this paper is organized as follows"
+		},
+		{
+			"id": "sp-04",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "The rest of this paper is organized as follows, with related work first and our own study second.",
+			"cites": [],
+			"stock": "the rest of this paper is organized as follows"
+		},
+		{
+			"id": "sp-05",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "A full account of copyright law is beyond the scope of this paper.",
+			"cites": [],
+			"stock": "is beyond the scope of this paper"
+		},
+		{
+			"id": "sp-06",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "Whether these habits differ by discipline is beyond the scope of this paper.",
+			"cites": [],
+			"stock": "is beyond the scope of this paper"
+		},
+		{
+			"id": "sp-07",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "Experimental results show that the proposed method halves the time writers spend looking for a quotation.",
+			"cites": [],
+			"stock": "experimental results show that the proposed method"
+		},
+		{
+			"id": "sp-08",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "Experimental results show that the proposed method is preferred by most participants.",
+			"cites": [],
+			"stock": "experimental results show that the proposed method"
+		},
+		{
+			"id": "sp-09",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "Dense retrievers now claim a new state of the art almost every month.",
+			"cites": [],
+			"stock": "a new state of the art"
+		},
+		{
+			"id": "sp-10",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "Each of these systems was reported as a new state of the art when it appeared.",
+			"cites": [],
+			"stock": "a new state of the art"
+		},
+		{
+			"id": "sp-11",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "Several of the retrievers reach state of the art performance on one benchmark and fall behind on the next.",
+			"cites": [],
+			"stock": "state of the art performance on"
+		},
+		{
+			"id": "sp-12",
+			"category": "stock_phrase",
+			"expect": "none",
+			"text": "None of the tools we tested offered state of the art performance on recall of the writer’s own notes.",
+			"cites": [],
+			"stock": "state of the art performance on"
+		},
+		{
+			"id": "cp-01",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "By running several attention operations side by side, the model can look at different kinds of relationship between words at once.",
+			"cites": ["1706.03762v7"],
+			"from": "1706.03762v7",
+			"paraphrases": "Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions."
+		},
+		{
+			"id": "cp-02",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "That deeper networks can train worse than shallower ones hints that stacked nonlinear layers struggle to learn to leave their input unchanged.",
+			"cites": ["1512.03385v1"],
+			"from": "1512.03385v1",
+			"paraphrases": "The degradation problem suggests that the solvers might have difficulties in approximating identity mappings by multiple nonlinear layers."
+		},
+		{
+			"id": "cp-03",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "Neither training nor sampling requires a Markov chain or an approximate inference network.",
+			"cites": [],
+			"from": "1406.2661v1",
+			"paraphrases": "There is no need for any Markov chains or unrolled approximate inference networks during either training or generation of samples."
+		},
+		{
+			"id": "cp-04",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "In experiments, the optimiser held up well against the alternatives it was compared with.",
+			"cites": ["1412.6980v9"],
+			"from": "1412.6980v9",
+			"paraphrases": "Empirical results demonstrate that Adam works well in practice and compares favorably to other stochastic optimization methods."
+		},
+		{
+			"id": "cp-05",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "Because of this, networks need smaller step sizes and carefully chosen starting weights, and those with saturating activations become very difficult to train.",
+			"cites": ["1502.03167v3"],
+			"from": "1502.03167v3",
+			"paraphrases": "This slows down the training by requiring lower learning rates and careful parameter initialization, and makes it notoriously hard to train models with saturating nonlinearities."
+		},
+		{
+			"id": "cp-06",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "One way to see dropout is as training a vast family of networks at once, all sharing the same parameters.",
+			"cites": [],
+			"from": "1503.02531v1",
+			"paraphrases": "Dropout can be viewed as a way of training an exponentially large ensemble of models that share weights."
+		},
+		{
+			"id": "cp-07",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "Recurrent networks tend to let the size of their inputs drift up or down from one step to the next, so gradients either blow up or die away.",
+			"cites": ["1607.06450v1"],
+			"from": "1607.06450v1",
+			"paraphrases": "In a standard RNN, there is a tendency for the average magnitude of the summed inputs to the recurrent units to either grow or shrink at every time-step, leading to exploding or vanishing gradients."
+		},
+		{
+			"id": "cp-08",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "The task is to label every node in a network, such as papers linked by citations, when only a few nodes come labelled.",
+			"cites": ["1609.02907v4"],
+			"from": "1609.02907v4",
+			"paraphrases": "We consider the problem of classifying nodes (such as documents) in a graph (such as a citation network), where labels are only available for a small subset of nodes."
+		},
+		{
+			"id": "cp-09",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "The contextual vectors help most when training data are scarce, cutting how much data a model needs to hit the same score.",
+			"cites": ["1802.05365v2"],
+			"from": "1802.05365v2",
+			"paraphrases": "Improvements with ELMo are largest for smaller training sets and significantly reduce the amount of training data needed to reach a given level of performance."
+		},
+		{
+			"id": "cp-10",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "Byte-pair encoding splits text into pieces smaller than words, chosen from frequency counts over the training text.",
+			"cites": [],
+			"from": "1907.11692v1",
+			"paraphrases": "Instead of full words, BPE relies on subwords units, which are extracted by performing statistical analysis of the training corpus."
+		},
+		{
+			"id": "cp-11",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "Two arguments only count as alike if they reach comparable conclusions by comparable reasoning.",
+			"cites": ["1908.10084v1"],
+			"from": "1908.10084v1",
+			"paraphrases": "To be considered similar, arguments must not only make similar claims, but also provide a similar reasoning."
+		},
+		{
+			"id": "cp-12",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "Learned dense vectors were shown to beat, and perhaps make redundant, term-matching retrieval for answering open questions.",
+			"cites": ["2004.04906v3"],
+			"from": "2004.04906v3",
+			"paraphrases": "In this work, we demonstrated that dense retrieval can outperform and potentially replace the traditional sparse retrieval component in open-domain question answering."
+		},
+		{
+			"id": "cp-13",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "The authors combine what a model has memorised in its weights with an external store it can look things up in.",
+			"cites": ["2005.11401v4"],
+			"from": "2005.11401v4",
+			"paraphrases": "In this work, we presented hybrid generation models with access to parametric and non-parametric memory."
+		},
+		{
+			"id": "cp-14",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "How cheaply a model pre-trains depends on its schedule, optimiser and regularisation as much as on its design.",
+			"cites": ["2010.11929v2"],
+			"from": "2010.11929v2",
+			"paraphrases": "However, we note that pre-training efficiency may be affected not only by the architecture choice, but also other parameters, such as training schedule, optimizer, weight decay, etc."
+		},
+		{
+			"id": "cp-15",
+			"category": "clean_paraphrase",
+			"expect": "none",
+			"text": "One model guesses a word from its neighbours; the other guesses the neighbours from the word.",
+			"cites": [],
+			"from": "1301.3781v3",
+			"paraphrases": "The CBOW architecture predicts the current word based on the context, and the Skip-gram predicts surrounding words given the current word."
+		},
+		{
+			"id": "pa-01",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "Any force directed layout algorithm requires a description of both the attractive and repulsive forces.",
+			"cites": [],
+			"from": "1802.03426v3",
+			"copied": "Any force directed layout algorithm requires a description of both the attractive and repulsive forces",
+			"as_extracted": "description of both the a\u008aractive and repulsive forces",
+			"why": "The extractor lost the tt ligature to a control character."
+		},
+		{
+			"id": "pa-02",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "The algorithm proceeds by iteratively applying attractive and repulsive forces at each edge or vertex.",
+			"cites": [],
+			"from": "1802.03426v3",
+			"copied": "The algorithm proceeds by iteratively applying attractive and repulsive forces at each edge or vertex",
+			"as_extracted": "iteratively applying a\u008aractive and repulsive forces",
+			"why": "The extractor lost the tt ligature to a control character."
+		},
+		{
+			"id": "pa-03",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "Convergence to a local minima is guaranteed by slowly decreasing the attractive and repulsive forces in a similar fashion to that used in simulated annealing.",
+			"cites": [],
+			"from": "1802.03426v3",
+			"copied": "Convergence to a local minima is guaranteed by slowly decreasing the attractive and repulsive forces in a similar fashion to that used in simulated annealing",
+			"as_extracted": "slowly decreasing the a\u008aractive and repulsive forces",
+			"why": "The extractor lost the tt ligature to a control character."
+		},
+		{
+			"id": "pa-04",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "Unlike left-to-right language model pre-training, the MLM objective enables the representation to fuse the left and the right context, which allows us to pretrain a deep bidirectional Transformer.",
+			"cites": [],
+			"from": "1810.04805v2",
+			"copied": "Unlike left-to-right language model pre-training, the MLM objective enables the representation to fuse the left and the right context, which allows us to pretrain a deep bidirectional Transformer",
+			"as_extracted": "Unlike left-toright language model",
+			"why": "The extractor lost a hyphen at a line break."
+		},
+		{
+			"id": "pa-05",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "The passage selection model serves as a reranker through cross-attention between the question and the passage.",
+			"cites": [],
+			"from": "2004.04906v3",
+			"copied": "The passage selection model serves as a reranker through cross-attention between the question and the passage",
+			"as_extracted": "reranker through crossattention between",
+			"why": "The extractor lost a hyphen at a line break."
+		},
+		{
+			"id": "pa-06",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "These parameters are learned along with the original model parameters, and restore the representation power of the network.",
+			"cites": [],
+			"from": "1502.03167v3",
+			"copied": "These parameters are learned along with the original model parameters, and restore the representation power of the network",
+			"as_extracted": "restore the representation power√ of the network",
+			"why": "A symbol from a neighbouring formula landed in the text."
+		},
+		{
+			"id": "pa-07",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "Using large models and datasets, we demonstrate Adam can eﬃciently solve practical deep learning problems.",
+			"cites": [],
+			"from": "1412.6980v9",
+			"copied": "Using large models and datasets, we demonstrate Adam can eﬃciently solve practical deep learning problems",
+			"why": "Pasted from the PDF with the ffi ligature."
+		},
+		{
+			"id": "pa-08",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "We also augment the test set by horizontal ﬂipping of the images; the soft-max class posteriors of the original and ﬂipped images are averaged to obtain the ﬁnal scores for the image.",
+			"cites": [],
+			"from": "1409.1556v6",
+			"copied": "We also augment the test set by horizontal ﬂipping of the images; the soft-max class posteriors of the original and ﬂipped images are averaged to obtain the ﬁnal scores for the image",
+			"why": "Pasted from the PDF with fl and fi ligatures."
+		},
+		{
+			"id": "pa-09",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "In this publication, we use the pre-trained BERT and RoBERTa network and only ﬁne-tune it to yield useful\u00a0sentence embeddings.",
+			"cites": [],
+			"from": "1908.10084v1",
+			"copied": "In this publication, we use the pre-trained BERT and RoBERTa network and only ﬁne-tune it to yield useful\u00a0sentence embeddings",
+			"why": "Pasted with a fi ligature and a no-break space."
+		},
+		{
+			"id": "pa-10",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "To reduce overﬁtting and share the work of learning lower level feature detectors, each specialist model is initialized with the weights of the generalist model.",
+			"cites": [],
+			"from": "1503.02531v1",
+			"copied": "To reduce overﬁtting and share the work of learning lower level feature detectors, each specialist model is initialized with the weights of the generalist model",
+			"why": "Pasted from the PDF with a fi ligature."
+		},
+		{
+			"id": "pa-11",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "We hypothesize that it is easier to opti\u00admize the residual mapping than to optimize the original, unreferenced mapping.",
+			"cites": [],
+			"from": "1512.03385v1",
+			"copied": "We hypothesize that it is easier to opti\u00admize the residual mapping than to optimize the original, unreferenced mapping",
+			"why": "Pasted with a soft hyphen."
+		},
+		{
+			"id": "pa-12",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "This eﬀect is ampliﬁed as the network depth increases.",
+			"cites": [],
+			"from": "1502.03167v3",
+			"copied": "This eﬀect is ampliﬁed as the network depth increases",
+			"why": "Pasted with ligatures close enough together to break every six-word run."
+		},
+		{
+			"id": "pa-13",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "Then the BN layers are ﬁxed during ﬁne-tuning for object detection.",
+			"cites": [],
+			"from": "1512.03385v1",
+			"copied": "Then the BN layers are ﬁxed during ﬁne-tuning for object detection",
+			"why": "Pasted with ligatures close enough together to break every six-word run."
+		},
+		{
+			"id": "pa-14",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "We do not observe a signiﬁcant diﬀerence between BERT and RoBERTa.",
+			"cites": [],
+			"from": "1908.10084v1",
+			"copied": "We do not observe a signiﬁcant diﬀerence between BERT and RoBERTa",
+			"why": "Pasted with ligatures close enough together to break every six-word run."
+		},
+		{
+			"id": "pa-15",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "Evaluators also ﬁnd RAG generations to be more speciﬁc by a large margin.",
+			"cites": [],
+			"from": "2005.11401v4",
+			"copied": "Evaluators also ﬁnd RAG generations to be more speciﬁc by a large margin",
+			"why": "Pasted with ligatures close enough together to break every six-word run."
+		},
+		{
+			"id": "pa-16",
+			"category": "pdf_artefact",
+			"expect": "uncited",
+			"text": "Our model draws inspiration both from the field of graph-based semi-supervised learning and from recent work on neural net- works that operate on graphs.",
+			"cites": [],
+			"from": "1609.02907v4",
+			"copied": "Our model draws inspiration both from the field of graph-based semi-supervised learning and from recent work on neural net- works that operate on graphs",
+			"why": "Pasted with the hyphen of a line break."
+		},
+		{
+			"id": "pa-17",
+			"category": "pdf_artefact",
+			"expect": "none",
+			"text": "Dosovitskiy et al. apply “a standard Transformer directly to images, with the fewest possible modiﬁcations”.",
+			"cites": ["2010.11929v2"],
+			"from": "2010.11929v2",
+			"copied": "a standard Transformer directly to images, with the fewest possible modiﬁcations",
+			"why": "Quoted and cited rightly, pasted with a fi ligature: nothing to report."
+		}
+	]
+}
