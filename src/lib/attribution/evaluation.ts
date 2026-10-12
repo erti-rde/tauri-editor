@@ -153,7 +153,7 @@ export function passagesFrom(chunks: Chunk[], fixture: Fixture): Passage[] {
 export function looseWords(text: string): string[] {
 	return text
 		.normalize('NFKC')
-		.replace(/­/g, '')
+		.replace(/\u00AD/g, '')
 		.replace(/(\p{L})- (\p{Ll})/gu, '$1$2')
 		.toLowerCase()
 		.split(/[^\p{L}\p{N}]+/u)
@@ -179,6 +179,27 @@ const parts = (copied: string | string[] | undefined): string[] =>
 	copied === undefined ? [] : Array.isArray(copied) ? copied : [copied];
 
 const QUOTE_MARKS = /[“”"]/;
+
+/** The categories whose sentences cite the work their words come from. */
+const CITES_ITS_SOURCE: ReadonlySet<Category> = new Set([
+	'verbatim_cited_unquoted',
+	'quoted_cited_exact',
+	'drifted_quote'
+]);
+
+/**
+ * Which version of the labelled set a result was measured on: a hash of the
+ * whole fixture, so last-run.json can be told apart from a set edited since
+ * without anyone remembering to run it again. FNV-1a, which needs no imports.
+ */
+export function fixtureFingerprint(fixture: Fixture): string {
+	let hash = 0x811c9dc5;
+	for (const unit of JSON.stringify(fixture)) {
+		hash ^= unit.codePointAt(0)!;
+		hash = Math.imul(hash, 0x01000193) >>> 0;
+	}
+	return hash.toString(16).padStart(8, '0');
+}
 
 /**
  * What's wrong with the labels, without the corpus: each problem a line.
@@ -206,9 +227,26 @@ export function checkLabels(fixture: Fixture, corpusIds: Iterable<string>): stri
 
 		if (QUOTED.has(s.category) && !QUOTE_MARKS.test(s.text)) say('should quote, and does not');
 
-		if (s.from?.startsWith('note:') && !notes.has(s.from.slice(5))) say(`no ${s.from}`);
-		if (s.from?.startsWith('doc:') && !documents.has(s.from.slice(4))) say(`no ${s.from}`);
-		if (s.from && !s.from.includes(':') && !known.has(s.from)) say(`from unknown ${s.from}`);
+		if (s.from?.startsWith('note:')) {
+			if (!notes.has(s.from.slice(5))) say(`no ${s.from}`);
+		} else if (s.from?.startsWith('doc:')) {
+			if (!documents.has(s.from.slice(4))) say(`no ${s.from}`);
+		} else if (s.from && !known.has(s.from)) say(`from unknown ${s.from}`);
+
+		// The work the words belong to, which is what a citation of them names.
+		// Another document is the writer's own, so nothing cites it.
+		const work = s.from?.startsWith('note:')
+			? notes.get(s.from.slice(5))?.source
+			: s.from?.startsWith('doc:')
+				? undefined
+				: s.from;
+		if (s.expect === 'uncited' && s.cites.length > 0) say('labelled uncited, but cites');
+		if (CITES_ITS_SOURCE.has(s.category) && work && !s.cites.includes(work))
+			say(`should cite ${work}, and does not`);
+		if (s.category === 'wrong_source') {
+			if (s.cites.length === 0) say('a wrong-source citation needs a citation');
+			else if (work && s.cites.includes(work)) say(`cites ${work}, its right source`);
+		}
 
 		const copied = parts(s.copied);
 		if (COPIED.has(s.category)) {

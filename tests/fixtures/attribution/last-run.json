@@ -1,5 +1,6 @@
 {
 	"measured": "2026-10-12",
+	"fixture": "adf55b47",
 	"chunking": {
 		"targetChars": 380,
 		"overlap": 0.15,

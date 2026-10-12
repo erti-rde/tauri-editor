@@ -10,6 +10,7 @@ import {
 	baselineCheck,
 	checkAgainstCorpus,
 	checkLabels,
+	fixtureFingerprint,
 	formatReport,
 	looseWords,
 	score,
@@ -91,7 +92,8 @@ describe('checking the labels', () => {
 	});
 
 	it('refuses a citation of a source nobody has', () => {
-		const problems = checkLabels(small([sentence({ cites: ['p9'] })]), []);
+		const cited = { category: 'verbatim_cited_unquoted', expect: 'none' } as const;
+		const problems = checkLabels(small([sentence({ ...cited, cites: ['p1', 'p9'] })]), []);
 		expect(problems).toEqual(['s1: cites unknown source p9']);
 	});
 
@@ -145,6 +147,65 @@ describe('checking the labels', () => {
 		};
 		const problems = checkLabels(small([sentence({ from: 'note:n1' })], { notes: [note] }), []);
 		expect(problems).toEqual([expect.stringContaining('note:n1 lacks')]);
+	});
+
+	it('refuses words from somewhere that is neither a paper, a note nor a document', () => {
+		const problems = checkLabels(small([sentence({ from: 'book:p1' })]), []);
+		expect(problems).toEqual(['s1: from unknown book:p1']);
+	});
+
+	it('refuses a citation on a sentence labelled uncited', () => {
+		const problems = checkLabels(small([sentence({ cites: ['p1'] })]), []);
+		expect(problems).toEqual(['s1: labelled uncited, but cites']);
+	});
+
+	it('refuses a cited quotation that does not cite where its words are from', () => {
+		const text = '“Every index is an argument about what a reader will want to find.”';
+		const exact = { category: 'quoted_cited_exact', expect: 'none', text } as const;
+		expect(checkLabels(small([sentence({ ...exact, cites: [] })]), [])).toEqual([
+			's1: should cite p1, and does not'
+		]);
+		expect(checkLabels(small([sentence({ ...exact, cites: ['p2'] })]), [])).toEqual([
+			's1: should cite p1, and does not'
+		]);
+	});
+
+	it('refuses a wrong-source citation that cites nothing, or the right source', () => {
+		const wrong = { category: 'wrong_source', expect: 'wrong_source' } as const;
+		expect(checkLabels(small([sentence({ ...wrong, cites: [] })]), [])).toEqual([
+			's1: a wrong-source citation needs a citation'
+		]);
+		expect(checkLabels(small([sentence({ ...wrong, cites: ['p1'] })]), [])).toEqual([
+			's1: cites p1, its right source'
+		]);
+		expect(checkLabels(small([sentence({ ...wrong, cites: ['p2'] })]), [])).toEqual([]);
+	});
+
+	it('takes a note’s work as the source its words are from', () => {
+		const note = {
+			id: 'n1',
+			source: 'p2',
+			kind: 'source_note' as const,
+			quote: 'Every index is an argument about what a reader will want to find.',
+			body: ''
+		};
+		const problems = checkLabels(
+			small(
+				[
+					sentence({
+						category: 'wrong_source',
+						expect: 'wrong_source',
+						from: 'note:n1',
+						cites: ['p2']
+					})
+				],
+				{
+					notes: [note]
+				}
+			),
+			[]
+		);
+		expect(problems).toEqual(['s1: cites p2, its right source']);
 	});
 });
 
@@ -251,6 +312,8 @@ describe('the scores', () => {
 		expect(Object.keys(lastRun.categories)).toEqual([...CATEGORIES]);
 		const total = CATEGORIES.reduce((n, c) => n + lastRun.categories[c].n, 0);
 		expect(total).toBe(fixture.sentences.length);
+		// Counts can survive an edit to a sentence; the fingerprint can't.
+		expect(lastRun.fixture).toBe(fixtureFingerprint(fixture));
 	});
 });
 
@@ -308,9 +371,20 @@ describe('the baseline', () => {
 	});
 });
 
+describe('the fixture’s fingerprint', () => {
+	it('is the same for the same set, and changes with any sentence', () => {
+		const set = small([sentence({})]);
+		expect(fixtureFingerprint(set)).toMatch(/^[0-9a-f]{8}$/);
+		expect(fixtureFingerprint(small([sentence({})]))).toBe(fixtureFingerprint(set));
+		expect(fixtureFingerprint(small([sentence({ expect: 'none' })]))).not.toBe(
+			fixtureFingerprint(set)
+		);
+	});
+});
+
 describe('loose words', () => {
 	it('undo ligatures, soft hyphens and line-break hyphens, and keep real hyphens apart', () => {
-		expect(looseWords('eﬃcient opti­mize net- works semi-supervised')).toEqual([
+		expect(looseWords('e\uFB03cient opti\u00ADmize net- works semi-supervised')).toEqual([
 			'efficient',
 			'optimize',
 			'networks',
