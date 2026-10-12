@@ -26,6 +26,7 @@
 		"e2e:shots": "ERTI_SHOTS=1 playwright test shots",
 		"e2e:typing": "ERTI_TYPING=1 playwright test typing",
 		"eval:attribution": "node scripts/eval/eval-attribution.mjs",
+		"mutate:attribution": "stryker run",
 		"e2e:app": "wdio run e2e-app/wdio.conf.mjs"
 	},
 	"devDependencies": {
@@ -38,6 +39,8 @@
 		"@iconify-json/ph": "^1.2.2",
 		"@internationalized/date": "^3.12.2",
 		"@playwright/test": "1.63.0",
+		"@stryker-mutator/core": "^10.0.0",
+		"@stryker-mutator/vitest-runner": "^10.0.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.70.1",
 		"@sveltejs/vite-plugin-svelte": "^5.1.1",

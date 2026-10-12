@@ -44,6 +44,28 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+  mutation:
+    # The attribution classifier decides what a writer is told about their own
+    # sentences, so a change to its rules has to fail a test (M4-4 AC-3).
+    name: Attribution classifier, mutation-tested
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Mutation score of at least 85%
+        run: pnpm mutate:attribution
+
   e2e:
     name: Browser journeys
     runs-on: ubuntu-latest
