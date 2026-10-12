@@ -223,7 +223,7 @@ function longest(spans: Span[]): Span {
  * works share is not reported against the one the writer didn't cite. What
  * no cited work explains is reported against the work it matches: as uncited
  * when the sentence cites nothing, otherwise as cited to the wrong work. The
- * writer's own other documents count only where no source matches.
+ * writer's own other documents count only for words no source matches.
  */
 export function classify(
 	sentences: readonly CheckedSentence[],
@@ -295,10 +295,15 @@ export function classify(
 			findings.push(finding(index, cited.size > 0 ? 'wrong_source' : 'uncited', longest(group)));
 		}
 
-		if (fromSources.length > 0) continue;
+		// The writer's own other documents, for the words no source explains.
+		// A paper sharing six of them by chance doesn't make the rest any less
+		// the writer's own. A source's span covers itself, so only documents'
+		// spans get past this.
+		const sourced = fromSources.map((s) => s.sentenceWords);
 		const fromDocuments = new Map<string, Span[]>();
 		for (const span of spans) {
 			if (span.sharedWords < thresholds.minSharedWords) continue;
+			if (uncovered(span.sentenceWords, sourced) < thresholds.minSharedWords) continue;
 			const work = passageOf(span).work;
 			fromDocuments.set(work, [...(fromDocuments.get(work) ?? []), span]);
 		}

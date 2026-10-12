@@ -623,6 +623,37 @@ describe('classifying spans', () => {
 		expect(kinds([sentence(text, ['a-paper'])], both)).toEqual([]);
 	});
 
+	// M4-4 AC-1
+	it('still reports reuse when a source shares only a few of the words', () => {
+		const own =
+			'Retrieval systems have always encoded a view of what their users need, and rarely say so';
+		const text = `${own}.`;
+		// Six of its words in a paper: too few to report, and far from all of it.
+		const six = 'a view of what their users';
+		const paper = 'Designers take a view of what their users want from a catalogue.';
+		const found = matches(
+			[span(0, text, 0, own, own), span(0, text, 1, paper, six)],
+			[passage('ch2', own, 'document'), passage('a-paper', paper)]
+		);
+		expect(kinds([sentence(text)], found)).toEqual([[0, 'self_reuse', 'ch2']]);
+	});
+
+	// M4-4 AC-2
+	it('holds reuse to the floor of shared words, not the words it spans', () => {
+		const chapter = 'Retrieval systems have always encoded a view of what their users need.';
+		const text = 'Retrieval systems have always encoded a view of what they need.';
+		// Nine words spanned, seven of them shared: a word changed between runs.
+		const loose: Span = {
+			...span(0, text, 0, chapter, 'retrieval systems have always encoded a view'),
+			sentenceWords: [0, 9],
+			sharedWords: 7,
+			verbatimScore: 7 / 9
+		};
+		expect(
+			kinds([sentence(text)], matches([loose], [passage('ch2', chapter, 'document')]))
+		).toEqual([]);
+	});
+
 	// M4-4 AC-2
 	it('reports reuse from exactly the floor of shared words', () => {
 		const chapter = 'Retrieval systems have always encoded a view of what their users need.';
