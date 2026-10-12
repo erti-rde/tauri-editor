@@ -112,7 +112,8 @@ checklist.
   through the command and a library on disk: `cargo run --release --bin eval_attribution --
 bench`, recorded in `tests/fixtures/attribution/speed.json`.
 - **Mutation testing** (Stryker) on the classifier module: its thresholds decide what a
-  researcher is told, so a surviving mutant is a real risk.
+  researcher is told, so a surviving mutant is a real risk. `pnpm mutate:attribution` mutates
+  `src/lib/attribution/classify.ts` and fails below 85%; CI runs it on every PR.
 
 **M5 — history, DOCX, find & replace, file operations**
 
