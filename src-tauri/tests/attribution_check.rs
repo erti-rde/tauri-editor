@@ -199,6 +199,40 @@ async fn finds_each_kind_of_corpus_text_in_one_pass() {
     assert_eq!(found.passages.len(), 5);
 }
 
+// M4-3 AC-3
+#[tokio::test]
+async fn returns_only_the_passages_a_span_still_names() {
+    let w = world("named").await;
+    // Two overlapping chunks of one paper both hold the sentence's words. One
+    // span is kept, the longer, and only its passage crosses back.
+    let overlap = "c1c1a000c1c1a000c1c1a000c1c1a000c1c1a000c1c1a000c1c1a000c1c1a000";
+    let library = w.state.library().await.unwrap();
+    queries::register_source(&library, overlap, "/papers/overlap.pdf", "overlap.pdf")
+        .await
+        .unwrap();
+    let words = "Catalogues have long shaped the questions a reader thinks to ask of them.";
+    store_chunks_in(
+        &w.state,
+        overlap,
+        &[
+            chunk(&format!("An earlier passage ends where {words}"), 3),
+            chunk(
+                "Catalogues have long shaped the questions a reader thinks",
+                4,
+            ),
+        ],
+    )
+    .await
+    .unwrap();
+
+    let found = check(&w, &[words]).await;
+
+    assert_eq!(found.spans.len(), 1);
+    assert_eq!(found.passages.len(), 1, "{:?}", found.passages);
+    assert_eq!(found.passages[0].page, Some(3));
+    assert_eq!(found.spans[0].passage, 0);
+}
+
 // M4-3 AC-2
 #[tokio::test]
 async fn does_not_match_the_manuscript_against_itself() {

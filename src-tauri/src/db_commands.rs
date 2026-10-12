@@ -1723,6 +1723,15 @@ pub async fn check_attribution_in(
     let (spans, kept, read) = matching.await.or_internal()?;
     fed?;
 
+    // Only the passages a span still names cross back. A passage that shared
+    // words may have lost its span to a longer one from the same work's
+    // overlapping chunk, and its text is no use to the webview without one.
+    let named: std::collections::HashSet<u32> = spans.iter().map(|span| span.passage).collect();
+    let kept: Vec<_> = kept
+        .into_iter()
+        .filter(|(fed, _)| named.contains(fed))
+        .collect();
+
     // Renumber spans by the passages kept, so the result carries only those.
     let index: std::collections::HashMap<u32, u32> = kept
         .iter()

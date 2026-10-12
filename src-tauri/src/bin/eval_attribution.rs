@@ -113,6 +113,10 @@ struct Speed {
     chunks: usize,
     passages_read: u32,
     spans: usize,
+    /// What crosses to the webview: the passages a span names, each with its
+    /// text, and the whole result as the IPC layer serialises it.
+    passages_returned: usize,
+    response_bytes: usize,
     runs: usize,
     median_ms: f64,
     slowest_ms: f64,
@@ -249,6 +253,8 @@ async fn bench(root: &Path) -> Result<Speed, String> {
         chunks: stored,
         passages_read: found.read,
         spans: found.spans.len(),
+        passages_returned: found.passages.len(),
+        response_bytes: serde_json::to_vec(&found).map_err(|e| e.to_string())?.len(),
         runs: RUNS,
         median_ms: (times[RUNS / 2] * 10.0).round() / 10.0,
         slowest_ms: (times[RUNS - 1] * 10.0).round() / 10.0,

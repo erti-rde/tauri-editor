@@ -6,8 +6,10 @@
 	"chunks": 56010,
 	"passages_read": 56010,
 	"spans": 1150,
+	"passages_returned": 1020,
+	"response_bytes": 825457,
 	"runs": 5,
-	"median_ms": 528.9,
-	"slowest_ms": 535.2,
+	"median_ms": 355.9,
+	"slowest_ms": 366.2,
 	"budget_ms": 1000.0
 }
