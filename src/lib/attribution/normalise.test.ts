@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import shared from '../../../tests/fixtures/attribution/normalise.json';
-import { normalise, words } from './normalise';
+import { normalise, wordSpans, words } from './normalise';
 
 describe('normalising words for the attribution check', () => {
 	// M4-3 AC-1
@@ -42,5 +42,39 @@ describe('normalising words for the attribution check', () => {
 			normalise('the final networks are different')
 		);
 		expect(normalise('recur- rence')).toBe('recurrence');
+	});
+});
+
+describe('finding words in what was written', () => {
+	// M4-5 AC-4
+	it('reads the same words as `words`, on every shared case', () => {
+		for (const { text, words: expected } of shared.cases) {
+			expect(
+				wordSpans(text).map((w) => w.word),
+				text
+			).toEqual(expected);
+		}
+	});
+
+	// M4-5 AC-4
+	it('says where each word is in the original text', () => {
+		const text = 'The ﬁnal net­works, recur- rence, and été.';
+		expect(wordSpans(text).map(({ start, end }) => text.slice(start, end))).toEqual([
+			'The',
+			'ﬁnal',
+			'net­works',
+			'recur- rence',
+			'and',
+			'été'
+		]);
+		expect(wordSpans(text).map((w) => w.word)).toEqual(words(text));
+	});
+
+	// M4-5 AC-4
+	it('counts offsets in UTF-16 units, as `slice` takes them', () => {
+		const text = '\u{1D400}lpha beta';
+		const [first, second] = wordSpans(text);
+		expect(text.slice(first.start, first.end)).toBe('\u{1D400}lpha');
+		expect(text.slice(second.start, second.end)).toBe('beta');
 	});
 });
