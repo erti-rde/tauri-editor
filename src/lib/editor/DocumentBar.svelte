@@ -1,4 +1,9 @@
 <script lang="ts">
+	import Ellipsis from '~icons/lucide/ellipsis';
+	import History from '~icons/lucide/history';
+
+	import { Button, Menu, TextField } from '$lib/ui';
+
 	import type { ProjectDocument } from './documents';
 
 	/**
@@ -14,19 +19,18 @@
 		current: ProjectDocument | null;
 		onopen: (document: ProjectDocument) => void;
 		oncreate: (name: string) => void;
+		/** Show the open document's history (UX-9). */
+		onhistory: () => void;
 	}
 
-	const { documents, current, onopen, oncreate }: Props = $props();
+	const { documents, current, onopen, oncreate, onhistory }: Props = $props();
 
 	let naming = $state(false);
 	let draft = $state('');
-	let input = $state<HTMLInputElement>();
 
 	function startNaming() {
 		naming = true;
 		draft = '';
-		// The field is created by this state change, so focus waits for it.
-		queueMicrotask(() => input?.focus());
 	}
 
 	/**
@@ -67,25 +71,36 @@
 		>
 			{document.title}
 		</button>
+		{#if document.path === current?.path}
+			<!-- The open document's own menu, beside its tab (UX-9). Rename,
+			     Duplicate and Delete join History here (M5-7). -->
+			<Menu
+				label={`Document menu for ${document.title}`}
+				items={[{ label: 'History…', icon: History, onSelect: onhistory }]}
+			>
+				{#snippet trigger()}
+					<Ellipsis class="size-4" aria-hidden="true" />
+				{/snippet}
+			</Menu>
+		{/if}
 	{/each}
 
 	{#if naming}
-		<input
-			bind:this={input}
-			bind:value={draft}
-			class="border-accent bg-surface-raised text-ink ml-1 w-40 shrink-0 rounded border px-2 py-1 text-xs"
-			placeholder="Chapter one"
-			aria-label="Name for the new document"
-			{onkeydown}
-			onblur={confirm}
-		/>
+		<div class="ml-1 w-40 shrink-0">
+			<!-- Focused as it appears: the field exists because "+ New" was pressed. -->
+			<TextField
+				bind:value={draft}
+				label="Name for the new document"
+				hideLabel
+				placeholder="Chapter one"
+				autofocus
+				{onkeydown}
+				onblur={confirm}
+			/>
+		</div>
 	{:else}
-		<button
-			class="text-ink-muted hover:bg-surface-hover hover:text-ink ml-1 shrink-0 rounded px-2 py-1 text-xs"
-			onclick={startNaming}
-			title="New document"
-		>
+		<Button variant="ghost" size="sm" class="ml-1" onclick={startNaming} title="New document">
 			+ New
-		</button>
+		</Button>
 	{/if}
 </div>

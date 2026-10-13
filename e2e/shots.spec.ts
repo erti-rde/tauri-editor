@@ -216,3 +216,20 @@ test('shots of the Check panel', async ({ page }) => {
 	await expect(page.getByText('The document has changed since this check.')).toBeVisible();
 	await page.screenshot({ ...shot('28-check-stale'), animations: 'disabled' });
 });
+
+// M5-1: a document's history, with yesterday's version chosen.
+test('shots of History', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	await page.getByRole('button', { name: 'Document menu for Chapter 1' }).click();
+	await page.screenshot({ ...shot('29-document-menu'), animations: 'disabled' });
+	await page.getByRole('menuitem', { name: 'History…' }).click();
+
+	await page
+		.getByRole('region', { name: 'Yesterday' })
+		.getByRole('button', { name: /on close/ })
+		.click();
+	await expect(page.getByLabel('The snapshot, read-only')).toContainText('back-translation');
+	await page.screenshot({ ...shot('30-history'), animations: 'disabled' });
+});

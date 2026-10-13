@@ -152,9 +152,10 @@ export function createManuscriptSession(
 		async save(path, doc, sources) {
 			if (path === refused) return false;
 
-			// Until version history (M5-1) exists, the copy beside the file is
-			// the way back to what an older Erti wrote. Never over an earlier one:
-			// the first copy is the one worth keeping.
+			// The copy beside the file is the way back to what an older Erti
+			// wrote: version history (M5-1) keeps only what this build has
+			// saved. Never over an earlier one: the first copy is the one worth
+			// keeping.
 			//
 			// A copy already there is that first copy, and is kept. Any other
 			// failure stops the save: writing format 1 over the only copy of what
