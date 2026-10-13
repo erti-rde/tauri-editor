@@ -632,8 +632,12 @@
 	async function showHistory() {
 		const current = $documentsStore.current;
 		if (!current) return;
+		// Read-only until History replaces it: a keystroke while saving would
+		// land after the snapshot History shows as the newest.
+		$editor.setEditable(false, false);
 		const saved = await autosave.flush();
 		if (!saved) {
+			applyEditable();
 			errorToast('Could not save the current document, so its history was not opened.');
 			return;
 		}

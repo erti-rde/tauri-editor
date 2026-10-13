@@ -57,16 +57,20 @@
 	const old = $derived(history ? clearable(history.snapshots, now) : 0);
 
 	async function load() {
+		const path = doc.path;
 		try {
 			now = new Date();
-			history = await call(commands.snapshotHistory(doc.path));
+			const listed = await call(commands.snapshotHistory(path));
+			// Another document's history asked for meanwhile: this answer isn't its.
+			if (path !== doc.path) return;
+			history = listed;
 			failure = null;
 			const keep = history.snapshots.find((s) => s.file === shown?.snapshot.file);
 			const next = keep ?? history.snapshots[0];
 			if (next) await choose(next);
 			else shown = null;
 		} catch (error) {
-			failure = describeError(error);
+			if (path === doc.path) failure = describeError(error);
 		}
 	}
 
@@ -77,13 +81,16 @@
 
 	async function choose(snapshot: Snapshot) {
 		if (shown?.snapshot.file === snapshot.file && shown.content) return;
+		const path = doc.path;
 		try {
-			const loaded = parseManuscript(await call(commands.readSnapshot(doc.path, snapshot.file)));
+			const loaded = parseManuscript(await call(commands.readSnapshot(path, snapshot.file)));
+			// A snapshot of another document must never be what Restore puts back.
+			if (path !== doc.path) return;
 			const readable = loaded.status === 'ok' || loaded.status === 'newer';
 			shown = { snapshot, content: readable ? loaded.content : null };
 		} catch (error) {
 			log.warn(`Could not read the snapshot ${snapshot.file}`, error);
-			shown = { snapshot, content: null };
+			if (path === doc.path) shown = { snapshot, content: null };
 		}
 	}
 
