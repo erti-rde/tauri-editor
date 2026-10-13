@@ -11,6 +11,7 @@ import { matchSpans } from '$lib/harness/fakeMatcher';
 import type { AttributionMatches, DismissedFinding, MatchedPassage } from '$lib/ipc';
 import { showInPdf } from '$lib/pdfreader/showInPdf';
 import { checkAttribution } from '$lib/stores/db';
+import { errorToast } from '$lib/toast/Toast.svelte';
 
 import CheckPanel from './CheckPanel.svelte';
 import { attributionCheck } from './check.svelte';
@@ -164,7 +165,7 @@ async function citeNow(instance: TiptapEditor, work: string) {
 	});
 }
 
-function openManuscript(content: JSONContent[] = MANUSCRIPT) {
+function openManuscript(content: JSONContent[] = MANUSCRIPT, cite = citeNow) {
 	host = document.createElement('div');
 	document.body.append(host);
 	editor = new Editor({
@@ -172,7 +173,7 @@ function openManuscript(content: JSONContent[] = MANUSCRIPT) {
 		extensions: editorExtensions,
 		content: { type: 'doc', content }
 	});
-	const bridge = checkEditor(editor, () => 'chapter-1.erti.json', citeNow);
+	const bridge = checkEditor(editor, () => 'chapter-1.erti.json', cite);
 	// As Editor.svelte reports them: the writer's edits, not relabels or fixes.
 	editor.on('update', ({ transaction }) => {
 		if (transaction.getMeta('addToHistory') !== false) attributionCheck.edited();
@@ -342,6 +343,29 @@ describe('looking at a finding', () => {
 		await user.click(screen.getByRole('button', { name: copy.RUN_AGAIN }));
 		await waitFor(() => expect(screen.queryByText(copy.STALE)).not.toBeInTheDocument());
 	});
+
+	// M4-5 AC-5
+	it('says so when the document changed while the check was running', async () => {
+		const user = userEvent.setup();
+		openManuscript();
+		render(CheckPanel);
+
+		// The answer held back until the writer has typed.
+		const answer = vi.mocked(checkAttribution).getMockImplementation()!;
+		let release!: () => void;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		vi.mocked(checkAttribution).mockImplementationOnce(async (...args) => {
+			await held;
+			return answer(...args);
+		});
+
+		await user.click(screen.getByRole('button', { name: copy.RUN }));
+		editor!.commands.insertContentAt(1, 'Indeed, ');
+		release();
+
+		await screen.findByText(/sentences checked against/);
+		expect(screen.getByText(copy.STALE)).toBeInTheDocument();
+	});
 });
 
 describe('fixing a finding', () => {
@@ -401,6 +425,38 @@ describe('fixing a finding', () => {
 		// The fix's own edit isn't a change that makes the check stale.
 		expect(screen.queryByText(copy.STALE)).not.toBeInTheDocument();
 		expect(group('drifted_quote')).toBeInTheDocument();
+	});
+
+	// M4-8 AC-1: a fix that isn't made says why, and only what's so.
+	it('says the sentence changed only when it did', async () => {
+		const user = userEvent.setup();
+		openManuscript();
+		render(CheckPanel);
+		await runCheck(user);
+
+		// Typed into the sentence after the check: its words aren't where they were.
+		const at = editor!.state.doc.textContent.indexOf('dominated') + 1;
+		editor!.commands.insertContentAt(at, 'long ');
+		await user.click(within(group('uncited')).getByRole('button', { name: copy.ACTIONS.cite }));
+
+		expect(errorToast).toHaveBeenCalledWith(copy.FIX_FAILED);
+		expect(vi.mocked(checkAttribution)).toHaveBeenCalledTimes(1);
+	});
+
+	// M4-8 AC-1
+	it('says a fix was not made, not that the sentence changed, when citing is refused', async () => {
+		const user = userEvent.setup();
+		// As `citeWork` does for a work with no citation details: it says why
+		// itself, and inserts nothing.
+		openManuscript(MANUSCRIPT, async () => {});
+		render(CheckPanel);
+		await runCheck(user);
+
+		await user.click(within(group('uncited')).getByRole('button', { name: copy.ACTIONS.cite }));
+
+		expect(errorToast).toHaveBeenCalledWith(copy.FIX_NOT_MADE);
+		expect(errorToast).not.toHaveBeenCalledWith(copy.FIX_FAILED);
+		expect(group('uncited')).toBeInTheDocument();
 	});
 
 	// M4-6 AC-2
