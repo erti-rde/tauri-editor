@@ -214,8 +214,8 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 
 - [x] **M4-1** Fixtures and harness, before any UI
 - [x] **M4-2** Sentence walk
-- [ ] **M4-3** Shingle matching (ADR-6)
-- [ ] **M4-4** Classification, mutation-tested
+- [x] **M4-3** Shingle matching (ADR-6)
+- [x] **M4-4** Classification, mutation-tested
 - [ ] **M4-5** Check panel (UX-7)
 - [ ] **M4-6** Fixes
 - [ ] **M4-7** Dismissals persist (project migration 2)
