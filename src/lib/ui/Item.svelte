@@ -25,16 +25,34 @@
 		/** Something to its left: a match's score. */
 		leading?: Snippet;
 		actions?: Snippet;
+		/**
+		 * Choosing the row, as a finding is chosen to show its sentence and
+		 * source. The text becomes the button, so the actions stay their own.
+		 */
+		onselect?: () => void;
+		/** The row chosen: said by `aria-pressed` and a quiet background. */
+		selected?: boolean;
 	}
 
-	let { meta, title, text, body, quote, clamp = false, leading, actions }: Props = $props();
+	let {
+		meta,
+		title,
+		text,
+		body,
+		quote,
+		clamp = false,
+		leading,
+		actions,
+		onselect,
+		selected = false
+	}: Props = $props();
 
 	const id = $props.id();
 	let expanded = $state(false);
 	const long = $derived(clamp && (quote?.length ?? 0) > 120);
 </script>
 
-<div class="border-line flex gap-2.5 border-b px-3 py-2">
+<div class={['border-line flex gap-2.5 border-b px-3 py-2', selected && 'bg-surface-hover']}>
 	{@render leading?.()}
 	<div class="grid min-w-0 flex-1 gap-1">
 		{#if meta}
@@ -45,7 +63,19 @@
 		{#if title}
 			<p class="text-small text-ink font-medium">{title}</p>
 		{/if}
-		{#if text}
+		{#if text && onselect}
+			<button
+				type="button"
+				class={[
+					'text-small text-ink rounded text-left hover:underline focus-visible:underline',
+					clamp && 'line-clamp-2'
+				]}
+				aria-pressed={selected}
+				onclick={onselect}
+			>
+				{text}
+			</button>
+		{:else if text}
 			<p class="text-small text-ink">{text}</p>
 		{/if}
 		{#if body}

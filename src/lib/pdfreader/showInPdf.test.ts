@@ -107,3 +107,44 @@ describe('when the file has moved', () => {
 		expect(errorToast).toHaveBeenCalled();
 	});
 });
+
+describe('beside the manuscript', () => {
+	const manuscript = {
+		id: '/project/chapter-1.erti.json',
+		kind: 'document' as const,
+		title: 'Chapter 1'
+	};
+
+	// M4-5 AC-4
+	it('opens a pane beside the manuscript rather than covering it', async () => {
+		workspaceStore.open(manuscript);
+
+		await showInPdf({ sha256: 'abc123', page: 4 }, { beside: true });
+
+		const { panes } = get(workspaceStore);
+		expect(panes).toHaveLength(2);
+		expect(panes[0].active).toBe(manuscript.id);
+		expect(panes[1].active).toBe(PATH);
+	});
+
+	// M4-5 AC-4
+	it('uses the other pane when there is one already', async () => {
+		workspaceStore.open(manuscript);
+		workspaceStore.split();
+		const other = get(workspaceStore).focused;
+		workspaceStore.focus('pane-1');
+
+		await showInPdf({ sha256: 'abc123', page: 4 }, { beside: true });
+
+		const { panes } = get(workspaceStore);
+		expect(panes).toHaveLength(2);
+		expect(panes.find((p) => p.id === other)?.active).toBe(PATH);
+		expect(panes[0].active).toBe(manuscript.id);
+	});
+
+	// M4-5 AC-4
+	it('opens where it would anyway when no manuscript is on show', async () => {
+		await showInPdf({ sha256: 'abc123', page: 4 }, { beside: true });
+		expect(get(workspaceStore).panes).toHaveLength(1);
+	});
+});
