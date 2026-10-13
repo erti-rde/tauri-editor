@@ -828,3 +828,20 @@ body {
 		display: none;
 	}
 }
+
+/*
+ * The sentence a selected attribution finding is about (M4-5 AC-4). One
+ * sentence at a time, and quiet: a dotted underline in the accent, which says
+ * "this one" without the alarm a red squiggle would carry.
+ */
+.erti-check-sentence {
+	text-decoration: underline dotted hsl(var(--accent));
+	text-decoration-thickness: 2px;
+	text-underline-offset: 0.25em;
+}
+
+@media print {
+	.erti-check-sentence {
+		text-decoration: none;
+	}
+}
