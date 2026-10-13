@@ -916,7 +916,19 @@ test('the Check panel finds the planted chapter’s findings, shows one beside i
 	await expect(page.getByRole('button', { name: 'Dismissed (1)' })).toBeVisible();
 
 	// The writer's own edit makes it stale (AC-5).
-	// The writer's own edit.
 	await replaceWord(page, 'entirely the writer', 'nothing', 'little');
 	await expect(page.getByText('The document has changed since this check.')).toBeVisible();
+
+	// A new document hasn't been checked: the last one's findings aren't its.
+	await page.getByRole('button', { name: '+ New' }).click();
+	await page.getByRole('textbox', { name: 'Name for the new document' }).fill('Chapter three');
+	await page.keyboard.press('Enter');
+	await expect(page.getByRole('button', { name: 'Chapter three', exact: true })).toHaveAttribute(
+		'aria-current',
+		'page'
+	);
+	await expect(
+		page.getByText('Check this document’s sentences against your library.')
+	).toBeVisible();
+	await expect(page.getByText('The document has changed since this check.')).toHaveCount(0);
 });
