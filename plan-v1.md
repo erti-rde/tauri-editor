@@ -216,10 +216,10 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M4-2** Sentence walk
 - [x] **M4-3** Shingle matching (ADR-6)
 - [x] **M4-4** Classification, mutation-tested
-- [ ] **M4-5** Check panel (UX-7)
-- [ ] **M4-6** Fixes
-- [ ] **M4-7** Dismissals persist (project migration 2)
-- [ ] **M4-8** Copy review
+- [x] **M4-5** Check panel (UX-7)
+- [x] **M4-6** Fixes
+- [x] **M4-7** Dismissals persist (project migration 2)
+- [x] **M4-8** Copy review
 
 ### M5 — Writing essentials _(L)_ · [spec](docs/specs/M5.md)
 
