@@ -31,26 +31,69 @@ function fold(token: string): string {
 	return token.toLowerCase().replace(/ß/g, 'ss').replace(/ς/g, 'σ');
 }
 
+/** A character after NFKC, and the stretch of the original text it came from. */
+interface Unit {
+	char: string;
+	start: number;
+	end: number;
+}
+
+/** A word, and where it is in the text it was read from. */
+export interface WordSpan {
+	word: string;
+	/** UTF-16 offsets into the original text, `[start, end)`. */
+	start: number;
+	end: number;
+}
+
 /** Every word of `text`, normalised. */
 export function words(text: string): string[] {
 	// By code point, as Rust iterates chars: a letter outside the BMP is one.
-	const chars = Array.from(text.normalize('NFKC'));
-	const out: string[] = [];
+	const units = Array.from(text.normalize('NFKC'), (char) => ({ char, start: 0, end: 0 }));
+	return tokenise(units).map((w) => w.word);
+}
+
+/**
+ * Every word of `text` with its offsets in `text`, for finding the words a
+ * span names in what the writer wrote (M4-5, M4-6).
+ *
+ * NFKC is applied a character at a time, with any combining marks after it,
+ * so each word can be traced back. That agrees with `words` on every text
+ * the fixture holds; a caller that needs to be sure compares the two.
+ */
+export function wordSpans(text: string): WordSpan[] {
+	const units: Unit[] = [];
+	const clusters = text.match(/\P{M}\p{M}*|\p{M}+/gsu) ?? [];
+	let offset = 0;
+	for (const cluster of clusters) {
+		const end = offset + cluster.length;
+		for (const char of cluster.normalize('NFKC')) units.push({ char, start: offset, end });
+		offset = end;
+	}
+	return tokenise(units);
+}
+
+function tokenise(units: Unit[]): WordSpan[] {
+	const out: WordSpan[] = [];
 	let token = '';
+	let start = 0;
+	let end = 0;
 
 	const emit = () => {
-		if (token.length > 0) out.push(fold(token));
+		if (token.length > 0) out.push({ word: fold(token), start, end });
 		token = '';
 	};
 
-	for (let i = 0; i < chars.length; i++) {
-		const c = chars[i];
+	for (let i = 0; i < units.length; i++) {
+		const { char: c } = units[i];
 		if (WORD_CHAR.test(c)) {
+			if (token.length === 0) start = units[i].start;
 			token += c;
+			end = units[i].end;
 		} else if (HYPHENS.has(c) && token.length > 0 && LETTER.test(Array.from(token).at(-1)!)) {
 			let j = i + 1;
-			while (j < chars.length && SPACE.test(chars[j])) j++;
-			if (j > i + 1 && j < chars.length && LOWER.test(chars[j])) {
+			while (j < units.length && SPACE.test(units[j].char)) j++;
+			if (j > i + 1 && j < units.length && LOWER.test(units[j].char)) {
 				// A word broken across a line: carry on with the same word.
 				i = j - 1;
 				continue;
