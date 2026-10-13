@@ -1,4 +1,4 @@
-import { expect, launch, openManuscript, openProject, test } from './harness';
+import { expect, launch, openManuscript, openProject, replaceWord, test } from './harness';
 
 /**
  * Screenshots for PRs (M1a-1 AC-5): `pnpm e2e:shots` writes them to
@@ -188,4 +188,31 @@ test('shots of the Notes panel saying what happened', async ({ page }) => {
 		page.getByText('Nothing in your notes or papers is close to this paragraph.')
 	).toBeVisible();
 	await page.screenshot(shot('24-notes-nothing-close'));
+});
+
+// M4-5: the Check panel, run on the planted chapter, one finding chosen.
+test('shots of the Check panel', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await page.getByRole('button', { name: 'Check' }).click();
+	await page.screenshot(shot('25-check-not-run'));
+
+	await page.getByRole('button', { name: 'Run check' }).click();
+	await expect(page.getByText(/sentences checked against/)).toBeVisible();
+	await page.screenshot({ ...shot('26-check-findings'), animations: 'disabled' });
+
+	await page
+		.getByRole('region', { name: 'Matches a source, no citation nearby' })
+		.getByRole('button', { name: /Attention-only models/ })
+		.first()
+		.click();
+	await expect(page.locator('.erti-check-sentence')).toHaveCount(1);
+	await page.screenshot({ ...shot('27-check-beside-source'), animations: 'disabled' });
+
+	// The writer's own edit.
+	await replaceWord(page, 'entirely the writer', 'nothing', 'little');
+	await expect(page.getByText('The document has changed since this check.')).toBeVisible();
+	await page.screenshot({ ...shot('28-check-stale'), animations: 'disabled' });
 });

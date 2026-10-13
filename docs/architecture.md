@@ -17,10 +17,10 @@ planned item lands, it says so.
 │ lib/citations         PURE: citeproc engine, whole-document render, sanitize                   │
 │ lib/export            PURE: LaTeX, BibTeX              lib/theme      tokens, palettes, contrast│
 │ lib/import            PURE: .bib, .ris, CSL-JSON → CSL items; what the library has already      │
-│ lib/attribution       PURE: sentence walk, normalisation, classification (M4, ADR 006)         │
+│ lib/attribution       sentence walk, normalisation, classification (pure); Check panel (M4)    │
 │ lib/ui                primitives (M1c grows these)     lib/stores     app state + IPC wrappers  │
 └───────────────────────────────────────┬───────────────────────────────────────────────────────┘
-                                        │ lib/ipc: 62 typed commands (ADR 011); only results cross, never vectors
+                                        │ lib/ipc: 65 typed commands (ADR 011); only results cross, never vectors
 ┌─────────────────────────────── Rust core (src-tauri/src) ─────────────────────────────────────┐
 │ lib.rs            plugins, managed state, the command list (generate_handler!)                │
 │ db_commands.rs    commands over the two databases        commands.rs   fs listing, embedding   │
@@ -85,6 +85,13 @@ in the Tauri store `settings-store.json`.
   pass) → spans and the passages they name → `attribution/classify.ts` says what each span is.
   Both sides normalise words alike: `attribution/normalise.rs` and `normalise.ts` agree on
   `tests/fixtures/attribution/normalise.json`.
+  The Check panel (`attribution/CheckPanel.svelte`, state in `check.svelte.ts`) runs this only
+  when asked, and reaches the manuscript through `editor/checkEditor.ts`, which the editor hands
+  over as it does the outline: it reads the sentences, tracks each finding's sentence through
+  edits (`extensions/CheckMarks.ts`), underlines the chosen one, and makes the fixes. A fix
+  checks its sentence again at once. Dismissals live in the project (`dismissed_findings`,
+  project migration 2), keyed by the sentence's normalised words. Every word the panel shows
+  is in `attribution/copy.ts`.
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
   `export/bibtex.ts` → files → `compile_latex` if TeX exists.
 

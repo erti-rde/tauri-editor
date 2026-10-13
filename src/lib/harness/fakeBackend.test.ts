@@ -322,10 +322,11 @@ describe('behaving like the database', () => {
 		const listing = await call(commands.readDirectory(ROOT));
 		expect(listing.map((i) => i.name)).toEqual([
 			'Chapter 1.erti.json',
+			'Planted.erti.json',
 			'Shared chapter.erti.json',
 			'papers'
 		]);
-		expect(listing[2].children?.map((i) => i.name)).toEqual([
+		expect(listing.find((i) => i.name === 'papers')?.children?.map((i) => i.name)).toEqual([
 			'devlin-2019.pdf',
 			'scan-chapter.pdf',
 			'vaswani-2017.pdf'

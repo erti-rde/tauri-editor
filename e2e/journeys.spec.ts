@@ -1,4 +1,4 @@
-import { expect, launch, openManuscript, openProject, test } from './harness';
+import { expect, launch, openManuscript, openProject, replaceWord, test } from './harness';
 
 test('a first launch asks before anything is looked up online', async ({ page }) => {
 	await launch(page, '?consent=unasked');
@@ -508,7 +508,8 @@ test('removing a source asks first, and its citations then render from the manus
 	const dialog = page.getByRole('dialog', {
 		name: 'Remove “Attention Is All You Need” from your library?'
 	});
-	await expect(dialog).toContainText('Cited 1 time in Chapter 1 in this project.');
+	// The planted chapter (M4 Verify) cites it too.
+	await expect(dialog).toContainText('Cited 2 times in Chapter 1 and Planted in this project.');
 	await expect(dialog).toContainText(/\d+ highlights? will be deleted\./);
 	await expect(dialog).toContainText('It’s in this project’s folder');
 	await dialog.getByRole('button', { name: 'Remove' }).click();
@@ -857,4 +858,65 @@ test('a note on a source is found in the Notes panel, by its words and by its me
 	await page.getByRole('radio', { name: 'Meaning' }).click();
 	await expect(found).toBeVisible();
 	await expect(page.getByText('Nothing found by meaning.')).toHaveCount(0);
+});
+
+// M4-5 to M4-7, and the M4 Verify: the planted chapter, checked in the app.
+test('the Check panel finds the planted chapter’s findings, shows one beside its source, and fixes one', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await expect(page.locator('.ProseMirror')).toContainText('almost overnight');
+
+	await page.getByRole('button', { name: 'Check' }).click();
+	// Never on its own (AC-6).
+	await expect(
+		page.getByText('Check this document’s sentences against your library.')
+	).toBeVisible();
+	await page.getByRole('button', { name: 'Run check' }).click();
+
+	// Three sources: the harness's PDFs are one sample file, read on opening the
+	// project, so the scan with no details holds the same words as Vaswani.
+	await expect(
+		page.getByText(
+			'5 sentences checked against 3 sources in your library and 2 other documents in this project.'
+		)
+	).toBeVisible();
+	const group = (title: string) => page.getByRole('region', { name: title });
+	await expect(group('Matches a source, no citation nearby')).toContainText('Vaswani 2017 · p. 1');
+	await expect(group('Quoted, but the words differ from the source')).toContainText('source says');
+	await expect(group('Cited to one source, matches another')).toContainText('cited to Devlin 2019');
+	await expect(group('Reused from another document in this project')).toContainText('Chapter 1');
+
+	// Chosen: that sentence alone is underlined, and the paper opens beside it.
+	await group('Matches a source, no citation nearby')
+		.getByRole('button', { name: /Attention-only models/ })
+		.first()
+		.click();
+	await expect(page.locator('.erti-check-sentence')).toHaveCount(1);
+	await expect(page.locator('.erti-check-sentence')).toContainText('almost overnight');
+	await expect(page.getByRole('tab', { name: /vaswani-2017\.pdf/ })).toBeVisible();
+	await expect(page.locator('.ProseMirror')).toBeVisible();
+
+	// A fix checks the sentence again, and the finding clears (M4-6 AC-2).
+	// Cited to Vaswani, the scan's copy of the words is explained too.
+	await group('Matches a source, no citation nearby')
+		.getByRole('button', { name: 'Cite', exact: true })
+		.first()
+		.click();
+	await expect(group('Matches a source, no citation nearby')).toHaveCount(0);
+	await expect(page.getByText('The document has changed since this check.')).toHaveCount(0);
+
+	// Dismissed, it waits in its own group (M4-7 AC-3).
+	await group('Reused from another document in this project')
+		.getByRole('button', { name: 'Dismiss' })
+		.click();
+	await expect(page.getByRole('button', { name: 'Dismissed (1)' })).toBeVisible();
+
+	// The writer's own edit makes it stale (AC-5).
+	// The writer's own edit.
+	await replaceWord(page, 'entirely the writer', 'nothing', 'little');
+	await expect(page.getByText('The document has changed since this check.')).toBeVisible();
 });

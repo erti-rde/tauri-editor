@@ -145,6 +145,65 @@ export const manuscript = {
 	]
 };
 
+/**
+ * A chapter planted with one of each kind of attribution finding (M4 Verify),
+ * matched against the marks' quotes, which the fake library also holds as
+ * passages, and against Chapter 1:
+ *
+ * - mark-1's words with no citation: uncited;
+ * - mark-2 quoted and cited to Vaswani, with a word added: a drifted quote;
+ * - mark-1's words cited to Devlin: cited to the wrong source;
+ * - Chapter 1's opening sentence: reused from another document.
+ *
+ * And one sentence of the writer's own, which is nothing to report.
+ */
+export const PLANTED = `${ROOT}/Planted.erti.json`;
+
+const text = (value: string) => ({ type: 'text', text: value });
+const citing = (sha256: string) => ({ type: 'citation', attrs: { id: JSON.stringify([sha256]) } });
+
+export const plantedManuscript = {
+	type: 'doc',
+	content: [
+		{
+			type: 'paragraph',
+			content: [
+				text('Attention-only models replaced recurrence in machine translation almost overnight. ')
+			]
+		},
+		{
+			type: 'paragraph',
+			content: [
+				text('The authors “employ eight parallel attention layers, or attention heads” '),
+				citing(SHA.vaswani),
+				text('.')
+			]
+		},
+		{
+			type: 'paragraph',
+			content: [
+				text(
+					'As later work put it, attention-only models replaced recurrence in machine translation for good '
+				),
+				citing(SHA.devlin),
+				text('.')
+			]
+		},
+		{
+			type: 'paragraph',
+			content: [
+				text(
+					'Sequence models built on recurrence dominated machine translation until attention-only architectures showed that parallel training could reach better quality at lower cost.'
+				)
+			]
+		},
+		{
+			type: 'paragraph',
+			content: [text('This closing sentence is entirely the writer’s own and borrows nothing.')]
+		}
+	]
+};
+
 function labels(): AnnotationLabel[] {
 	return (
 		[
@@ -279,6 +338,7 @@ export function defaultFixture(): Fixture {
 		files: {
 			[MANUSCRIPT]: JSON.stringify(manuscript),
 			[SHARED]: JSON.stringify(sharedManuscript),
+			[PLANTED]: JSON.stringify(plantedManuscript),
 			// Opened before: this is how Erti knows a recent project is still there.
 			[`${ROOT}/.erti/project.db`]: '',
 			[`${ROOT}/papers/vaswani-2017.pdf`]: { pdf: paperUrl },

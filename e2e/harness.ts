@@ -60,3 +60,39 @@ export async function openManuscript(page: Page) {
 	await page.getByText('Chapter 1.erti.json').click();
 	await expect(page.locator('.ProseMirror')).toContainText('Attention in Low-Resource Translation');
 }
+
+/**
+ * Replace one word of a manuscript paragraph, as the writer would: a double
+ * click on the word, wherever it is on screen, then typing. Measured rather
+ * than clicked by offset, since a split pane can scroll the page's left edge
+ * out of view.
+ */
+export async function replaceWord(
+	page: Page,
+	paragraph: string,
+	word: string,
+	replacement: string
+) {
+	const at = await page.evaluate(
+		([paragraph, word]) => {
+			const p = [...document.querySelectorAll('.ProseMirror p')].find((e) =>
+				e.textContent?.includes(paragraph)
+			);
+			const walker = p && document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+			for (let node = walker?.nextNode(); node; node = walker!.nextNode()) {
+				const i = node.textContent!.indexOf(word);
+				if (i < 0) continue;
+				const range = document.createRange();
+				range.setStart(node, i);
+				range.setEnd(node, i + word.length);
+				const box = range.getBoundingClientRect();
+				return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+			}
+			return null;
+		},
+		[paragraph, word]
+	);
+	if (!at) throw new Error(`No “${word}” in the paragraph “${paragraph}”.`);
+	await page.mouse.dblclick(at.x, at.y);
+	await page.keyboard.type(replacement);
+}
