@@ -63,6 +63,41 @@ describe('Item', () => {
 		mount(Item, { quote: 'the effect was strongest', clamp: true });
 		expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
 	});
+
+	// M4-5 AC-4
+	it('can be chosen by its text, saying when it is', async () => {
+		const user = userEvent.setup();
+		const onselect = vi.fn();
+		const { rerender } = mount(Item, {
+			text: 'Indexes encode a view of their users.',
+			onselect,
+			actions: html('<button>Cite</button>')
+		});
+
+		const row = screen.getByRole('button', { name: 'Indexes encode a view of their users.' });
+		expect(row).toHaveAttribute('aria-pressed', 'false');
+		await user.click(row);
+		expect(onselect).toHaveBeenCalledOnce();
+		// The actions stay buttons of their own, not inside the chosen text.
+		expect(row).not.toContainElement(screen.getByRole('button', { name: 'Cite' }));
+
+		await rerender({
+			component: Item,
+			text: 'Indexes encode a view of their users.',
+			onselect,
+			selected: true
+		});
+		expect(screen.getByRole('button', { name: /Indexes encode/ })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
+	});
+
+	// M4-5 AC-4
+	it('is text, not a button, when it cannot be chosen', () => {
+		mount(Item, { text: 'A note.' });
+		expect(screen.queryByRole('button')).not.toBeInTheDocument();
+	});
 });
 
 // M1c-4 AC-3

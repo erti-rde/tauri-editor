@@ -79,7 +79,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | Something needs attention in place | `Banner`                               | `info`/`warning`/`danger`/`success`, in words, optionally one action                     |
 | Nothing to show                    | `EmptyState`                           | Say which kind of nothing: none yet, none match, or failed                               |
 | Working                            | `Loader`, `ProgressLine`               | ProgressLine when the count is known ("214 of 380")                                      |
-| A row in any list                  | `Item`                                 | Meta line (`LabelChip` · source · page), body, optional quote, actions                   |
+| A row in any list                  | `Item`                                 | Meta line (`LabelChip` · source · page), body, quote, actions; `onselect` to choose it   |
 | A label                            | `LabelChip`                            | The dot **and** the name, always                                                         |
 | A short fact beside something      | `Chip`                                 | "Book", "2 files"; `accent` for the one that should draw the eye                         |
 | A keyboard shortcut                | `Kbd`                                  | As the toolbar writes it: "Mod Shift Z"                                                  |

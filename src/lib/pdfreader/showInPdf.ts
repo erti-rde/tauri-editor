@@ -30,7 +30,19 @@ function fileName(path: string): string {
 	return path.split(/[\\/]/).pop() ?? path;
 }
 
-export async function showInPdf(target: SourceLocation): Promise<boolean> {
+export interface ShowOptions {
+	/**
+	 * Beside the manuscript rather than over it: in the other pane, opening
+	 * one if there's only the one (M4-5 AC-4). The Check panel's sources go
+	 * here, since the point is to read the sentence and the passage together.
+	 */
+	beside?: boolean;
+}
+
+export async function showInPdf(
+	target: SourceLocation,
+	options: ShowOptions = {}
+): Promise<boolean> {
 	const { sha256, ...location } = target;
 
 	let path: string | null = null;
@@ -59,7 +71,27 @@ export async function showInPdf(target: SourceLocation): Promise<boolean> {
 	// Not open yet. The reader cannot scroll before it has laid out its pages,
 	// so the jump is left for it to collect rather than raced against.
 	readerStore.requestJump(path, location);
-	workspaceStore.open({ id: path, kind: 'pdf', title: fileName(path) });
+	workspaceStore.open(
+		{ id: path, kind: 'pdf', title: fileName(path) },
+		options.beside ? besideManuscript() : undefined
+	);
 
 	return true;
+}
+
+/**
+ * The pane beside the manuscript: the other one, or a new one. Undefined, so
+ * the focused pane is used, when no manuscript is on show.
+ */
+function besideManuscript(): string | undefined {
+	const workspace = get(workspaceStore);
+	const writing = workspace.panes.find(
+		(pane) => pane.active && workspace.tabs[pane.active]?.kind === 'document'
+	);
+	if (!writing) return undefined;
+	const other = workspace.panes.find((pane) => pane.id !== writing.id);
+	if (other) return other.id;
+	workspaceStore.focus(writing.id);
+	workspaceStore.split();
+	return get(workspaceStore).focused;
 }
