@@ -16,7 +16,9 @@ import { call, commands, IpcError } from '$lib/ipc';
 import * as db from '$lib/stores/db';
 
 import { fakeCommands, stateFrom, type FakeCommands } from './fakeBackend';
-import { defaultFixture, MANUSCRIPT, ROOT, SHA } from './fixture';
+import { countSavedWords } from '$lib/editor/wordCount';
+
+import { chapterHistory, CUT_PARAGRAPH, defaultFixture, MANUSCRIPT, ROOT, SHA } from './fixture';
 import { useFakeBackend } from './testing';
 
 const backend = useFakeBackend();
@@ -32,7 +34,9 @@ describe('the contract (M1a-1 AC-2, AC-6)', () => {
 			list: () => [],
 			has: () => false,
 			pdfUrl: () => undefined,
-			text: () => undefined
+			text: () => undefined,
+			write: () => {},
+			remove: () => {}
 		});
 		expect(Object.keys(fake).sort()).toEqual(Object.keys(commands).sort());
 	});
@@ -383,5 +387,60 @@ describe('the plugins', () => {
 	it('answers path questions', async () => {
 		expect(await homeDir()).toBe('/fake/home');
 		expect(await join('/a', 'b', '../c')).toBe('/a/c');
+	});
+});
+
+describe('version history (M5-1)', () => {
+	const history = () => call(commands.snapshotHistory(MANUSCRIPT));
+
+	it('labels the fixture’s snapshots with the words the editor counts', async () => {
+		await openFixtureProject();
+		const listed = await history();
+		expect(listed.snapshots.map((s) => [s.trigger, s.words])).toEqual([
+			['close', 57],
+			['writing', 27]
+		]);
+		for (const s of listed.snapshots) {
+			const text = await call(commands.readSnapshot(MANUSCRIPT, s.file));
+			expect(countSavedWords(JSON.parse(text))).toBe(s.words);
+		}
+	});
+
+	// M5-1 AC-2, AC-4: as `history.rs` does it.
+	it('restores yesterday’s snapshot, keeping today’s first', async () => {
+		await openFixtureProject();
+		const today = await readTextFile(MANUSCRIPT);
+		const { yesterday, dir } = chapterHistory();
+
+		const before = await call(commands.restoreSnapshot(MANUSCRIPT, yesterday, 39));
+		expect(before?.trigger).toBe('before_restore');
+		expect(await readTextFile(MANUSCRIPT)).toContain(CUT_PARAGRAPH);
+		expect(await readTextFile(`${dir}/${before!.file}`)).toBe(today);
+
+		// The same bytes again: no second copy.
+		await writeTextFile(MANUSCRIPT, today);
+		expect(await call(commands.takeSnapshot(MANUSCRIPT, 'close', 39))).toBeNull();
+		// While writing, not within ten minutes of the last.
+		await writeTextFile(MANUSCRIPT, `${today} `);
+		expect(await call(commands.takeSnapshot(MANUSCRIPT, 'writing', 39))).toBeNull();
+		expect((await history()).snapshots).toHaveLength(3);
+	});
+
+	it('clears what is older than it is asked to, and refuses what isn’t a snapshot', async () => {
+		await openFixtureProject();
+		expect(await call(commands.clearSnapshots(MANUSCRIPT, 2))).toBe(1);
+		expect((await history()).snapshots).toHaveLength(1);
+
+		for (const file of ['../Chapter 1.erti.json', 'snapshots.json']) {
+			await expect(call(commands.readSnapshot(MANUSCRIPT, file))).rejects.toMatchObject({
+				kind: 'InvalidInput'
+			});
+		}
+		await expect(
+			call(commands.snapshotHistory('/elsewhere/Theirs.erti.json'))
+		).rejects.toMatchObject({ kind: 'PermissionDenied' });
+		await expect(call(commands.snapshotHistory(`${ROOT}/notes.txt`))).rejects.toMatchObject({
+			kind: 'InvalidInput'
+		});
 	});
 });

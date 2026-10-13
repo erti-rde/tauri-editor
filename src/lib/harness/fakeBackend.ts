@@ -19,6 +19,7 @@ import type {
 
 import { words as normalisedWords } from '$lib/attribution/normalise';
 
+import { fakeHistory } from './fakeHistory';
 import { manuscriptParagraphs, matchSpans } from './fakeMatcher';
 import type { Fixture, LibrarySource } from './fixture';
 
@@ -176,12 +177,17 @@ export interface Disk {
 	pdfUrl(path: string): string | undefined;
 	/** A text file's contents, when the path is one. */
 	text(path: string): string | undefined;
+	/** Write a text file, making its folders: what Rust's own writes do. */
+	write(path: string, text: string): void;
+	remove(path: string): void;
 }
 
 const NOT_OPEN_LIBRARY = appError('Conflict', "The library isn't open yet.");
 const NOT_OPEN_PROJECT = appError('Conflict', 'No project is open.');
 
 export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
+	const history = fakeHistory(disk);
+	const seconds = () => Math.floor(Date.now() / 1000);
 	const library = () => {
 		if (!state.libraryOpen) throw NOT_OPEN_LIBRARY;
 		return state.library;
@@ -1149,6 +1155,29 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			root();
 			state.dismissed = state.dismissed.filter((d) => !sameFinding(d, finding));
 			return null;
+		},
+
+		snapshotHistory(document) {
+			const { dir } = history.locate(root(), document);
+			return history.list(dir);
+		},
+
+		takeSnapshot(document, trigger, words) {
+			const { manuscript, dir } = history.locate(root(), document);
+			return history.take(dir, manuscript, trigger, words, seconds());
+		},
+
+		readSnapshot(document, file) {
+			return history.read(history.locate(root(), document).dir, file);
+		},
+
+		restoreSnapshot(document, file, words) {
+			const { manuscript, dir } = history.locate(root(), document);
+			return history.restore(dir, manuscript, file, words, seconds());
+		},
+
+		clearSnapshots(document, olderThanDays) {
+			return history.clear(history.locate(root(), document).dir, olderThanDays, seconds());
 		},
 
 		restoreDefaultLabels: () => (library(), 0),

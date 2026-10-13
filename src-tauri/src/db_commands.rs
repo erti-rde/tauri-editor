@@ -92,8 +92,21 @@ pub async fn recent_projects_present(paths: Vec<String>) -> Result<Vec<bool>, Ap
 /// `open_project`, gated (M1a-3): the open project decides what the other path
 /// commands accept, so opening `/` must not be possible.
 pub async fn open_project_in(state: &DbState, root: String) -> Result<(), AppError> {
-    crate::scope::may_open_project(state, &root).await?;
-    state.open_project(&PathBuf::from(root)).await.or_database()
+    let canonical = crate::scope::may_open_project(state, &root).await?;
+    state
+        .open_project(&PathBuf::from(root))
+        .await
+        .or_database()?;
+
+    // Thinned here, on open, and never while typing (ADR 007). A failure is
+    // logged and left for the next open: it must not keep the project shut.
+    let now = crate::history::now();
+    if let Err(e) =
+        tokio::task::spawn_blocking(move || crate::history::thin_project(&canonical, now)).await
+    {
+        log::warn!("could not thin the version history: {e}");
+    }
+    Ok(())
 }
 
 /// Add a cited source this library lacks, from the manuscript's snapshot, and

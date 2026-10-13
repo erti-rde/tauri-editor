@@ -183,6 +183,46 @@ export const commands = {
 	dismissFinding: (finding: DismissedFinding) => typedError<null, AppError>(__TAURI_INVOKE("dismiss_finding", { finding })),
 	/**  Bring a dismissed finding back (M4-7 AC-3). */
 	restoreFinding: (finding: DismissedFinding) => typedError<null, AppError>(__TAURI_INVOKE("restore_finding", { finding })),
+	/**  A document's snapshots, newest first, and the space they take. */
+	snapshotHistory: (document: string) => typedError<History, AppError>(__TAURI_INVOKE("snapshot_history", { document })),
+	/**
+	 *  Take a snapshot of a manuscript as it's saved. None when it was too soon,
+	 *  unchanged, or never saved.
+	 */
+	takeSnapshot: (document: string, trigger: Trigger, words: number | null) => typedError<{
+	/**  Its file name in the document's history folder. */
+	file: string,
+	/**  When it was taken, in seconds since 1970 (UTC), read from its name. */
+	takenAt: number,
+	/**  What took it. None for a snapshot `snapshots.json` doesn't know. */
+	trigger: Trigger | null,
+	/**  Its words, as the editor counted them. None when unknown. */
+	words: number | null,
+	bytes: number,
+} | null, AppError>(__TAURI_INVOKE("take_snapshot", { document, trigger, words })),
+	/**  A snapshot's text, for the read-only preview. */
+	readSnapshot: (document: string, file: string) => typedError<string, AppError>(__TAURI_INVOKE("read_snapshot", { document, file })),
+	/**
+	 *  Put a snapshot back as the manuscript, after keeping the manuscript as it
+	 *  is (`words`, its count, labels that snapshot). Returns the snapshot of the
+	 *  state it replaced, or None when the newest already held it.
+	 */
+	restoreSnapshot: (document: string, file: string, words: number | null) => typedError<{
+	/**  Its file name in the document's history folder. */
+	file: string,
+	/**  When it was taken, in seconds since 1970 (UTC), read from its name. */
+	takenAt: number,
+	/**  What took it. None for a snapshot `snapshots.json` doesn't know. */
+	trigger: Trigger | null,
+	/**  Its words, as the editor counted them. None when unknown. */
+	words: number | null,
+	bytes: number,
+} | null, AppError>(__TAURI_INVOKE("restore_snapshot", { document, file, words })),
+	/**
+	 *  Delete a document's snapshots older than `older_than_days`. Returns how
+	 *  many went.
+	 */
+	clearSnapshots: (document: string, olderThanDays: number) => typedError<number, AppError>(__TAURI_INVOKE("clear_snapshots", { document, olderThanDays })),
 	/**
 	 *  Search everything in the library by meaning: passages, marks and source
 	 *  notes, in one ranked list, each result saying which it is (ADR 005).
@@ -400,6 +440,12 @@ export type FileItem = {
 	children: FileItem[] | null,
 };
 
+/**  A document's snapshots, newest first, and the space they take. */
+export type History = {
+	snapshots: Snapshot[],
+	bytes: number,
+};
+
 /**
  *  One result from the index, whatever kind of row it is (ADR 005).
  * 
@@ -613,6 +659,19 @@ export type ScoredSourceNote = {
 	title: string | null,
 } & SourceNote;
 
+/**  One snapshot, as the history list shows it. */
+export type Snapshot = {
+	/**  Its file name in the document's history folder. */
+	file: string,
+	/**  When it was taken, in seconds since 1970 (UTC), read from its name. */
+	takenAt: number,
+	/**  What took it. None for a snapshot `snapshots.json` doesn't know. */
+	trigger: Trigger | null,
+	/**  Its words, as the editor counted them. None when unknown. */
+	words: number | null,
+	bytes: number,
+};
+
 export type Source = {
 	/**
 	 *  The work's canonical id (ADR 003): a file's hash, or `erti:<uuid>` for
@@ -734,6 +793,17 @@ export type TexToolchain = {
 	/**  Whether BibTeX or Biber is available to resolve citations. */
 	bibliography: string | null,
 };
+
+/**  Why a snapshot was taken, as the history list says it. */
+export type Trigger = 
+/**  Every ten minutes at most, while the document changes. */
+"writing" | 
+/**  The document was closed: another opened, or the editor left. */
+"close" | 
+/**  The app quit. */
+"quit" | 
+/**  The manuscript as it was, just before a snapshot replaced it. */
+"before_restore";
 
 /**
  *  Everything noted on a work (UX-3's Notes tab): its own notes, and the marks

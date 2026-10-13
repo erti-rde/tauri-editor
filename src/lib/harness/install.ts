@@ -190,6 +190,13 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 		text: (path) => {
 			const entry = files.get(path);
 			return typeof entry === 'string' ? entry : undefined;
+		},
+		write: (path, text) => {
+			for (let at = parent(path); at !== '/' && at !== ''; at = parent(at)) dirs.add(at);
+			files.set(path, text);
+		},
+		remove: (path) => {
+			files.delete(path);
 		}
 	});
 

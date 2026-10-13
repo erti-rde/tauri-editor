@@ -82,6 +82,36 @@ export function countDocument(doc: ProsemirrorNode): WordCount {
 }
 
 /**
+ * The body words of a document as saved: its JSON, not a ProseMirror node.
+ *
+ * What a snapshot is labelled with (M5-1). The words are counted from what was
+ * written to disk rather than from the editor, which may have moved on while
+ * the save was under way, and the History view counts a file it has no editor
+ * for. The same words as `countDocument(...).body`: the reference list and the
+ * notes are left out.
+ */
+export function countSavedWords(doc: unknown): number {
+	let text = '';
+	const visit = (node: unknown) => {
+		if (typeof node !== 'object' || node === null) return;
+		const {
+			type,
+			text: own,
+			content
+		} = node as {
+			type?: unknown;
+			text?: unknown;
+			content?: unknown;
+		};
+		if (type === BIBLIOGRAPHY_NODE || type === NOTES_NODE) return;
+		if (type === 'text' && typeof own === 'string') text += ` ${own}`;
+		if (Array.isArray(content)) content.forEach(visit);
+	};
+	visit(doc);
+	return countWords(text);
+}
+
+/**
  * How the count reads next to a target.
  *
  * A target is something to reach as often as it is something not to exceed — a
