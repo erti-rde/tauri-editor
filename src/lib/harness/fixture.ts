@@ -145,6 +145,48 @@ export const manuscript = {
 	]
 };
 
+/** A paragraph Chapter 1 had yesterday and has since lost: what History gets back. */
+export const CUT_PARAGRAPH =
+	'Before attention-only models, low-resource translation relied on transfer from high-resource pairs and on back-translation to manufacture parallel data.';
+
+/** Chapter 1 as a snapshot holds it: a manuscript like any other (ADR 007). */
+const asSnapshot = (doc: typeof manuscript) =>
+	JSON.stringify({ ...doc, erti: { format: 1, sources: {}, savedWith: '1.0.0' } });
+
+/**
+ * Chapter 1's history (M5 Verify): three days ago, its opening alone; yesterday,
+ * on close, with a paragraph that has been cut since. Times are relative to
+ * when the harness starts, so "Yesterday" is always yesterday.
+ */
+export function chapterHistory(now = Date.now()) {
+	const [heading, introduction, opening, encoders] = manuscript.content;
+	const cut = { type: 'paragraph', content: [{ type: 'text', text: CUT_PARAGRAPH }] };
+	const secs = Math.floor(now / 1000);
+	const stamp = (at: number) =>
+		`${new Date(at * 1000).toISOString().slice(0, 19).replace(/:/g, '-')}Z.erti.json`;
+	const older = stamp(secs - 3 * 86_400);
+	const yesterday = stamp(secs - 86_400);
+	const dir = `${ROOT}/.erti/history/Chapter 1`;
+	return {
+		dir,
+		yesterday,
+		files: {
+			[`${dir}/${older}`]: asSnapshot({ ...manuscript, content: [heading, introduction, opening] }),
+			[`${dir}/${yesterday}`]: asSnapshot({
+				...manuscript,
+				content: [heading, introduction, opening, cut, encoders]
+			}),
+			// The words as the editor counts them: `fakeBackend.test.ts` checks.
+			[`${dir}/snapshots.json`]: JSON.stringify({
+				snapshots: {
+					[older]: { trigger: 'writing', words: 27 },
+					[yesterday]: { trigger: 'close', words: 57 }
+				}
+			})
+		}
+	};
+}
+
 /**
  * A chapter planted with one of each kind of attribution finding (M4 Verify),
  * matched against the marks' quotes, which the fake library also holds as
@@ -339,6 +381,7 @@ export function defaultFixture(): Fixture {
 			[MANUSCRIPT]: JSON.stringify(manuscript),
 			[SHARED]: JSON.stringify(sharedManuscript),
 			[PLANTED]: JSON.stringify(plantedManuscript),
+			...chapterHistory().files,
 			// Opened before: this is how Erti knows a recent project is still there.
 			[`${ROOT}/.erti/project.db`]: '',
 			[`${ROOT}/papers/vaswani-2017.pdf`]: { pdf: paperUrl },

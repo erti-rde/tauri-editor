@@ -5,7 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { Bibliography, BIBLIOGRAPHY_NODE } from './extensions/citation/Bibliography';
 import { Citation } from './extensions/citation/Citation';
 import { Notes, NOTES_NODE } from './extensions/citation/Notes';
-import { countDocument, countWords, progressTo } from './wordCount';
+import { countDocument, countSavedWords, countWords, progressTo } from './wordCount';
 
 vi.mock('@tauri-apps/plugin-store', () => ({ load: vi.fn() }));
 vi.mock('$lib/stores/db', () => ({
@@ -119,6 +119,41 @@ describe('counting a manuscript', () => {
 
 		expect(countDocument(editor.state.doc)).toMatchObject({ body: 0, references: 0, total: 0 });
 		editor.destroy();
+	});
+});
+
+describe('counting a saved manuscript', () => {
+	// M5-1 AC-4: a snapshot's words are counted from the file, as the editor counts them.
+	it('counts the body words the editor counts', () => {
+		const editor = docWith([
+			{ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Related work' }] },
+			{
+				type: 'paragraph',
+				content: [
+					{ type: 'text', text: 'As argued ' },
+					{ type: 'text', text: 'at length', marks: [{ type: 'bold' }] },
+					{ type: 'citation', attrs: { id: JSON.stringify(['x']), label: '(Smith, 2020)' } },
+					{ type: 'text', text: ' — and again.' }
+				]
+			},
+			{ type: 'bulletList', content: [{ type: 'listItem', content: [para('One more point')] }] },
+			{ type: NOTES_NODE, attrs: { notes: [{ index: 1, text: 'Smith, Coastal Erosion, 101.' }] } },
+			{
+				type: BIBLIOGRAPHY_NODE,
+				attrs: { entries: ['Smith, A. (2020). A long entry with many words in it.'], missing: 0 }
+			}
+		]);
+
+		const body = countDocument(editor.state.doc).body;
+		expect(body).toBe(11);
+		expect(countSavedWords(editor.getJSON())).toBe(body);
+		editor.destroy();
+	});
+
+	it('counts nothing in what isn’t a document', () => {
+		for (const value of [null, undefined, 'text', 3, {}, { type: 'doc', content: 'x' }]) {
+			expect(countSavedWords(value)).toBe(0);
+		}
 	});
 });
 

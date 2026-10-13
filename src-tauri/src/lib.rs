@@ -3,6 +3,7 @@ pub mod commands;
 pub mod db;
 pub mod db_commands;
 pub mod fs_errors;
+pub mod history;
 pub mod ipc;
 pub mod latex;
 pub mod ml;
@@ -171,6 +172,11 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         dismissed_findings,
         dismiss_finding,
         restore_finding,
+        history::snapshot_history,
+        history::take_snapshot,
+        history::read_snapshot,
+        history::restore_snapshot,
+        history::clear_snapshots,
         search_library,
         source_removal,
         add_source_by_hand,
