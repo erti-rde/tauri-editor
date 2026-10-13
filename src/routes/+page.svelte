@@ -7,6 +7,8 @@
 	import Notes from '$lib/notes/Notes.svelte';
 	import CheckPanel from '$lib/attribution/CheckPanel.svelte';
 	import Outline from '$lib/outline/Outline.svelte';
+	import HistoryView from '$lib/history/HistoryView.svelte';
+	import { historyView } from '$lib/history/historyStore.svelte';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
 	import { watchBackups } from '$lib/stores/backups';
@@ -33,10 +35,14 @@
 		if (newSidePanelName === panelName || !isExplorerOpen) {
 			isExplorerOpen = !isExplorerOpen;
 		}
+		// Another view asked for: History gives the workspace back to it.
+		if (newSidePanelName !== panelName) historyView.close();
 		panelName = newSidePanelName;
 	}
 
 	async function handleProjectOpening() {
+		// A history left open belongs to the project that was open then.
+		historyView.close();
 		// The project database lives at <project>/.erti/project.db and is created
 		// on first open, so each project keeps its own manuscripts, source set and
 		// metadata corrections while sharing the one library of sources.
@@ -151,6 +157,11 @@
 				{#if panelName == 'metadataExplorer'}
 					<!-- A PDF opened from a source's File tab shows in the workspace. -->
 					<MetadataEditor onopen={() => (panelName = 'fileExplorer')} />
+				{:else if historyView.document}
+					<!-- History takes over the workspace, as Sources does (UX-9). The
+					     editor reads the document afresh when it comes back, restored
+					     or not. -->
+					<HistoryView document={historyView.document} onclose={() => historyView.close()} />
 				{:else}
 					<!-- Panes and tabs, rather than one slot switched by a mode flag.
 					     Opening a paper used to replace the manuscript; now it sits

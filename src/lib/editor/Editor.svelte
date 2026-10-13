@@ -7,7 +7,7 @@
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
 	import { mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
-	import { call, commands } from '$lib/ipc';
+	import { call, commands, describeError } from '$lib/ipc';
 
 	import { get } from 'svelte/store';
 
@@ -18,7 +18,7 @@
 	import { citedIds, snapshotSources } from '$lib/manuscript/format';
 	import AwayCitationTip from './AwayCitationTip.svelte';
 	import { readSetting } from '$lib/settings';
-	import { countDocument } from './wordCount';
+	import { countDocument, countSavedWords } from './wordCount';
 	import { documentStatus } from '$lib/statusFooter/documentStatus';
 	import { parseCitationIds } from '$lib/citations/document';
 	import { toBibliography } from '$lib/export/bibtex';
@@ -48,6 +48,8 @@
 	import { attributionCheck } from '$lib/attribution/check.svelte';
 	import { checkEditor, type CheckEditor } from './checkEditor';
 	import { nudgeSetting } from '$lib/notes/writingSettings';
+	import { createSnapshots } from '$lib/history/snapshots';
+	import { historyView } from '$lib/history/historyStore.svelte';
 
 	import type { EditorState } from '@tiptap/pm/state';
 	import type { Readable } from 'svelte/store';
@@ -137,6 +139,22 @@
 	 * was invisible.
 	 */
 
+	/**
+	 * Snapshots for the history (M5-1, ADR 007): after a save at most every ten
+	 * minutes, and when the document closes. Only of what this editor wrote.
+	 */
+	const snapshots = createSnapshots(
+		(path, trigger, words) => call(commands.takeSnapshot(path, trigger, words)),
+		(path, error, first) => {
+			log.error('Could not keep a snapshot', error);
+			// Said once per document: the saves go on, and so do the attempts.
+			if (!first) return;
+			errorToast(
+				`Could not keep a snapshot of “${fileNameOf(path)?.replace(DOCUMENT_EXTENSION, '')}” for its history: ${describeError(error).replace(/\.$/, '')}. The document itself is saved.`
+			);
+		}
+	);
+
 	const autosave = createAutosave({
 		write: async (content) => {
 			// Resolved at write time, not captured: switching documents changes
@@ -153,7 +171,11 @@
 				{},
 				citationStore.canonicalId
 			);
-			await manuscript.save(target.path, content, sources);
+			if (!(await manuscript.save(target.path, content, sources))) return;
+			// Awaited, so the next save can't land while the file is copied. A
+			// snapshot that fails is said by `snapshots`, and never fails the save.
+			snapshots.written(target.path, countSavedWords(content));
+			await snapshots.writing(target.path);
 		},
 		onStateChange: (next) => documentStatus.report({ save: next }),
 		onError: (error) => {
@@ -295,7 +317,9 @@
 		// mid-write and lose the work. Tauri's close request can be held open,
 		// which turns best-effort into an actual guarantee.
 		unlistenClose = await getCurrentWindow().onCloseRequested(async (event) => {
-			if (!autosave.hasUnsavedChanges) return;
+			const open = get(documentsStore).current?.path;
+			const owed = open !== undefined && snapshots.pending(open);
+			if (!autosave.hasUnsavedChanges && !owed) return;
 
 			event.preventDefault();
 			const saved = await autosave.flush();
@@ -307,6 +331,10 @@
 				return;
 			}
 
+			// The work is saved; a snapshot that fails now is said, and doesn't
+			// keep the window open.
+			const path = get(documentsStore).current?.path;
+			if (path) await snapshots.closing(path, 'quit');
 			await getCurrentWindow().destroy();
 		});
 
@@ -398,8 +426,11 @@
 		if (checkBridge) attributionCheck.detach(checkBridge);
 		// Best-effort: a component teardown cannot be awaited. The close handler
 		// above is what actually guarantees the write; this covers switching away
-		// from a document while the app stays open.
-		void autosave.flush();
+		// from a document while the app stays open. Then its snapshot, on close.
+		const leaving = get(documentsStore).current?.path;
+		void autosave.flush().then((saved) => {
+			if (saved && leaving) void snapshots.closing(leaving, 'close');
+		});
 		unlistenClose?.();
 		stopWaiting?.();
 		autosave.destroy();
@@ -561,6 +592,9 @@
 			return;
 		}
 		if (token !== transition) return;
+		const leaving = $documentsStore.current?.path;
+		if (leaving) await snapshots.closing(leaving, 'close');
+		if (token !== transition) return;
 
 		// Not followed by lifting the guard: an unreadable chapter opened this way
 		// used to be saved over, blank, on the next keystroke.
@@ -588,6 +622,23 @@
 		// deleting the reference list in one chapter would suppress it in every
 		// chapter opened afterwards.
 		references.reset();
+	}
+
+	/**
+	 * Show the document's history in the workspace (UX-9). Saved first, and its
+	 * snapshot taken if it changed, so the newest snapshot is what's on screen
+	 * and a restore can't race a save still under way.
+	 */
+	async function showHistory() {
+		const current = $documentsStore.current;
+		if (!current) return;
+		const saved = await autosave.flush();
+		if (!saved) {
+			errorToast('Could not save the current document, so its history was not opened.');
+			return;
+		}
+		await snapshots.closing(current.path, 'close');
+		historyView.open(current);
 	}
 
 	/** An empty manuscript, written only if that name is genuinely free. */
@@ -626,6 +677,9 @@
 			errorToast('Could not save the current document, so the new one was not created.');
 			return;
 		}
+		if (token !== transition) return;
+		const leaving = $documentsStore.current?.path;
+		if (leaving) await snapshots.closing(leaving, 'close');
 		if (token !== transition) return;
 
 		const path = await pathJoin(currentDir, result.fileName!);
@@ -819,6 +873,7 @@
 				current={$documentsStore.current}
 				onopen={openDocument}
 				oncreate={createDocument}
+				onhistory={showHistory}
 			/>
 
 			<ToolBar editor={$editor} {toggleView} {exportToPdf} {exportToLatex} />

@@ -9,8 +9,7 @@
 		"shadow": 1
 	},
 	"src/lib/editor/DocumentBar.svelte": {
-		"button": 2,
-		"input": 1
+		"button": 1
 	},
 	"src/lib/editor/extensions/BubbleMenu.svelte": {
 		"button": 1,

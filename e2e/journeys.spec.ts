@@ -932,3 +932,107 @@ test('the Check panel finds the planted chapter’s findings, shows one beside i
 	).toBeVisible();
 	await expect(page.getByText('The document has changed since this check.')).toHaveCount(0);
 });
+
+/** Chapter 1's snapshots on the fake disk, oldest first, with their labels. */
+function chapterSnapshots(page: import('@playwright/test').Page) {
+	return page.evaluate(() => {
+		const files = window.__ERTI_FAKE__!.files;
+		const dir = [...files.keys()]
+			.find((p) => p.endsWith('/.erti/history/Chapter 1/snapshots.json'))!
+			.replace('/snapshots.json', '');
+		const index = JSON.parse(files.get(`${dir}/snapshots.json`) as string).snapshots;
+		return [...files.keys()]
+			.filter((p) => p.startsWith(`${dir}/2`))
+			.sort()
+			.map((p) => {
+				const name = p.slice(dir.length + 1);
+				return { name, text: files.get(p) as string, ...index[name] };
+			});
+	});
+}
+
+// M5-1 AC-2: a snapshot while writing (the newest is a day old), and on
+// leaving the document; nothing for one opened and left unchanged.
+test('writing keeps a snapshot, and so does closing the document after more', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	expect(await chapterSnapshots(page)).toHaveLength(2);
+
+	await page.locator('.ProseMirror').click();
+	await page.keyboard.press('End');
+	await page.keyboard.type(' A first new sentence.');
+	await expect
+		.poll(async () => (await chapterSnapshots(page)).map((s) => s.trigger))
+		.toEqual(['writing', 'close', 'writing']);
+	const [, , writing] = await chapterSnapshots(page);
+	expect(writing.text).toContain('A first new sentence.');
+	expect(writing.words).toBe(43);
+
+	// Within ten minutes: saved, but no snapshot while writing.
+	await page.keyboard.type(' And a second.');
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				(
+					window.__ERTI_FAKE__!.files.get(
+						[...window.__ERTI_FAKE__!.files.keys()].find((p) => p.endsWith('/Chapter 1.erti.json'))!
+					) as string
+				).includes('And a second.')
+			)
+		)
+		.toBe(true);
+	expect(await chapterSnapshots(page)).toHaveLength(3);
+
+	// Leaving it for another document keeps that on close.
+	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await expect
+		.poll(async () => (await chapterSnapshots(page)).map((s) => s.trigger).at(-1))
+		.toBe('close');
+	expect((await chapterSnapshots(page)).at(-1)!.text).toContain('And a second.');
+	await page.getByRole('button', { name: 'Chapter 1', exact: true }).click();
+	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await page.waitForTimeout(300);
+	expect(await chapterSnapshots(page)).toHaveLength(4);
+});
+
+// M5-1 AC-4, M5 Verify: restore yesterday's snapshot in the harness.
+test('History shows yesterday’s version, and restoring it keeps today’s', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	const cut = 'Before attention-only models, low-resource translation relied on transfer';
+	await expect(page.locator('.ProseMirror')).not.toContainText(cut);
+
+	await page.getByRole('button', { name: 'Document menu for Chapter 1' }).click();
+	await page.getByRole('menuitem', { name: 'History…' }).click();
+
+	await expect(page.getByRole('heading', { name: 'History of Chapter 1' })).toBeVisible();
+	// Opening the chapter saved it in format 1, and the newest snapshot was a
+	// day old, so today's version is kept too, and shown first.
+	const today = page.getByRole('region', { name: 'Today' });
+	await expect(today.getByRole('button', { name: /while writing · −18 words/ })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+	await expect(page.getByLabel('The snapshot, read-only')).not.toContainText(cut);
+	const yesterday = page.getByRole('region', { name: 'Yesterday' });
+	await yesterday.getByRole('button', { name: /on close · \+30 words/ }).click();
+	await expect(page.getByLabel('The snapshot, read-only')).toContainText(cut);
+	await expect(page.getByText(/^History uses \d+ KB$/)).toBeVisible();
+
+	await page.getByRole('button', { name: 'Restore this version' }).click();
+	await expect(
+		page.getByText('Restored. Your previous version is saved as a snapshot.')
+	).toBeVisible();
+	await expect(page.locator('.ProseMirror')).toContainText(cut);
+
+	// Today's version was already a snapshot (the restore kept no second copy
+	// of the same bytes), so the restore can be undone from History.
+	await page.getByRole('button', { name: 'Document menu for Chapter 1' }).click();
+	await page.getByRole('menuitem', { name: 'History…' }).click();
+	await today.getByRole('button', { name: /while writing · −18 words/ }).click();
+	await expect(page.getByLabel('The snapshot, read-only')).not.toContainText(cut);
+	await page.getByRole('button', { name: 'Back to the document' }).click();
+	await expect(page.locator('.ProseMirror')).toContainText(cut);
+});
