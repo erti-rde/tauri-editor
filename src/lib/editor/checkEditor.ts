@@ -140,10 +140,9 @@ export function checkEditor(
 			const range = trackedRange(editor.state, id);
 			if (!range) return;
 			// Into view, centred, without moving the writer's cursor: looking at a
-			// finding isn't starting to edit it.
-			const { node } = editor.view.domAtPos(range.from);
-			const element = node instanceof Element ? node : node.parentElement;
-			element?.scrollIntoView?.({ block: 'center' });
+			// finding isn't starting to edit it. Up and down only: in a split the
+			// page is wider than its pane, and the writer's sideways place stays.
+			scrollToCentre(editor.view.dom, () => editor.view.coordsAtPos(range.from));
 		},
 
 		get fixing() {
@@ -221,4 +220,22 @@ export function checkEditor(
 			}
 		}
 	};
+}
+
+/** Scroll the nearest scrolling ancestor of `dom` so `at` sits mid-height. */
+function scrollToCentre(dom: HTMLElement, at: () => { top: number; bottom: number }) {
+	let scroller: HTMLElement | null = dom.parentElement;
+	while (scroller) {
+		const { overflowY } = getComputedStyle(scroller);
+		if (/(auto|scroll)/.test(overflowY) && scroller.scrollHeight > scroller.clientHeight) break;
+		scroller = scroller.parentElement;
+	}
+	if (!scroller) return;
+	try {
+		const { top, bottom } = at();
+		const box = scroller.getBoundingClientRect();
+		scroller.scrollTop += (top + bottom) / 2 - (box.top + box.height / 2);
+	} catch {
+		// No layout to measure (a document not yet drawn): nothing to scroll.
+	}
 }

@@ -303,7 +303,14 @@ class AttributionCheck {
 					id: findingId({ ...finding, sentence: indexOf(finding.sentence) }),
 					checked: sentence,
 					hash: await sentenceHash(sentence.text),
-					excerpt: excerpt(sentence.text, span.sentenceWords),
+					// A drifted quotation whole: the drift is often outside the words
+					// the matcher paired up.
+					excerpt: excerpt(
+						sentence.text,
+						finding.kind === 'drifted_quote'
+							? (quotationOf(sentence, span)?.words ?? span.sentenceWords)
+							: span.sentenceWords
+					),
 					source: document ? documentName(passage.work) : nameOf(passage.work),
 					page: document ? null : pageOf(passage),
 					detail,
