@@ -56,6 +56,8 @@ export const ACTIONS = {
 /** What a fix said when it could not be made where the sentence is now. */
 export const FIX_FAILED =
 	'That sentence has changed, so the fix was not made. Run the check again.';
+/** What a fix said when the sentence was as checked but the fix still wasn't made. */
+export const FIX_NOT_MADE = 'That fix could not be made. The sentence is as it was.';
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 

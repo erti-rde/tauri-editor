@@ -48,7 +48,8 @@ export interface Sentence {
 	 * Inside a block quotation, which marks a quotation without quotation
 	 * marks, so the classifier must not read it as unquoted (M4-4).
 	 */
-	quoted: boolean; /**
+	quoted: boolean;
+	/**
 	 * The document position of each UTF-16 unit of `text`, so a fix can find
 	 * words inside the sentence: they jump over a citation, which `text`
 	 * leaves out (M4-6).

@@ -109,6 +109,11 @@ class AttributionCheck {
 	private ranges = new Map<string, { from: number; to: number }>();
 	/** Which run is the latest: an older one's answer is dropped. */
 	private generation = 0;
+	/**
+	 * The writer edited while a check was running. Its sentences were read
+	 * before the edit, so its answer is already behind the document.
+	 */
+	private editedWhileRunning = false;
 
 	/** The result for the open manuscript, if the last check was of it. */
 	get current(): CheckResult | null {
@@ -173,6 +178,7 @@ class AttributionCheck {
 	/** The writer changed the document (AC-5). A fix's own edits don't count. */
 	edited() {
 		if (this.editor?.fixing) return;
+		if (this.running) this.editedWhileRunning = true;
 		if (this.current) this.stale = true;
 	}
 
@@ -184,6 +190,7 @@ class AttributionCheck {
 		if (!editor || this.running) return;
 		const ticket = ++this.generation;
 		this.running = true;
+		this.editedWhileRunning = false;
 		this.failure = null;
 		this.selected = null;
 		editor.select(null);
@@ -251,7 +258,7 @@ class AttributionCheck {
 	private finish(ticket: number, result: CheckResult) {
 		if (ticket !== this.generation) return;
 		this.result = result;
-		this.stale = false;
+		this.stale = this.editedWhileRunning;
 		this.running = false;
 		this.ranges.clear();
 	}
@@ -356,15 +363,21 @@ class AttributionCheck {
 		if (!editor || this.fixing) return;
 		this.fixing = finding.id;
 		try {
+			// Said only when it's so: a fix can also be refused for its own
+			// reasons (a work with no citation details says why itself).
+			if (editor.sentenceOf(finding.id)?.text !== finding.checked.text) {
+				errorToast(copy.FIX_FAILED);
+				return;
+			}
 			const made = await this.make(editor, finding, action);
 			if (!made) {
-				errorToast(copy.FIX_FAILED);
+				errorToast(copy.FIX_NOT_MADE);
 				return;
 			}
 			await this.recheck(editor, finding);
 		} catch (thrown) {
 			log.error('Could not make that fix', thrown);
-			errorToast(copy.FIX_FAILED);
+			errorToast(copy.FIX_NOT_MADE);
 		} finally {
 			this.fixing = null;
 		}
