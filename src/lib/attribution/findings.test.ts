@@ -10,7 +10,7 @@ import {
 	quotationOf,
 	sentenceHash,
 	shortName,
-	sourceDifference,
+	sourceDifferences,
 	sourceSays,
 	sourceWordsFor,
 	toChecked,
@@ -103,34 +103,71 @@ describe('where a drifted quotation differs', () => {
 	const w = (s: string) => s.split(' ');
 
 	// M4-5 AC-3
-	it('names the source’s words between what is shared', () => {
-		expect(sourceDifference(w('a b changed d e'), w('a b c d e'))).toEqual([2, 3]);
-		expect(sourceDifference(w('a b d'), w('a b c d'))).toEqual([2, 3]);
+	it('names each place the source’s words differ', () => {
+		expect(sourceDifferences(w('a b changed d e'), w('a b c d e'))).toEqual([[2, 3]]);
+		expect(sourceDifferences(w('a b d'), w('a b c d'))).toEqual([[2, 3]]);
+		// Two places apart, not everything between them.
+		expect(sourceDifferences(w('x b c d y'), w('a b c d e'))).toEqual([
+			[0, 1],
+			[4, 5]
+		]);
 		// A word added to the quotation: the words either side of it.
-		expect(sourceDifference(w('a b x c'), w('a b c'))).toEqual([1, 3]);
-		expect(sourceDifference(w('a b c'), w('a b c'))).toBeNull();
+		expect(sourceDifferences(w('a b x c'), w('a b c'))).toEqual([[1, 3]]);
+		expect(sourceDifferences(w('a b c'), w('a b c'))).toEqual([]);
 	});
 
 	// M4-5 AC-3
-	it('says it as the source wrote it', () => {
+	it('says it as the source wrote it, over the whole quotation', () => {
+		const said =
+			'BERT “obtains new state of the art results on eleven natural language tasks” here.';
+		const source = passage(
+			'We obtain new state of the art results on eleven natural language Processing tasks, including'
+		);
+		// The span holds only the words the two share unbroken.
+		const found = span({ sentenceWords: [2, 12], passageWords: [2, 12] });
+		const sentence = { text: said, cites: ['w'], quoted: false };
+		expect(sourceSays(sentence, found, source)).toBe('obtain … Processing');
+	});
+
+	// M4-5 AC-3
+	it('compares the span when the quotation can’t be found', () => {
 		const said = 'They reported results on eleven natural language tasks today.';
 		const source = passage(
 			'obtains results on eleven natural language Processing tasks, including'
 		);
 		const found = span({ sentenceWords: [2, 8], passageWords: [1, 8] });
-		expect(sourceSays(said, found, source)).toBe('Processing');
+		const sentence = { text: said, cites: ['w'], quoted: false };
+		expect(sourceSays(sentence, found, source)).toBe('Processing');
 	});
 
 	// M4-6 AC-1
 	it('runs the source’s words out to the quotation’s ends', () => {
 		const source = passage('zero one two three four five six seven eight nine');
 		// The quotation is words 1–7 of the sentence; the span 2–6, aligned at 3.
+		const said = 'x two three four five six seven y';
 		const found = span({ sentenceWords: [2, 6], passageWords: [3, 7] });
-		expect(sourceWordsFor([1, 7], found, source)).toBe('two three four five six seven');
-		// Clamped to the passage.
-		expect(sourceWordsFor([0, 9], found, source)).toBe(
-			'one two three four five six seven eight nine'
+		expect(sourceWordsFor(said, [1, 7], found, source)).toBe('two three four five six seven');
+	});
+
+	// M4-6 AC-1
+	it('finds the ends when the quotation dropped a word outside the span', () => {
+		const source = passage(
+			'We obtain new state of the art results on eleven natural language processing tasks today'
 		);
+		const said = 'BERT obtains new state of the art results on eleven natural language tasks';
+		// "new … language" is the span; "obtains" and "tasks" are outside it.
+		const found = span({ sentenceWords: [2, 12], passageWords: [2, 12] });
+		expect(sourceWordsFor(said, [1, 13], found, source)).toBe(
+			'obtain new state of the art results on eleven natural language processing tasks'
+		);
+	});
+
+	// M4-6 AC-1
+	it('stays inside the passage', () => {
+		const source = passage('two three four five six seven');
+		const said = 'a b two three four five six seven c d';
+		const found = span({ sentenceWords: [2, 8], passageWords: [0, 6] });
+		expect(sourceWordsFor(said, [0, 10], found, source)).toBe('two three four five six seven');
 	});
 });
 

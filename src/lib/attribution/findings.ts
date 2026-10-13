@@ -64,47 +64,68 @@ export function excerpt(text: string, range: readonly [number, number]): string 
 }
 
 /**
- * Where a drifted quotation and its source part ways: the source's words
- * between what they share at the start and at the end of the span.
+ * Where a drifted quotation and its source part ways: the runs of the
+ * source's words the quotation doesn't have, as ranges of `source`.
  *
- * "eleven natural language tasks" against "eleven natural language processing
- * tasks" gives "processing". Null when the span holds no difference: then the
- * quotation differs outside it, and the span's own words are the best answer.
+ * Read off a longest common subsequence, so a word changed at each end is
+ * two places, not everything between. "eleven natural language tasks"
+ * against "eleven natural language processing tasks" gives "processing".
+ * Where the writer added a word the source hasn't, the source's words either
+ * side of it stand for the place. Empty when the two agree.
  */
-export function sourceDifference(
-	sentenceWords: string[],
-	passageWords: string[]
-): [number, number] | null {
-	let head = 0;
-	while (
-		head < sentenceWords.length &&
-		head < passageWords.length &&
-		sentenceWords[head] === passageWords[head]
-	)
-		head++;
-	let tail = 0;
-	while (
-		tail < sentenceWords.length - head &&
-		tail < passageWords.length - head &&
-		sentenceWords[sentenceWords.length - 1 - tail] === passageWords[passageWords.length - 1 - tail]
-	)
-		tail++;
-	const end = passageWords.length - tail;
-	if (head === sentenceWords.length && end === head) return null;
-	// A word left out of the quotation: show the words around the gap.
-	if (end === head) return [Math.max(0, head - 1), Math.min(passageWords.length, head + 1)];
-	return [head, end];
+export function sourceDifferences(said: string[], source: string[]): Array<[number, number]> {
+	// lcs[i][j]: the longest common run of said[i..] and source[j..].
+	const lcs = Array.from({ length: said.length + 1 }, () =>
+		new Array<number>(source.length + 1).fill(0)
+	);
+	for (let i = said.length - 1; i >= 0; i--) {
+		for (let j = source.length - 1; j >= 0; j--) {
+			lcs[i][j] =
+				said[i] === source[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+		}
+	}
+
+	const out: Array<[number, number]> = [];
+	const add = (from: number, to: number) => {
+		const last = out.at(-1);
+		if (last && from <= last[1]) last[1] = Math.max(last[1], to);
+		else out.push([from, to]);
+	};
+	let i = 0;
+	let j = 0;
+	while (i < said.length || j < source.length) {
+		if (i < said.length && j < source.length && said[i] === source[j]) {
+			i++;
+			j++;
+		} else if (j < source.length && (i === said.length || lcs[i][j + 1] >= lcs[i + 1][j])) {
+			add(j, j + 1);
+			j++;
+		} else {
+			// A word of the writer's own. Where the source has words of its own
+			// here too, that place is already named; otherwise its neighbours are.
+			if (out.at(-1)?.[1] !== j) add(Math.max(0, j - 1), Math.min(source.length, j + 1));
+			i++;
+		}
+	}
+	return out.filter(([from, to]) => from < to);
 }
 
-/** What the source says where a drifted quotation differs, as written. */
-export function sourceSays(sentence: string, span: Span, passage: MatchedPassage): string {
-	const said = words(sentence).slice(...span.sentenceWords);
-	const source = words(passage.text).slice(...span.passageWords);
-	const diff = sourceDifference(said, source);
-	const range: [number, number] = diff
-		? [span.passageWords[0] + diff[0], span.passageWords[0] + diff[1]]
-		: span.passageWords;
-	return wordsAsWritten(passage.text, range) ?? source.join(' ');
+/**
+ * What the source says where a drifted quotation differs, as written: each
+ * place, joined by an ellipsis. The whole quotation is compared, since the
+ * drift is often just outside the words the matcher could pair up.
+ */
+export function sourceSays(sentence: CheckedSentence, span: Span, passage: MatchedPassage): string {
+	const quotation = quotationOf(sentence, span);
+	const quoted: [number, number] = quotation?.words ?? span.sentenceWords;
+	const text =
+		(quotation && sourceWordsFor(sentence.text, quotation.words, span, passage)) ??
+		wordsAsWritten(passage.text, span.passageWords) ??
+		passage.text;
+
+	const places = sourceDifferences(words(sentence.text).slice(...quoted), words(text));
+	if (places.length === 0) return text;
+	return places.map((range) => wordsAsWritten(text, range) ?? '').join(' … ');
 }
 
 /**
@@ -126,19 +147,48 @@ export function quotationOf(
 	return null;
 }
 
+/** How far either side of where counting puts it a quotation's end is looked for. */
+const SLACK = 4;
+
 /**
  * The source's words for a whole drifted quotation: the passage words the
  * span aligns with, run out to the quotation's ends.
+ *
+ * Counting words out from the span puts each end where it would be if the
+ * quotation kept the source's length; a word dropped or added outside the
+ * span moves it. So each end is the quotation's own first or last word,
+ * looked for near there, and the counted place when it isn't found.
  */
 export function sourceWordsFor(
+	sentence: string,
 	quote: [number, number],
 	span: Span,
 	passage: MatchedPassage
 ): string | null {
-	const total = words(passage.text).length;
-	const from = Math.max(0, span.passageWords[0] - (span.sentenceWords[0] - quote[0]));
-	const to = Math.min(total, span.passageWords[1] + (quote[1] - span.sentenceWords[1]));
-	return wordsAsWritten(passage.text, [from, to]);
+	const said = words(sentence);
+	const source = words(passage.text);
+	const [s0, s1] = span.sentenceWords;
+	const [p0, p1] = span.passageWords;
+
+	const nearest = (word: string, target: number, lo: number, hi: number) => {
+		let best: number | null = null;
+		for (let k = Math.max(0, lo); k < Math.min(source.length, hi); k++) {
+			if (source[k] === word && (best === null || Math.abs(k - target) < Math.abs(best - target)))
+				best = k;
+		}
+		return best;
+	};
+
+	const counted = [p0 - (s0 - quote[0]), p1 + (quote[1] - s1)];
+	const from =
+		quote[0] < s0
+			? (nearest(said[quote[0]], counted[0], counted[0] - SLACK, p0) ?? counted[0])
+			: p0 + (quote[0] - s0);
+	const last =
+		quote[1] > s1
+			? (nearest(said[quote[1] - 1], counted[1] - 1, p1, counted[1] + SLACK) ?? counted[1] - 1)
+			: p1 - 1 - (s1 - quote[1]);
+	return wordsAsWritten(passage.text, [Math.max(0, from), Math.min(source.length, last + 1)]);
 }
 
 /** A finding's identity within one check: its sentence, kind and work. */
