@@ -18,9 +18,10 @@ planned item lands, it says so.
 │ lib/export            PURE: LaTeX, BibTeX              lib/theme      tokens, palettes, contrast│
 │ lib/import            PURE: .bib, .ris, CSL-JSON → CSL items; what the library has already      │
 │ lib/attribution       sentence walk, normalisation, classification (pure); Check panel (M4)    │
-│ lib/ui                primitives (M1c grows these)     lib/stores     app state + IPC wrappers  │
+│ lib/history           snapshot rules, History view (M5) lib/ui        primitives               │
+│ lib/stores            app state + IPC wrappers                                                 │
 └───────────────────────────────────────┬───────────────────────────────────────────────────────┘
-                                        │ lib/ipc: 65 typed commands (ADR 011); only results cross, never vectors
+                                        │ lib/ipc: 70 typed commands (ADR 011); only results cross, never vectors
 ┌─────────────────────────────── Rust core (src-tauri/src) ─────────────────────────────────────┐
 │ lib.rs            plugins, managed state, the command list (generate_handler!)                │
 │ db_commands.rs    commands over the two databases        commands.rs   fs listing, embedding   │
@@ -28,6 +29,7 @@ planned item lands, it says so.
 │ db/index.rs       vectors in memory, search by meaning (ADR 005)                               │
 │ ml/mod.rs         ONNX session (all-MiniLM-L6-v2)        latex.rs      detect + compile TeX    │
 │ attribution/      shingle matcher (ADR 006): manuscript indexed, corpus streamed past it       │
+│ history.rs        snapshots under .erti/history (ADR 007): take, restore, thin on open         │
 │ fs_errors.rs      human messages for OS errors                                                 │
 └───────────────┬──────────────────────────────────────┬────────────────────────────────────────┘
         ~/Erti/library.db                        <project>/.erti/project.db
@@ -92,6 +94,16 @@ in the Tauri store `settings-store.json`.
   checks its sentence again at once. Dismissals live in the project (`dismissed_findings`,
   project migration 2), keyed by the sentence's normalised words. Every word the panel shows
   is in `attribution/copy.ts`.
+- **Version history (M5-1, ADR 007).** After each save, the editor asks `take_snapshot` with
+  the words it wrote (`history/snapshots.ts` says when: only for a manuscript this session has
+  written). `history.rs` decides whether that is a snapshot: while writing, not within ten
+  minutes of the last; never the bytes the newest already holds. It copies the saved file to
+  `.erti/history/<stem>/<UTC>.erti.json` and labels it in `snapshots.json` beside it. A close,
+  a document switch, opening History and quitting ask too. History (`history/HistoryView.svelte`,
+  opened from the document bar's **⋯**) takes the workspace's place, as Sources does: the
+  editor is gone while it shows, so `restore_snapshot` copies the snapshot over the file, after
+  keeping the file as it was, and the editor reads it afresh on return. `open_project` thins
+  every document's history. The fake backend keeps the same files (`harness/fakeHistory.ts`).
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
   `export/bibtex.ts` → files → `compile_latex` if TeX exists.
 

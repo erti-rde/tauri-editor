@@ -35,6 +35,13 @@ Why are we not jumping on GAI train and make everything very easy for researcher
 
 **IN SHORT**: Erti exists to help the most ethical way possible.
 
+## Where your work is kept
+
+A project is a folder. Its manuscripts are the `.erti.json` files in it, and Erti keeps its own records beside them in a hidden `.erti` folder.
+
+- **Version history.** Erti keeps snapshots of each manuscript in `.erti/history/<document>/`: at most every ten minutes while you write, when you close it, and before a restore. They're ordinary manuscript files, so one can be opened, or copied back, without Erti. Older ones are thinned: everything from the last day, then one an hour for a week, one a day for three months, and one a week after that. **History…** on a document's **⋯** menu shows them and restores one.
+- **Synced folders sync the history too.** If the project folder is in Dropbox, iCloud Drive or OneDrive, or shared with co-authors, `.erti/history` goes with it. That keeps your history safe on another machine, and it means co-authors sharing the folder see it as well.
+
 ## Download and Installation
 
 Erti is build using [Tauri](https://tauri.app/) and [SvelteKit](https://svelte.dev/docs/kit/introduction). The installation of Tauri will depend on your OS.
