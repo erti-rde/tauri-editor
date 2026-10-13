@@ -55,7 +55,7 @@ export function fakeHistory(disk: HistoryDisk) {
 		const stem = name.endsWith(EXTENSION)
 			? name.slice(0, -EXTENSION.length)
 			: name === 'magnum_opus.json'
-				? 'magnum_opus'
+				? 'magnum_opus.json'
 				: null;
 		if (!stem || stem.startsWith('.')) throw NOT_A_MANUSCRIPT;
 		if (document.slice(0, at) !== root) throw OUTSIDE;
@@ -118,7 +118,8 @@ export function fakeHistory(disk: HistoryDisk) {
 		words: number | null,
 		now: number
 	): Snapshot | null {
-		const newest = snapshotsIn(dir)[0];
+		// The newest not from the future, as `history.rs` reads it.
+		const newest = snapshotsIn(dir).find(([time]) => time <= now);
 		if (newest && trigger === 'writing' && now - newest[0] < WHILE_WRITING_EVERY) return null;
 		const content = disk.text(manuscript);
 		if (content === undefined) return null;
