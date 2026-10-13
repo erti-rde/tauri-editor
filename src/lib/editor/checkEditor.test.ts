@@ -14,6 +14,7 @@ import { checkEditor, type CheckEditor } from './checkEditor';
  */
 
 let editor: Editor | undefined;
+let host: HTMLElement | undefined;
 
 /** Cites as `citeWork` would, without the project's citation store. */
 async function cite(instance: TiptapEditor, work: string, locator?: string) {
@@ -25,16 +26,21 @@ async function cite(instance: TiptapEditor, work: string, locator?: string) {
 }
 
 function open(content: JSONContent[]): CheckEditor {
-	const element = document.createElement('div');
-	document.body.append(element);
-	editor = new Editor({ element, extensions: editorExtensions, content: { type: 'doc', content } });
+	host = document.createElement('div');
+	document.body.append(host);
+	editor = new Editor({
+		element: host,
+		extensions: editorExtensions,
+		content: { type: 'doc', content }
+	});
 	return checkEditor(editor, () => 'chapter-1.erti.json', cite);
 }
 
 afterEach(() => {
 	editor?.destroy();
-	editor?.options.element?.remove();
+	host?.remove();
 	editor = undefined;
+	host = undefined;
 });
 
 const para = (...text: string[]): JSONContent => ({

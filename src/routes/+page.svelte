@@ -5,6 +5,7 @@
 	import { Explorer, Landing, SidePanel, StatusFooter, MetadataEditor } from '$lib';
 	import Workspace from '$lib/workspace/Workspace.svelte';
 	import Notes from '$lib/notes/Notes.svelte';
+	import CheckPanel from '$lib/attribution/CheckPanel.svelte';
 	import Outline from '$lib/outline/Outline.svelte';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
@@ -134,6 +135,12 @@
 					     reading is only useful where the drafting happens. -->
 					<div class="border-line h-full w-72 border-r">
 						<Notes />
+					</div>
+				{:else if panelName === 'check'}
+					<!-- Beside the writing: the sentence and its source are read
+					     together, and the panel runs only when asked (UX-7). -->
+					<div class="border-line h-full w-80 border-r">
+						<CheckPanel />
 					</div>
 				{:else}
 					<Explorer {isExplorerOpen} />

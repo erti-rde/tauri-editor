@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
-import Panel from './Panel.svelte';
+import Panel from './PanelHarness.svelte';
 
 import { useFakeBackend } from '$lib/harness/testing';
 
@@ -33,6 +33,17 @@ describe('Panel.svelte (with real Settings)', () => {
 
 		await fireEvent.click(getByRole('button', { name: 'Sources' }));
 		expect(toggleSidePanel).toHaveBeenCalledWith('metadataExplorer');
+	});
+
+	// M4-5 AC-1
+	it('has Check between Notes and Sources', async () => {
+		const toggleSidePanel = vi.fn();
+		const { getAllByRole, getByRole } = render(Panel, { props: { toggleSidePanel } });
+
+		const names = getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
+		expect(names.slice(0, 5)).toEqual(['Files', 'Outline', 'Notes', 'Check', 'Sources']);
+		await fireEvent.click(getByRole('button', { name: 'Check' }));
+		expect(toggleSidePanel).toHaveBeenCalledWith('check');
 	});
 
 	it('names every control in the rail', () => {

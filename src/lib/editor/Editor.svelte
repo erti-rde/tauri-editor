@@ -45,6 +45,8 @@
 	import { outlineStore } from '$lib/outline/outlineStore';
 	import { createFollower, draftContext, draftMatches, nudgeFor } from '$lib/notes/draftContext';
 	import { showNudge } from './extensions/NoteNudge';
+	import { attributionCheck } from '$lib/attribution/check.svelte';
+	import { checkEditor, type CheckEditor } from './checkEditor';
 	import { nudgeSetting } from '$lib/notes/writingSettings';
 
 	import type { EditorState } from '@tiptap/pm/state';
@@ -82,6 +84,10 @@
 	 * the time the writer moves it.
 	 */
 	let loadedPath: string | undefined;
+	let checkBridge: CheckEditor | null = null;
+
+	/** A path's file name: what the attribution check calls a document. */
+	const fileNameOf = (path: string | undefined) => path?.split(/[\\/]/).pop() ?? null;
 	/** Set on teardown: onMount awaits, and must not finish on an editor that's gone. */
 	let destroyed = false;
 
@@ -207,8 +213,14 @@
 			extensions: paginatedExtensions(setup),
 			content: await getDocumentData(loadedPath),
 
-			onUpdate: ({ editor }) => {
+			onUpdate: ({ editor, transaction }) => {
 				documentStatus.report({ words: countDocument(editor.state.doc) });
+				// The writer's edits make a check stale (M4-5 AC-5). Relabelled
+				// citations and a document loading aren't edits, and are kept out
+				// of the history for that reason; a fix says so itself.
+				if (!loadingContent && transaction.getMeta('addToHistory') !== false) {
+					attributionCheck.edited();
+				}
 				noticeNewCitations(editor.state.doc);
 				publishOutline(editor);
 				publishDraftContext(editor);
@@ -246,6 +258,10 @@
 		publishOutline($editor);
 		publishDraftContext($editor);
 		draftContext.report({ cite: citeSource });
+		// The Check panel's way in (M4-5): it reads the sentences, marks the one
+		// a finding is about, and makes the fixes.
+		checkBridge = checkEditor($editor, () => fileNameOf(loadedPath));
+		attributionCheck.attach(checkBridge);
 
 		// Last, so the page-setup effects only run once there is something to
 		// apply a setup to. They cannot watch `editor` itself: it publishes on
@@ -379,6 +395,7 @@
 		// The bar outlives the editor, so a closed manuscript must not leave a
 		// stale count sitting in it.
 		documentStatus.clear();
+		if (checkBridge) attributionCheck.detach(checkBridge);
 		// Best-effort: a component teardown cannot be awaited. The close handler
 		// above is what actually guarantees the write; this covers switching away
 		// from a document while the app stays open.
@@ -552,6 +569,9 @@
 
 		documentsStore.open(next);
 		loadedPath = next.path;
+		// Before the content changes, so the old check isn't marked stale by a
+		// switch: it's for the other document now.
+		attributionCheck.opened(fileNameOf(next.path));
 		loadingContent = true;
 		$editor.commands.setContent(content);
 		// Where the writer left off in this one, as on opening the editor: a
