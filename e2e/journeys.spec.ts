@@ -992,7 +992,9 @@ test('writing keeps a snapshot, and so does closing the document after more', as
 	expect((await chapterSnapshots(page)).at(-1)!.text).toContain('And a second.');
 	await page.getByRole('button', { name: 'Chapter 1', exact: true }).click();
 	await page.getByRole('button', { name: 'Planted', exact: true }).click();
-	await page.waitForTimeout(300);
+	// A switch takes its close snapshot before the next document shows, so
+	// once Planted is on screen any snapshot of Chapter 1 has been asked for.
+	await expect(page.locator('.ProseMirror')).toContainText('almost overnight');
 	expect(await chapterSnapshots(page)).toHaveLength(4);
 });
 

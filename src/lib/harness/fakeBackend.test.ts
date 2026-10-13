@@ -410,7 +410,14 @@ describe('version history (M5-1)', () => {
 	it('restores yesterday’s snapshot, keeping today’s first', async () => {
 		await openFixtureProject();
 		const today = await readTextFile(MANUSCRIPT);
-		const { yesterday, dir } = chapterHistory();
+		// Read from what was installed, not named again: the fixture took its
+		// clock when it was laid out, and a second's turn since would name a
+		// file that isn't there.
+		const { dir } = chapterHistory();
+		const [newest] = (await history()).snapshots;
+		expect(newest.trigger).toBe('close');
+		const yesterday = newest.file;
+		expect(await call(commands.readSnapshot(MANUSCRIPT, yesterday))).toContain(CUT_PARAGRAPH);
 
 		const before = await call(commands.restoreSnapshot(MANUSCRIPT, yesterday, 39));
 		expect(before?.trigger).toBe('before_restore');
