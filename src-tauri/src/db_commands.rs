@@ -578,6 +578,61 @@ pub async fn set_metadata_override(
         .or_database()
 }
 
+/// The attribution findings dismissed in this project (M4-7).
+#[tauri::command]
+#[specta::specta]
+pub async fn dismissed_findings(
+    state: State<'_, DbState>,
+) -> Result<Vec<queries::DismissedFinding>, AppError> {
+    dismissed_findings_in(&state).await
+}
+
+pub async fn dismissed_findings_in(
+    state: &DbState,
+) -> Result<Vec<queries::DismissedFinding>, AppError> {
+    queries::dismissed_findings(&state.project().await?)
+        .await
+        .or_database()
+}
+
+/// Dismiss an attribution finding, for this project, until its words change.
+#[tauri::command]
+#[specta::specta]
+pub async fn dismiss_finding(
+    state: State<'_, DbState>,
+    finding: queries::DismissedFinding,
+) -> Result<(), AppError> {
+    dismiss_finding_in(&state, finding).await
+}
+
+pub async fn dismiss_finding_in(
+    state: &DbState,
+    finding: queries::DismissedFinding,
+) -> Result<(), AppError> {
+    queries::dismiss_finding(&state.project().await?, &finding)
+        .await
+        .or_database()
+}
+
+/// Bring a dismissed finding back (M4-7 AC-3).
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_finding(
+    state: State<'_, DbState>,
+    finding: queries::DismissedFinding,
+) -> Result<(), AppError> {
+    restore_finding_in(&state, finding).await
+}
+
+pub async fn restore_finding_in(
+    state: &DbState,
+    finding: queries::DismissedFinding,
+) -> Result<(), AppError> {
+    queries::restore_finding(&state.project().await?, &finding)
+        .await
+        .or_database()
+}
+
 /// What removing a source would delete, for the dialog that asks first.
 #[tauri::command]
 #[specta::specta]

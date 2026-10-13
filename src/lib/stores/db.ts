@@ -396,3 +396,19 @@ export const searchLibrary = (
 			options.includeLibrary ?? null
 		)
 	) as Promise<LibraryHit[]>;
+
+export type AttributionMatches = ipc.AttributionMatches;
+export type DismissedFinding = ipc.DismissedFinding;
+
+/**
+ * Match a manuscript's sentences against the library, the project's other
+ * documents and every mark and note's quote (M4-3). `document` is the open
+ * manuscript's file name, so it isn't matched against itself.
+ */
+export const checkAttribution = (document: string | null, sentences: string[]) =>
+	call(commands.checkAttribution(document, sentences));
+
+/** The attribution findings dismissed in this project (M4-7). */
+export const dismissedFindings = () => call(commands.dismissedFindings());
+export const dismissFinding = (finding: DismissedFinding) => run(commands.dismissFinding(finding));
+export const restoreFinding = (finding: DismissedFinding) => run(commands.restoreFinding(finding));

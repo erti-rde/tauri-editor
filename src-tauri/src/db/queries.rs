@@ -790,6 +790,69 @@ pub async fn set_metadata_override(
     Ok(())
 }
 
+/// An attribution finding the writer dismissed (M4-7): the sentence's words,
+/// the work it matched and the kind of finding.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DismissedFinding {
+    pub sentence_hash: String,
+    pub canonical_id: String,
+    pub kind: String,
+}
+
+pub async fn dismissed_findings(project: &SqlitePool) -> Result<Vec<DismissedFinding>, String> {
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT normalised_sentence_hash, canonical_id, kind FROM dismissed_findings
+         ORDER BY dismissed_at, rowid",
+    )
+    .fetch_all(project)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(rows
+        .into_iter()
+        .map(|(sentence_hash, canonical_id, kind)| DismissedFinding {
+            sentence_hash,
+            canonical_id,
+            kind,
+        })
+        .collect())
+}
+
+/// Dismiss a finding. Dismissing it again keeps the first time it was.
+pub async fn dismiss_finding(
+    project: &SqlitePool,
+    finding: &DismissedFinding,
+) -> Result<(), String> {
+    sqlx::query(
+        "INSERT OR IGNORE INTO dismissed_findings (normalised_sentence_hash, canonical_id, kind)
+         VALUES (?, ?, ?)",
+    )
+    .bind(&finding.sentence_hash)
+    .bind(&finding.canonical_id)
+    .bind(&finding.kind)
+    .execute(project)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub async fn restore_finding(
+    project: &SqlitePool,
+    finding: &DismissedFinding,
+) -> Result<(), String> {
+    sqlx::query(
+        "DELETE FROM dismissed_findings
+         WHERE normalised_sentence_hash = ? AND canonical_id = ? AND kind = ?",
+    )
+    .bind(&finding.sentence_hash)
+    .bind(&finding.canonical_id)
+    .bind(&finding.kind)
+    .execute(project)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Every alias in the library, alias → canonical (ADR 003).
 ///
 /// Read whole rather than id by id: a library has a handful of aliases, and
