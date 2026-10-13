@@ -2,6 +2,7 @@ import type {
 	commands,
 	Annotation,
 	AttributionMatches,
+	DismissedFinding,
 	MatchedPassage,
 	AnnotationLabel,
 	AppError,
@@ -115,6 +116,8 @@ export interface FakeState {
 	project: Set<string>;
 	/** Project-local metadata corrections. */
 	overrides: Map<string, string>;
+	/** Dismissed attribution findings, in the order dismissed (M4-7). */
+	dismissed: DismissedFinding[];
 	/** Alias → canonical id, as `source_aliases` holds them. Never chained. */
 	aliases: Map<string, string>;
 	chunks: Map<string, NewChunk[]>;
@@ -138,6 +141,7 @@ export function stateFrom(fixture: Fixture): FakeState {
 		library,
 		project: new Set(library.keys()),
 		overrides: new Map(),
+		dismissed: [],
 		aliases: new Map(Object.entries(fixture.aliases ?? {})),
 		// Each ready source can be found by its own title and its marked passages,
 		// which is enough for the suggestions panel to have something to show.
@@ -1129,11 +1133,32 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			};
 		},
 
+		dismissedFindings() {
+			root();
+			return structuredClone(state.dismissed);
+		},
+
+		dismissFinding(finding) {
+			root();
+			if (!state.dismissed.some((d) => sameFinding(d, finding)))
+				state.dismissed.push({ ...finding });
+			return null;
+		},
+
+		restoreFinding(finding) {
+			root();
+			state.dismissed = state.dismissed.filter((d) => !sameFinding(d, finding));
+			return null;
+		},
+
 		restoreDefaultLabels: () => (library(), 0),
 
 		nameLabelsAfterColours: () => (library(), 0)
 	};
 }
+
+const sameFinding = (a: DismissedFinding, b: DismissedFinding) =>
+	a.sentenceHash === b.sentenceHash && a.canonicalId === b.canonicalId && a.kind === b.kind;
 
 /** The directory listing `read_directory` returns, built from flat paths. */
 function tree(prefix: string, paths: string[]) {

@@ -18,7 +18,7 @@
 
 /// Schema version applied to a freshly created or upgraded database.
 pub const LIBRARY_VERSION: i64 = 6;
-pub const PROJECT_VERSION: i64 = 1;
+pub const PROJECT_VERSION: i64 = 2;
 
 /// One step up to schema version `to`.
 ///
@@ -77,11 +77,18 @@ pub const LIBRARY_MIGRATIONS: &[Migration] = &[
     },
 ];
 
-pub const PROJECT_MIGRATIONS: &[Migration] = &[Migration {
-    to: 1,
-    sql: PROJECT_SCHEMA,
-    skip_if: None,
-}];
+pub const PROJECT_MIGRATIONS: &[Migration] = &[
+    Migration {
+        to: 1,
+        sql: PROJECT_SCHEMA,
+        skip_if: None,
+    },
+    Migration {
+        to: 2,
+        sql: DISMISSED_FINDINGS_SCHEMA,
+        skip_if: None,
+    },
+];
 
 /// The shared source corpus. Lives at a user-configurable location, defaulting to
 /// `~/Erti/library.db`, the way Zotero exposes its data directory.
@@ -448,4 +455,22 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 INSERT OR IGNORE INTO settings (id) VALUES (1);
+"#;
+
+/// Attribution findings the writer has dismissed (M4-7, docs/ux.md UX-7).
+///
+/// In the project, since a dismissal is a judgement about this manuscript's
+/// sentence, not about the source. Keyed by the sentence's words rather than
+/// its place: `normalised_sentence_hash` is the SHA-256 of the sentence as
+/// the check normalises it, so spacing and punctuation leave a dismissal
+/// standing and changed words bring the finding back. `canonical_id` is the
+/// work it matched (ADR 003), or the other document's file name for reuse.
+pub const DISMISSED_FINDINGS_SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS dismissed_findings (
+    normalised_sentence_hash TEXT NOT NULL,
+    canonical_id             TEXT NOT NULL,
+    kind                     TEXT NOT NULL,
+    dismissed_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (normalised_sentence_hash, canonical_id, kind)
+);
 "#;

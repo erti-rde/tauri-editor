@@ -177,6 +177,12 @@ export const commands = {
 	 *  and the corpus as they are now.
 	 */
 	checkAttribution: (document: string | null, sentences: string[]) => typedError<AttributionMatches, AppError>(__TAURI_INVOKE("check_attribution", { document, sentences })),
+	/**  The attribution findings dismissed in this project (M4-7). */
+	dismissedFindings: () => typedError<DismissedFinding[], AppError>(__TAURI_INVOKE("dismissed_findings")),
+	/**  Dismiss an attribution finding, for this project, until its words change. */
+	dismissFinding: (finding: DismissedFinding) => typedError<null, AppError>(__TAURI_INVOKE("dismiss_finding", { finding })),
+	/**  Bring a dismissed finding back (M4-7 AC-3). */
+	restoreFinding: (finding: DismissedFinding) => typedError<null, AppError>(__TAURI_INVOKE("restore_finding", { finding })),
 	/**
 	 *  Search everything in the library by meaning: passages, marks and source
 	 *  notes, in one ranked list, each result saying which it is (ADR 005).
@@ -340,6 +346,16 @@ export type CompileResult = {
 	pdf: string | null,
 	/**  The engine's output, kept whether or not it succeeded. */
 	log: string,
+};
+
+/**
+ *  An attribution finding the writer dismissed (M4-7): the sentence's words,
+ *  the work it matched and the kind of finding.
+ */
+export type DismissedFinding = {
+	sentenceHash: string,
+	canonicalId: string,
+	kind: string,
 };
 
 /**
