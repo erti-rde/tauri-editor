@@ -286,7 +286,11 @@ fn take_locked(
     // Before reading anything: while writing, this is asked after every save,
     // and nearly every time the answer is "too soon".
     let existing = snapshots_in(dir);
-    let newest = existing.first();
+    // The newest that isn't from the future. One dated ahead (a clock set
+    // wrong, here or on a co-author's machine syncing the folder) would
+    // otherwise hold off every snapshot while writing until that time came,
+    // and be what each new one was compared with.
+    let newest = existing.iter().find(|(time, _)| *time <= now);
     if let Some((time, _)) = newest {
         if trigger == Trigger::Writing && now - time < WHILE_WRITING_EVERY {
             return Ok(None);
@@ -436,11 +440,14 @@ pub fn now() -> i64 {
 }
 
 /// The name a manuscript's history folder takes: its file name without
-/// Erti's extension. The document from before 1.0 is `magnum_opus`.
+/// Erti's extension. The document from before 1.0 keeps its whole name.
 pub fn stem_of(file_name: &str) -> Option<&str> {
     let stem = file_name
         .strip_suffix(".erti.json")
-        .or_else(|| (file_name == "magnum_opus.json").then_some("magnum_opus"))?;
+        // Its whole name: `magnum_opus.erti.json` may sit beside it, a
+        // document of its own, and two histories in one folder would restore
+        // one over the other.
+        .or_else(|| (file_name == "magnum_opus.json").then_some("magnum_opus.json"))?;
     (!stem.is_empty() && !stem.starts_with('.')).then_some(stem)
 }
 
@@ -966,10 +973,43 @@ mod tests {
         assert_eq!(clear_before(&dir, now - 90 * DAY).unwrap(), 0);
     }
 
+    // M5-1 AC-2
+    #[test]
+    fn a_snapshot_from_the_future_does_not_hold_off_the_others() {
+        let root = scratch("future");
+        let doc = root.join("Chapter 1.erti.json");
+        let dir = root.join("history");
+        let t = at("2026-10-13T10-00-00Z");
+
+        // Taken on a machine whose clock ran a day ahead.
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(name_for(t + DAY)), "one").unwrap();
+
+        std::fs::write(&doc, "one").unwrap();
+        // The same bytes as that one, but it isn't the newest yet: kept.
+        assert!(take(&dir, &doc, Trigger::Writing, Some(1), t)
+            .unwrap()
+            .is_some());
+        // And the ten minutes are counted from this one, not from tomorrow.
+        std::fs::write(&doc, "one two").unwrap();
+        assert_eq!(
+            take(&dir, &doc, Trigger::Writing, Some(2), t + 599).unwrap(),
+            None
+        );
+        assert!(take(&dir, &doc, Trigger::Writing, Some(2), t + 600)
+            .unwrap()
+            .is_some());
+    }
+
     #[test]
     fn a_manuscripts_history_folder_is_its_name() {
         assert_eq!(stem_of("Chapter 1.erti.json"), Some("Chapter 1"));
-        assert_eq!(stem_of("magnum_opus.json"), Some("magnum_opus"));
+        assert_eq!(stem_of("magnum_opus.json"), Some("magnum_opus.json"));
+        // A document named after it is another document, with its own history.
+        assert_ne!(
+            stem_of("magnum_opus.erti.json"),
+            stem_of("magnum_opus.json")
+        );
         for name in [".erti.json", "..erti.json", "notes.json", "x.pdf"] {
             assert_eq!(stem_of(name), None, "{name}");
         }
