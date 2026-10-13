@@ -655,6 +655,10 @@
 			legacy: false
 		});
 
+		// As on opening one: the Check panel's result was for the other
+		// document, and a check now must leave this one out of its corpus.
+		loadedPath = path;
+		attributionCheck.opened(fileNameOf(path));
 		$editor.commands.setContent({ type: 'doc', content: [] });
 		citationsSeen = 0;
 		await fileSystemStore.readDirectory(currentDir);
