@@ -13,7 +13,7 @@
 		saveLabel,
 		type AnnotationLabel
 	} from '$lib/stores/db';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 
 	/**
 	 * The highlight labels, and what they mean.

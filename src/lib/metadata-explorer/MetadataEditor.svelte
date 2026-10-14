@@ -8,7 +8,7 @@
 	import { projectSources } from '$lib/stores/db';
 	import { workspaceStore } from '$lib/workspace/workspaceStore';
 	import { applyManualDoi, ingestAll, retryIngest } from '$utils/pdf_handlers';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { open as pickFile } from '@tauri-apps/plugin-dialog';
 	import { EXTENSIONS } from '$lib/import';

@@ -4,7 +4,7 @@
 
 	import { describeError } from '$lib/ipc';
 	import { sourceFiles, type SourceFile } from '$lib/stores/db';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import { Button, EmptyState, Loader } from '$lib/ui';
 	import { workspaceStore } from '$lib/workspace/workspaceStore';
 	import { retryIngest } from '$utils/pdf_handlers';

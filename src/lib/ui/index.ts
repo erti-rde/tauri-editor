@@ -27,8 +27,8 @@ export { default as Switch } from './Switch.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as TextArea } from './TextArea.svelte';
 export { default as TextField } from './TextField.svelte';
+export { default as Toast, toast, type ToastKind } from './Toast.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
-// Existing, aligned to the tokens, and kept where the app already imports them.
+// Existing, aligned to the tokens, and kept where the app already imports it.
 export { default as Loader } from '$lib/loader/Loader.svelte';
-export { default as Toast } from '$lib/toast/Toast.svelte';
 export type { IconComponent } from './icon';

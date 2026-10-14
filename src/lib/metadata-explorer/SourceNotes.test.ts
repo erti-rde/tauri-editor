@@ -15,7 +15,7 @@ const db = vi.hoisted(() => ({
 }));
 vi.mock('$lib/stores/db', () => db);
 const toast = vi.hoisted(() => ({ errorToast: vi.fn() }));
-vi.mock('$lib/toast/Toast.svelte', () => toast);
+vi.mock('$lib/ui/Toast.svelte', () => toast);
 
 const BOOK = 'erti:6f1c3a52-8d0e-4c1b-9a7e-2b5d4f3e1a01';
 const PDF = 'c'.repeat(64);

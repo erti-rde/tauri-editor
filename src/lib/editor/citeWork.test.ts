@@ -36,7 +36,7 @@ const db = vi.hoisted(() => ({
 vi.mock('$lib/stores/db', () => db);
 
 const toast = vi.hoisted(() => ({ errorToast: vi.fn(), successToast: vi.fn() }));
-vi.mock('$lib/toast/Toast.svelte', () => toast);
+vi.mock('$lib/ui/Toast.svelte', () => toast);
 
 function editor() {
 	const insertCitation = vi.fn();

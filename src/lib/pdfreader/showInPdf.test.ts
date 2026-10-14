@@ -5,7 +5,7 @@ import { readerStore } from './readerStore';
 import { showInPdf } from './showInPdf';
 import { workspaceStore } from '$lib/workspace/workspaceStore';
 import { pathForSource } from '$lib/stores/db';
-import { errorToast } from '$lib/toast/Toast.svelte';
+import { errorToast } from '$lib/ui/Toast.svelte';
 
 /**
  * The way back from a citation to the page it came from (#37).
@@ -16,7 +16,7 @@ import { errorToast } from '$lib/toast/Toast.svelte';
  */
 
 vi.mock('$lib/stores/db', () => ({ pathForSource: vi.fn() }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn() }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: vi.fn() }));
 
 const PATH = '/papers/smith-2020.pdf';
 

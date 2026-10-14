@@ -17,7 +17,7 @@ const { addSourceFromManuscript, successToast, store } = vi.hoisted(() => ({
 
 vi.mock('$lib/stores/db', () => ({ addSourceFromManuscript }));
 vi.mock('$lib/stores/citationStore', () => ({ citationStore: store }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ successToast, errorToast: vi.fn() }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ successToast, errorToast: vi.fn() }));
 vi.mock('@floating-ui/dom', () => ({
 	autoUpdate: () => () => {},
 	computePosition: async () => ({ x: 0, y: 0 }),

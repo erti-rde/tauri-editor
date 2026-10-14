@@ -20,7 +20,7 @@ vi.mock('./bibliography', async (real) => ({
 	locatePdfs: mocks.locatePdfs,
 	attachPdfs: mocks.attachPdfs
 }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
 
 import type { ImportEntry } from '$lib/import';
 import type { AugmentedZoteroSchema } from './adapterCslZotero';

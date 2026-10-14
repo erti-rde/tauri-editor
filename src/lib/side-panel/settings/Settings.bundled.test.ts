@@ -31,7 +31,7 @@ vi.mock('@tauri-apps/plugin-store', () => ({
 }));
 
 vi.mock('$lib', () => ({ Icon: () => '<svg></svg>' }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: mockErrorToast, successToast: vi.fn() }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: mockErrorToast, successToast: vi.fn() }));
 
 const MANIFEST = {
 	default: { style: 'apa', locale: 'en-GB' },

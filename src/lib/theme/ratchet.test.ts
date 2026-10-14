@@ -91,8 +91,8 @@ const SRC = join(process.cwd(), 'src');
 const UI = join(SRC, 'lib', 'ui') + sep;
 
 /**
- * A primitive that lives elsewhere and is exported from `$lib/ui` (`Toast`
- * keeps its place beside the store that drives it) is part of the library.
+ * A primitive that lives elsewhere and is exported from `$lib/ui` (`Loader`)
+ * is part of the library.
  */
 const REEXPORTED = new Set(
 	[...readFileSync(join(UI, 'index.ts'), 'utf8').matchAll(/from '\$lib\/([^']+\.svelte)'/g)].map(

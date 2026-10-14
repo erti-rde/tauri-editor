@@ -76,7 +76,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | Sections of one surface            | `Tabs`                                 |                                                                                          |
 | A rail panel                       | `Panel` + `PanelHeader`                | Header: title, one primary action, a scope line                                          |
 | A right-hand detail view           | `Sidebar`                              | Close with Esc; its actions in `footer`, Save last                                       |
-| Something happened                 | `Toast`                                | Past tense, with an action if there's a next step ("Show in folder")                     |
+| Something happened                 | `toast()`                              | The fact as title, past tense; one action if there's a way on ("Show in folder")         |
 | Something needs attention in place | `Banner`                               | `info`/`warning`/`danger`/`success`, in words, optionally one action                     |
 | Nothing to show                    | `EmptyState`                           | Say which kind of nothing: none yet, none match, or failed                               |
 | Working                            | `Loader`, `ProgressLine`               | ProgressLine when the count is known ("214 of 380")                                      |
@@ -95,7 +95,6 @@ needs it. Paths are under `src/lib`.
 | Primitive                 | Replaces                                                                                                                                                                 | Needed by     |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
 | `FindBar`                 | The find field in `pdfreader/PdfToolbar.svelte`; the editor's find bar                                                                                                   | M5-2          |
-| `Toast`, rebuilt here     | `toast/Toast.svelte`, exported from `$lib/ui` but built outside it                                                                                                       | M5-4 to M5-6  |
 | `DocumentTab`             | The tabs in `workspace/TabBar.svelte` and the **⋯** button in `editor/DocumentBar.svelte`                                                                                | M5-7          |
 | `InlineRename`            | The label name field in `pdfreader/LabelPicker.svelte`; Rename… on a document                                                                                            | M5-7          |
 | `SplitHandle`             | The fixed even split in `workspace/Workspace.svelte`                                                                                                                     | M5-9          |
@@ -142,7 +141,7 @@ Most of the app predates the primitives, so it isn't migrated in one go (ADR 010
 
 Overlays are primitives, so outside `src/lib/ui` their radius (`rounded-lg`) and shadow
 (`shadow-overlay`) count too: a menu built by hand is what should migrate. A primitive that
-lives elsewhere and is exported from `$lib/ui` (`Toast`, `Loader`) counts as part of the
+lives elsewhere and is exported from `$lib/ui` (`Loader`) counts as part of the
 library. It reads class names: comments, and CSS in a `<style>` block, aren't counted.
 
 `src/lib/theme/design-system-baseline.json` records each file's counts.

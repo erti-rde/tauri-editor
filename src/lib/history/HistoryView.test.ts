@@ -7,7 +7,7 @@ import { chapterHistory, CUT_PARAGRAPH, MANUSCRIPT, ROOT, SHARED } from '$lib/ha
 import { nameFor, timeOfName } from '$lib/harness/fakeHistory';
 import { useFakeBackend } from '$lib/harness/testing';
 import { openLibrary, openProject } from '$lib/stores/db';
-import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 
 import UiHarness from '$lib/ui/UiHarness.svelte';
 
@@ -20,7 +20,7 @@ import { RESTORED, timeLabel } from './history';
  * ago, and yesterday on close, holding a paragraph cut since.
  */
 
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
 
 const backend = useFakeBackend();
 

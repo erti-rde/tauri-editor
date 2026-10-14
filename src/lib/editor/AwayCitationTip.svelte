@@ -7,7 +7,7 @@
 	import { describeError } from '$lib/ipc';
 	import { addSourceFromManuscript } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 
 	/**
 	 * What a citation from the manuscript's own sources says about itself

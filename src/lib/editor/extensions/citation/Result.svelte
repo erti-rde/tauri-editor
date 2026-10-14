@@ -6,7 +6,7 @@
 
 	import { addToProject, searchSources, type ScoredChunk } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 
 	import type { CitationItem } from '$lib/stores/citationStore';
 	import { clickOutside } from '$utils/clickOutside.svelte';

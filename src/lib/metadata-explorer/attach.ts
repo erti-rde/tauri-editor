@@ -2,7 +2,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 
 import { describeError } from '$lib/ipc';
 import { attachFile } from '$lib/stores/db';
-import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 import { retryIngest } from '$utils/pdf_handlers';
 
 /**

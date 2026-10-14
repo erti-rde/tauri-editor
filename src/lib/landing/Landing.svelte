@@ -5,7 +5,7 @@
 
 	import { call, commands } from '$lib/ipc';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import {
 		describeWhen,
 		forgetProject,

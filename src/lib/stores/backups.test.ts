@@ -9,7 +9,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 		return () => {};
 	})
 }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn() }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: vi.fn() }));
 
 const { watchBackups } = await import('./backups');
 

@@ -1,6 +1,6 @@
 import { listen } from '@tauri-apps/api/event';
 
-import { errorToast } from '$lib/toast/Toast.svelte';
+import { errorToast } from '$lib/ui/Toast.svelte';
 
 /**
  * Say once when a library backup fails (ADR 008, M1a-5 AC-5).

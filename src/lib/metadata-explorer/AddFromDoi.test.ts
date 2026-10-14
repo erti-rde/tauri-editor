@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('./fromDoi', () => ({ addFromDoi: mocks.addFromDoi }));
 vi.mock('$lib/stores/consent', () => ({ networkAllowed: mocks.networkAllowed }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
 
 import type { AugmentedZoteroSchema } from './adapterCslZotero';
 import AddFromDoi from './AddFromDoi.svelte';

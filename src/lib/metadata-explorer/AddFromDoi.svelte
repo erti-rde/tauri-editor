@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { describeError } from '$lib/ipc';
 	import { networkAllowed } from '$lib/stores/consent';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import { Banner, Button, Dialog, TextField } from '$lib/ui';
 
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';

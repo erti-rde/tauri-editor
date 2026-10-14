@@ -30,7 +30,7 @@ vi.mock('$lib/stores/db', () => ({ projectSources, setMetadataOverride: vi.fn() 
 vi.mock('$utils/pdf_handlers', () => ({ retryIngest, ingestAll, applyManualDoi: vi.fn() }));
 vi.mock('./adapterCslZotero', () => ({ augmentSchema: vi.fn(async () => null) }));
 vi.mock('./attach', () => ({ attachPdf }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast, successToast }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast, successToast }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: pickFile }));
 vi.mock('@tauri-apps/plugin-fs', () => ({ readTextFile: vi.fn(async () => '') }));
 vi.mock('./bibliography', async (real) => ({

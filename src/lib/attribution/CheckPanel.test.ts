@@ -11,7 +11,7 @@ import { matchSpans } from '$lib/harness/fakeMatcher';
 import type { AttributionMatches, DismissedFinding, MatchedPassage } from '$lib/ipc';
 import { showInPdf } from '$lib/pdfreader/showInPdf';
 import { checkAttribution } from '$lib/stores/db';
-import { errorToast } from '$lib/toast/Toast.svelte';
+import { errorToast } from '$lib/ui/Toast.svelte';
 
 import CheckPanel from './CheckPanel.svelte';
 import { attributionCheck } from './check.svelte';
@@ -121,7 +121,7 @@ vi.mock('$lib/stores/db', async (original) => ({
 	})
 }));
 vi.mock('$lib/pdfreader/showInPdf', () => ({ showInPdf: vi.fn(async () => true) }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
 
 const text = (value: string): JSONContent => ({ type: 'text', text: value });
 const cite = (id: string): JSONContent => ({

@@ -20,7 +20,7 @@
 	import { writeTextFile } from '@tauri-apps/plugin-fs';
 	import { projectSources, sourceAliases } from '$lib/stores/db';
 	import { canonical } from '$lib/citations/aliases';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 	import { toMarkdown, toSidecar } from './export';
 	import { draftContext, draftMatches, firstWords, matchesFrom, SHOWN_FLOOR } from './draftContext';
 	import { followSetting } from './writingSettings';

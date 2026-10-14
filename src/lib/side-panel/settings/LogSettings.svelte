@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { commands, describeError, run } from '$lib/ipc';
 	import { log } from '$lib/log';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 
 	// Moves into About when M7a-10 lands (M1a-12 AC-5), and onto the Button
 	// primitive with M1c-2.

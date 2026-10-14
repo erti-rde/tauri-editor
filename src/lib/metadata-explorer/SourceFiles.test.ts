@@ -14,7 +14,7 @@ vi.mock('$lib/stores/db', () => ({ sourceFiles: mocks.sourceFiles }));
 vi.mock('./attach', () => ({ attachPdf: mocks.attachPdf }));
 vi.mock('@tauri-apps/plugin-opener', () => ({ revealItemInDir: mocks.revealItemInDir }));
 vi.mock('$lib/workspace/workspaceStore', () => ({ workspaceStore: { open: mocks.openTab } }));
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: mocks.errorToast }));
 vi.mock('$utils/pdf_handlers', () => ({ retryIngest: mocks.retryIngest }));
 
 import SourceFiles from './SourceFiles.svelte';

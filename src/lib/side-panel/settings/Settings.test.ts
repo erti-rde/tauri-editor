@@ -49,7 +49,7 @@ vi.mock('@tauri-apps/plugin-store', () => {
 
 // Mock required dependencies
 vi.mock('$lib', () => ({ Icon: () => '<svg></svg>' }));
-vi.mock('$lib/toast/Toast.svelte', () => ({
+vi.mock('$lib/ui/Toast.svelte', () => ({
 	errorToast: mockErrorToast,
 	successToast: vi.fn()
 }));

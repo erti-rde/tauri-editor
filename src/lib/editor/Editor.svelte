@@ -2,7 +2,7 @@
 	import { onDestroy, onMount, untrack } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';

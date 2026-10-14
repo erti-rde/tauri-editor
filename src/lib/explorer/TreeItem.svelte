@@ -6,7 +6,7 @@
 	import { workspaceStore } from '$lib/workspace/workspaceStore';
 	import { documentsStore } from '$lib/stores/documents.svelte';
 	import { isDocumentFile } from '$lib/editor/documents';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import { get } from 'svelte/store';
 
 	interface Props {

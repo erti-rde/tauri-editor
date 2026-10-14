@@ -14,7 +14,7 @@
 		type SourceNote,
 		type WorkNotes
 	} from '$lib/stores/db';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import { Button, ConfirmDialog, EmptyState, Item, LabelChip } from '$lib/ui';
 
 	import { pageAbbreviation } from '$lib/citations/document';

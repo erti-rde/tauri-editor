@@ -14,7 +14,7 @@ vi.mock('$lib/ingest/extract', () => ({}));
 vi.mock('$lib/ingest/chunk', () => ({}));
 vi.mock('$lib/ingest/pipeline', () => ({}));
 vi.mock('$lib/statusFooter/StatusFooter.svelte', () => ({}));
-vi.mock('$lib/toast/Toast.svelte', () => ({}));
+vi.mock('$lib/ui/Toast.svelte', () => ({}));
 vi.mock('$lib/ingest/resolve', async (real) => ({
 	...(await real<typeof import('$lib/ingest/resolve')>()),
 	lookupDoi: mocks.lookupDoi,
