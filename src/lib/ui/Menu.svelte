@@ -11,6 +11,13 @@
 		/** Destructive. Sits last, after a separator, whatever order it's given in. */
 		danger?: boolean;
 		disabled?: boolean;
+		/** Starts a group: a line above it, such as between a check and what it checks. */
+		separated?: boolean;
+		/**
+		 * Something has changed that this is about, such as the document since its
+		 * last check. A dot, so the description has to say what changed in words.
+		 */
+		dot?: boolean;
 		onSelect: () => void;
 	}
 </script>
@@ -75,6 +82,9 @@
 				<span class="text-caption text-ink-muted">{item.description}</span>
 			{/if}
 		</span>
+		{#if item.dot}
+			<span class="bg-accent mt-1.5 size-1.5 shrink-0 rounded-full" aria-hidden="true"></span>
+		{/if}
 		{#if item.active}
 			<Check class="text-accent mt-px size-3.5 shrink-0" aria-hidden="true" />
 		{/if}
@@ -105,7 +115,10 @@
 			class="shadow-overlay bg-surface-raised border-line-strong z-50 grid min-w-48 rounded border p-1 outline-hidden"
 		>
 			<DropdownMenu.Group aria-label={label}>
-				{#each safe as item (item.label)}
+				{#each safe as item, i (item.label)}
+					{#if item.separated && i > 0}
+						<DropdownMenu.Separator class="bg-line my-1 h-px" />
+					{/if}
 					{@render row(item)}
 				{/each}
 			</DropdownMenu.Group>

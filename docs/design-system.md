@@ -65,7 +65,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | ---------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
 | An action with words               | `Button`                               | `primary` once per view · `secondary` · `ghost` · `danger`; `sm`/`md`; `loading`         |
 | An action with an icon             | `IconButton`                           | `label` required: tooltip + accessible name                                              |
-| A list of actions                  | `Menu`                                 | Items can carry a one-line description; `danger` item sits last, after a separator       |
+| A list of actions                  | `Menu`                                 | One-line descriptions; `danger` last, after a line; `separated` groups; `dot` + words    |
 | Text in                            | `TextField`, `TextArea`, `SearchField` | Label, hint and error built in; the error says how to fix it                             |
 | Find in a text                     | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change  |
 | One of a few                       | `RadioGroup`                           | Arrow keys; the Appearance settings pattern                                              |

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { createRawSnippet, type Component, type ComponentProps } from 'svelte';
 import { readFileSync } from 'node:fs';
@@ -193,6 +193,31 @@ describe('Menu', () => {
 				'false'
 			)
 		);
+	});
+
+	it('starts a group with a line, and says in words what its dot means', async () => {
+		const user = userEvent.setup();
+		mount(Menu, {
+			label: 'Export',
+			items: [
+				{
+					label: 'Check attribution first…',
+					description: 'Changed since the last check',
+					dot: true,
+					onSelect: vi.fn()
+				},
+				{ label: 'PDF…', separated: true, onSelect: vi.fn() },
+				{ label: 'Word document (.docx)…', onSelect: vi.fn() }
+			]
+		});
+
+		await user.click(screen.getByRole('button', { name: 'Export' }));
+		const menu = await screen.findByRole('menu', anyVisibility);
+
+		// By its data attribute: bits-ui's separator carries no separator role.
+		expect(menu.querySelectorAll('[data-dropdown-menu-separator]')).toHaveLength(1);
+		const [check] = within(menu).getAllByRole('menuitem', anyVisibility);
+		expect(check).toHaveTextContent('Changed since the last check');
 	});
 
 	it("can't be opened while disabled", async () => {
