@@ -1089,3 +1089,56 @@ test('the manuscript asks to be spellchecked', async ({ page }) => {
 	// and is checked by hand in the release matrix (AC-2).
 	await expect(page.locator('.ProseMirror')).toHaveAttribute('spellcheck', 'true');
 });
+
+test('the Export menu writes a Word document where asked, and shows it in its folder', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	const path = '/fake/home/Documents/Thesis/Chapter 1.docx';
+	await page.evaluate((answer) => window.__ERTI_FAKE__!.dialogAnswers.push(answer), path);
+
+	// M5-6 AC-1: one menu, the check first and the formats after it.
+	await page.getByRole('button', { name: 'Export' }).click();
+	await expect(page.getByRole('menuitem')).toHaveText([
+		'Check attribution first…',
+		'PDF…',
+		'Word document (.docx)…',
+		'LaTeX bundle…'
+	]);
+	await page.getByRole('menuitem', { name: 'Word document (.docx)…' }).click();
+
+	// M5-6 AC-2: said, and one click from the file.
+	const toast = page
+		.locator('[data-toasts]')
+		.getByRole('status')
+		.filter({ hasText: 'Exported Chapter 1.docx' });
+	await expect(toast).toBeVisible();
+	await toast.getByRole('button', { name: 'Show in folder' }).click();
+	const fake = await page.evaluate((written) => {
+		const backend = window.__ERTI_FAKE__!;
+		const bytes = backend.files.get(written);
+		return {
+			opened: backend.opened,
+			zip: bytes instanceof Uint8Array ? [bytes[0], bytes[1]] : null
+		};
+	}, path);
+	expect(fake.opened).toContain(path);
+	// A .docx is a zip: "PK".
+	expect(fake.zip).toEqual([0x50, 0x4b]);
+});
+
+test('Check attribution first, from the Export menu, runs the check in its panel', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	await page.getByRole('button', { name: 'Export' }).click();
+	await page.getByRole('menuitem', { name: 'Check attribution first…' }).click();
+
+	// Run, not just opened: choosing it was the asking (UX-7 AC-6).
+	await expect(page.getByText(/sentences? checked against/)).toBeVisible();
+});
