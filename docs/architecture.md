@@ -113,7 +113,10 @@ in the Tauri store `settings-store.json`.
   edit while the bar is open. Replace all is one transaction, closed off from the typing before
   it, so it is one step for undo.
 - **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
-  `export/bibtex.ts` → files → `compile_latex` if TeX exists.
+  `export/bibtex.ts` → files → `compile_latex` if TeX exists. Word: `export/docx.ts`, a pure
+  function from the document, its rendered notes, the images' bytes and the page setup
+  (`toDocxPageSetup`) to bytes, on the `docx` package. It's loaded with `import()` on export,
+  never with the editor; a test fails on a static import.
 
 ## Rules that must not break
 
