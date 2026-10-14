@@ -2,7 +2,8 @@
 
 How Erti's interface is put together: the tokens, the primitives, and the rules. The decision
 and its reasoning are in [ADR 010](adr/010-design-system.md). The look it serves is described in
-[ux.md](ux.md) and drawn in the [mockups](ux/mockups.html).
+[ux.md](ux.md) and drawn in the [mockups](ux/mockups.html). The primitives still to build are
+drawn in the [component mockups](https://claude.ai/artifact/B3NikygFEYa14dQeoz5hh2) (private).
 
 **The look in one line:** a code editor's chrome that recedes, with thin rules instead of
 shadows and the manuscript as the one bright surface.
@@ -84,6 +85,32 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | A short fact beside something      | `Chip`                                 | "Book", "2 files"; `accent` for the one that should draw the eye                         |
 | A keyboard shortcut                | `Kbd`                                  | As the toolbar writes it: "Mod Shift Z"                                                  |
 
+### Planned primitives
+
+A component audit against this document, ux.md and plan-v1.md found these missing. Each is
+drawn in the [component mockups](https://claude.ai/artifact/B3NikygFEYa14dQeoz5hh2). Rule 1
+applies: the primitive lands in `src/lib/ui`, with a catalogue entry, before the item that
+needs it. Paths are under `src/lib`.
+
+| Primitive                 | Replaces                                                                                                                                                                 | Needed by     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `FindBar`                 | The find field in `pdfreader/PdfToolbar.svelte`; the editor's find bar                                                                                                   | M5-2          |
+| `Toast`, rebuilt here     | `toast/Toast.svelte`, exported from `$lib/ui` but built outside it                                                                                                       | M5-4 to M5-6  |
+| `DocumentTab`             | The tabs in `workspace/TabBar.svelte` and the **⋯** button in `editor/DocumentBar.svelte`                                                                                | M5-7          |
+| `InlineRename`            | The label name field in `pdfreader/LabelPicker.svelte`; Rename… on a document                                                                                            | M5-7          |
+| `SplitHandle`             | The fixed even split in `workspace/Workspace.svelte`                                                                                                                     | M5-9          |
+| `Toolbar`, `ToggleButton` | The hand-built bars and toggles in `editor/extensions/ToolBar.svelte` and `pdfreader/PdfToolbar.svelte`                                                                  | M5-8          |
+| `NumberField`             | The number inputs in `side-panel/settings/Settings.svelte` and `PageSetupSettings.svelte`; the page field in `PdfToolbar.svelte`; `editor/pagination/ZoomControl.svelte` | M5-8          |
+| `SettingRow`, `RadioCard` | The rows in `side-panel/settings/*.svelte`; the palette and page-setup cards built on bits-ui's `RadioGroup` directly                                                    | M5-10, M7a-10 |
+| `Slider`                  | The `type="range"` inputs in `AppearanceSettings.svelte`                                                                                                                 | M6-8          |
+| `ColourField`             | The `type="color"` input in `ReadingSettings.svelte`; the swatches in `LabelPicker.svelte` and `AppearanceMenu.svelte`                                                   | M6-8          |
+| `Combobox`                | The hand-built listbox in `editor/extensions/citation/CitationSuggestion.svelte`                                                                                         | M6-8          |
+| `FloatingToolbar`         | `editor/extensions/BubbleMenu.svelte`, `pdfreader/SelectionMenu.svelte`, `pdfreader/MarkMenu.svelte`                                                                     | M6-8          |
+| `TreeRow`                 | `explorer/TreeItem.svelte` and the rows in `outline/Outline.svelte`                                                                                                      | M6-8          |
+| `StatusItem`              | The spans in `statusFooter/StatusFooter.svelte`                                                                                                                          | M6-8          |
+
+When one lands, move its row into the table above.
+
 ## Rules
 
 1. Build new UI only from primitives. If one is missing, add it to `src/lib/ui` with a
@@ -95,6 +122,10 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
    drawn inside with `focus-inset` for elements flush with a pane edge.
 4. Colour is never the only channel. State and kind are also in words or shape.
 5. Copy follows ux.md: say what happens, state facts not verdicts, British spelling.
+6. A pressed toggle is `ink` on `accent-quiet` with a `line-strong` edge, never `accent` text.
+   Accent text on `accent-quiet` is what missed 4.5:1 on the accent `Chip`, and the edge tells
+   pressed from hovered. The editor toolbar and the bubble menu break this today
+   (`ToolBar.svelte:132`, `BubbleMenu.svelte:101`); `ToggleButton` fixes both.
 
 ## The ratchet
 
