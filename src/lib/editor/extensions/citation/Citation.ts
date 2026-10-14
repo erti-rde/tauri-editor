@@ -118,17 +118,10 @@ function refreshNotes(tr: Transaction, notes: RenderedNote[]): boolean {
 	return updated;
 }
 
-/**
- * Re-render every citation in the document against the document.
- *
- * Formatting each citation on its own cannot be correct: two different Smith
- * 2020 papers both render "(Smith, 2020)", repeated notes are never shortened,
- * and note numbers are all 0. Those are properties of the manuscript as a
- * whole, so the whole ordered list goes to the processor at once.
- */
-function updateAllCitations(tr: Transaction): boolean {
+/** Every citation in the document, in order: what the processor renders as one. */
+export function citationSites(doc: ProsemirrorNode): CitationSite[] {
 	const sites: CitationSite[] = [];
-	tr.doc.descendants((node, pos) => {
+	doc.descendants((node, pos) => {
 		if (node.type.name === 'citation') {
 			sites.push({
 				pos,
@@ -138,6 +131,19 @@ function updateAllCitations(tr: Transaction): boolean {
 		}
 		return true;
 	});
+	return sites;
+}
+
+/**
+ * Re-render every citation in the document against the document.
+ *
+ * Formatting each citation on its own cannot be correct: two different Smith
+ * 2020 papers both render "(Smith, 2020)", repeated notes are never shortened,
+ * and note numbers are all 0. Those are properties of the manuscript as a
+ * whole, so the whole ordered list goes to the processor at once.
+ */
+function updateAllCitations(tr: Transaction): boolean {
+	const sites = citationSites(tr.doc);
 
 	// An empty document is still rendered, because the store has to be told: the
 	// bibliography and the missing-source markers left by the citations that were

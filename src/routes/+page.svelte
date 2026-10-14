@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { appDataDir, homeDir, join } from '@tauri-apps/api/path';
 	import { readSetting } from '$lib/settings';
 	import { Explorer, Landing, SidePanel, StatusFooter, MetadataEditor } from '$lib';
 	import Workspace from '$lib/workspace/Workspace.svelte';
 	import Notes from '$lib/notes/Notes.svelte';
 	import CheckPanel from '$lib/attribution/CheckPanel.svelte';
+	import { attributionCheck } from '$lib/attribution/check.svelte';
 	import Outline from '$lib/outline/Outline.svelte';
 	import HistoryView from '$lib/history/HistoryView.svelte';
 	import { historyView } from '$lib/history/historyStore.svelte';
@@ -39,6 +40,17 @@
 		if (newSidePanelName !== panelName) historyView.close();
 		panelName = newSidePanelName;
 	}
+
+	// A check asked for from the Export menu is read in its panel, beside the
+	// writing (UX-8). One asked for from the panel finds it open already.
+	$effect(() => {
+		if (!attributionCheck.running) return;
+		untrack(() => {
+			if (panelName !== 'check') historyView.close();
+			panelName = 'check';
+			isExplorerOpen = true;
+		});
+	});
 
 	async function handleProjectOpening() {
 		// A history left open belongs to the project that was open then.

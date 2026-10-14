@@ -13,7 +13,10 @@
 	import BookText from '~icons/lucide/book-text';
 	import BookOpen from '~icons/lucide/book-open';
 	import FilePen from '~icons/lucide/file-pen';
-	import FileOutput from '~icons/lucide/file-output';
+	import FileCode from '~icons/lucide/file-code';
+	import FileText from '~icons/lucide/file-text';
+	import FileType from '~icons/lucide/file-type';
+	import ScanText from '~icons/lucide/scan-text';
 	import SeparatorHorizontal from '~icons/lucide/separator-horizontal';
 	import Italic from '~icons/lucide/italic';
 	import StrikeThrough from '~icons/lucide/strikethrough';
@@ -41,6 +44,8 @@
 	import Link from '~icons/lucide/link';
 
 	import Menu, { type MenuItem } from '$lib/ui/Menu.svelte';
+	import { attributionCheck } from '$lib/attribution/check.svelte';
+	import type { Exports } from '$lib/export/exports';
 	import LinkPopover from './LinkPopover.svelte';
 	import TablePopover from './TablePopover.svelte';
 	import ZoomControl from '../pagination/ZoomControl.svelte';
@@ -48,13 +53,30 @@
 	interface Props {
 		editor: Editor;
 		toggleView: () => void;
-		exportToPdf: () => void;
-		exportToLatex: () => void;
+		exports: Exports;
 	}
 
-	// toggleView and exportToPdf are used in the markup below, but
+	// toggleView is used in the markup below, but
 	// @typescript-eslint/no-unused-vars does not track Svelte template references.
-	let { editor, toggleView, exportToPdf, exportToLatex }: Props = $props();
+	let { editor, toggleView, exports }: Props = $props();
+
+	/**
+	 * One Export menu (UX-8), with the attribution check first: the moment of
+	 * sending a paper out is the moment to look again. The dot says the document
+	 * has changed since the last check, and the line under it says so in words.
+	 */
+	const exportItems: MenuItem[] = $derived([
+		{
+			label: 'Check attribution first…',
+			icon: ScanText,
+			description: attributionCheck.stale ? 'Changed since the last check' : undefined,
+			dot: attributionCheck.stale,
+			onSelect: () => void attributionCheck.run()
+		},
+		{ label: 'PDF…', icon: FileText, separated: true, onSelect: () => void exports.pdf() },
+		{ label: 'Word document (.docx)…', icon: FileType, onSelect: () => void exports.word() },
+		{ label: 'LaTeX bundle…', icon: FileCode, onSelect: () => void exports.latex() }
+	]);
 
 	function handleFormatSelect(format: string) {
 		if (format === 'paragraph') {
@@ -372,22 +394,6 @@
 
 		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
 
-		{@render toolBarButton({
-			onclick: exportToPdf,
-			Icon: FileOutput,
-			label: 'Export as PDF'
-		})}
-
-		<Tooltip label="Export a LaTeX bundle" shortcut="main.tex + references.bib">
-			{#snippet children(tooltip)}
-				<button
-					{...tooltip}
-					class="hover:bg-surface-hover text-ink-muted hover:text-ink rounded px-1.5 py-1.5 font-mono text-[11px] transition-colors"
-					onclick={exportToLatex}
-				>
-					.tex
-				</button>
-			{/snippet}
-		</Tooltip>
+		<Menu label="Export" items={exportItems} align="end" />
 	</div>
 </div>

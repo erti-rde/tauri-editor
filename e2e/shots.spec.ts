@@ -245,3 +245,19 @@ test('shots of find & replace', async ({ page }) => {
 	await expect(page.locator('.erti-find-match')).toHaveCount(2);
 	await page.screenshot({ ...shot('31-find-replace'), animations: 'disabled' });
 });
+
+test('shots of the Export menu and its toast', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	await page.evaluate(() =>
+		window.__ERTI_FAKE__!.dialogAnswers.push('/fake/home/Documents/Thesis/Chapter 1.docx')
+	);
+	await page.getByRole('button', { name: 'Export' }).click();
+	await expect(page.getByRole('menuitem')).toHaveCount(4);
+	await page.screenshot({ ...shot('32-export-menu'), animations: 'disabled' });
+
+	await page.getByRole('menuitem', { name: 'Word document (.docx)…' }).click();
+	await expect(page.getByText('Exported Chapter 1.docx')).toBeVisible();
+	await page.screenshot({ ...shot('33-exported'), animations: 'disabled' });
+});

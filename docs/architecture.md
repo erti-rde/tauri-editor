@@ -112,11 +112,14 @@ in the Tauri store `settings-store.json`.
   matched, and a match never runs across one. The matches are decorations, found again on every
   edit while the bar is open. Replace all is one transaction, closed off from the typing before
   it, so it is one step for undo.
-- **Exporting.** PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
-  `export/bibtex.ts` → files → `compile_latex` if TeX exists. Word: `export/docx.ts`, a pure
-  function from the document, its rendered notes, the images' bytes and the page setup
-  (`toDocxPageSetup`) to bytes, on the `docx` package. It's loaded with `import()` on export,
-  never with the editor; a test fails on a static import.
+- **Exporting.** The toolbar's **Export ▾** menu runs `export/exports.ts` (UX-8), which settles
+  the document (autosave flushed, citations rendered), writes, and ends with a toast holding
+  **Show in folder**. "Check attribution first…" runs the check, and the page shows its panel
+  whenever one runs. PDF: `window.print()` with the print stylesheet. LaTeX: `export/latex.ts` +
+  `export/bibtex.ts` → the project's `export/` → `compile_latex` if TeX exists. Word: asks
+  where, then `export/docx.ts`, a pure function from the document, its rendered notes, the
+  images' bytes and the page setup (`toDocxPageSetup`) to bytes, on the `docx` package. It's
+  loaded with `import()` on export, never with the editor; a test fails on a static import.
 
 ## Rules that must not break
 

@@ -93,7 +93,9 @@ describe('the BibTeX parser', () => {
 				.filter((from) =>
 					from === '@retorquere/bibtex-parser'
 						? !file.endsWith('src/lib/import/bibtex.ts')
-						: /(^|\/)import\/bibtex$|^\.\/bibtex$/.test(from)
+						: /(^|\/)import\/bibtex$/.test(from) ||
+							// `./bibtex` beside the import modules, not the export's own.
+							(from === './bibtex' && /src\/lib\/import\/[^/]+$/.test(file))
 				)
 				.map((from) => `${file} → ${from}`)
 		);

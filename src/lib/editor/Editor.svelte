@@ -2,11 +2,10 @@
 	import { onDestroy, onMount, untrack } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
-	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
-	import { mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 	import { call, commands, describeError } from '$lib/ipc';
 
 	import { get } from 'svelte/store';
@@ -20,9 +19,7 @@
 	import { readSetting } from '$lib/settings';
 	import { countDocument, countSavedWords } from './wordCount';
 	import { documentStatus } from '$lib/statusFooter/documentStatus';
-	import { parseCitationIds } from '$lib/citations/document';
-	import { toBibliography } from '$lib/export/bibtex';
-	import { toLatexDocument } from '$lib/export/latex';
+	import { createExports } from '$lib/export/exports';
 	import { DOCUMENT_EXTENSION, toDocumentFileName, type ProjectDocument } from './documents';
 	import { documentsStore, requested } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
@@ -31,13 +28,7 @@
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
 	import { paginatedExtensions } from './core/extensions';
-	import {
-		applyPageSetup,
-		observePageCount,
-		pageSetupStore,
-		paperById,
-		toLatexPageSetup
-	} from './pagination';
+	import { applyPageSetup, observePageCount, pageSetupStore, paperById } from './pagination';
 	import { zoomStore } from './pagination/zoom';
 	import { createReferencesWatcher } from './references/autoReferences';
 	import { countCitations, readDocumentShape } from './references/documentShape';
@@ -451,112 +442,12 @@
 		applyEditable();
 	}
 
-	/**
-	 * Export as PDF, through the webview's own print.
-	 *
-	 * What is on screen is what comes out, which is the point for researchers
-	 * arriving from Word: the editor already renders an 816px page — US Letter at
-	 * 96dpi — so the model was right, it just had no print stylesheet.
-	 *
-	 * The previous implementation rendered `magnum_opus.html` through a headless
-	 * Chrome. Nothing ever wrote that file, so it had never worked, and requiring
-	 * a Chrome install contradicts the whole premise of an offline-first app.
-	 * `window.print()` reaches the OS print sheet, which is where "Save as PDF"
-	 * lives, and needs nothing installed.
-	 */
-	/**
-	 * Write a LaTeX bundle beside the manuscript, and compile it if this machine
-	 * can.
-	 *
-	 * Journals routinely ask for `.tex` alongside the PDF, and some supply a
-	 * class file the paper must be built with. Erti does not ship TeX Live —
-	 * several gigabytes for the minority who compile locally — so the bundle is
-	 * the deliverable and compiling is an offer.
-	 */
-	async function exportToLatex() {
-		await autosave.flush();
-		$editor.commands.updateAllCitation();
-
-		const current = $documentsStore.current;
-		if (!current) return;
-
-		try {
-			const doc = $editor.getJSON();
-
-			// Only the works this manuscript cites: a .bib of the whole library
-			// lists papers it never mentions, and some journals check.
-			const cited: string[] = [];
-			$editor.state.doc.descendants((node) => {
-				if (node.type.name === 'citation') cited.push(...parseCitationIds(node.attrs.id));
-				return true;
-			});
-
-			const { bibtex, keys } = toBibliography(
-				citationStore.getAllSourcesAsJson(),
-				cited,
-				citationStore.canonicalId
-			);
-
-			const dir = await pathJoin(currentDir, 'export');
-			await mkdir(dir, { recursive: true });
-
-			await writeTextFile(
-				await pathJoin(dir, 'main.tex'),
-				toLatexDocument(doc, {
-					title: current.title,
-					citationKeys: keys,
-					// The same paper, margins and spacing the PDF gets, so the two
-					// exports are the same document.
-					page: toLatexPageSetup(get(pageSetupStore))
-				})
-			);
-			await writeTextFile(await pathJoin(dir, 'references.bib'), bibtex);
-
-			const tex = await commands.detectTexToolchain();
-
-			if (!tex.engine) {
-				// Said rather than hidden: the bundle is the useful artefact, and
-				// Overleaf is where most co-authors will open it.
-				successToast(
-					`Wrote export/main.tex and references.bib. No LaTeX installation was found, so it was not compiled — the folder is ready to upload to Overleaf or send to a journal.`
-				);
-				return;
-			}
-
-			const result = await call(commands.compileLatex(dir, tex.engine));
-
-			if (result.ok) {
-				successToast(`Compiled export/main.pdf with ${tex.engine}.`);
-			} else {
-				// What the engine said is the only account of what went wrong. It's
-				// written beside the bundle, the user's own folder, and never into
-				// Erti's log: TeX quotes the manuscript line by line. Not main.log,
-				// which tectonic doesn't write unless asked.
-				log.warn(`${tex.engine} could not compile the LaTeX bundle`);
-				await writeTextFile(await pathJoin(dir, 'compile.log'), result.log);
-				errorToast(
-					`${tex.engine} could not compile the document. The bundle is in export/, with what ${tex.engine} said in compile.log.`
-				);
-			}
-		} catch (error) {
-			log.error('LaTeX export failed', error);
-			errorToast(
-				`Could not write the LaTeX bundle: ${error instanceof Error ? error.message : String(error)}`
-			);
-		}
-	}
-
-	async function exportToPdf() {
-		// Anything still in the quiet period is written first, so the PDF and the
-		// file on disk are the same document.
-		await autosave.flush();
-
-		// The citations and the works-cited list are rendered from the document, so
-		// they must be current before it is committed to paper.
-		$editor.commands.updateAllCitation();
-
-		window.print();
-	}
+	const exports = createExports({
+		editor: () => $editor,
+		flush: () => autosave.flush(),
+		title: () => $documentsStore.current?.title ?? null,
+		directory: () => currentDir
+	});
 
 	async function getDocumentData(path?: string) {
 		const target = path ?? get(documentsStore).current?.path;
@@ -919,7 +810,7 @@
 				onhistory={showHistory}
 			/>
 
-			<ToolBar editor={$editor} {toggleView} {exportToPdf} {exportToLatex} />
+			<ToolBar editor={$editor} {toggleView} {exports} />
 		</div>
 
 		<!-- The editor used to refuse to open when citations couldn't be set up,
