@@ -27,6 +27,7 @@
 	import { documentsStore, requested } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
 	import DocumentBar from './DocumentBar.svelte';
+	import FindBar from './FindBar.svelte';
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
 	import { paginatedExtensions } from './core/extensions';
@@ -92,6 +93,12 @@
 	const fileNameOf = (path: string | undefined) => path?.split(/[\\/]/).pop() ?? null;
 	/** Set on teardown: onMount awaits, and must not finish on an editor that's gone. */
 	let destroyed = false;
+
+	/** The find bar (UX-11): whether it's open, and whether it replaces too. */
+	let finding = $state(false);
+	let replacing = $state(false);
+	let findBar: FindBar | undefined = $state();
+	let root: HTMLElement | undefined = $state();
 
 	/**
 	 * Once Tiptap has run its own mount-time focus, which sets the selection a
@@ -645,6 +652,33 @@
 		historyView.open(current);
 	}
 
+	/**
+	 * ⌘F opens find, ⌘⌥F find and replace, and Esc in the manuscript closes it
+	 * (M5-2 AC-1). On the window, so the keys work from the bar's own fields
+	 * too, but only for keys pressed in the editor: the reader beside it isn't
+	 * the manuscript.
+	 */
+	function onWindowKey(event: KeyboardEvent) {
+		if (!editorReady) return;
+		const target = event.target as Node | null;
+		const inEditor = target === document.body || (!!target && !!root?.contains(target));
+		if (!inEditor || event.defaultPrevented) return;
+
+		// `code`, not `key`: ⌥F types "ƒ" on a Mac.
+		const mod = event.metaKey || event.ctrlKey;
+		if (mod && !event.shiftKey && event.code === 'KeyF') {
+			event.preventDefault();
+			if (event.altKey) replacing = true;
+			else if (!finding) replacing = false;
+			if (finding) findBar?.focus();
+			finding = true;
+		} else if (finding && event.key === 'Escape' && !mod) {
+			event.preventDefault();
+			finding = false;
+			$editor.commands.focus();
+		}
+	}
+
 	/** An empty manuscript, written only if that name is genuinely free. */
 	async function createOnDisk(path: string): Promise<boolean> {
 		const result = await manuscript.create(path);
@@ -869,8 +903,10 @@
 	}
 </script>
 
+<svelte:window onkeydown={onWindowKey} />
+
 {#if $editor}
-	<div class="bg-surface flex h-full w-full flex-col">
+	<div bind:this={root} class="bg-surface flex h-full w-full flex-col">
 		<div class="z-10 mb-1 shrink-0">
 			<DocumentBar
 				documents={$documentsStore.documents}
@@ -907,23 +943,36 @@
 			</p>
 		{/if}
 
-		<!-- The zoom is set here rather than on the manuscript itself, so the
-		     scrollable area shrinks with the page instead of leaving the reader
-		     scrolling past the end of a document that visibly stopped. -->
-		<div
-			class="page-viewport bg-surface-sunken flex min-h-0 grow justify-center overflow-auto px-4 py-4"
-			style="zoom: {$zoomStore}"
-		>
-			<EditorContent editor={$editor} />
-			<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
-
-			{#if showCitationPanel}
-				<Result
-					{selectedText}
-					selectCitation={handleCitationSelect}
-					closePanel={handlePanelClose}
+		<!-- The find bar sits over the top of the manuscript, outside the zoom,
+		     so it stays the size of the rest of the interface. -->
+		<div class="relative flex min-h-0 grow flex-col">
+			{#if finding && editorReady}
+				<FindBar
+					bind:this={findBar}
+					bind:replacing
+					editor={$editor}
+					onclose={() => (finding = false)}
 				/>
 			{/if}
+
+			<!-- The zoom is set here rather than on the manuscript itself, so the
+		     scrollable area shrinks with the page instead of leaving the reader
+		     scrolling past the end of a document that visibly stopped. -->
+			<div
+				class="page-viewport bg-surface-sunken flex min-h-0 grow justify-center overflow-auto px-4 py-4"
+				style="zoom: {$zoomStore}"
+			>
+				<EditorContent editor={$editor} />
+				<BubbleMenu editor={$editor} requestCitation={handleCitationRequest} />
+
+				{#if showCitationPanel}
+					<Result
+						{selectedText}
+						selectCitation={handleCitationSelect}
+						closePanel={handlePanelClose}
+					/>
+				{/if}
+			</div>
 		</div>
 		<!-- Outside the zoomed area: the tip is placed in viewport coordinates,
 		     which zoom would scale a second time. -->

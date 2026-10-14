@@ -233,3 +233,15 @@ test('shots of History', async ({ page }) => {
 	await expect(page.getByLabel('The snapshot, read-only')).toContainText('back-translation');
 	await page.screenshot({ ...shot('30-history'), animations: 'disabled' });
 });
+
+test('shots of find & replace', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	await page.locator('.ProseMirror').getByText('Pre-trained bidirectional').click();
+	await page.keyboard.press('ControlOrMeta+Alt+f');
+	await page.getByRole('textbox', { name: 'Find' }).fill('translation');
+	await page.getByRole('textbox', { name: 'Replace with' }).fill('MT');
+	await expect(page.locator('.erti-find-match')).toHaveCount(2);
+	await page.screenshot({ ...shot('31-find-replace'), animations: 'disabled' });
+});

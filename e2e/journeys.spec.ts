@@ -1038,3 +1038,44 @@ test('History shows yesterday’s version, and restoring it keeps today’s', as
 	await page.getByRole('button', { name: 'Back to the document' }).click();
 	await expect(page.locator('.ProseMirror')).toContainText(cut);
 });
+
+test('find & replace finds the writer’s words, never a citation’s, and undoes in one step', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	const manuscript = page.locator('.ProseMirror');
+	await expect(manuscript).toContainText('Vaswani');
+
+	await manuscript.getByText('Pre-trained bidirectional').click();
+	await page.keyboard.press('ControlOrMeta+f');
+	const find = page.getByRole('textbox', { name: 'Find' });
+	await expect(find).toBeFocused();
+	const count = page.getByRole('search').getByRole('status');
+
+	await find.fill('translation');
+	await expect(count).toHaveText(/^[12] of 2$/);
+	await expect(manuscript.locator('.erti-find-match')).toHaveCount(2);
+	await page.keyboard.press('Enter');
+	await expect(manuscript.locator('.erti-find-current')).toHaveCount(1);
+
+	// The citation reads "Vaswani", but its words are the library's.
+	await find.fill('Vaswani');
+	await expect(count).toHaveText('No matches');
+
+	await page.keyboard.press('ControlOrMeta+Alt+f');
+	await find.fill('translation');
+	await page.getByRole('textbox', { name: 'Replace with' }).fill('MT');
+	await page.getByRole('button', { name: 'Replace all' }).click();
+	await expect(count).toHaveText('Replaced 2');
+	await expect(manuscript).toContainText('Attention in Low-Resource MT');
+	await expect(manuscript).not.toContainText(/translation/i);
+
+	await find.press('Escape');
+	await expect(page.getByRole('search')).toBeHidden();
+	await expect(manuscript.locator('.erti-find-match')).toHaveCount(0);
+	await page.keyboard.press('ControlOrMeta+z');
+	await expect(manuscript).toContainText('Attention in Low-Resource Translation');
+	await expect(manuscript).toContainText('dominated machine translation');
+});
