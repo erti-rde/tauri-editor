@@ -9,7 +9,7 @@
 	import { call, commands, describeError, type History, type Snapshot } from '$lib/ipc';
 	import { log } from '$lib/log';
 	import { loadManuscript, parseManuscript, tauriFiles, type Content } from '$lib/manuscript/io';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 	import {
 		Banner,
 		Button,

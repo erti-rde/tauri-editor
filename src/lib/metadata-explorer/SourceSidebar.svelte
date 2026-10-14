@@ -10,7 +10,7 @@
 		workNotes,
 		type WorkNotes
 	} from '$lib/stores/db';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 	import { Button, Sidebar, Tabs } from '$lib/ui';
 
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';

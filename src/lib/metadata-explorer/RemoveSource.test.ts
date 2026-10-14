@@ -16,7 +16,7 @@ const { db, toast, annotations } = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/stores/db', () => db);
-vi.mock('$lib/toast/Toast.svelte', () => toast);
+vi.mock('$lib/ui/Toast.svelte', () => toast);
 vi.mock('$lib/stores/annotations.svelte', () => ({ annotationsStore: annotations }));
 vi.mock('$lib/stores/fileSystem.svelte', () => ({
 	fileSystemStore: writable({ items: [], currentPath: '/thesis' })

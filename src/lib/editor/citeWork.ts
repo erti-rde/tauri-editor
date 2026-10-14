@@ -2,7 +2,7 @@ import type { Editor } from '@tiptap/core';
 
 import { citationStore } from '$lib/stores/citationStore';
 import { addToProject } from '$lib/stores/db';
-import { errorToast } from '$lib/toast/Toast.svelte';
+import { errorToast } from '$lib/ui/Toast.svelte';
 import { log } from '$lib/log';
 
 /**

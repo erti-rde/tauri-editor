@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: mocks.open }));
 vi.mock('$lib/stores/db', () => ({ attachFile: mocks.attachFile }));
 vi.mock('$utils/pdf_handlers', () => ({ retryIngest: mocks.retryIngest }));
-vi.mock('$lib/toast/Toast.svelte', () => ({
+vi.mock('$lib/ui/Toast.svelte', () => ({
 	errorToast: mocks.errorToast,
 	successToast: mocks.successToast
 }));

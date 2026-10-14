@@ -130,6 +130,10 @@ for (const palette of PALETTES) {
 			// M1c-5 AC-3
 			const failures = await page.evaluate(measure, '[data-specimen]');
 			expect(failures, 'pairs below WCAG AA on the catalogue').toEqual([]);
+			// The toasts, one of each kind, are an overlay that is always open here.
+			await expect(page.locator('[data-toasts] > *')).toHaveCount(3);
+			const toasts = await page.evaluate(measure, '[data-toasts]');
+			expect(toasts, 'pairs below WCAG AA in the toasts').toEqual([]);
 
 			// M1c-5 AC-2
 			if (shots) {

@@ -10,7 +10,7 @@
 	import { readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 	import { readSetting, writeSetting } from '$lib/settings';
 	import { getConsent, getMailto, setConsent, setMailto } from '$lib/stores/consent';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import {
 		bundledStyleByName,
 		isBundledLocale,

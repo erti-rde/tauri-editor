@@ -3,7 +3,7 @@
 	import { readTextFile } from '@tauri-apps/plugin-fs';
 
 	import { describeError } from '$lib/ipc';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import { Banner, Button, Checkbox, Dialog, Loader, ProgressLine } from '$lib/ui';
 
 	import type { AugmentedZoteroSchema } from './adapterCslZotero';

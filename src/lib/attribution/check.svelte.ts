@@ -10,7 +10,7 @@ import {
 	restoreFinding,
 	type DismissedFinding
 } from '$lib/stores/db';
-import { errorToast } from '$lib/toast/Toast.svelte';
+import { errorToast } from '$lib/ui/Toast.svelte';
 import type { CheckEditor } from '$lib/editor/checkEditor';
 import type { AttributionMatches } from '$lib/ipc';
 

@@ -33,7 +33,7 @@
 		TextField,
 		type MenuItem
 	} from '$lib/ui';
-	import { toasts } from '$lib/toast/Toast.svelte';
+	import { toasts } from '$lib/ui/Toast.svelte';
 
 	import Specimen from './Specimen.svelte';
 
@@ -76,20 +76,22 @@
 	let date = $state(new CalendarDate(2017, 6, 12));
 
 	// Straight into the list the layout's `<Toast />` draws, without the timer
-	// `successToast` sets, so they stay for the screenshot.
+	// `toast()` sets, so they stay for the screenshot: one of each kind.
 	toasts.push(
 		{
 			id: 'catalogue-success',
-			title: 'success',
-			description: 'Bibliography copied',
-			color: 'bg-success'
+			kind: 'success',
+			title: 'Exported Chapter 1.docx',
+			description: 'Saved to Documents › Thesis.',
+			action: { label: 'Show in folder', run: () => {} }
 		},
 		{
-			id: 'catalogue-error',
-			title: 'error',
-			description: 'Could not read the style',
-			color: 'bg-danger'
-		}
+			id: 'catalogue-danger',
+			kind: 'danger',
+			title: 'Could not read the style',
+			description: 'The file is not a citation style.'
+		},
+		{ id: 'catalogue-info', kind: 'info', title: 'Removed “Orality and Literacy”' }
 	);
 </script>
 

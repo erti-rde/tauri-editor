@@ -12,7 +12,7 @@
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
 	import { watchBackups } from '$lib/stores/backups';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import ConsentPrompt from '$lib/consent/ConsentPrompt.svelte';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { extractAndChunkPdfs } from '$utils/pdf_handlers';

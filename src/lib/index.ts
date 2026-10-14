@@ -7,7 +7,7 @@ import MetadataEditor from './metadata-explorer/MetadataEditor.svelte';
 import PdfReader from './pdfreader/PdfReader.svelte';
 import SidePanel from './side-panel/Panel.svelte';
 import StatusFooter from './statusFooter/StatusFooter.svelte';
-import Toast from './toast/Toast.svelte';
+import Toast from './ui/Toast.svelte';
 
 export {
 	Editor,

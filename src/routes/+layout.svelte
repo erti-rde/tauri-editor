@@ -5,7 +5,7 @@
 
 	import { Toast } from '$lib';
 	import { catchUnhandled } from '$lib/log';
-	import { errorToast } from '$lib/toast/Toast.svelte';
+	import { errorToast } from '$lib/ui/Toast.svelte';
 	import { appearanceStore } from '$lib/theme/appearanceStore';
 	import '../global.css';
 

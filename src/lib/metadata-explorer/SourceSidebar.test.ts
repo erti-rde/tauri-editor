@@ -21,7 +21,7 @@ const db = vi.hoisted(() => ({
 	sourceForDoi: vi.fn(async (): Promise<string | null> => null)
 }));
 vi.mock('$lib/stores/db', () => db);
-vi.mock('$lib/toast/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
+vi.mock('$lib/ui/Toast.svelte', () => ({ errorToast: vi.fn(), successToast: vi.fn() }));
 
 const schema = augment(
 	JSON.parse(

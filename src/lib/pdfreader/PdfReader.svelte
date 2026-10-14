@@ -32,7 +32,7 @@
 	import { annotationImage, saveAnnotationImage } from '$lib/stores/db';
 	import { save } from '@tauri-apps/plugin-dialog';
 	import { writeFile } from '@tauri-apps/plugin-fs';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 	import {
 		boundingRect,
 		clientRectsToPdf,

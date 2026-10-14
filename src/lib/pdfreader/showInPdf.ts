@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 
 import { pathForSource } from '$lib/stores/db';
-import { errorToast } from '$lib/toast/Toast.svelte';
+import { errorToast } from '$lib/ui/Toast.svelte';
 import { workspaceStore } from '$lib/workspace/workspaceStore';
 
 import { readerStore } from './readerStore';

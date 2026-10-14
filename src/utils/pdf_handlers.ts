@@ -13,7 +13,7 @@ import {
 } from '$lib/stores/db';
 import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 import { removeStatus, setStatus } from '$lib/statusFooter/StatusFooter.svelte';
-import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { augmentSchema } from '$lib/metadata-explorer/adapterCslZotero';
 

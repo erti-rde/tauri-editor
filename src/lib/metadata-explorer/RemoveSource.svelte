@@ -10,7 +10,7 @@
 	import { annotationsStore } from '$lib/stores/annotations.svelte';
 	import { removeSource, sourceAliases, sourceRemoval } from '$lib/stores/db';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
-	import { errorToast, successToast } from '$lib/toast/Toast.svelte';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 	import { Button, ConfirmDialog } from '$lib/ui';
 	import { workspaceStore } from '$lib/workspace/workspaceStore';
 
