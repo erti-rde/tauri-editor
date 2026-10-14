@@ -267,3 +267,45 @@ export function toLatexPageSetup(setup: PageSetup) {
 export function fillPlaceholders(template: string, page: number, total: number): string {
 	return template.replaceAll('{page}', String(page)).replaceAll('{total}', String(total));
 }
+
+/** Word measures the page in twentieths of a point: 1440 to the inch. */
+const TWIPS_PER_INCH = 1440;
+
+/**
+ * Each paper in twips, from its physical size rather than the 96dpi pixels.
+ * A4 through the pixels comes out 11910 wide where Word's own A4 is 11906,
+ * and a co-author's "A4" that isn't quite is the kind of thing a journal's
+ * checker flags.
+ */
+const PAPER_TWIPS: Record<PaperId, { width: number; height: number }> = {
+	letter: { width: 8.5 * TWIPS_PER_INCH, height: 11 * TWIPS_PER_INCH },
+	a4: {
+		width: Math.round((210 / 25.4) * TWIPS_PER_INCH),
+		height: Math.round((297 / 25.4) * TWIPS_PER_INCH)
+	},
+	legal: { width: 8.5 * TWIPS_PER_INCH, height: 14 * TWIPS_PER_INCH }
+};
+
+/** The page as Word's section properties want it (M5-5). */
+export interface DocxPageSetup {
+	/** Twips. */
+	width: number;
+	height: number;
+	/** Twips, uniform on all four sides. */
+	margin: number;
+	/** Unitless, as the editor has it: 1.15, 1.5 or 2. */
+	spacing: number;
+	firstPageBare: boolean;
+	runningHeads: RunningHeads;
+}
+
+/** The same setup as Word understands it, so the .docx is the PDF's document. */
+export function toDocxPageSetup(setup: PageSetup): DocxPageSetup {
+	return {
+		...PAPER_TWIPS[paperById(setup.paper).id],
+		margin: marginById(setup.margin).inches * TWIPS_PER_INCH,
+		spacing: spacingById(setup.spacing).value,
+		firstPageBare: setup.firstPageBare,
+		runningHeads: setup.runningHeads
+	};
+}
