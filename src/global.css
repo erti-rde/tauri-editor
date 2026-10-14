@@ -845,3 +845,26 @@ body {
 		text-decoration: none;
 	}
 }
+
+/*
+ * Find & replace (M5-2, UX-11). Every match is tinted; the current one is
+ * tinted more and also outlined, so it reads as "this one" without telling
+ * colours apart. Only on screen: a search is never part of the manuscript.
+ */
+.erti-find-match {
+	background: hsl(var(--accent) / 0.18);
+	border-radius: 2px;
+}
+
+.erti-find-current {
+	background: hsl(var(--accent) / 0.35);
+	outline: 1px solid hsl(var(--accent));
+}
+
+@media print {
+	.erti-find-match,
+	.erti-find-current {
+		background: none;
+		outline: none;
+	}
+}
