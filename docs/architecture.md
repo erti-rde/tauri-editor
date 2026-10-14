@@ -104,8 +104,9 @@ in the Tauri store `settings-store.json`.
   editor is gone while it shows, so `restore_snapshot` copies the snapshot over the file, after
   keeping the file as it was, and the editor reads it afresh on return. `open_project` thins
   every document's history. The fake backend keeps the same files (`harness/fakeHistory.ts`).
-- **Find & replace (M5-2).** ⌘F in the editor opens `editor/FindBar.svelte` over the top of
-  the manuscript; the searching is `extensions/FindReplace.ts`. It reads each textblock as one
+- **Find & replace (M5-2).** ⌘F in the editor opens `editor/ManuscriptFind.svelte`, the
+  `FindBar` primitive over the top of the manuscript; the searching is
+  `extensions/FindReplace.ts`. It reads each textblock as one
   string whose offsets are document positions, with any inline node (a citation, an image, a
   line break) as one object character no query contains, so a citation's words are never
   matched, and a match never runs across one. The matches are decorations, found again on every

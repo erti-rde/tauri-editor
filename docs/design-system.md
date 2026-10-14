@@ -67,6 +67,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | An action with an icon             | `IconButton`                           | `label` required: tooltip + accessible name                                              |
 | A list of actions                  | `Menu`                                 | Items can carry a one-line description; `danger` item sits last, after a separator       |
 | Text in                            | `TextField`, `TextArea`, `SearchField` | Label, hint and error built in; the error says how to fix it                             |
+| Find in a text                     | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change  |
 | One of a few                       | `RadioGroup`                           | Arrow keys; the Appearance settings pattern                                              |
 | One of many                        | `Select`                               |                                                                                          |
 | On/off                             | `Switch`                               | Takes effect at once; `Checkbox` is for choices submitted together                       |
@@ -94,7 +95,6 @@ needs it. Paths are under `src/lib`.
 
 | Primitive                 | Replaces                                                                                                                                                                 | Needed by     |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| `FindBar`                 | The find field in `pdfreader/PdfToolbar.svelte`; the editor's find bar                                                                                                   | M5-2          |
 | `DocumentTab`             | The tabs in `workspace/TabBar.svelte` and the **⋯** button in `editor/DocumentBar.svelte`                                                                                | M5-7          |
 | `InlineRename`            | The label name field in `pdfreader/LabelPicker.svelte`; Rename… on a document                                                                                            | M5-7          |
 | `SplitHandle`             | The fixed even split in `workspace/Workspace.svelte`                                                                                                                     | M5-9          |

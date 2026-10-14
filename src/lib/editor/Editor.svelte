@@ -27,7 +27,7 @@
 	import { documentsStore, requested } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
 	import DocumentBar from './DocumentBar.svelte';
-	import FindBar from './FindBar.svelte';
+	import ManuscriptFind from './ManuscriptFind.svelte';
 	import { Editor } from './core/Editor';
 	import EditorContent from './core/EditorContent.svelte';
 	import { paginatedExtensions } from './core/extensions';
@@ -97,7 +97,7 @@
 	/** The find bar (UX-11): whether it's open, and whether it replaces too. */
 	let finding = $state(false);
 	let replacing = $state(false);
-	let findBar: FindBar | undefined = $state();
+	let findBar: ManuscriptFind | undefined = $state();
 	let root: HTMLElement | undefined = $state();
 
 	/**
@@ -950,7 +950,7 @@
 		     so it stays the size of the rest of the interface. -->
 		<div class="relative flex min-h-0 grow flex-col">
 			{#if finding && editorReady}
-				<FindBar
+				<ManuscriptFind
 					bind:this={findBar}
 					bind:replacing
 					editor={$editor}

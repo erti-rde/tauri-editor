@@ -7,12 +7,13 @@ import { Editor } from '$lib/editor/core/Editor';
 import { editorExtensions } from '$lib/editor/core/extensions';
 import UiHarness from '$lib/ui/UiHarness.svelte';
 
-import FindBar from './FindBar.svelte';
+import ManuscriptFind from './ManuscriptFind.svelte';
 import { findState } from './extensions/FindReplace';
 
 /**
- * The find bar (M5-2, UX-11) over a real editor built from the app's own
- * extensions: the searching itself is tested in `FindReplace.test.ts`.
+ * Find & replace in the manuscript (M5-2, UX-11) over a real editor built from
+ * the app's own extensions: the searching is tested in `FindReplace.test.ts`,
+ * the bar itself in `ui/FindBar.test.ts`.
  */
 
 let editor: Editor | undefined;
@@ -30,7 +31,7 @@ function show(content: string, props: { replacing?: boolean } = {}) {
 	});
 	const onclose = vi.fn();
 	render(UiHarness, {
-		props: { component: FindBar, editor, replacing: false, onclose, ...props }
+		props: { component: ManuscriptFind, editor, replacing: false, onclose, ...props }
 	});
 	return { editor, onclose, user: userEvent.setup() };
 }
@@ -99,7 +100,7 @@ describe('the find bar', () => {
 		});
 		editor.commands.setTextSelection({ from: 5, to: 12 });
 		render(UiHarness, {
-			props: { component: FindBar, editor, replacing: false, onclose: vi.fn() }
+			props: { component: ManuscriptFind, editor, replacing: false, onclose: vi.fn() }
 		});
 
 		expect(findField()).toHaveValue('encoder');
@@ -124,7 +125,7 @@ describe('replacing from the bar', () => {
 	it('shows the replace field when asked', async () => {
 		const { user } = show('<p>one</p>');
 
-		await user.click(screen.getByRole('button', { name: 'Replace' }));
+		await user.click(screen.getByRole('button', { name: 'Show replace' }));
 
 		expect(screen.getByRole('textbox', { name: 'Replace with' })).toBeInTheDocument();
 	});
@@ -162,7 +163,13 @@ describe('replacing from the bar', () => {
 			editable: false
 		});
 		render(UiHarness, {
-			props: { component: FindBar, editor, replacing: true, readOnly: true, onclose: vi.fn() }
+			props: {
+				component: ManuscriptFind,
+				editor,
+				replacing: true,
+				readOnly: true,
+				onclose: vi.fn()
+			}
 		});
 		await userEvent.type(findField(), 'colour');
 
@@ -180,7 +187,13 @@ describe('replacing from the bar', () => {
 			content: '<p>colour</p>',
 			editable: false
 		});
-		const props = { component: FindBar, editor, replacing: true, readOnly: true, onclose: vi.fn() };
+		const props = {
+			component: ManuscriptFind,
+			editor,
+			replacing: true,
+			readOnly: true,
+			onclose: vi.fn()
+		};
 		const { rerender } = render(UiHarness, { props });
 		await userEvent.type(findField(), 'colour');
 		expect(screen.getByRole('textbox', { name: 'Replace with' })).toBeDisabled();
