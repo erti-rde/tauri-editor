@@ -50,12 +50,13 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
 
 export function createExports(context: ExportContext): Exports {
 	/**
-	 * Everything an export reads is current: the file saved, and the citations
-	 * and works cited rendered from the document as it now is.
+	 * Everything an export reads is current: the citations and works cited
+	 * rendered from the document as it now is, then the file saved. In that
+	 * order, because rendering them is an edit that schedules its own save.
 	 */
 	async function settle() {
-		await context.flush();
 		context.editor().commands.updateAllCitation();
+		await context.flush();
 	}
 
 	return {

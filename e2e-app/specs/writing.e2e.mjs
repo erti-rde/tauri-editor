@@ -39,7 +39,9 @@ describe('writing with sources', () => {
 	});
 
 	it('exports a LaTeX bundle to the project folder', async () => {
-		await $('button*=.tex').click();
+		// M5-6: the bundle is one of the Export menu's formats.
+		await $('button[aria-label="Export"]').click();
+		await $('[role="menuitem"]*=LaTeX bundle').click();
 
 		const dir = join(process.env.ERTI_E2E_PROJECT, 'export');
 		await browser.waitUntil(() => existsSync(join(dir, 'references.bib')), {
