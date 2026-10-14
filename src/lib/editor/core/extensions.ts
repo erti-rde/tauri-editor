@@ -10,6 +10,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { Bibliography } from '../extensions/citation/Bibliography';
 import { Citation } from '../extensions/citation/Citation';
 import { CheckMarks } from '../extensions/CheckMarks';
+import { FindReplace } from '../extensions/FindReplace';
 import { NoteNudge } from '../extensions/NoteNudge';
 import { PageBreak } from '../extensions/PageBreak';
 import { Notes } from '../extensions/citation/Notes';
@@ -52,7 +53,8 @@ export const editorExtensions = [
 	Bibliography,
 	PageBreak,
 	NoteNudge,
-	CheckMarks
+	CheckMarks,
+	FindReplace
 ];
 
 /**
