@@ -14,6 +14,7 @@
 		DateField,
 		Dialog,
 		EmptyState,
+		FindBar,
 		IconButton,
 		Item,
 		Kbd,
@@ -213,6 +214,62 @@
 				</Specimen>
 				<Specimen name="SearchField" state="disabled" target="input">
 					<SearchField label="Search notes" hideLabel value="attention" disabled />
+				</Specimen>
+			</div>
+		</section>
+
+		<section class="grid gap-4">
+			{@render section('FindBar')}
+			<div class="grid grid-cols-2 gap-6">
+				<Specimen name="FindBar reader" state="rest">
+					<FindBar
+						label="Find in this paper"
+						query="encoder"
+						status="7 of 31"
+						found
+						onstep={() => {}}
+						onclose={() => {}}
+					/>
+				</Specimen>
+				<Specimen name="FindBar" state="focus" target="input">
+					<FindBar query="encoder" status="7 of 31" found onstep={() => {}} onclose={() => {}} />
+				</Specimen>
+				<Specimen name="FindBar replacing" state="rest">
+					<FindBar
+						query="attention"
+						status="3 of 12"
+						found
+						caseSensitive
+						wholeWord={false}
+						replacing
+						replacement="self-attention"
+						onstep={() => {}}
+						onclose={() => {}}
+						onreplace={() => {}}
+						onreplaceall={() => {}}
+					/>
+				</Specimen>
+				<Specimen name="FindBar no matches" state="rest">
+					<FindBar
+						query="atention"
+						status="No matches"
+						found={false}
+						onstep={() => {}}
+						onclose={() => {}}
+					/>
+				</Specimen>
+				<Specimen name="FindBar read-only" state="disabled">
+					<FindBar
+						query="colour"
+						status="1 of 4"
+						found
+						readOnly
+						replacing
+						onstep={() => {}}
+						onclose={() => {}}
+						onreplace={() => {}}
+						onreplaceall={() => {}}
+					/>
 				</Specimen>
 			</div>
 		</section>

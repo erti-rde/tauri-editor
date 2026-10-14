@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '$lib/icon/Icon.svelte';
+	import { FindBar } from '$lib/ui';
 	import Tooltip from '$lib/ui/Tooltip.svelte';
 
 	import AppearanceMenu, { type PageTheme } from './AppearanceMenu.svelte';
@@ -135,7 +136,7 @@
 	const showSheet = $derived(pageLabel !== null && pageLabel !== String(page));
 
 	let query = $state('');
-	let searchBox: HTMLInputElement | undefined = $state();
+	let findBar: FindBar | undefined = $state();
 
 	function commit() {
 		if (!editing) return;
@@ -154,21 +155,13 @@
 		}
 	}
 
-	function onSearchKey(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			// Enter on an unchanged query means "next", which is what every other
-			// find bar does and what the hands expect.
-			onsearch(query, { again: true, backwards: event.shiftKey });
-			return;
-		}
-		if (event.key === 'Escape') {
-			query = '';
-			onclosesearch();
-		}
-	}
-
 	$effect(() => {
-		if (searching) searchBox?.focus();
+		if (searching) findBar?.focus();
+	});
+
+	const status = $derived.by(() => {
+		if (!query || !find) return '';
+		return find.matches ? `${find.current} of ${find.matches}` : 'No matches';
 	});
 
 	const plain =
@@ -371,63 +364,19 @@
 
 	<!-- --------------------------------------------------------- how it looks -->
 	{#if searching}
-		<!--
-			The count sits inside the field's row rather than in a popup, because
-			"3 of 17" is the answer to the question being asked and hiding it behind
-			a hover is how find bars become useless.
-		-->
-		<div class="flex items-center gap-1">
-			<input
-				bind:this={searchBox}
-				bind:value={query}
-				class="border-line bg-surface-sunken text-ink w-40 rounded border px-2 py-0.5"
-				aria-label="Find in this paper"
-				placeholder="Find…"
-				oninput={() => onsearch(query)}
-				onkeydown={onSearchKey}
-			/>
-
-			<span class="text-ink-muted w-16 tabular-nums">
-				{#if query && find}
-					{find.matches ? `${find.current} of ${find.matches}` : 'none'}
-				{/if}
-			</span>
-
-			<Tooltip label="Previous match" side="bottom">
-				{#snippet children(tooltip)}
-					<button
-						{...tooltip}
-						class={plain}
-						onclick={() => onsearch(query, { again: true, backwards: true })}
-					>
-						<Icon icon="ChevronUp" size="s" />
-					</button>
-				{/snippet}
-			</Tooltip>
-
-			<Tooltip label="Next match" side="bottom">
-				{#snippet children(tooltip)}
-					<button {...tooltip} class={plain} onclick={() => onsearch(query, { again: true })}>
-						<Icon icon="ChevronDown" size="s" />
-					</button>
-				{/snippet}
-			</Tooltip>
-
-			<Tooltip label="Close find" side="bottom">
-				{#snippet children(tooltip)}
-					<button
-						{...tooltip}
-						class={plain}
-						onclick={() => {
-							query = '';
-							onclosesearch();
-						}}
-					>
-						<Icon icon="X" size="s" />
-					</button>
-				{/snippet}
-			</Tooltip>
-		</div>
+		<FindBar
+			bind:this={findBar}
+			bind:query
+			label="Find in this paper"
+			{status}
+			found={!!find?.matches}
+			onquery={(text) => onsearch(text)}
+			onstep={(direction) => onsearch(query, { again: true, backwards: direction < 0 })}
+			onclose={() => {
+				query = '';
+				onclosesearch();
+			}}
+		/>
 	{:else}
 		<!--
 			The marks, on the right with the rest of what this application adds to a

@@ -103,8 +103,8 @@
 		"button": 2
 	},
 	"src/lib/pdfreader/PdfToolbar.svelte": {
-		"button": 13,
-		"input": 2
+		"button": 10,
+		"input": 1
 	},
 	"src/lib/pdfreader/ReaderSidebar.svelte": {
 		"button": 3,

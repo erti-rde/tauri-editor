@@ -10,6 +10,7 @@ export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export { default as DateField } from './DateField.svelte';
 export { default as Dialog } from './Dialog.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
+export { default as FindBar } from './FindBar.svelte';
 export { default as IconButton } from './IconButton.svelte';
 export { default as Item } from './Item.svelte';
 export { default as Kbd } from './Kbd.svelte';
