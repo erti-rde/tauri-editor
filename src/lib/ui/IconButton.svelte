@@ -34,8 +34,10 @@
 		...rest
 	}: Props = $props();
 
+	// Pressed is ink on accent-quiet with a line-strong edge (design-system.md
+	// rule 6): accent text there misses 4.5:1, and the edge tells it from hover.
 	const iconButton = variants({
-		base: 'inline-flex shrink-0 items-center justify-center rounded text-ink-muted transition-colors duration-(--duration-fast) ease-standard enabled:hover:bg-surface-hover enabled:hover:text-ink disabled:cursor-not-allowed disabled:opacity-50 aria-pressed:bg-accent-quiet aria-pressed:text-accent',
+		base: 'inline-flex shrink-0 items-center justify-center rounded text-ink-muted transition-colors duration-(--duration-fast) ease-standard enabled:hover:bg-surface-hover enabled:hover:text-ink disabled:cursor-not-allowed disabled:opacity-50 aria-pressed:bg-accent-quiet aria-pressed:text-ink aria-pressed:inset-ring aria-pressed:inset-ring-line-strong',
 		variants: {
 			size: { sm: 'size-5', md: 'size-(--row-height)' }
 		},
