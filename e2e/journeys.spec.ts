@@ -1079,3 +1079,13 @@ test('find & replace finds the writer’s words, never a citation’s, and undoe
 	await expect(manuscript).toContainText('Attention in Low-Resource Translation');
 	await expect(manuscript).toContainText('dominated machine translation');
 });
+
+test('the manuscript asks to be spellchecked', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	// M5-3 AC-1: whether the misspellings are then marked is the platform's,
+	// and is checked by hand in the release matrix (AC-2).
+	await expect(page.locator('.ProseMirror')).toHaveAttribute('spellcheck', 'true');
+});

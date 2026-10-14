@@ -233,7 +233,10 @@
 					// and `clear`, and floats are ignored inside a flex container —
 					// every break became a flex item a full page tall, pushing the
 					// text 13,000px down a 14,835px-high "page".
-					class: 'manuscript border border-line cursor-text'
+					class: 'manuscript border border-line cursor-text',
+					// Said, not left to the default (M5-3): WebKitGTK and WebView2
+					// differ on whether a contenteditable is checked unasked.
+					spellcheck: 'true'
 				}
 			},
 			// Where the writer left off, if this manuscript was open before: the

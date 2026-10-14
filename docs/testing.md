@@ -162,4 +162,5 @@ Run by a person on the draft release, one column per build, every cell ticked be
 | Export PDF (print), LaTeX, DOCX; the DOCX opens in Word/LibreOffice   |             |             |            |              |                   |
 | Restore a snapshot; library backup exists                             |             |             |            |              |                   |
 | Update from the previous release through the updater                  |             |             |            |              |                   |
+| Spellcheck: a misspelling is marked; a suggestion replaces it (M5-3)  |             |             |            |              |                   |
 | Every palette, keyboard-only pass of new surfaces                     |             |             |            |              |                   |
