@@ -224,7 +224,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 ### M5 — Writing essentials _(L)_ · [spec](docs/specs/M5.md)
 
 - [x] **M5-1** Version history (ADR-7, UX-9) (#246)
-- [ ] **M5-2** Find & replace (UX-11)
+- [x] **M5-2** Find & replace (UX-11) (#247)
 - [ ] **M5-3** Spellcheck, per platform
 - [ ] **M5-4** PDF export, per platform
 - [ ] **M5-5** DOCX export (ADR-9)
