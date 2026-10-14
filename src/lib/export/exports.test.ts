@@ -89,8 +89,10 @@ describe('M5-6 Word…', () => {
 
 		await exports.word();
 
-		expect(flush).toHaveBeenCalled();
-		expect(updateAllCitation).toHaveBeenCalled();
+		// Rendered first: that's an edit, and the save after it writes it.
+		expect(updateAllCitation.mock.invocationCallOrder[0]).toBeLessThan(
+			flush.mock.invocationCallOrder[0]
+		);
 		expect(tauri.toDocx).toHaveBeenCalledWith(
 			doc,
 			expect.objectContaining({
@@ -226,8 +228,9 @@ describe('PDF…', () => {
 
 		await exports.pdf();
 
-		expect(flush).toHaveBeenCalled();
-		expect(updateAllCitation).toHaveBeenCalled();
+		expect(updateAllCitation.mock.invocationCallOrder[0]).toBeLessThan(
+			flush.mock.invocationCallOrder[0]
+		);
 		expect(print).toHaveBeenCalled();
 	});
 });
