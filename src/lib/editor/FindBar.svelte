@@ -27,10 +27,16 @@
 		editor: Editor;
 		/** Whether the replace field shows. ⌘⌥F turns it on. */
 		replacing: boolean;
+		/**
+		 * Whether the document can't be edited: open from a newer Erti, or in
+		 * reading view. A prop because Tiptap's `setEditable` dispatches no
+		 * transaction, so the bar can't see it change by watching the editor.
+		 */
+		readOnly?: boolean;
 		onclose: () => void;
 	}
 
-	let { editor, replacing = $bindable(), onclose }: Props = $props();
+	let { editor, replacing = $bindable(), readOnly = false, onclose }: Props = $props();
 
 	let query = $state(initialQuery());
 	let replacement = $state('');
@@ -192,17 +198,17 @@
 				onkeydown={onReplaceKey}
 				autocomplete="off"
 				spellcheck="false"
-				disabled={!editor.isEditable}
+				disabled={readOnly}
 				class="w-48"
 			/>
 			<Button
-				disabled={!editor.isEditable || found.matches.length === 0}
+				disabled={readOnly || found.matches.length === 0}
 				onclick={() => replaceCurrent(editor.view, replacement)}
 			>
 				Replace
 			</Button>
 			<Button
-				disabled={!editor.isEditable || found.matches.length === 0}
+				disabled={readOnly || found.matches.length === 0}
 				onclick={() => (replaced = replaceAll(editor.view, replacement))}
 			>
 				Replace all

@@ -60,7 +60,7 @@
 	import { log } from '$lib/log';
 
 	let editor = $state() as Readable<Editor>;
-	let editable = true;
+	let editable = $state(true);
 	let currentDir = '';
 	/**
 	 * Set once the editor exists.
@@ -954,6 +954,7 @@
 					bind:this={findBar}
 					bind:replacing
 					editor={$editor}
+					readOnly={!editable || newerFile !== null}
 					onclose={() => (finding = false)}
 				/>
 			{/if}

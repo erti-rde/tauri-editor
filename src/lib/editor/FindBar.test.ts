@@ -162,12 +162,33 @@ describe('replacing from the bar', () => {
 			editable: false
 		});
 		render(UiHarness, {
-			props: { component: FindBar, editor, replacing: true, onclose: vi.fn() }
+			props: { component: FindBar, editor, replacing: true, readOnly: true, onclose: vi.fn() }
 		});
 		await userEvent.type(findField(), 'colour');
 
 		expect(count()).toHaveTextContent('1 of 1');
 		expect(screen.getByRole('button', { name: 'Replace all' })).toBeDisabled();
 		expect(screen.getByRole('textbox', { name: 'Replace with' })).toBeDisabled();
+	});
+
+	it('can replace once the document becomes editable while the bar is open', async () => {
+		// Reading view turned off: `setEditable` dispatches nothing the bar could
+		// see, so it's told, and the replace row follows without a keystroke.
+		editor = new Editor({
+			element: document.createElement('div'),
+			extensions: editorExtensions,
+			content: '<p>colour</p>',
+			editable: false
+		});
+		const props = { component: FindBar, editor, replacing: true, readOnly: true, onclose: vi.fn() };
+		const { rerender } = render(UiHarness, { props });
+		await userEvent.type(findField(), 'colour');
+		expect(screen.getByRole('textbox', { name: 'Replace with' })).toBeDisabled();
+
+		editor.setEditable(true, false);
+		await rerender({ ...props, readOnly: false });
+
+		expect(screen.getByRole('textbox', { name: 'Replace with' })).toBeEnabled();
+		expect(screen.getByRole('button', { name: 'Replace all' })).toBeEnabled();
 	});
 });
