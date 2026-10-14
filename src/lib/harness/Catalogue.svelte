@@ -59,6 +59,13 @@
 		{ label: 'Paragraph', description: 'Body text', active: true, onSelect: () => {} },
 		{ label: 'Heading 1', onSelect: () => {} },
 		{ label: 'Heading 2', disabled: true, onSelect: () => {} },
+		{
+			label: 'Check first…',
+			description: 'Changed since the last check',
+			separated: true,
+			dot: true,
+			onSelect: () => {}
+		},
 		{ label: 'Delete', icon: Trash, danger: true, onSelect: () => {} }
 	];
 
