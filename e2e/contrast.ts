@@ -102,6 +102,15 @@ export function measure(rootSelector: string): Failure[] {
 		);
 	};
 
+	// Not drawn at all, as a tab's close button is until its tab is hovered:
+	// there's nothing to read yet, and it's measured in the state that shows it.
+	const transparent = (el: Element) => {
+		for (let at: Element | null = el; at; at = at.parentElement) {
+			if (getComputedStyle(at).opacity === '0') return true;
+		}
+		return false;
+	};
+
 	const disabled = (el: Element) =>
 		!!el.closest('[disabled], [aria-disabled="true"], [data-disabled]') ||
 		!!el.closest('[data-state~="disabled"]');
@@ -123,7 +132,7 @@ export function measure(rootSelector: string): Failure[] {
 		const scope = root.querySelector('[data-sample]') ?? root;
 
 		for (const el of [scope, ...scope.querySelectorAll('*')]) {
-			if (!visible(el) || disabled(el)) continue;
+			if (!visible(el) || transparent(el) || disabled(el)) continue;
 			const style = getComputedStyle(el);
 			const label = `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 30)}"`;
 

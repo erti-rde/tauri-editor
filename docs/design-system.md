@@ -65,8 +65,10 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | ---------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
 | An action with words               | `Button`                               | `primary` once per view · `secondary` · `ghost` · `danger`; `sm`/`md`; `loading`         |
 | An action with an icon             | `IconButton`                           | `label` required: tooltip + accessible name                                              |
-| A list of actions                  | `Menu`                                 | One-line descriptions; `danger` last, after a line; `separated` groups; `dot` + words    |
+| A list of actions                  | `Menu`                                 | One-line descriptions; `danger` last; `separated` groups; `dot` + words; `icon` alone    |
+| An open file in a tab strip        | `DocumentTab`                          | Current: surface, accent rule, `aria-selected`; its ⋯ menu on the current tab only       |
 | Text in                            | `TextField`, `TextArea`, `SearchField` | Label, hint and error built in; the error says how to fix it                             |
+| A name changed where it is read    | `InlineRename`                         | Opens selected; Enter renames, Esc puts it back; why a name won’t do, beside it          |
 | Find in a text                     | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change  |
 | One of a few                       | `RadioGroup`                           | Arrow keys; the Appearance settings pattern                                              |
 | One of many                        | `Select`                               |                                                                                          |
@@ -95,8 +97,6 @@ needs it. Paths are under `src/lib`.
 
 | Primitive                 | Replaces                                                                                                                                                                 | Needed by     |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| `DocumentTab`             | The tabs in `workspace/TabBar.svelte` and the **⋯** button in `editor/DocumentBar.svelte`                                                                                | M5-7          |
-| `InlineRename`            | The label name field in `pdfreader/LabelPicker.svelte`; Rename… on a document                                                                                            | M5-7          |
 | `SplitHandle`             | The fixed even split in `workspace/Workspace.svelte`                                                                                                                     | M5-9          |
 | `Toolbar`, `ToggleButton` | The hand-built bars and toggles in `editor/extensions/ToolBar.svelte` and `pdfreader/PdfToolbar.svelte`                                                                  | M5-8          |
 | `NumberField`             | The number inputs in `side-panel/settings/Settings.svelte` and `PageSetupSettings.svelte`; the page field in `PdfToolbar.svelte`; `editor/pagination/ZoomControl.svelte` | M5-8          |

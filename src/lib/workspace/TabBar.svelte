@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { DocumentTab } from '$lib/ui';
 	import Tooltip from '$lib/ui/Tooltip.svelte';
 	import FileText from '~icons/lucide/file-text';
 	import FileType from '~icons/lucide/file-type-2';
 	import SplitSquare from '~icons/lucide/columns-2';
-	import X from '~icons/lucide/x';
 
 	import { workspaceStore } from './workspaceStore';
 	import { documentsStore } from '$lib/stores/documents.svelte';
@@ -54,53 +54,13 @@
 		{#each pane.tabs as tabId (tabId)}
 			{@const tab = workspace.tabs[tabId]}
 			{#if tab}
-				{@const isActive = pane.active === tabId}
-				<!--
-					A div rather than a button, because the close control is a button and
-					a button inside a button is invalid — the parser closes the outer one
-					early and the two end up siblings.
-				-->
-				<div
-					role="tab"
-					tabindex={isActive ? 0 : -1}
-					aria-selected={isActive}
-					class="group border-line flex max-w-52 min-w-0 shrink-0 cursor-pointer items-center gap-1.5 border-r px-3 text-xs transition-colors {isActive
-						? 'bg-surface text-ink'
-						: 'text-ink-muted hover:bg-surface-hover hover:text-ink'}"
-					onclick={() => activate(tab)}
-					onkeydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') {
-							e.preventDefault();
-							activate(tab);
-						}
-					}}
-					onauxclick={(e) => {
-						// Middle-click closes, as it does in every editor and browser.
-						if (e.button === 1) {
-							e.preventDefault();
-							workspaceStore.close(pane.id, tabId);
-						}
-					}}
-				>
-					{#if tab.kind === 'pdf'}
-						<FileType class="h-3.5 w-3.5 shrink-0" />
-					{:else}
-						<FileText class="h-3.5 w-3.5 shrink-0" />
-					{/if}
-
-					<span class="truncate">{tab.title}</span>
-
-					<button
-						class="hover:bg-surface-active shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-						aria-label="Close {tab.title}"
-						onclick={(e) => {
-							e.stopPropagation();
-							workspaceStore.close(pane.id, tabId);
-						}}
-					>
-						<X class="h-3 w-3" />
-					</button>
-				</div>
+				<DocumentTab
+					title={tab.title}
+					icon={tab.kind === 'pdf' ? FileType : FileText}
+					current={pane.active === tabId}
+					onselect={() => activate(tab)}
+					onclose={() => workspaceStore.close(pane.id, tabId)}
+				/>
 			{/if}
 		{/each}
 	</div>
