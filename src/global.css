@@ -778,14 +778,6 @@ body {
 	padding-block: 0.3rem;
 }
 
-[data-density='compact'] .document-tab {
-	padding-block: 0.25rem;
-}
-
-[data-density='comfortable'] .document-tab {
-	padding-block: 0.5rem;
-}
-
 /*
  * The mark beside a paragraph you have written a note about and not used.
  *

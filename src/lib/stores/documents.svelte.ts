@@ -25,6 +25,13 @@ interface DocumentsState {
  */
 export const requested = writable<ProjectDocument | null>(null);
 
+/** In the order `listDocuments` gives them. */
+const sorted = (documents: ProjectDocument[]) =>
+	documents.sort((a, b) => {
+		if (a.legacy !== b.legacy) return a.legacy ? -1 : 1;
+		return a.title.localeCompare(b.title);
+	});
+
 function createDocumentsStore() {
 	const { subscribe, update, set } = writable<DocumentsState>({ documents: [], current: null });
 
@@ -83,11 +90,32 @@ function createDocumentsStore() {
 		/** Add a manuscript that has just been written to disk, and open it. */
 		add(document: ProjectDocument) {
 			update((state) => ({
-				documents: [...state.documents, document].sort((a, b) => {
-					if (a.legacy !== b.legacy) return a.legacy ? -1 : 1;
-					return a.title.localeCompare(b.title);
-				}),
+				documents: sorted([...state.documents, document]),
 				current: document
+			}));
+		},
+
+		/**
+		 * A manuscript renamed on disk: the same document under its new name,
+		 * still current if it was. Not `refresh()`, which would find the old path
+		 * gone and open another document in its place.
+		 */
+		renamed(from: string, document: ProjectDocument) {
+			update((state) => ({
+				documents: sorted(state.documents.map((d) => (d.path === from ? document : d))),
+				current: state.current?.path === from ? document : state.current
+			}));
+		},
+
+		/**
+		 * A manuscript gone from disk. Nothing is current until the editor opens
+		 * another: a save meanwhile has nowhere to go, rather than going into
+		 * whichever document `refresh()` would pick.
+		 */
+		removed(path: string) {
+			update((state) => ({
+				documents: state.documents.filter((d) => d.path !== path),
+				current: state.current?.path === path ? null : state.current
 			}));
 		},
 

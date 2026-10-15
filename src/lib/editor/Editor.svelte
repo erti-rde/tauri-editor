@@ -2,11 +2,11 @@
 	import { onDestroy, onMount, untrack } from 'svelte';
 
 	import { citationStore } from '$lib/stores/citationStore';
-	import { errorToast } from '$lib/ui/Toast.svelte';
+	import { errorToast, toast } from '$lib/ui/Toast.svelte';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 	import { join as pathJoin } from '@tauri-apps/api/path';
-	import { call, commands, describeError } from '$lib/ipc';
+	import { call, commands, describeError, run } from '$lib/ipc';
 
 	import { get } from 'svelte/store';
 
@@ -650,6 +650,126 @@
 		await fileSystemStore.readDirectory(currentDir);
 	}
 
+	/**
+	 * Rename the open document, in its tab (M5-7). Saved first and held still
+	 * while it moves: a save landing midway would write the old name back.
+	 * Its history moves with it, on disk.
+	 */
+	async function renameDocument(name: string) {
+		const renaming = $documentsStore.current;
+		if (!renaming) return;
+		const others = $documentsStore.documents.filter((d) => d.path !== renaming.path);
+		const result = toDocumentFileName(
+			name,
+			others.map((d) => d.fileName)
+		);
+		if (!result.ok) {
+			errorToast(result.reason!);
+			return;
+		}
+		if (result.fileName === renaming.fileName) return;
+
+		++transition;
+		$editor.setEditable(false, false);
+		if (!(await autosave.flush())) {
+			applyEditable();
+			errorToast(`Could not save “${renaming.title}”, so it kept its name.`);
+			return;
+		}
+		try {
+			await call(commands.renameDocument(renaming.path, result.fileName!));
+		} catch (error) {
+			applyEditable();
+			errorToast(`Couldn’t rename “${renaming.title}”`, describeError(error));
+			return;
+		}
+
+		// Joined here rather than taken from Rust's reply, which resolves links:
+		// the folder listing names it this way, and a path that differs from it
+		// would read as a document gone.
+		const path = await pathJoin(currentDir, result.fileName!);
+		documentsStore.renamed(renaming.path, {
+			fileName: result.fileName!,
+			path,
+			title: result.fileName!.replace(DOCUMENT_EXTENSION, ''),
+			legacy: false
+		});
+		// The guard against saving over a file this build can't read follows
+		// the file to its new name.
+		await manuscript.open(path);
+		loadedPath = path;
+		cursorMemory.remember(path, cursorPosition($editor.state.selection));
+		attributionCheck.opened(fileNameOf(path));
+		applyEditable();
+		await fileSystemStore.readDirectory(currentDir);
+	}
+
+	/** A copy of the open document beside it, offered rather than opened (M5-7). */
+	async function duplicateDocument() {
+		const original = $documentsStore.current;
+		if (!original) return;
+		if (!(await autosave.flush())) {
+			errorToast(`Could not save “${original.title}”, so it wasn’t copied.`);
+			return;
+		}
+		let copy: ProjectDocument | undefined;
+		try {
+			const written = await call(commands.duplicateDocument(original.path));
+			const path = await pathJoin(currentDir, fileNameOf(written)!);
+			await fileSystemStore.readDirectory(currentDir);
+			documentsStore.refresh();
+			copy = get(documentsStore).documents.find((d) => d.path === path);
+		} catch (error) {
+			errorToast(`Couldn’t copy “${original.title}”`, describeError(error));
+			return;
+		}
+		if (!copy) return;
+		const made = copy;
+		toast({
+			kind: 'success',
+			title: `Made “${made.title}”`,
+			action: { label: 'Open', run: () => void openDocument(made) }
+		});
+	}
+
+	/**
+	 * Move the open document to the bin, once the writer has said so (M5-7).
+	 * Saved and its snapshot taken first, so what's put back from the bin, and
+	 * what History keeps, is what was on screen. Then another opens, or a new
+	 * one when it was the last.
+	 */
+	async function deleteDocument() {
+		const doomed = $documentsStore.current;
+		if (!doomed) return;
+		++transition;
+		$editor.setEditable(false, false);
+		if (!(await autosave.flush())) {
+			applyEditable();
+			errorToast(`Could not save “${doomed.title}”, so it wasn’t deleted.`);
+			return;
+		}
+		await snapshots.closing(doomed.path, 'close');
+		try {
+			await run(commands.trashDocument(doomed.path));
+		} catch (error) {
+			applyEditable();
+			errorToast(`Couldn’t delete “${doomed.title}”`, describeError(error));
+			return;
+		}
+
+		documentsStore.removed(doomed.path);
+		const next = get(documentsStore).documents[0];
+		if (next) await openDocument(next);
+		else await createDocument('Untitled');
+		await fileSystemStore.readDirectory(currentDir);
+		documentsStore.refresh();
+		toast({
+			kind: 'success',
+			title: `Moved “${doomed.title}” to the bin`,
+			description: 'Its history stays with the project.'
+		});
+	}
+
 	// Citation handling
 	let selectedText = $state('');
 	let showCitationPanel = $state(false);
@@ -808,6 +928,9 @@
 				onopen={openDocument}
 				oncreate={createDocument}
 				onhistory={showHistory}
+				onrename={renameDocument}
+				onduplicate={duplicateDocument}
+				ondelete={deleteDocument}
 			/>
 
 			<ToolBar editor={$editor} {toggleView} {exports} />
