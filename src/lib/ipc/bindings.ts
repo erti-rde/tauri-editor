@@ -224,6 +224,18 @@ export const commands = {
 	 */
 	clearSnapshots: (document: string, olderThanDays: number) => typedError<number, AppError>(__TAURI_INVOKE("clear_snapshots", { document, olderThanDays })),
 	/**
+	 *  Rename a manuscript to `file_name`, beside it, and move its history with
+	 *  it. Returns its new path.
+	 */
+	renameDocument: (document: string, fileName: string) => typedError<string, AppError>(__TAURI_INVOKE("rename_document", { document, fileName })),
+	/**
+	 *  Copy a manuscript to "<name> copy" beside it (or "copy 2", and on).
+	 *  Returns the copy's path.
+	 */
+	duplicateDocument: (document: string) => typedError<string, AppError>(__TAURI_INVOKE("duplicate_document", { document })),
+	/**  Move a manuscript to the system's trash. Its history stays (UX-9). */
+	trashDocument: (document: string) => typedError<null, AppError>(__TAURI_INVOKE("trash_document", { document })),
+	/**
 	 *  Search everything in the library by meaning: passages, marks and source
 	 *  notes, in one ranked list, each result saying which it is (ADR 005).
 	 * 

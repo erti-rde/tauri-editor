@@ -2,6 +2,7 @@ pub mod attribution;
 pub mod commands;
 pub mod db;
 pub mod db_commands;
+pub mod documents;
 pub mod fs_errors;
 pub mod history;
 pub mod ipc;
@@ -177,6 +178,9 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         history::read_snapshot,
         history::restore_snapshot,
         history::clear_snapshots,
+        documents::rename_document,
+        documents::duplicate_document,
+        documents::trash_document,
         search_library,
         source_removal,
         add_source_by_hand,

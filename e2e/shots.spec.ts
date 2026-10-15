@@ -1,4 +1,12 @@
-import { expect, launch, openManuscript, openProject, replaceWord, test } from './harness';
+import {
+	documentTab,
+	expect,
+	launch,
+	openManuscript,
+	openProject,
+	replaceWord,
+	test
+} from './harness';
 
 /**
  * Screenshots for PRs (M1a-1 AC-5): `pnpm e2e:shots` writes them to
@@ -43,7 +51,7 @@ test('shots', async ({ page }) => {
 
 	// Back to the manuscript, whose document bar switches chapters.
 	await page.getByText('Chapter 1.erti.json').locator('visible=true').first().click();
-	await page.getByRole('button', { name: 'Shared chapter', exact: true }).click();
+	await documentTab(page, 'Shared chapter').click();
 	const away = page.locator('.ProseMirror [data-type="citation"][data-away]');
 	await away.hover();
 	await expect(page.getByRole('dialog', { name: 'Source from the manuscript' })).toBeVisible();
@@ -222,7 +230,7 @@ test('shots of History', async ({ page }) => {
 	await launch(page);
 	await openProject(page);
 	await openManuscript(page);
-	await page.getByRole('button', { name: 'Document menu for Chapter 1' }).click();
+	await page.getByRole('button', { name: 'Chapter 1 menu' }).click();
 	await page.screenshot({ ...shot('29-document-menu'), animations: 'disabled' });
 	await page.getByRole('menuitem', { name: 'History…' }).click();
 
@@ -260,4 +268,22 @@ test('shots of the Export menu and its toast', async ({ page }) => {
 	await page.getByRole('menuitem', { name: 'Word document (.docx)…' }).click();
 	await expect(page.getByText('Exported Chapter 1.docx')).toBeVisible();
 	await page.screenshot({ ...shot('33-exported'), animations: 'disabled' });
+});
+
+// M5-7: a document renamed in its tab, and deleted after asking.
+test('shots of renaming and deleting a document', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	await page.getByRole('button', { name: 'Chapter 1 menu' }).click();
+	await page.getByRole('menuitem', { name: 'Rename…' }).click();
+	await page.keyboard.type('Planted');
+	await expect(page.getByText('A document called "Planted" is already here.')).toBeVisible();
+	await page.screenshot({ ...shot('34-document-rename'), animations: 'disabled' });
+	await page.keyboard.press('Escape');
+
+	await page.getByRole('button', { name: 'Chapter 1 menu' }).click();
+	await page.getByRole('menuitem', { name: 'Delete…' }).click();
+	await expect(page.getByRole('dialog', { name: 'Delete “Chapter 1”?' })).toBeVisible();
+	await page.screenshot({ ...shot('35-document-delete'), animations: 'disabled' });
 });

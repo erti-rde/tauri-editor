@@ -1,5 +1,10 @@
 <script lang="ts">
 	import Bold from '~icons/lucide/bold';
+	import BookOpen from '~icons/lucide/book-open';
+	import Copy from '~icons/lucide/copy';
+	import FileText from '~icons/lucide/file-text';
+	import History from '~icons/lucide/history';
+	import Pencil from '~icons/lucide/pencil';
 	import Italic from '~icons/lucide/italic';
 	import Trash from '~icons/lucide/trash-2';
 	import Settings from '~icons/lucide/settings';
@@ -13,9 +18,11 @@
 		ConfirmDialog,
 		DateField,
 		Dialog,
+		DocumentTab,
 		EmptyState,
 		FindBar,
 		IconButton,
+		InlineRename,
 		Item,
 		Kbd,
 		LabelChip,
@@ -68,6 +75,25 @@
 		},
 		{ label: 'Delete', icon: Trash, danger: true, onSelect: () => {} }
 	];
+
+	const DOCUMENT_MENU: MenuItem[] = [
+		{ label: 'Rename…', icon: Pencil, onSelect: () => {} },
+		{ label: 'Duplicate', icon: Copy, onSelect: () => {} },
+		{ label: 'History…', icon: History, onSelect: () => {} },
+		{ label: 'Delete…', icon: Trash, danger: true, onSelect: () => {} }
+	];
+
+	const TAKEN = ['Literature review', 'Methods'];
+	const nameInUse = (name: string) =>
+		TAKEN.includes(name) ? `“${name}” is already in this project. Choose another name.` : undefined;
+
+	/** Types a name that's taken, so the field shows what it says about one. */
+	function typeTaken(node: HTMLElement) {
+		const input = node.querySelector('input');
+		if (!input) return;
+		input.value = 'Literature review';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+	}
 
 	const SOURCE_TYPES = [
 		{ value: 'article-journal', label: 'Journal article' },
@@ -167,6 +193,69 @@
 						<Menu label="Insert" items={MENU_ITEMS} />
 					</div>
 				</Specimen>
+			</div>
+		</section>
+
+		<section class="grid gap-4">
+			{@render section('DocumentTab, InlineRename')}
+			<div class="grid gap-6">
+				<Specimen name="DocumentTab" state="rest">
+					<div class="bg-surface-sunken border-line flex h-8 border-b" role="tablist">
+						<DocumentTab
+							title="Chapter 1"
+							icon={FileText}
+							current
+							menu={DOCUMENT_MENU}
+							onselect={() => {}}
+							onclose={() => {}}
+						/>
+						<DocumentTab title="Literature review" icon={FileText} onselect={() => {}} />
+						<DocumentTab
+							title="vaswani-2017.pdf"
+							icon={BookOpen}
+							onselect={() => {}}
+							onclose={() => {}}
+						/>
+					</div>
+				</Specimen>
+				<div class="flex flex-wrap gap-6">
+					{#each FORCED as state (state)}
+						<Specimen name="DocumentTab" {state}>
+							<div class="bg-surface-sunken flex h-8" role="tablist">
+								<DocumentTab
+									title="Literature review"
+									icon={FileText}
+									onselect={() => {}}
+									onclose={() => {}}
+								/>
+							</div>
+						</Specimen>
+					{/each}
+					<Specimen name="DocumentTab renaming" state="focus" target="input">
+						<div class="bg-surface-sunken flex h-8" role="tablist">
+							<DocumentTab
+								title="Chapter 1"
+								icon={FileText}
+								current
+								renaming
+								validate={nameInUse}
+								onselect={() => {}}
+								onrename={() => {}}
+							/>
+						</div>
+					</Specimen>
+					<Specimen name="InlineRename" state="error" target="input">
+						<div class="bg-surface-sunken flex h-8 items-center px-3" {@attach typeTaken}>
+							<InlineRename
+								value="Chapter 1"
+								label="Name for Chapter 1"
+								class="w-40"
+								validate={nameInUse}
+								oncommit={() => {}}
+							/>
+						</div>
+					</Specimen>
+				</div>
 			</div>
 		</section>
 

@@ -67,6 +67,13 @@ export async function openManuscript(page: Page) {
  * than clicked by offset, since a split pane can scroll the page's left edge
  * out of view.
  */
+/** A manuscript's tab in the document bar, above the toolbar. */
+export function documentTab(page: Page, title: string) {
+	return page
+		.getByRole('tablist', { name: 'Documents' })
+		.getByRole('tab', { name: title, exact: true });
+}
+
 export async function replaceWord(
 	page: Page,
 	paragraph: string,
