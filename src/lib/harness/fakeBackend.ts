@@ -131,6 +131,8 @@ export interface FakeState {
 	images: Map<string, number[]>;
 	positions: Map<string, number>;
 	embeddingMeta: { model_id: string; dims: number } | null;
+	/** Manuscripts moved to the system's trash, newest last (M5-7). */
+	trashed: string[];
 }
 
 export function stateFrom(fixture: Fixture): FakeState {
@@ -165,7 +167,8 @@ export function stateFrom(fixture: Fixture): FakeState {
 		labels: structuredClone(fixture.labels),
 		images: new Map(),
 		positions: new Map(),
-		embeddingMeta: { model_id: 'all-MiniLM-L6-v2', dims: 384 }
+		embeddingMeta: { model_id: 'all-MiniLM-L6-v2', dims: 384 },
+		trashed: []
 	};
 }
 
@@ -187,6 +190,12 @@ const NOT_OPEN_PROJECT = appError('Conflict', 'No project is open.');
 
 export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 	const history = fakeHistory(disk);
+	/** A manuscript of the open project that's there, as `documents::existing`. */
+	const existing = (document: string) => {
+		const found = history.locate(root(), document);
+		if (!disk.has(found.manuscript)) throw notFound(found.manuscript);
+		return found;
+	};
 	const seconds = () => Math.floor(Date.now() / 1000);
 	const library = () => {
 		if (!state.libraryOpen) throw NOT_OPEN_LIBRARY;
@@ -1178,6 +1187,52 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 
 		clearSnapshots(document, olderThanDays) {
 			return history.clear(history.locate(root(), document).dir, olderThanDays, seconds());
+		},
+
+		// As `documents.rs` (M5-7): a manuscript of the open project, its
+		// history moving with a rename, and never over another file.
+		renameDocument(document, fileName) {
+			const { manuscript, dir } = existing(document);
+			if (/[/\\:\0]/.test(fileName) || !fileName.endsWith('.erti.json')) {
+				throw appError('InvalidInput', 'That isn’t a name for a document.');
+			}
+			const stem = fileName.slice(0, -'.erti.json'.length);
+			if (!stem || stem.startsWith('.')) {
+				throw appError('InvalidInput', 'That isn’t a name for a document.');
+			}
+			const target = `${root()}/${fileName}`;
+			if (target.toLowerCase() !== manuscript.toLowerCase() && disk.has(target)) {
+				throw appError(
+					'Conflict',
+					`A document called “${stem}” is already here. Choose another name.`
+				);
+			}
+			disk.write(target, disk.text(manuscript) ?? '');
+			if (target !== manuscript) disk.remove(manuscript);
+			history.move(dir, `${root()}/.erti/history/${stem}`);
+			return target;
+		},
+
+		duplicateDocument(document) {
+			const { manuscript } = existing(document);
+			const name = manuscript.slice(manuscript.lastIndexOf('/') + 1);
+			const title = name.endsWith('.erti.json')
+				? name.slice(0, -'.erti.json'.length)
+				: 'Untitled document';
+			const taken = new Set(disk.list().map((path) => path.toLowerCase()));
+			for (let n = 1; ; n++) {
+				const copy = `${root()}/${title} copy${n === 1 ? '' : ` ${n}`}.erti.json`;
+				if (taken.has(copy.toLowerCase())) continue;
+				disk.write(copy, disk.text(manuscript) ?? '');
+				return copy;
+			}
+		},
+
+		trashDocument(document) {
+			const { manuscript } = existing(document);
+			disk.remove(manuscript);
+			state.trashed.push(manuscript);
+			return null;
 		},
 
 		restoreDefaultLabels: () => (library(), 0),

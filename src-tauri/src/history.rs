@@ -407,6 +407,52 @@ pub fn thin(dir: &Path, now: i64) -> io::Result<u32> {
     Ok(thinned)
 }
 
+/// Move a document's history to the folder its new name takes (M5-7).
+///
+/// Usually that folder doesn't exist and this is one rename. It can, when a
+/// document of the new name was deleted and its history kept: then the
+/// snapshots join it, renamed a second on if one already holds that time, and
+/// nothing of either is lost. A case-only rename on a case-insensitive disk is
+/// the same folder, and is just renamed.
+pub fn move_to(from: &Path, to: &Path) -> io::Result<()> {
+    let _guard = lock();
+    if !from.is_dir() {
+        return Ok(());
+    }
+    let same = match (std::fs::canonicalize(from), std::fs::canonicalize(to)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    };
+    if same || !to.exists() {
+        if let Some(parent) = to.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        return std::fs::rename(from, to);
+    }
+
+    let mut moving = read_index(from);
+    let mut index = read_index(to);
+    for (time, name) in snapshots_in(from) {
+        let mut at = time;
+        while to.join(name_for(at)).exists() {
+            at += 1;
+        }
+        let target = name_for(at);
+        std::fs::rename(from.join(&name), to.join(&target))?;
+        if let Some(entry) = moving.snapshots.remove(&name) {
+            index.snapshots.insert(target, entry);
+        }
+    }
+    if let Err(e) = write_index(to, index, &snapshots_in(to)) {
+        log::warn!("could not update the history index: {e}");
+    }
+    // Whatever's left is the old index and anything that wasn't a snapshot,
+    // which stays where it was rather than be deleted.
+    let _ = std::fs::remove_file(from.join(INDEX));
+    let _ = std::fs::remove_dir(from);
+    Ok(())
+}
+
 /// Where a project's history lives.
 pub fn root_of(project: &Path) -> PathBuf {
     project.join(".erti").join("history")
