@@ -82,7 +82,8 @@ const OVERLAYS: { name: string; open: (page: Page) => Promise<unknown>; content:
 	{
 		name: 'popover',
 		open: (page) => page.locator('[data-overlay="popover"] button').click(),
-		content: '[data-popover-content]'
+		// Not the rename field's error, which is open throughout.
+		content: '[data-popover-content]:not([data-rename-error])'
 	},
 	{
 		name: 'tooltip',
@@ -134,6 +135,10 @@ for (const palette of PALETTES) {
 			await expect(page.locator('[data-toasts] > *')).toHaveCount(3);
 			const toasts = await page.evaluate(measure, '[data-toasts]');
 			expect(toasts, 'pairs below WCAG AA in the toasts').toEqual([]);
+			// So is what InlineRename says about a name it won't take.
+			await expect(page.locator('[data-rename-error]')).toBeVisible();
+			const renaming = await page.evaluate(measure, '[data-rename-error]');
+			expect(renaming, 'pairs below WCAG AA in the rename error').toEqual([]);
 
 			// M1c-5 AC-2
 			if (shots) {

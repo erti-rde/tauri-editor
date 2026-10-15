@@ -29,6 +29,7 @@
 	import ChevronDown from '~icons/lucide/chevron-down';
 
 	import { buttonClass } from './Button.svelte';
+	import IconButton from './IconButton.svelte';
 
 	interface Props {
 		/** The menu's name, read on its trigger and on the list it opens. */
@@ -39,6 +40,12 @@
 		open?: boolean;
 		align?: 'start' | 'center' | 'end';
 		disabled?: boolean;
+		/**
+		 * The trigger is this icon alone, as a small `IconButton`: the label is its
+		 * tooltip and its name. For a menu that sits on something else, such as ⋯
+		 * on a document's tab.
+		 */
+		icon?: IconComponent;
 	}
 
 	let {
@@ -47,7 +54,8 @@
 		trigger,
 		open = $bindable(false),
 		align = 'start',
-		disabled = false
+		disabled = false,
+		icon
 	}: Props = $props();
 
 	const safe = $derived(items.filter((item) => !item.danger));
@@ -92,22 +100,30 @@
 {/snippet}
 
 <DropdownMenu.Root bind:open>
-	<DropdownMenu.Trigger
-		aria-label={current ? `${label}: ${current.label}` : label}
-		{disabled}
-		data-current={current ? '' : undefined}
-		class={[
-			buttonClass({ variant: 'ghost', size: 'tight' }),
-			'data-current:bg-surface-active data-current:text-ink'
-		]}
-	>
-		{#if trigger}
-			{@render trigger()}
-		{:else}
-			{label}
-		{/if}
-		<ChevronDown class="size-3" aria-hidden="true" />
-	</DropdownMenu.Trigger>
+	{#if icon}
+		<DropdownMenu.Trigger {disabled}>
+			{#snippet child({ props })}
+				<IconButton {...props} {label} {icon} size="sm" />
+			{/snippet}
+		</DropdownMenu.Trigger>
+	{:else}
+		<DropdownMenu.Trigger
+			aria-label={current ? `${label}: ${current.label}` : label}
+			{disabled}
+			data-current={current ? '' : undefined}
+			class={[
+				buttonClass({ variant: 'ghost', size: 'tight' }),
+				'data-current:bg-surface-active data-current:text-ink'
+			]}
+		>
+			{#if trigger}
+				{@render trigger()}
+			{:else}
+				{label}
+			{/if}
+			<ChevronDown class="size-3" aria-hidden="true" />
+		</DropdownMenu.Trigger>
+	{/if}
 	<DropdownMenu.Portal>
 		<DropdownMenu.Content
 			{align}

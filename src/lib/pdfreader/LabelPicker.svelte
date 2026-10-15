@@ -5,6 +5,7 @@
 	import Pencil from '~icons/lucide/pencil';
 
 	import type { AnnotationLabel } from '$lib/stores/db';
+	import { InlineRename } from '$lib/ui';
 
 	/**
 	 * Which colour the next mark takes, and what that colour means.
@@ -32,10 +33,9 @@
 	const usable = $derived(labels.filter((label) => label.enabled));
 	const active = $derived(usable.find((label) => label.id === current) ?? usable[0]);
 
-	function commit(label: AnnotationLabel, value: string) {
-		const name = value.trim();
+	function rename(label: AnnotationLabel, name: string) {
 		editing = null;
-		if (name && name !== label.name) onrename(label, name);
+		onrename(label, name);
 	}
 </script>
 
@@ -75,18 +75,12 @@
 							class="border-line inline-block h-3.5 w-3.5 shrink-0 rounded-sm border"
 							style:background="hsl({label.colour})"
 						></span>
-						<!-- svelte-ignore a11y_autofocus -->
-						<input
-							class="border-line bg-surface-sunken text-ink w-full rounded border px-1 py-0.5 text-xs"
-							aria-label="Name for this label"
+						<InlineRename
 							value={label.name}
-							autofocus
-							onkeydown={(event) => {
-								event.stopPropagation();
-								if (event.key === 'Enter') commit(label, event.currentTarget.value);
-								if (event.key === 'Escape') editing = null;
-							}}
-							onblur={(event) => commit(label, event.currentTarget.value)}
+							label="Name for this label"
+							class="w-full"
+							oncommit={(name) => rename(label, name)}
+							oncancel={() => (editing = null)}
 						/>
 					</div>
 				{:else}

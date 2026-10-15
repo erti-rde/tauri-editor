@@ -89,7 +89,6 @@
 	},
 	"src/lib/pdfreader/LabelPicker.svelte": {
 		"button": 4,
-		"input": 1,
 		"radius": 1,
 		"shadow": 1
 	},
@@ -140,6 +139,6 @@
 		"textPx": 1
 	},
 	"src/lib/workspace/TabBar.svelte": {
-		"button": 2
+		"button": 1
 	}
 }
