@@ -72,8 +72,8 @@ Ordered by what they cut off. Each lands in the milestone that touches the area.
    refused.
 2. **Narrow the fs scope (T3)** — done in M1a-4. The webview has the six fs calls the app
    makes and no scope of its own: opening a project grants its folder, the dialog grants what the
-   user picks, and resources and app folders stay readable. No `remove`; the trash command comes
-   with M5-7, the first delete. Verified with an in-app probe (reads and writes outside the
+   user picks, and resources and app folders stay readable. No `remove`; the one delete,
+   M5-7's, is a Rust command that moves a manuscript of the open project to the system's bin. Verified with an in-app probe (reads and writes outside the
    project refused, inside allowed, `remove` refused everywhere).
 3. **Validate every untrusted format at the boundary (T1, T8)** — the guards are `src/lib/guard`
    (M1b-10), applied to lookup replies and sidecars now, to manuscripts in M1a-8 and to imports

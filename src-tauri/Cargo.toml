@@ -40,6 +40,8 @@ tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 specta-typescript = "=0.0.12"
 tauri-plugin-log = "2"
 log = "0.4"
+# Delete moves a manuscript to the system's trash (M5-7).
+trash = "5.2.9"
 
 
 [dev-dependencies]

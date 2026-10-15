@@ -152,6 +152,21 @@ export function fakeHistory(disk: HistoryDisk) {
 			disk.write(manuscript, content);
 			return before;
 		},
+		/** As `history::move_to`: renamed, or joined to a history kept under that name. */
+		move(from: string, to: string) {
+			if (from === to) return;
+			const index = readIndex(from);
+			const moved: Record<string, Entry> = {};
+			for (const [time, name] of snapshotsIn(from)) {
+				let at = time;
+				while (disk.text(`${to}/${nameFor(at)}`) !== undefined) at += 1;
+				disk.write(`${to}/${nameFor(at)}`, disk.text(`${from}/${name}`) ?? '');
+				disk.remove(`${from}/${name}`);
+				if (index[name]) moved[nameFor(at)] = index[name];
+			}
+			if (Object.keys(moved).length > 0) writeIndex(to, { ...readIndex(to), ...moved });
+			disk.remove(`${from}/${INDEX}`);
+		},
 		clear(dir: string, olderThanDays: number, now: number): number {
 			const cutoff = now - olderThanDays * DAY;
 			const old = snapshotsIn(dir).filter(([time]) => time < cutoff);
