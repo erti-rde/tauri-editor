@@ -1,10 +1,13 @@
 <script lang="ts">
-	import Ellipsis from '~icons/lucide/ellipsis';
+	import Copy from '~icons/lucide/copy';
+	import FileText from '~icons/lucide/file-text';
 	import History from '~icons/lucide/history';
+	import Pencil from '~icons/lucide/pencil';
+	import Trash from '~icons/lucide/trash-2';
 
-	import { Button, Menu, TextField } from '$lib/ui';
+	import { Button, ConfirmDialog, DocumentTab, InlineRename, type MenuItem } from '$lib/ui';
 
-	import type { ProjectDocument } from './documents';
+	import { toDocumentFileName, type ProjectDocument } from './documents';
 
 	/**
 	 * Which manuscript is open, and how to reach the others.
@@ -12,6 +15,9 @@
 	 * A project used to hold exactly one piece of writing, so there was nothing
 	 * to show. A thesis has chapters and a paper has a draft alongside a response
 	 * to reviewers, so the set has to be visible and one click away.
+	 *
+	 * The open one's ⋯ menu holds what's done to a document as a whole (UX-9):
+	 * renamed in its tab, duplicated, its history, and deleted after asking.
 	 */
 
 	interface Props {
@@ -21,86 +27,120 @@
 		oncreate: (name: string) => void;
 		/** Show the open document's history (UX-9). */
 		onhistory: () => void;
+		/** Rename the open document; the name has passed `toDocumentFileName`. */
+		onrename?: (name: string) => void;
+		onduplicate?: () => void;
+		/** Move the open document to the bin, once the writer has said so. */
+		ondelete?: () => Promise<void>;
 	}
 
-	const { documents, current, onopen, oncreate, onhistory }: Props = $props();
+	const {
+		documents,
+		current,
+		onopen,
+		oncreate,
+		onhistory,
+		onrename,
+		onduplicate,
+		ondelete
+	}: Props = $props();
 
 	let naming = $state(false);
-	let draft = $state('');
+	let renaming = $state(false);
+	let confirming = $state(false);
+	let deleting = $state(false);
+	/** Kept while the dialog closes, when another document is already current. */
+	let doomed = $state('');
 
-	function startNaming() {
-		naming = true;
-		draft = '';
+	/** Why a name can't be used, said as the writer types it. */
+	function reasonAgainst(name: string, except?: ProjectDocument) {
+		const others = documents.filter((d) => d.path !== except?.path).map((d) => d.fileName);
+		return toDocumentFileName(name, others).reason;
 	}
 
-	/**
-	 * Name the new document, once.
-	 *
-	 * Enter and Escape end naming, which removes the field, and the browser then
-	 * blurs it on its way out. Without the check that blur confirmed again: Enter
-	 * created the document twice ("File exists" the second time), and Escape
-	 * created the one it meant to cancel.
-	 */
-	function confirm() {
-		if (!naming) return;
-		const name = draft.trim();
-		if (name.length > 0) oncreate(name);
-		naming = false;
+	const menu = $derived<MenuItem[]>([
+		...(onrename ? [{ label: 'Rename…', icon: Pencil, onSelect: () => (renaming = true) }] : []),
+		...(onduplicate ? [{ label: 'Duplicate', icon: Copy, onSelect: onduplicate }] : []),
+		{ label: 'History…', icon: History, onSelect: onhistory },
+		...(ondelete ? [{ label: 'Delete…', icon: Trash, danger: true, onSelect: askToDelete }] : [])
+	]);
+
+	function askToDelete() {
+		doomed = current?.title ?? '';
+		confirming = true;
 	}
 
-	function onkeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			confirm();
-		} else if (event.key === 'Escape') {
-			event.preventDefault();
-			naming = false;
+	async function confirmDelete() {
+		deleting = true;
+		try {
+			await ondelete?.();
+		} finally {
+			deleting = false;
+			confirming = false;
 		}
 	}
 </script>
 
-<div class="border-line bg-surface flex items-center gap-px overflow-x-auto border-b px-2">
+<div
+	class="border-line bg-surface-sunken flex h-8 items-stretch overflow-x-auto border-b"
+	role="tablist"
+	aria-label="Documents"
+>
 	{#each documents as document (document.path)}
-		<button
-			class="document-tab shrink-0 border-b-2 px-3 text-xs whitespace-nowrap transition-colors
-				{document.path === current?.path
-				? 'border-accent bg-surface-raised text-ink'
-				: 'text-ink-muted hover:bg-surface-hover hover:text-ink border-transparent'}"
-			onclick={() => onopen(document)}
-			aria-current={document.path === current?.path ? 'page' : undefined}
-		>
-			{document.title}
-		</button>
-		{#if document.path === current?.path}
-			<!-- The open document's own menu, beside its tab (UX-9). Rename,
-			     Duplicate and Delete join History here (M5-7). -->
-			<Menu
-				label={`Document menu for ${document.title}`}
-				items={[{ label: 'History…', icon: History, onSelect: onhistory }]}
-			>
-				{#snippet trigger()}
-					<Ellipsis class="size-4" aria-hidden="true" />
-				{/snippet}
-			</Menu>
-		{/if}
+		{@const isCurrent = document.path === current?.path}
+		<DocumentTab
+			title={document.title}
+			icon={FileText}
+			current={isCurrent}
+			onselect={() => onopen(document)}
+			menu={isCurrent ? menu : undefined}
+			renaming={isCurrent && renaming}
+			validate={(name) => reasonAgainst(name, document)}
+			onrename={(name) => {
+				renaming = false;
+				onrename?.(name);
+			}}
+			oncancelrename={() => (renaming = false)}
+		/>
 	{/each}
 
-	{#if naming}
-		<div class="ml-1 w-40 shrink-0">
+	<div class="flex shrink-0 items-center px-1">
+		{#if naming}
 			<!-- Focused as it appears: the field exists because "+ New" was pressed. -->
-			<TextField
-				bind:value={draft}
+			<InlineRename
+				value=""
 				label="Name for the new document"
-				hideLabel
 				placeholder="Chapter one"
-				autofocus
-				{onkeydown}
-				onblur={confirm}
+				class="w-40"
+				validate={(name) => reasonAgainst(name)}
+				oncommit={(name) => {
+					naming = false;
+					oncreate(name);
+				}}
+				oncancel={() => (naming = false)}
 			/>
-		</div>
-	{:else}
-		<Button variant="ghost" size="sm" class="ml-1" onclick={startNaming} title="New document">
-			+ New
-		</Button>
-	{/if}
+		{:else}
+			<Button variant="ghost" size="sm" onclick={() => (naming = true)} title="New document">
+				+ New
+			</Button>
+		{/if}
+	</div>
 </div>
+
+{#if ondelete}
+	<ConfirmDialog
+		bind:open={confirming}
+		title="Delete “{doomed}”?"
+		action="Delete"
+		busy={deleting}
+		onConfirm={confirmDelete}
+	>
+		{#snippet consequences()}
+			<p>It moves to the bin, and can be put back from there.</p>
+			<p class="text-ink-muted">
+				Its history stays with the project. Put it back, or make a document of the same name, and
+				History has every snapshot.
+			</p>
+		{/snippet}
+	</ConfirmDialog>
+{/if}

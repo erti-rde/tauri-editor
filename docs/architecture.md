@@ -30,6 +30,7 @@ planned item lands, it says so.
 │ ml/mod.rs         ONNX session (all-MiniLM-L6-v2)        latex.rs      detect + compile TeX    │
 │ attribution/      shingle matcher (ADR 006): manuscript indexed, corpus streamed past it       │
 │ history.rs        snapshots under .erti/history (ADR 007): take, restore, thin on open         │
+│ documents.rs      a manuscript renamed (its history too), duplicated, or put in the bin        │
 │ fs_errors.rs      human messages for OS errors                                                 │
 └───────────────┬──────────────────────────────────────┬────────────────────────────────────────┘
         ~/Erti/library.db                        <project>/.erti/project.db
@@ -104,6 +105,12 @@ in the Tauri store `settings-store.json`.
   editor is gone while it shows, so `restore_snapshot` copies the snapshot over the file, after
   keeping the file as it was, and the editor reads it afresh on return. `open_project` thins
   every document's history. The fake backend keeps the same files (`harness/fakeHistory.ts`).
+- **The document menu (M5-7, UX-9).** The **⋯** on the open document's tab: Rename…,
+  Duplicate, History…, Delete…. Each saves first, then asks Rust (`documents.rs`), since the
+  webview has no `remove` or `rename`. Rename moves the file, then its history folder (joining
+  one a deleted document of that name left), and the editor carries on under the new path.
+  Delete moves the file to the system's bin with the `trash` crate and leaves its history; the
+  editor opens another document, or a new one if it was the last.
 - **Find & replace (M5-2).** ⌘F in the editor opens `editor/ManuscriptFind.svelte`, the
   `FindBar` primitive over the top of the manuscript; the searching is
   `extensions/FindReplace.ts`. It reads each textblock as one

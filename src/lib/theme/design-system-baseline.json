@@ -8,9 +8,6 @@
 		"button": 1,
 		"shadow": 1
 	},
-	"src/lib/editor/DocumentBar.svelte": {
-		"button": 1
-	},
 	"src/lib/editor/extensions/BubbleMenu.svelte": {
 		"button": 1,
 		"radius": 1,

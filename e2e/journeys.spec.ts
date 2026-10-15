@@ -1,4 +1,12 @@
-import { expect, launch, openManuscript, openProject, replaceWord, test } from './harness';
+import {
+	documentTab,
+	expect,
+	launch,
+	openManuscript,
+	openProject,
+	replaceWord,
+	test
+} from './harness';
 
 test('a first launch asks before anything is looked up online', async ({ page }) => {
 	await launch(page, '?consent=unasked');
@@ -127,7 +135,7 @@ test('a co-author’s citation renders from the manuscript, and can be kept', as
 	await openProject(page);
 	await openManuscript(page);
 	// Chapters switch from the document bar.
-	await page.getByRole('button', { name: 'Shared chapter', exact: true }).click();
+	await documentTab(page, 'Shared chapter').click();
 
 	// Rendered from the file's own sources, dotted, not an error.
 	const away = page.locator('.ProseMirror [data-type="citation"][data-away]');
@@ -655,7 +663,7 @@ test('a new document after one from a newer Erti can be written in', async ({ pa
 	await openProject(page);
 	await openManuscript(page);
 
-	await page.getByRole('button', { name: 'Future chapter', exact: true }).click();
+	await documentTab(page, 'Future chapter').click();
 	const banner = page.getByText('This document was saved by a newer Erti.');
 	await expect(banner).toBeVisible();
 	await expect(page.locator('.ProseMirror')).toHaveAttribute('contenteditable', 'false');
@@ -663,10 +671,7 @@ test('a new document after one from a newer Erti can be written in', async ({ pa
 	await page.getByRole('button', { name: '+ New' }).click();
 	await page.getByRole('textbox', { name: 'Name for the new document' }).fill('Chapter two');
 	await page.keyboard.press('Enter');
-	await expect(page.getByRole('button', { name: 'Chapter two', exact: true })).toHaveAttribute(
-		'aria-current',
-		'page'
-	);
+	await expect(documentTab(page, 'Chapter two')).toHaveAttribute('aria-selected', 'true');
 
 	await expect(banner).toBeHidden();
 	const editor = page.locator('.ProseMirror');
@@ -867,7 +872,7 @@ test('the Check panel finds the planted chapter’s findings, shows one beside i
 	await launch(page);
 	await openProject(page);
 	await openManuscript(page);
-	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await documentTab(page, 'Planted').click();
 	await expect(page.locator('.ProseMirror')).toContainText('almost overnight');
 
 	await page.getByRole('button', { name: 'Check' }).click();
@@ -923,10 +928,7 @@ test('the Check panel finds the planted chapter’s findings, shows one beside i
 	await page.getByRole('button', { name: '+ New' }).click();
 	await page.getByRole('textbox', { name: 'Name for the new document' }).fill('Chapter three');
 	await page.keyboard.press('Enter');
-	await expect(page.getByRole('button', { name: 'Chapter three', exact: true })).toHaveAttribute(
-		'aria-current',
-		'page'
-	);
+	await expect(documentTab(page, 'Chapter three')).toHaveAttribute('aria-selected', 'true');
 	await expect(
 		page.getByText('Check this document’s sentences against your library.')
 	).toBeVisible();
@@ -985,13 +987,13 @@ test('writing keeps a snapshot, and so does closing the document after more', as
 	expect(await chapterSnapshots(page)).toHaveLength(3);
 
 	// Leaving it for another document keeps that on close.
-	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await documentTab(page, 'Planted').click();
 	await expect
 		.poll(async () => (await chapterSnapshots(page)).map((s) => s.trigger).at(-1))
 		.toBe('close');
 	expect((await chapterSnapshots(page)).at(-1)!.text).toContain('And a second.');
-	await page.getByRole('button', { name: 'Chapter 1', exact: true }).click();
-	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await documentTab(page, 'Chapter 1').click();
+	await documentTab(page, 'Planted').click();
 	// A switch takes its close snapshot before the next document shows, so
 	// once Planted is on screen any snapshot of Chapter 1 has been asked for.
 	await expect(page.locator('.ProseMirror')).toContainText('almost overnight');
@@ -1006,7 +1008,7 @@ test('History shows yesterday’s version, and restoring it keeps today’s', as
 	const cut = 'Before attention-only models, low-resource translation relied on transfer';
 	await expect(page.locator('.ProseMirror')).not.toContainText(cut);
 
-	await page.getByRole('button', { name: 'Document menu for Chapter 1' }).click();
+	await page.getByRole('button', { name: 'Chapter 1 menu' }).click();
 	await page.getByRole('menuitem', { name: 'History…' }).click();
 
 	await expect(page.getByRole('heading', { name: 'History of Chapter 1' })).toBeVisible();
@@ -1031,12 +1033,93 @@ test('History shows yesterday’s version, and restoring it keeps today’s', as
 
 	// Today's version was already a snapshot (the restore kept no second copy
 	// of the same bytes), so the restore can be undone from History.
-	await page.getByRole('button', { name: 'Document menu for Chapter 1' }).click();
+	await page.getByRole('button', { name: 'Chapter 1 menu' }).click();
 	await page.getByRole('menuitem', { name: 'History…' }).click();
 	await today.getByRole('button', { name: /while writing · −18 words/ }).click();
 	await expect(page.getByLabel('The snapshot, read-only')).not.toContainText(cut);
 	await page.getByRole('button', { name: 'Back to the document' }).click();
 	await expect(page.locator('.ProseMirror')).toContainText(cut);
+});
+
+// M5-7 AC-1, AC-2
+test('the document menu renames a document with its history, copies it, and deletes it to the bin', async ({
+	page
+}) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+	const files = () => page.evaluate(() => [...window.__ERTI_FAKE__!.files.keys()]);
+	const historyOf = (stem: string) => (path: string) => path.includes(`/.erti/history/${stem}/`);
+	expect((await files()).some(historyOf('Chapter 1'))).toBe(true);
+
+	await page.getByRole('button', { name: 'Chapter 1 menu' }).click();
+	await expect(page.getByRole('menuitem')).toHaveText([
+		'Rename…',
+		'Duplicate',
+		'History…',
+		'Delete…'
+	]);
+
+	// Renamed in its tab, and never to another document's name.
+	await page.getByRole('menuitem', { name: 'Rename…' }).click();
+	const field = page.getByRole('textbox', { name: 'Name for Chapter 1' });
+	await expect(field).toBeFocused();
+	await page.keyboard.type('Planted');
+	await expect(field).toHaveAccessibleDescription('A document called "Planted" is already here.');
+	await field.fill('Introduction');
+	await page.keyboard.press('Enter');
+	await expect(documentTab(page, 'Introduction')).toHaveAttribute('aria-selected', 'true');
+	await expect(
+		page.getByRole('tablist', { name: 'Open files' }).getByRole('tab', { name: /Introduction/ })
+	).toBeVisible();
+
+	// Its history moved with it, and History finds it there.
+	expect((await files()).some(historyOf('Chapter 1'))).toBe(false);
+	expect((await files()).some(historyOf('Introduction'))).toBe(true);
+	await page.getByRole('button', { name: 'Introduction menu' }).click();
+	await page.getByRole('menuitem', { name: 'History…' }).click();
+	await expect(page.getByRole('heading', { name: 'History of Introduction' })).toBeVisible();
+	await expect(
+		page.getByRole('region', { name: 'Yesterday' }).getByRole('button', { name: /on close/ })
+	).toBeVisible();
+	await page.getByRole('button', { name: 'Back to the document' }).click();
+
+	// What's written next goes to the new name.
+	await page.locator('.ProseMirror p').last().click();
+	await page.keyboard.press('End');
+	await page.keyboard.type(' Renamed.');
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				[...window.__ERTI_FAKE__!.files].find(([p]) => p.endsWith('/Introduction.erti.json'))
+			)
+		)
+		.toEqual([expect.any(String), expect.stringContaining('Renamed.')]);
+	expect((await files()).some((p) => p.endsWith('/Chapter 1.erti.json'))).toBe(false);
+
+	// A copy beside it, offered rather than opened.
+	await page.getByRole('button', { name: 'Introduction menu' }).click();
+	await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+	await expect(page.getByText('Made “Introduction copy”')).toBeVisible();
+	await expect(documentTab(page, 'Introduction copy')).toHaveAttribute('aria-selected', 'false');
+	await expect(documentTab(page, 'Introduction')).toHaveAttribute('aria-selected', 'true');
+
+	// Deleted after asking: to the bin, its history kept.
+	await page.getByRole('button', { name: 'Introduction menu' }).click();
+	await page.getByRole('menuitem', { name: 'Delete…' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Delete “Introduction”?' });
+	await expect(dialog).toContainText('Its history stays with the project.');
+	await dialog.getByRole('button', { name: 'Delete' }).click();
+	await expect(page.getByText('Moved “Introduction” to the bin')).toBeVisible();
+	await expect(documentTab(page, 'Introduction')).toHaveCount(0);
+	await expect(
+		page.getByRole('tablist', { name: 'Documents' }).getByRole('tab', { selected: true })
+	).toHaveCount(1);
+	expect(
+		await page.evaluate(() => window.__ERTI_FAKE__!.state.trashed.map((p) => p.split('/').pop()))
+	).toEqual(['Introduction.erti.json']);
+	expect((await files()).some(historyOf('Introduction'))).toBe(true);
+	expect((await files()).some((p) => p.endsWith('/Introduction copy.erti.json'))).toBe(true);
 });
 
 test('find & replace finds the writer’s words, never a citation’s, and undoes in one step', async ({
