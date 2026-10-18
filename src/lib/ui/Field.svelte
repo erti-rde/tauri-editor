@@ -26,17 +26,22 @@
 		hint?: string;
 		/** What's wrong and how to fix it: "Enter a DOI, such as 10.1000/xyz". */
 		error?: string;
+		/**
+		 * The note over what's below, rather than pushing it down: for a field in
+		 * a toolbar, whose row would otherwise grow by a line.
+		 */
+		floatNote?: boolean;
 		control: Snippet<[FieldControl]>;
 	}
 
-	let { label, hideLabel = false, hint, error, control }: Props = $props();
+	let { label, hideLabel = false, hint, error, floatNote = false, control }: Props = $props();
 
 	const id = $props.id();
 	// An empty error is no error: a form that clears it with '' keeps its hint.
 	const note = $derived(error || hint);
 </script>
 
-<div>
+<div class={floatNote ? 'relative' : undefined}>
 	<div class="grid gap-1">
 		<label for={id} class={hideLabel ? 'sr-only' : 'text-small text-ink font-medium'}>
 			{label}
@@ -52,7 +57,14 @@
 	     change. Empty, it has no height, and outside the grid, no gap. -->
 	<p
 		id="{id}-note"
-		class={['text-caption', note && 'mt-1', error ? 'text-danger' : 'text-ink-muted']}
+		class={[
+			'text-caption',
+			note && 'mt-1',
+			error ? 'text-danger' : 'text-ink-muted',
+			floatNote &&
+				note &&
+				'bg-surface-raised border-line-strong shadow-overlay absolute top-full left-0 z-20 w-max max-w-xs rounded border px-2 py-1'
+		]}
 		aria-live="polite"
 	>
 		{note ?? ''}

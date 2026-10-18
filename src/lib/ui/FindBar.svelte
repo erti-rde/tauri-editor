@@ -10,6 +10,7 @@
 	import Button from './Button.svelte';
 	import { controlClass } from './Field.svelte';
 	import IconButton from './IconButton.svelte';
+	import ToggleButton from './ToggleButton.svelte';
 
 	/**
 	 * Find, and replace where the text can be changed (docs/ux.md UX-11). The
@@ -154,7 +155,7 @@
 			onclick={() => onstep(1)}
 		/>
 		{#if caseSensitive !== undefined}
-			<IconButton
+			<ToggleButton
 				label="Match case"
 				icon={CaseSensitive}
 				pressed={caseSensitive}
@@ -163,7 +164,7 @@
 			/>
 		{/if}
 		{#if wholeWord !== undefined}
-			<IconButton
+			<ToggleButton
 				label="Whole word"
 				icon={WholeWord}
 				pressed={wholeWord}

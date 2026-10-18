@@ -1,13 +1,16 @@
 <script lang="ts">
+	import AlignLeft from '~icons/lucide/align-left';
 	import Bold from '~icons/lucide/bold';
 	import BookOpen from '~icons/lucide/book-open';
 	import Copy from '~icons/lucide/copy';
 	import FileText from '~icons/lucide/file-text';
 	import History from '~icons/lucide/history';
 	import Pencil from '~icons/lucide/pencil';
+	import ImagePlus from '~icons/lucide/image-plus';
 	import Italic from '~icons/lucide/italic';
 	import Trash from '~icons/lucide/trash-2';
 	import Settings from '~icons/lucide/settings';
+	import Underline from '~icons/lucide/underline';
 	import { CalendarDate } from '@internationalized/date';
 
 	import {
@@ -28,6 +31,7 @@
 		LabelChip,
 		Loader,
 		Menu,
+		NumberField,
 		Panel,
 		Popover,
 		ProgressLine,
@@ -39,6 +43,9 @@
 		Tabs,
 		TextArea,
 		TextField,
+		ToggleButton,
+		Toolbar,
+		ToolbarGroup,
 		type MenuItem
 	} from '$lib/ui';
 	import { toasts } from '$lib/ui/Toast.svelte';
@@ -92,6 +99,14 @@
 		const input = node.querySelector('input');
 		if (!input) return;
 		input.value = 'Literature review';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+	}
+
+	/** Types a size out of range, so the field shows what it says about one. */
+	function typeOutOfRange(node: HTMLElement) {
+		const input = node.querySelector('input');
+		if (!input) return;
+		input.value = '140';
 		input.dispatchEvent(new Event('input', { bubbles: true }));
 	}
 
@@ -366,6 +381,89 @@
 						onreplace={() => {}}
 						onreplaceall={() => {}}
 					/>
+				</Specimen>
+			</div>
+		</section>
+
+		<section class="grid gap-4">
+			{@render section('Toolbar, ToggleButton, NumberField')}
+			<Specimen name="Toolbar" state="rest">
+				<Toolbar label="Formatting" class="border-line bg-surface border-b px-2 py-1">
+					<ToolbarGroup>
+						<NumberField
+							label="Font size"
+							hideLabel
+							floatNote
+							value={16}
+							min={8}
+							max={72}
+							unit="px"
+							steppers
+							stepLabels={['Smaller', 'Larger']}
+							class="w-24"
+						/>
+					</ToolbarGroup>
+					<ToolbarGroup>
+						<ToggleButton label="Bold" shortcut="Mod B" icon={Bold} pressed />
+						<ToggleButton label="Italic" shortcut="Mod I" icon={Italic} pressed={false} />
+						<ToggleButton label="Underline" shortcut="Mod U" icon={Underline} pressed={false} />
+					</ToolbarGroup>
+					<ToolbarGroup>
+						<ToggleButton label="Align left" icon={AlignLeft} pressed />
+						<IconButton label="Insert an image" icon={ImagePlus} />
+					</ToolbarGroup>
+				</Toolbar>
+			</Specimen>
+			<div class="flex flex-wrap gap-6">
+				{#each ['rest', ...FORCED, 'disabled'] as state (state)}
+					<Specimen name="ToggleButton" {state}>
+						<ToggleButton
+							label="Italic"
+							icon={Italic}
+							pressed={false}
+							disabled={state === 'disabled'}
+						/>
+					</Specimen>
+				{/each}
+				{#each ['rest', 'hover', 'focus'] as state (state)}
+					<Specimen name="ToggleButton pressed" {state}>
+						<ToggleButton label="Bold" icon={Bold} pressed />
+					</Specimen>
+				{/each}
+			</div>
+			<div class="grid grid-cols-3 gap-6">
+				{#each ['rest', ...FORCED] as state (state)}
+					<Specimen name="NumberField" {state} target="input">
+						<NumberField
+							label="Page size"
+							value={16}
+							min={8}
+							max={72}
+							unit="px"
+							steppers
+							stepLabels={['Smaller', 'Larger']}
+							hint="Arrow keys step by 1, Shift and an arrow by 10."
+						/>
+					</Specimen>
+				{/each}
+				<Specimen name="NumberField no steppers" state="rest" target="input">
+					<NumberField label="Word-count target" value={8000} min={0} max={500000} unit="words" />
+				</Specimen>
+				<Specimen name="NumberField" state="error" target="input">
+					<div {@attach typeOutOfRange}>
+						<NumberField
+							label="Page size"
+							value={16}
+							min={8}
+							max={72}
+							unit="px"
+							steppers
+							noun="a size"
+						/>
+					</div>
+				</Specimen>
+				<Specimen name="NumberField" state="disabled" target="input">
+					<NumberField label="Page size" value={16} min={8} max={72} unit="px" steppers disabled />
 				</Specimen>
 			</div>
 		</section>
