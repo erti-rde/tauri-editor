@@ -15,7 +15,7 @@
 	interface Props {
 		editor: Editor;
 		isActive: boolean;
-		children: Snippet;
+		children: Snippet<[Record<string, unknown>]>;
 	}
 
 	let { isActive, children, editor }: Props = $props();
@@ -81,8 +81,12 @@
 </script>
 
 <Popover.Root bind:open={isActive}>
+	<!-- The control is the trigger, given its props, rather than a button
+	     inside the trigger's own button. -->
 	<Popover.Trigger>
-		{@render children()}
+		{#snippet child({ props })}
+			{@render children(props)}
+		{/snippet}
 	</Popover.Trigger>
 	<Popover.Portal>
 		<Popover.Content

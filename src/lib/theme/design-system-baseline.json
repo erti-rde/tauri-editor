@@ -34,14 +34,6 @@
 		"radius": 2,
 		"shadow": 1
 	},
-	"src/lib/editor/extensions/ToolBar.svelte": {
-		"button": 1,
-		"shadow": 1
-	},
-	"src/lib/editor/pagination/ZoomControl.svelte": {
-		"button": 3,
-		"textPx": 1
-	},
 	"src/lib/explorer/Tree.svelte": {
 		"radius": 1
 	},
