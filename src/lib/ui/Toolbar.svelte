@@ -29,7 +29,7 @@
 		children: Snippet;
 	}
 
-	let { label, wrap = false, class: extra, children, ...rest }: Props = $props();
+	let { label, wrap = false, class: extra, children, onkeydown: given, ...rest }: Props = $props();
 
 	const FOCUSABLE = 'button, input, select, textarea, a[href], [tabindex]';
 
@@ -67,7 +67,9 @@
 		setTimeout(restore);
 	}
 
-	function onkeydown(event: KeyboardEvent) {
+	function onkeydown(event: KeyboardEvent & { currentTarget: EventTarget & HTMLDivElement }) {
+		// A caller's own keys come first, and can claim one with preventDefault.
+		given?.(event);
 		if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
 		const root = event.currentTarget as HTMLElement;
 		const target = event.target as HTMLElement;
@@ -99,8 +101,8 @@
 	aria-label={label}
 	aria-orientation="horizontal"
 	class={['flex min-w-0 items-center gap-1', wrap && 'flex-wrap', extra]}
-	{onkeydown}
 	{...rest}
+	{onkeydown}
 >
 	{@render children()}
 </div>

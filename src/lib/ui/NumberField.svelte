@@ -177,12 +177,15 @@
 				{/if}
 				{#if steppers}
 					<!-- Out of the tab order and the toolbar's arrows: the box's own
-					     arrow keys do the same. -->
+					     arrow keys do the same. A press leaves focus in the box, as
+					     WebKit does anyway, so a click doesn't strand it on a control
+					     the toolbar can't move from, and what's typed stays typed. -->
 					<button
 						type="button"
 						tabindex="-1"
 						data-toolbar-skip
 						class="pointer-events-auto {stepper}"
+						onmousedown={(event) => event.preventDefault()}
 						aria-label={stepLabels[0]}
 						disabled={disabled || value <= min}
 						onclick={() => stepBy(-step)}
@@ -194,6 +197,7 @@
 						tabindex="-1"
 						data-toolbar-skip
 						class="pointer-events-auto {stepper}"
+						onmousedown={(event) => event.preventDefault()}
 						aria-label={stepLabels[1]}
 						disabled={disabled || value >= max}
 						onclick={() => stepBy(step)}

@@ -195,6 +195,10 @@
 	/**
 	 * The tools, in Zotero's order, so a hand that knows one knows the other.
 	 *
+	 * Each keeps its name when it's latched: `aria-pressed` says it's on, and a
+	 * name that turned into "Stop highlighting" would be heard as "Stop
+	 * highlighting, pressed", the state twice and the two at odds.
+	 *
 	 * `tinted` marks the two that put a colour on the page. A note takes the
 	 * colour too, but it is drawn as a marker rather than over the words, and an
 	 * icon tinted to match would read as a third marking mode.
@@ -203,29 +207,25 @@
 		{
 			id: 'highlight' as const,
 			icon: Highlighter,
-			on: 'Highlight as you select',
-			off: 'Stop highlighting',
+			label: 'Highlight as you select',
 			tinted: true
 		},
 		{
 			id: 'underline' as const,
 			icon: Underline,
-			on: 'Underline as you select',
-			off: 'Stop underlining',
+			label: 'Underline as you select',
 			tinted: true
 		},
 		{
 			id: 'note' as const,
 			icon: StickyNote,
-			on: 'Leave a note on the page',
-			off: 'Stop leaving notes',
+			label: 'Leave a note on the page',
 			tinted: false
 		},
 		{
 			id: 'area' as const,
 			icon: Crop,
-			on: 'Keep a figure or table',
-			off: 'Stop keeping figures',
+			label: 'Keep a figure or table',
 			tinted: false
 		}
 	];
@@ -234,103 +234,107 @@
 <!--
 	One stop for Tab, with the arrows along it (`Toolbar`): the reader's controls
 	are a dozen, and a reader tabbing to the paper went through every one.
+
+	The find bar sits beside it rather than in it. It's a search of its own, with
+	a box and the buttons that step through what it finds, and in the toolbar Tab
+	from the box would have gone past every one of them.
 -->
-<Toolbar
-	label="Reading"
-	class="border-line bg-surface h-9 shrink-0 border-b px-2 text-xs select-none"
+<div
+	class="border-line bg-surface flex h-9 shrink-0 items-center border-b px-2 text-xs select-none"
 >
-	<!-- ------------------------------------------------------- getting about -->
-	<!--
+	<Toolbar label="Reading" class="h-full grow">
+		<!-- ------------------------------------------------------- getting about -->
+		<!--
 		The panel every PDF reader has, where every PDF reader has it: pages,
 		contents, marks. This used to be a marks-only toggle, which put a feature of
 		this application in the place readers look for the paper's own furniture.
 	-->
-	<ToolbarGroup>
-		<ToggleButton
-			label={sidebarOpen ? 'Hide the panel' : 'Pages, contents and marks'}
-			icon={PanelLeft}
-			pressed={sidebarOpen}
-			onclick={ontogglesidebar}
-		/>
-	</ToolbarGroup>
+		<ToolbarGroup>
+			<ToggleButton
+				label="Pages, contents and marks"
+				icon={PanelLeft}
+				pressed={sidebarOpen}
+				onclick={ontogglesidebar}
+			/>
+		</ToolbarGroup>
 
-	<ToolbarGroup>
-		<IconButton label="Zoom out" icon={ZoomOut} onclick={() => onzoom(1 / 1.1)} />
-		<IconButton label="Zoom in" icon={ZoomIn} onclick={() => onzoom(1.1)} />
-		<!--
+		<ToolbarGroup>
+			<IconButton label="Zoom out" icon={ZoomOut} onclick={() => onzoom(1 / 1.1)} />
+			<IconButton label="Zoom in" icon={ZoomIn} onclick={() => onzoom(1.1)} />
+			<!--
 			The percentage doubles as the button that undoes it, which is where every
 			reader looks first when a paper is too wide to read.
 		-->
-		<Tooltip label="Fit the page width ({Math.round(scale * 100)}%)">
-			{#snippet children(tooltip)}
-				<Button {...tooltip} variant="ghost" class="tabular-nums" onclick={onfit}>
-					<FitWidth class="size-4" aria-hidden="true" />
-					{Math.round(scale * 100)}%
-				</Button>
-			{/snippet}
-		</Tooltip>
-	</ToolbarGroup>
+			<Tooltip label="Fit the page width ({Math.round(scale * 100)}%)">
+				{#snippet children(tooltip)}
+					<Button {...tooltip} variant="ghost" class="tabular-nums" onclick={onfit}>
+						<FitWidth class="size-4" aria-hidden="true" />
+						{Math.round(scale * 100)}%
+					</Button>
+				{/snippet}
+			</Tooltip>
+		</ToolbarGroup>
 
-	<!--
+		<!--
 		Back to where a jump came from. Following a citation into page 41 and then
 		having to find your way back to page 3 by hand is the thing that stops
 		people following citations at all.
 	-->
-	<ToolbarGroup>
-		<IconButton
-			label="Back to where you jumped from"
-			icon={GoBack}
-			disabled={!canGoBack}
-			onclick={onback}
-		/>
-	</ToolbarGroup>
+		<ToolbarGroup>
+			<IconButton
+				label="Back to where you jumped from"
+				icon={GoBack}
+				disabled={!canGoBack}
+				onclick={onback}
+			/>
+		</ToolbarGroup>
 
-	<ToolbarGroup>
-		<IconButton
-			label="Previous page"
-			icon={ChevronUp}
-			disabled={page <= 1}
-			onclick={() => onpage(page - 1)}
-		/>
-		<IconButton
-			label="Next page"
-			icon={ChevronDown}
-			disabled={page >= pages}
-			onclick={() => onpage(page + 1)}
-		/>
-		<!-- A text box rather than a NumberField: it takes the page the paper
+		<ToolbarGroup>
+			<IconButton
+				label="Previous page"
+				icon={ChevronUp}
+				disabled={page <= 1}
+				onclick={() => onpage(page - 1)}
+			/>
+			<IconButton
+				label="Next page"
+				icon={ChevronDown}
+				disabled={page >= pages}
+				onclick={() => onpage(page + 1)}
+			/>
+			<!-- A text box rather than a NumberField: it takes the page the paper
 		     prints, which may be "xiv". -->
-		<div class="text-ink-muted ml-1 flex items-center gap-1">
-			<div class="w-12">
-				<TextField
-					label={pageLabel === null ? 'Page number' : 'Page number the paper prints'}
-					hideLabel
-					class="text-center"
-					title={pageLabel === null
-						? 'Go to a page'
-						: 'Go to a page. This paper prints its own numbers, and this is one of them.'}
-					value={shown}
-					oninput={(event) => {
-						editing = true;
-						draft = event.currentTarget.value;
-					}}
-					onblur={commit}
-					onkeydown={onPageKey}
-				/>
+			<div class="text-ink-muted ml-1 flex items-center gap-1">
+				<div class="w-12">
+					<TextField
+						label={pageLabel === null ? 'Page number' : 'Page number the paper prints'}
+						hideLabel
+						class="text-center"
+						title={pageLabel === null
+							? 'Go to a page'
+							: 'Go to a page. This paper prints its own numbers, and this is one of them.'}
+						value={shown}
+						oninput={(event) => {
+							editing = true;
+							draft = event.currentTarget.value;
+						}}
+						onblur={commit}
+						onkeydown={onPageKey}
+					/>
+				</div>
+				<span class="whitespace-nowrap tabular-nums">
+					{#if showSheet}({page})&nbsp;{/if}of&nbsp;{pages || '–'}
+				</span>
 			</div>
-			<span class="whitespace-nowrap tabular-nums">
-				{#if showSheet}({page})&nbsp;{/if}of&nbsp;{pages || '–'}
-			</span>
-		</div>
-	</ToolbarGroup>
+		</ToolbarGroup>
 
-	<span class="grow" aria-hidden="true"></span>
+		<span class="grow" aria-hidden="true"></span>
 
-	<!-- ------------------------------------------------------------- the tools -->
-	<ToolbarGroup label="What to mark with" rule={false}>
-		{#each tools as item (item.id)}
-			{@const active = tool === item.id}
-			<!--
+		<!-- ------------------------------------------------------------- the tools -->
+		<ToolbarGroup label="What to mark with" rule={false}>
+			{#each tools as item (item.id)}
+				{@const active = tool === item.id}
+				<!--
 				A latched marking tool is drawn in the colour it will mark with.
 
 				Without it the toolbar says a tool is in hand but not what it would
@@ -338,62 +342,65 @@
 				second thing to choose before anything will happen. It has already
 				been chosen; this is where that shows.
 			-->
-			<ToggleButton
-				label={active ? item.off : item.on}
-				icon={item.icon}
-				pressed={active}
-				style={active && item.tinted ? `color: hsl(${colour})` : undefined}
-				onclick={() => ontool(active ? null : item.id)}
-			/>
-		{/each}
+				<ToggleButton
+					label={item.label}
+					icon={item.icon}
+					pressed={active}
+					style={active && item.tinted ? `color: hsl(${colour})` : undefined}
+					onclick={() => ontool(active ? null : item.id)}
+				/>
+			{/each}
 
-		<LabelPicker {labels} current={lastLabel} onchoose={onlabel} {onrename} {onresetnames} />
-	</ToolbarGroup>
+			<LabelPicker {labels} current={lastLabel} onchoose={onlabel} {onrename} {onresetnames} />
+		</ToolbarGroup>
 
-	<span class="grow" aria-hidden="true"></span>
+		<span class="grow" aria-hidden="true"></span>
 
-	<!-- --------------------------------------------------------- how it looks -->
-	<ToolbarGroup rule={false}>
-		{#if searching}
-			<FindBar
-				bind:this={findBar}
-				bind:query
-				label="Find in this paper"
-				{status}
-				found={!!find?.matches}
-				onquery={(text) => onsearch(text)}
-				onstep={(direction) => onsearch(query, { again: true, backwards: direction < 0 })}
-				onclose={() => {
-					query = '';
-					onclosesearch();
-				}}
-			/>
-		{:else}
-			<!--
+		<!-- --------------------------------------------------------- how it looks -->
+		{#if !searching}
+			<ToolbarGroup rule={false}>
+				<!--
 				The marks, on the right with the rest of what this application adds to
 				a paper rather than in the panel button's place.
 			-->
-			<Tooltip label={marks === 1 ? '1 mark on this paper' : `${marks} marks on this paper`}>
-				{#snippet children(tooltip)}
-					<Button {...tooltip} variant="ghost" class="tabular-nums" onclick={onshowmarks}>
-						<Pencil class="size-4" aria-hidden="true" />
-						{#if marks > 0}{marks}{/if}
-					</Button>
-				{/snippet}
-			</Tooltip>
+				<Tooltip label={marks === 1 ? '1 mark on this paper' : `${marks} marks on this paper`}>
+					{#snippet children(tooltip)}
+						<Button {...tooltip} variant="ghost" class="tabular-nums" onclick={onshowmarks}>
+							<Pencil class="size-4" aria-hidden="true" />
+							{#if marks > 0}{marks}{/if}
+						</Button>
+					{/snippet}
+				</Tooltip>
 
-			<AppearanceMenu
-				{scrollMode}
-				{spreadMode}
-				{rotation}
-				{pageTheme}
-				onscroll={onscrollmode}
-				onspread={onspreadmode}
-				{onrotate}
-				ontheme={onpagetheme}
-			/>
+				<AppearanceMenu
+					{scrollMode}
+					{spreadMode}
+					{rotation}
+					{pageTheme}
+					onscroll={onscrollmode}
+					onspread={onspreadmode}
+					{onrotate}
+					ontheme={onpagetheme}
+				/>
 
-			<IconButton label="Find in this paper" icon={Search} onclick={ontogglesearch} />
+				<IconButton label="Find in this paper" icon={Search} onclick={ontogglesearch} />
+			</ToolbarGroup>
 		{/if}
-	</ToolbarGroup>
-</Toolbar>
+	</Toolbar>
+
+	{#if searching}
+		<FindBar
+			bind:this={findBar}
+			bind:query
+			label="Find in this paper"
+			{status}
+			found={!!find?.matches}
+			onquery={(text) => onsearch(text)}
+			onstep={(direction) => onsearch(query, { again: true, backwards: direction < 0 })}
+			onclose={() => {
+				query = '';
+				onclosesearch();
+			}}
+		/>
+	{/if}
+</div>

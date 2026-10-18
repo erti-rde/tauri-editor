@@ -367,6 +367,24 @@ describe('the toolbar', () => {
 		expect(viewer.find).toHaveBeenCalledWith('entropy', undefined);
 	});
 
+	it('tabs from the find box to its own buttons', async () => {
+		// The find bar is beside the toolbar, not in it: there, Tab from the box
+		// went past every button the bar has.
+		const user = userEvent.setup();
+		render(Harness, { path: '/papers/one.pdf' });
+		await waitFor(() => expect(viewer.load).toHaveBeenCalled());
+
+		await user.click(screen.getByRole('button', { name: 'Find in this paper' }));
+		const box = await screen.findByLabelText('Find in this paper');
+		await waitFor(() => expect(box).toHaveFocus());
+		expect(box.closest('[role="toolbar"]')).toBeNull();
+
+		await user.tab();
+
+		expect(document.activeElement?.closest('[role="search"]')).not.toBeNull();
+		expect(document.activeElement).not.toBe(box);
+	});
+
 	it('zooms', async () => {
 		const user = userEvent.setup();
 		render(Harness, { path: '/papers/one.pdf' });
@@ -571,11 +589,9 @@ describe('choosing how to mark', () => {
 
 		await user.click(underline);
 
-		// Its name changes with its state, because pressing it again turns it off.
-		expect(await screen.findByRole('button', { name: 'Stop underlining' })).toHaveAttribute(
-			'aria-pressed',
-			'true'
-		);
+		// It keeps its name, and says it's on: the state is heard once, not twice.
+		await waitFor(() => expect(underline).toHaveAttribute('aria-pressed', 'true'));
+		expect(underline).toHaveAccessibleName('Underline as you select');
 		expect(screen.getByRole('button', { name: 'Highlight as you select' })).toHaveAttribute(
 			'aria-pressed',
 			'false'
@@ -658,17 +674,12 @@ describe('the tools Zotero puts in the toolbar', () => {
 		expect(screen.getByRole('button', { name: 'Keep a figure or table' })).toBeInTheDocument();
 
 		await user.click(highlight);
-		expect(await screen.findByRole('button', { name: 'Stop highlighting' })).toHaveAttribute(
-			'aria-pressed',
-			'true'
-		);
+		await waitFor(() => expect(highlight).toHaveAttribute('aria-pressed', 'true'));
 
-		await user.click(screen.getByRole('button', { name: 'Keep a figure or table' }));
+		const area = screen.getByRole('button', { name: 'Keep a figure or table' });
+		await user.click(area);
 
-		expect(await screen.findByRole('button', { name: 'Stop keeping figures' })).toHaveAttribute(
-			'aria-pressed',
-			'true'
-		);
+		await waitFor(() => expect(area).toHaveAttribute('aria-pressed', 'true'));
 		expect(screen.getByRole('button', { name: 'Highlight as you select' })).toHaveAttribute(
 			'aria-pressed',
 			'false'
@@ -699,13 +710,12 @@ describe('the tools Zotero puts in the toolbar', () => {
 		await waitFor(() => expect(viewer.load).toHaveBeenCalled());
 		captured.current.onPagesLoaded?.(20);
 
-		await user.click(await screen.findByRole('button', { name: 'Leave a note on the page' }));
+		const note = await screen.findByRole('button', { name: 'Leave a note on the page' });
+		await user.click(note);
+		await waitFor(() => expect(note).toHaveAttribute('aria-pressed', 'true'));
 		pressOn(screen.getByRole('region', { name: 'Paper' }), { x: 120, y: 300 });
 
-		expect(await screen.findByRole('button', { name: 'Leave a note on the page' })).toHaveAttribute(
-			'aria-pressed',
-			'false'
-		);
+		await waitFor(() => expect(note).toHaveAttribute('aria-pressed', 'false'));
 	});
 });
 

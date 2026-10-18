@@ -65,7 +65,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | ---------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | An action with words               | `Button`                               | `primary` once per view · `secondary` · `ghost` · `danger`; `sm`/`md`; `loading`                 |
 | An action with an icon             | `IconButton`                           | `label` required: tooltip + accessible name                                                      |
-| An icon that’s on or off           | `ToggleButton`                         | `aria-pressed` always; pressed is ink on accent-quiet with an edge (rule 6)                      |
+| An icon that’s on or off           | `ToggleButton`                         | `aria-pressed` always, one label on and off; pressed is ink on accent-quiet, edged (rule 6)      |
 | A row of controls on one thing     | `Toolbar` + `ToolbarGroup`             | One Tab stop; arrows, Home, End along it; groups ruled apart, named when unclear                 |
 | A list of actions                  | `Menu`                                 | One-line descriptions; `danger` last; `separated` groups; `dot` + words; `icon` alone            |
 | An open file in a tab strip        | `DocumentTab`                          | Current: surface, accent rule, `aria-selected`; its ⋯ menu on the current tab only               |
