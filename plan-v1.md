@@ -229,7 +229,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M5-4** PDF export, per platform
 - [ ] **M5-5** DOCX export (ADR-9)
 - [ ] **M5-6** Export menu (UX-8)
-- [ ] **M5-7** Document menu: rename, duplicate, history, delete (#23)
+- [x] **M5-7** Document menu: rename, duplicate, history, delete (#23) (#251)
 - [ ] **M5-8** Font family and size in the toolbar (#103)
 - [ ] **M5-9** Draggable split divider (#100)
 - [ ] **M5-10** Settings › Library (UX-10)
