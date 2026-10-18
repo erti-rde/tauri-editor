@@ -61,12 +61,6 @@ export async function openManuscript(page: Page) {
 	await expect(page.locator('.ProseMirror')).toContainText('Attention in Low-Resource Translation');
 }
 
-/**
- * Replace one word of a manuscript paragraph, as the writer would: a double
- * click on the word, wherever it is on screen, then typing. Measured rather
- * than clicked by offset, since a split pane can scroll the page's left edge
- * out of view.
- */
 /** A manuscript's tab in the document bar, above the toolbar. */
 export function documentTab(page: Page, title: string) {
 	return page
@@ -74,6 +68,12 @@ export function documentTab(page: Page, title: string) {
 		.getByRole('tab', { name: title, exact: true });
 }
 
+/**
+ * Replace one word of a manuscript paragraph, as the writer would: a double
+ * click on the word, wherever it is on screen, then typing. Measured rather
+ * than clicked by offset, since a split pane can scroll the page's left edge
+ * out of view.
+ */
 export async function replaceWord(
 	page: Page,
 	paragraph: string,

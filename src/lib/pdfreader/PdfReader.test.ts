@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { tick } from 'svelte';
 
+import { focusSettles } from '$lib/harness/testing';
+
 import Harness from './PdfReaderHarness.svelte';
 import { readerStore } from './readerStore';
 import { annotationsStore } from '$lib/stores/annotations.svelte';
@@ -607,6 +609,9 @@ describe('choosing how to mark', () => {
 		render(Harness, { path: '/papers/one.pdf' });
 
 		await user.click(await screen.findByRole('button', { name: 'Highlight colour: Claim' }));
+		// The menu takes focus a frame after it opens. Renaming before then had
+		// it take focus from the new field, which renamed nothing and closed.
+		await focusSettles((focused) => expect(focused?.closest('[role="menu"]')).not.toBeNull());
 		// By title: the accessible-name query cannot see inside the hidden wrapper
 		// that floating-ui leaves behind in jsdom.
 		await user.click((await screen.findAllByTitle('Rename'))[0]);
