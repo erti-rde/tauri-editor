@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
+import { focusSettles } from '$lib/harness/testing';
 import UiHarness from '$lib/ui/UiHarness.svelte';
 import DocumentBar from './DocumentBar.svelte';
 
@@ -150,7 +151,9 @@ describe('M5-7 the document menu', () => {
 		await user.keyboard('{Enter}');
 		const items = await screen.findAllByRole('menuitem', { hidden: true });
 		const item = items.find((i) => i.textContent?.trim() === label)!;
-		await waitFor(() => expect(document.activeElement).toBe(items[0]), { timeout: 5000 });
+		// Until bits-ui has stopped moving focus: a frame after the first item
+		// has it, its focus scope can take it back, and Enter then chooses that.
+		await focusSettles((focused) => expect(focused).toBe(items[0]));
 		item.focus();
 		await user.keyboard('{Enter}');
 		return user;

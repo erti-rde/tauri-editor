@@ -203,7 +203,7 @@ test('shots of the Check panel', async ({ page }) => {
 	await launch(page);
 	await openProject(page);
 	await openManuscript(page);
-	await page.getByRole('button', { name: 'Planted', exact: true }).click();
+	await documentTab(page, 'Planted').click();
 	await page.getByRole('button', { name: 'Check' }).click();
 	await page.screenshot(shot('25-check-not-run'));
 
