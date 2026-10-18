@@ -67,6 +67,22 @@ describe('Toolbar', () => {
 		expect(size).toHaveFocus();
 	});
 
+	it('keeps focus in a number box when its stepper is pressed', async () => {
+		// Otherwise a click leaves it on a stepper, which the toolbar doesn't
+		// count, and the next Tab stops at Bold instead of leaving.
+		const user = userEvent.setup();
+		render(ToolbarHarness);
+		const size = screen.getByRole('spinbutton', { name: 'Font size' });
+		size.focus();
+
+		await user.click(screen.getByRole('button', { name: 'Larger' }));
+
+		expect(size).toHaveFocus();
+		expect(size).toHaveValue('17');
+		await user.tab();
+		expect(screen.getByRole('button', { name: 'After' })).toHaveFocus();
+	});
+
 	it('names its groups when asked, and rules them apart', () => {
 		render(ToolbarHarness);
 		const groups = screen.getAllByRole('group');

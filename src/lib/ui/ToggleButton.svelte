@@ -11,6 +11,10 @@
 	 * pressed" rather than an action. Pressed is drawn as ink on accent-quiet
 	 * with a line-strong edge (design-system.md rule 6), so it's a shape as well
 	 * as a colour.
+	 *
+	 * The label stays the same on and off ("Bold", not "Remove bold"): with
+	 * `aria-pressed` beside it, a label that changed would say the state twice,
+	 * and the two would disagree.
 	 */
 	interface Props extends Omit<ComponentProps<typeof IconButton>, 'pressed'> {
 		pressed: boolean;
