@@ -89,10 +89,6 @@
 	"src/lib/pdfreader/PdfReader.svelte": {
 		"button": 2
 	},
-	"src/lib/pdfreader/PdfToolbar.svelte": {
-		"button": 10,
-		"input": 1
-	},
 	"src/lib/pdfreader/ReaderSidebar.svelte": {
 		"button": 3,
 		"textPx": 1,

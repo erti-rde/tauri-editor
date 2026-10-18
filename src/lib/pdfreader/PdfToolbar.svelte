@@ -1,7 +1,28 @@
 <script lang="ts">
-	import Icon from '$lib/icon/Icon.svelte';
-	import { FindBar } from '$lib/ui';
-	import Tooltip from '$lib/ui/Tooltip.svelte';
+	import ChevronDown from '~icons/lucide/chevron-down';
+	import ChevronUp from '~icons/lucide/chevron-up';
+	import GoBack from '~icons/lucide/corner-up-left';
+	import Crop from '~icons/lucide/crop';
+	import Highlighter from '~icons/lucide/highlighter';
+	import PanelLeft from '~icons/lucide/panel-left';
+	import Pencil from '~icons/lucide/pencil';
+	import FitWidth from '~icons/lucide/scan';
+	import Search from '~icons/lucide/search';
+	import StickyNote from '~icons/lucide/sticky-note';
+	import Underline from '~icons/lucide/underline';
+	import ZoomIn from '~icons/lucide/zoom-in';
+	import ZoomOut from '~icons/lucide/zoom-out';
+
+	import {
+		Button,
+		FindBar,
+		IconButton,
+		TextField,
+		ToggleButton,
+		Toolbar,
+		ToolbarGroup,
+		Tooltip
+	} from '$lib/ui';
 
 	import AppearanceMenu, { type PageTheme } from './AppearanceMenu.svelte';
 	import LabelPicker from './LabelPicker.svelte';
@@ -164,9 +185,6 @@
 		return find.matches ? `${find.current} of ${find.matches}` : 'No matches';
 	});
 
-	const plain =
-		'text-ink-muted hover:bg-surface-hover hover:text-ink rounded p-1 transition-colors disabled:opacity-40 disabled:hover:bg-transparent';
-
 	/** The colour a mark made now would take. */
 	const colour = $derived(
 		labels.find((label) => label.id === lastLabel)?.colour ??
@@ -184,28 +202,28 @@
 	const tools = [
 		{
 			id: 'highlight' as const,
-			icon: 'Highlighter' as const,
+			icon: Highlighter,
 			on: 'Highlight as you select',
 			off: 'Stop highlighting',
 			tinted: true
 		},
 		{
 			id: 'underline' as const,
-			icon: 'Underline' as const,
+			icon: Underline,
 			on: 'Underline as you select',
 			off: 'Stop underlining',
 			tinted: true
 		},
 		{
 			id: 'note' as const,
-			icon: 'StickyNote' as const,
+			icon: StickyNote,
 			on: 'Leave a note on the page',
 			off: 'Stop leaving notes',
 			tinted: false
 		},
 		{
 			id: 'area' as const,
-			icon: 'Crop' as const,
+			icon: Crop,
 			on: 'Keep a figure or table',
 			off: 'Stop keeping figures',
 			tinted: false
@@ -213,8 +231,13 @@
 	];
 </script>
 
-<div
-	class="border-line bg-surface flex h-9 shrink-0 items-center gap-0.5 border-b px-2 text-xs select-none"
+<!--
+	One stop for Tab, with the arrows along it (`Toolbar`): the reader's controls
+	are a dozen, and a reader tabbing to the paper went through every one.
+-->
+<Toolbar
+	label="Reading"
+	class="border-line bg-surface h-9 shrink-0 border-b px-2 text-xs select-none"
 >
 	<!-- ------------------------------------------------------- getting about -->
 	<!--
@@ -222,201 +245,155 @@
 		contents, marks. This used to be a marks-only toggle, which put a feature of
 		this application in the place readers look for the paper's own furniture.
 	-->
-	<Tooltip label={sidebarOpen ? 'Hide the panel' : 'Pages, contents and marks'} side="bottom">
-		{#snippet children(tooltip)}
-			<button
-				{...tooltip}
-				class="rounded p-1 transition-colors {sidebarOpen
-					? 'bg-surface-active text-ink'
-					: 'text-ink-muted hover:bg-surface-hover hover:text-ink'}"
-				aria-pressed={sidebarOpen}
-				onclick={ontogglesidebar}
-			>
-				<Icon icon="PanelLeft" size="s" />
-			</button>
-		{/snippet}
-	</Tooltip>
+	<ToolbarGroup>
+		<ToggleButton
+			label={sidebarOpen ? 'Hide the panel' : 'Pages, contents and marks'}
+			icon={PanelLeft}
+			pressed={sidebarOpen}
+			onclick={ontogglesidebar}
+		/>
+	</ToolbarGroup>
 
-	<div class="bg-line mx-1 h-4 w-px" aria-hidden="true"></div>
-
-	<Tooltip label="Zoom out" side="bottom">
-		{#snippet children(tooltip)}
-			<button {...tooltip} class={plain} onclick={() => onzoom(1 / 1.1)}>
-				<Icon icon="ZoomOut" size="s" />
-			</button>
-		{/snippet}
-	</Tooltip>
-
-	<Tooltip label="Zoom in" side="bottom">
-		{#snippet children(tooltip)}
-			<button {...tooltip} class={plain} onclick={() => onzoom(1.1)}>
-				<Icon icon="ZoomIn" size="s" />
-			</button>
-		{/snippet}
-	</Tooltip>
-
-	<!--
-		The percentage doubles as the button that undoes it, which is where every
-		reader looks first when a paper is too wide to read.
-	-->
-	<Tooltip label="Fit the page width ({Math.round(scale * 100)}%)" side="bottom">
-		{#snippet children(tooltip)}
-			<button {...tooltip} class="{plain} flex items-center gap-1 px-1.5" onclick={onfit}>
-				<Icon icon="FitWidth" size="s" />
-				<span class="tabular-nums">{Math.round(scale * 100)}%</span>
-			</button>
-		{/snippet}
-	</Tooltip>
-
-	<div class="bg-line mx-1 h-4 w-px" aria-hidden="true"></div>
+	<ToolbarGroup>
+		<IconButton label="Zoom out" icon={ZoomOut} onclick={() => onzoom(1 / 1.1)} />
+		<IconButton label="Zoom in" icon={ZoomIn} onclick={() => onzoom(1.1)} />
+		<!--
+			The percentage doubles as the button that undoes it, which is where every
+			reader looks first when a paper is too wide to read.
+		-->
+		<Tooltip label="Fit the page width ({Math.round(scale * 100)}%)">
+			{#snippet children(tooltip)}
+				<Button {...tooltip} variant="ghost" class="tabular-nums" onclick={onfit}>
+					<FitWidth class="size-4" aria-hidden="true" />
+					{Math.round(scale * 100)}%
+				</Button>
+			{/snippet}
+		</Tooltip>
+	</ToolbarGroup>
 
 	<!--
 		Back to where a jump came from. Following a citation into page 41 and then
 		having to find your way back to page 3 by hand is the thing that stops
 		people following citations at all.
 	-->
-	<Tooltip label="Back to where you jumped from" side="bottom">
-		{#snippet children(tooltip)}
-			<button {...tooltip} class={plain} disabled={!canGoBack} onclick={onback}>
-				<Icon icon="GoBack" size="s" />
-			</button>
-		{/snippet}
-	</Tooltip>
-
-	<div class="bg-line mx-1 h-4 w-px" aria-hidden="true"></div>
-
-	<Tooltip label="Previous page" side="bottom">
-		{#snippet children(tooltip)}
-			<button {...tooltip} class={plain} disabled={page <= 1} onclick={() => onpage(page - 1)}>
-				<Icon icon="ChevronUp" size="s" />
-			</button>
-		{/snippet}
-	</Tooltip>
-
-	<Tooltip label="Next page" side="bottom">
-		{#snippet children(tooltip)}
-			<button {...tooltip} class={plain} disabled={page >= pages} onclick={() => onpage(page + 1)}>
-				<Icon icon="ChevronDown" size="s" />
-			</button>
-		{/snippet}
-	</Tooltip>
-
-	<div class="text-ink-muted ml-1 flex items-center gap-1">
-		<input
-			class="border-line bg-surface-sunken text-ink w-11 rounded border px-1 py-0.5 text-center"
-			aria-label={pageLabel === null ? 'Page number' : 'Page number the paper prints'}
-			title={pageLabel === null
-				? 'Go to a page'
-				: 'Go to a page. This paper prints its own numbers, and this is one of them.'}
-			value={shown}
-			oninput={(event) => {
-				editing = true;
-				draft = event.currentTarget.value;
-			}}
-			onblur={commit}
-			onkeydown={onPageKey}
+	<ToolbarGroup>
+		<IconButton
+			label="Back to where you jumped from"
+			icon={GoBack}
+			disabled={!canGoBack}
+			onclick={onback}
 		/>
-		<span class="whitespace-nowrap tabular-nums">
-			{#if showSheet}({page})&nbsp;{/if}of&nbsp;{pages || '–'}
-		</span>
-	</div>
+	</ToolbarGroup>
 
-	<div class="grow"></div>
+	<ToolbarGroup>
+		<IconButton
+			label="Previous page"
+			icon={ChevronUp}
+			disabled={page <= 1}
+			onclick={() => onpage(page - 1)}
+		/>
+		<IconButton
+			label="Next page"
+			icon={ChevronDown}
+			disabled={page >= pages}
+			onclick={() => onpage(page + 1)}
+		/>
+		<!-- A text box rather than a NumberField: it takes the page the paper
+		     prints, which may be "xiv". -->
+		<div class="text-ink-muted ml-1 flex items-center gap-1">
+			<div class="w-12">
+				<TextField
+					label={pageLabel === null ? 'Page number' : 'Page number the paper prints'}
+					hideLabel
+					class="text-center"
+					title={pageLabel === null
+						? 'Go to a page'
+						: 'Go to a page. This paper prints its own numbers, and this is one of them.'}
+					value={shown}
+					oninput={(event) => {
+						editing = true;
+						draft = event.currentTarget.value;
+					}}
+					onblur={commit}
+					onkeydown={onPageKey}
+				/>
+			</div>
+			<span class="whitespace-nowrap tabular-nums">
+				{#if showSheet}({page})&nbsp;{/if}of&nbsp;{pages || '–'}
+			</span>
+		</div>
+	</ToolbarGroup>
+
+	<span class="grow" aria-hidden="true"></span>
 
 	<!-- ------------------------------------------------------------- the tools -->
-	<!--
-		`group` rather than `toolbar`: a toolbar promises arrow-key navigation
-		between its controls, which these do not have. They are each tabbable,
-		which is what `group` describes.
-	-->
-	<div class="flex items-center gap-0.5" role="group" aria-label="What to mark with">
+	<ToolbarGroup label="What to mark with" rule={false}>
 		{#each tools as item (item.id)}
 			{@const active = tool === item.id}
-			<Tooltip label={active ? item.off : item.on} side="bottom">
-				{#snippet children(tooltip)}
-					<!--
-						A latched marking tool is drawn in the colour it will mark with.
+			<!--
+				A latched marking tool is drawn in the colour it will mark with.
 
-						Without it the toolbar says a tool is in hand but not what it
-						would do, and the colour lives in a separate control — which
-						reads as a second thing to choose before anything will happen.
-						It has already been chosen; this is where that shows.
-					-->
-					<button
-						{...tooltip}
-						class="rounded p-1 transition-colors {active
-							? 'bg-surface-active text-ink'
-							: 'text-ink-muted hover:bg-surface-hover hover:text-ink'}"
-						style:color={active && item.tinted ? `hsl(${colour})` : undefined}
-						aria-pressed={active}
-						onclick={() => ontool(active ? null : item.id)}
-					>
-						<Icon icon={item.icon} size="s" />
-					</button>
-				{/snippet}
-			</Tooltip>
+				Without it the toolbar says a tool is in hand but not what it would
+				do, and the colour lives in a separate control — which reads as a
+				second thing to choose before anything will happen. It has already
+				been chosen; this is where that shows.
+			-->
+			<ToggleButton
+				label={active ? item.off : item.on}
+				icon={item.icon}
+				pressed={active}
+				style={active && item.tinted ? `color: hsl(${colour})` : undefined}
+				onclick={() => ontool(active ? null : item.id)}
+			/>
 		{/each}
 
 		<LabelPicker {labels} current={lastLabel} onchoose={onlabel} {onrename} {onresetnames} />
-	</div>
+	</ToolbarGroup>
 
-	<div class="grow"></div>
+	<span class="grow" aria-hidden="true"></span>
 
 	<!-- --------------------------------------------------------- how it looks -->
-	{#if searching}
-		<FindBar
-			bind:this={findBar}
-			bind:query
-			label="Find in this paper"
-			{status}
-			found={!!find?.matches}
-			onquery={(text) => onsearch(text)}
-			onstep={(direction) => onsearch(query, { again: true, backwards: direction < 0 })}
-			onclose={() => {
-				query = '';
-				onclosesearch();
-			}}
-		/>
-	{:else}
-		<!--
-			The marks, on the right with the rest of what this application adds to a
-			paper rather than in the panel button's place.
-		-->
-		<Tooltip
-			label={marks === 1 ? '1 mark on this paper' : `${marks} marks on this paper`}
-			side="bottom"
-		>
-			{#snippet children(tooltip)}
-				<button
-					{...tooltip}
-					class="text-ink-muted hover:bg-surface-hover hover:text-ink flex items-center gap-1 rounded p-1 transition-colors"
-					onclick={onshowmarks}
-				>
-					<Icon icon="Pencil" size="s" />
-					{#if marks > 0}
-						<span class="tabular-nums">{marks}</span>
-					{/if}
-				</button>
-			{/snippet}
-		</Tooltip>
+	<ToolbarGroup rule={false}>
+		{#if searching}
+			<FindBar
+				bind:this={findBar}
+				bind:query
+				label="Find in this paper"
+				{status}
+				found={!!find?.matches}
+				onquery={(text) => onsearch(text)}
+				onstep={(direction) => onsearch(query, { again: true, backwards: direction < 0 })}
+				onclose={() => {
+					query = '';
+					onclosesearch();
+				}}
+			/>
+		{:else}
+			<!--
+				The marks, on the right with the rest of what this application adds to
+				a paper rather than in the panel button's place.
+			-->
+			<Tooltip label={marks === 1 ? '1 mark on this paper' : `${marks} marks on this paper`}>
+				{#snippet children(tooltip)}
+					<Button {...tooltip} variant="ghost" class="tabular-nums" onclick={onshowmarks}>
+						<Pencil class="size-4" aria-hidden="true" />
+						{#if marks > 0}{marks}{/if}
+					</Button>
+				{/snippet}
+			</Tooltip>
 
-		<AppearanceMenu
-			{scrollMode}
-			{spreadMode}
-			{rotation}
-			{pageTheme}
-			onscroll={onscrollmode}
-			onspread={onspreadmode}
-			{onrotate}
-			ontheme={onpagetheme}
-		/>
+			<AppearanceMenu
+				{scrollMode}
+				{spreadMode}
+				{rotation}
+				{pageTheme}
+				onscroll={onscrollmode}
+				onspread={onspreadmode}
+				{onrotate}
+				ontheme={onpagetheme}
+			/>
 
-		<Tooltip label="Find in this paper" side="bottom">
-			{#snippet children(tooltip)}
-				<button {...tooltip} class={plain} onclick={ontogglesearch}>
-					<Icon icon="Search" size="s" />
-				</button>
-			{/snippet}
-		</Tooltip>
-	{/if}
-</div>
+			<IconButton label="Find in this paper" icon={Search} onclick={ontogglesearch} />
+		{/if}
+	</ToolbarGroup>
+</Toolbar>
