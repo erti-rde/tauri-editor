@@ -1,13 +1,9 @@
 <script lang="ts">
-	import type { SvelteComponent } from 'svelte';
-	import type { SvelteHTMLElements } from 'svelte/elements';
 	import { type Editor } from '@tiptap/core';
 
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { convertFileSrc } from '@tauri-apps/api/core';
 
-	import { Separator } from 'bits-ui';
-	import Tooltip from '$lib/ui/Tooltip.svelte';
 	// Import Icons for toolbar
 	import Bold from '~icons/lucide/bold';
 	import BookText from '~icons/lucide/book-text';
@@ -43,7 +39,15 @@
 	import Table from '~icons/lucide/table';
 	import Link from '~icons/lucide/link';
 
-	import Menu, { type MenuItem } from '$lib/ui/Menu.svelte';
+	import {
+		IconButton,
+		Menu,
+		ToggleButton,
+		Toolbar,
+		ToolbarGroup,
+		type IconComponent,
+		type MenuItem
+	} from '$lib/ui';
 	import { attributionCheck } from '$lib/attribution/check.svelte';
 	import type { Exports } from '$lib/export/exports';
 	import LinkPopover from './LinkPopover.svelte';
@@ -129,271 +133,223 @@
 	}
 </script>
 
-{#snippet toolBarButton({
-	onclick,
-	disabled,
-	isActive,
-	Icon,
-	label,
-	shortcut
-}: {
-	onclick: () => void;
-	disabled?: boolean;
-	isActive?: boolean;
-	Icon: typeof SvelteComponent<SvelteHTMLElements['svg']>;
-	/** What the button does. Also its accessible name. */
-	label: string;
-	shortcut?: string;
-})}
-	<Tooltip {label} {shortcut}>
-		{#snippet children(tooltip)}
-			<button
-				{...tooltip}
-				class={[
-					'hover:bg-surface-hover rounded p-1.5 transition-colors duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-50',
-					isActive && 'bg-accent-quiet text-accent'
-				]}
-				{onclick}
-				{disabled}
-				aria-pressed={isActive}
-			>
-				<Icon />
-			</button>
-		{/snippet}
-	</Tooltip>
+{#snippet toggle(
+	label: string,
+	icon: IconComponent,
+	mark: string,
+	command: () => boolean,
+	can: boolean,
+	shortcut?: string
+)}
+	<ToggleButton
+		{label}
+		{icon}
+		{shortcut}
+		pressed={editor.isActive(mark)}
+		disabled={!can}
+		onclick={command}
+	/>
 {/snippet}
 
-<div
-	class="bg-surface-raised/95 border-line flex h-(--toolbar-l) w-full items-center border-b px-2 py-1 shadow-md backdrop-blur-sm"
+{#snippet align(label: string, icon: IconComponent, side: 'left' | 'center' | 'right' | 'justify')}
+	<ToggleButton
+		{label}
+		{icon}
+		pressed={editor.isActive({ textAlign: side })}
+		onclick={() => editor.chain().focus().setTextAlign(side).run()}
+	/>
+{/snippet}
+
+<!-- The trigger shows what the cursor is in, so the current style can be read
+     without opening the menu. -->
+{#snippet current(items: MenuItem[], Fallback: MenuItem['icon'])}
+	{@const active = items.find((item) => item.active)}
+	{@const Shown = active?.icon ?? Fallback}
+	<Shown class={['size-4', active && 'text-accent']} aria-hidden="true" />
+{/snippet}
+
+<Toolbar
+	label="Formatting"
+	class="bg-surface-raised border-line h-(--toolbar-l) w-full border-b px-2"
 >
 	<!-- Zoom sits at the left, apart from the formatting controls: it acts on the
 	     view rather than on the selection, which is where every editor with one
 	     puts it. -->
-	<ZoomControl />
+	<ToolbarGroup label="Zoom">
+		<ZoomControl />
+	</ToolbarGroup>
 
-	<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
+	<!-- The formatting controls stay centred on the window, with the view
+	     controls held to the edges either side of them. -->
+	<span class="grow" aria-hidden="true"></span>
 
-	<!-- The formatting controls stay centred on the window, as before, with the
-	     view controls held to the edges either side of them. -->
-	<div class="flex flex-1 justify-center">
-		<!-- History Controls Group -->
+	<ToolbarGroup>
+		<IconButton
+			label="Undo"
+			icon={Undo}
+			shortcut="Mod Z"
+			disabled={!editor.can().undo()}
+			onclick={() => editor.chain().focus().undo().run()}
+		/>
+		<IconButton
+			label="Redo"
+			icon={Redo}
+			shortcut="Mod Shift Z"
+			disabled={!editor.can().redo()}
+			onclick={() => editor.chain().focus().redo().run()}
+		/>
+	</ToolbarGroup>
 
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().undo().run(),
-			disabled: !editor.can().undo(),
-			Icon: Undo,
-			label: 'Undo',
-			shortcut: 'Mod Z'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().redo().run(),
-			disabled: !editor.can().redo(),
-			Icon: Redo,
-			label: 'Redo',
-			shortcut: 'Mod Shift Z'
-		})}
-
-		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
-
-		<!-- The trigger shows what the cursor is in, so the current style can be
-		     read without opening the menu. -->
-		{#snippet current(items: MenuItem[], Fallback: MenuItem['icon'])}
-			{@const active = items.find((item) => item.active)}
-			{@const Shown = active?.icon ?? Fallback}
-			<Shown class={['size-4', active && 'text-accent']} aria-hidden="true" />
-		{/snippet}
-
+	<ToolbarGroup>
 		<Menu label="Text style" items={headings}>
 			{#snippet trigger()}{@render current(headings, Heading)}{/snippet}
 		</Menu>
-
 		<Menu label="List style" items={lists}>
 			{#snippet trigger()}{@render current(lists, ListUnordered)}{/snippet}
 		</Menu>
+		{@render toggle(
+			'Block quote',
+			Blockquote,
+			'blockquote',
+			() => editor.chain().focus().toggleBlockquote().run(),
+			editor.can().chain().focus().toggleBlockquote().run(),
+			'Mod Shift B'
+		)}
+		{@render toggle(
+			'Code block',
+			CodeBlock,
+			'codeBlock',
+			() => editor.chain().focus().toggleCodeBlock().run(),
+			editor.can().chain().focus().toggleCodeBlock().run(),
+			'Mod Alt C'
+		)}
+	</ToolbarGroup>
 
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleBlockquote().run(),
-			isActive: editor.isActive('blockquote'),
-			disabled: !editor.can().chain().focus().toggleBlockquote().run(),
-			Icon: Blockquote,
-			label: 'Block quote',
-			shortcut: 'Mod Shift B'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleCodeBlock().run(),
-			isActive: editor.isActive('codeBlock'),
-			disabled: !editor.can().chain().focus().toggleCodeBlock().run(),
-			Icon: CodeBlock,
-			label: 'Code block',
-			shortcut: 'Mod Alt C'
-		})}
-
-		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
-
-		<!-- Text Formatting Group -->
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleBold().run(),
-			isActive: editor.isActive('bold'),
-			disabled: !editor.can().chain().focus().toggleBold().run(),
-			Icon: Bold,
-			label: 'Bold',
-			shortcut: 'Mod B'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleItalic().run(),
-			isActive: editor.isActive('italic'),
-			disabled: !editor.can().chain().focus().toggleItalic().run(),
-			Icon: Italic,
-			label: 'Italic',
-			shortcut: 'Mod I'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleStrike().run(),
-			isActive: editor.isActive('strike'),
-			disabled: !editor.can().chain().focus().toggleStrike().run(),
-			Icon: StrikeThrough,
-			label: 'Strikethrough',
-			shortcut: 'Mod Shift X'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleUnderline().run(),
-			isActive: editor.isActive('underline'),
-			disabled: !editor.can().chain().focus().toggleUnderline().run(),
-			Icon: Underline,
-			label: 'Underline',
-			shortcut: 'Mod U'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleCode().run(),
-			isActive: editor.isActive('code'),
-			disabled: !editor.can().chain().focus().toggleCode().run(),
-			Icon: InlineCode,
-			label: 'Inline code',
-			shortcut: 'Mod E'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleHighlight().run(),
-			isActive: editor.isActive('highlight'),
-			disabled: !editor.can().chain().focus().toggleHighlight().run(),
-			Icon: Highlighter,
-			label: 'Highlight'
-		})}
-
-		<!-- Configure Link -->
-
+	<ToolbarGroup>
+		{@render toggle(
+			'Bold',
+			Bold,
+			'bold',
+			() => editor.chain().focus().toggleBold().run(),
+			editor.can().chain().focus().toggleBold().run(),
+			'Mod B'
+		)}
+		{@render toggle(
+			'Italic',
+			Italic,
+			'italic',
+			() => editor.chain().focus().toggleItalic().run(),
+			editor.can().chain().focus().toggleItalic().run(),
+			'Mod I'
+		)}
+		{@render toggle(
+			'Strikethrough',
+			StrikeThrough,
+			'strike',
+			() => editor.chain().focus().toggleStrike().run(),
+			editor.can().chain().focus().toggleStrike().run(),
+			'Mod Shift X'
+		)}
+		{@render toggle(
+			'Underline',
+			Underline,
+			'underline',
+			() => editor.chain().focus().toggleUnderline().run(),
+			editor.can().chain().focus().toggleUnderline().run(),
+			'Mod U'
+		)}
+		{@render toggle(
+			'Inline code',
+			InlineCode,
+			'code',
+			() => editor.chain().focus().toggleCode().run(),
+			editor.can().chain().focus().toggleCode().run(),
+			'Mod E'
+		)}
+		{@render toggle(
+			'Highlight',
+			Highlighter,
+			'highlight',
+			() => editor.chain().focus().toggleHighlight().run(),
+			editor.can().chain().focus().toggleHighlight().run()
+		)}
 		<LinkPopover {editor} isActive={editor.isActive('link')}>
-			{@render toolBarButton({
-				onclick: () => null,
-				Icon: Link,
-				label: 'Link',
-				shortcut: 'Mod K'
-			})}
+			{#snippet children(trigger)}
+				<IconButton {...trigger} label="Link" icon={Link} shortcut="Mod K" />
+			{/snippet}
 		</LinkPopover>
+	</ToolbarGroup>
 
-		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
-
-		<!-- supper script and subscript group-->
-
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleSubscript().run(),
-			isActive: editor.isActive('subscript'),
-			disabled: !editor.can().chain().focus().toggleSubscript().run(),
-			Icon: Subscript,
-			label: 'Subscript',
-			shortcut: 'Mod ,'
-		})}
-
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().toggleSuperscript().run(),
-			isActive: editor.isActive('superscript'),
-			disabled: !editor.can().chain().focus().toggleSuperscript().run(),
-			Icon: Superscript,
-			label: 'Superscript',
-			shortcut: 'Mod .'
-		})}
-
+	<ToolbarGroup>
+		{@render toggle(
+			'Subscript',
+			Subscript,
+			'subscript',
+			() => editor.chain().focus().toggleSubscript().run(),
+			editor.can().chain().focus().toggleSubscript().run(),
+			'Mod ,'
+		)}
+		{@render toggle(
+			'Superscript',
+			Superscript,
+			'superscript',
+			() => editor.chain().focus().toggleSuperscript().run(),
+			editor.can().chain().focus().toggleSuperscript().run(),
+			'Mod .'
+		)}
 		<!-- A break the author places. Print rules decide where a page *may* break;
-	     only this says where one *must* end — a chapter, or the references. -->
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().insertPageBreak().run(),
-			isActive: editor.isActive('pageBreak'),
-			Icon: SeparatorHorizontal,
-			label: 'Insert a page break',
-			shortcut: 'Mod Enter'
-		})}
-
+		     only this says where one *must* end — a chapter, or the references. -->
+		<IconButton
+			label="Insert a page break"
+			icon={SeparatorHorizontal}
+			shortcut="Mod Enter"
+			onclick={() => editor.chain().focus().insertPageBreak().run()}
+		/>
 		<!-- The works cited. A document node, so it exports and paginates with the
-	     manuscript rather than living beside it. -->
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().insertBibliography().run(),
-			isActive: editor.isActive('bibliography'),
-			Icon: BookText,
-			label: 'Add the references section'
-		})}
+		     manuscript rather than living beside it. -->
+		<IconButton
+			label="Add the references section"
+			icon={BookText}
+			onclick={() => editor.chain().focus().insertBibliography().run()}
+		/>
+	</ToolbarGroup>
 
-		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
+	<ToolbarGroup>
+		{@render align('Align left', AlignLeft, 'left')}
+		{@render align('Align centre', AlignCenter, 'center')}
+		{@render align('Align right', AlignRight, 'right')}
+		{@render align('Justify', AlignJustify, 'justify')}
+	</ToolbarGroup>
 
-		<!-- Alignment Group -->
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().setTextAlign('left').run(),
-			isActive: editor.isActive({ textAlign: 'left' }),
-			Icon: AlignLeft,
-			label: 'Align left'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().setTextAlign('center').run(),
-			isActive: editor.isActive({ textAlign: 'center' }),
-			Icon: AlignCenter,
-			label: 'Align centre'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().setTextAlign('right').run(),
-			isActive: editor.isActive({ textAlign: 'right' }),
-			Icon: AlignRight,
-			label: 'Align right'
-		})}
-		{@render toolBarButton({
-			onclick: () => editor.chain().focus().setTextAlign('justify').run(),
-			isActive: editor.isActive({ textAlign: 'justify' }),
-			Icon: AlignJustify,
-			label: 'Justify'
-		})}
-
-		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
-
-		<!-- Add image -->
-
-		{@render toolBarButton({
-			onclick: async () => await addImage(),
-			Icon: Image,
-			label: 'Insert an image'
-		})}
-
-		<!-- Add table -->
+	<ToolbarGroup>
+		<IconButton label="Insert an image" icon={Image} onclick={addImage} />
 		<TablePopover {editor}>
-			{@render toolBarButton({
-				onclick: () => editor.commands.insertTable(),
-				isActive: editor.isActive('table'),
-				Icon: Table,
-				label: 'Insert a table'
-			})}
+			{#snippet children(trigger)}
+				<IconButton
+					{...trigger}
+					label="Insert a table"
+					icon={Table}
+					onclick={() => editor.commands.insertTable()}
+				/>
+			{/snippet}
 		</TablePopover>
-	</div>
+	</ToolbarGroup>
+
+	<span class="grow" aria-hidden="true"></span>
 
 	<!--
 		Export and the read/write toggle, held at the right edge so the writing
 		controls stay centred between them and zoom. This group was commented out
 		once, which is why export had no way in despite working.
 	-->
-	<div class="flex shrink-0 items-center gap-1">
-		{@render toolBarButton({
-			onclick: toggleView,
-			Icon: editor.isEditable ? BookOpen : FilePen,
-			label: editor.isEditable ? 'Preview without editing' : 'Back to editing'
-		})}
-
-		<Separator.Root class="bg-line mx-1 my-1 w-px self-stretch" />
-
+	<ToolbarGroup rule={false}>
+		<IconButton
+			label={editor.isEditable ? 'Preview without editing' : 'Back to editing'}
+			icon={editor.isEditable ? BookOpen : FilePen}
+			onclick={toggleView}
+		/>
+	</ToolbarGroup>
+	<ToolbarGroup>
 		<Menu label="Export" items={exportItems} align="end" />
-	</div>
-</div>
+	</ToolbarGroup>
+</Toolbar>

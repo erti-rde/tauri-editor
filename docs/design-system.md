@@ -124,8 +124,8 @@ When one lands, move its row into the table above.
 5. Copy follows ux.md: say what happens, state facts not verdicts, British spelling.
 6. A pressed toggle is `ink` on `accent-quiet` with a `line-strong` edge, never `accent` text.
    Accent text on `accent-quiet` is what missed 4.5:1 on the accent `Chip`, and the edge tells
-   pressed from hovered. The editor toolbar and the bubble menu break this today
-   (`ToolBar.svelte:132`, `BubbleMenu.svelte:101`); `ToggleButton` fixes both.
+   pressed from hovered. `ToggleButton` draws it. The bubble menu still breaks it
+   (`BubbleMenu.svelte:101`) until it moves to `FloatingToolbar` (M6-8).
 
 ## The ratchet
 

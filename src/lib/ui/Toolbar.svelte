@@ -48,15 +48,23 @@
 		(el instanceof HTMLInputElement && !['checkbox', 'radio', 'button'].includes(el.type));
 
 	/** Out of the order for one Tab, so it lands past the toolbar. */
-	function leave(from: HTMLElement, all: HTMLElement[]) {
+	function leave(root: HTMLElement, from: HTMLElement, all: HTMLElement[]) {
 		const kept = all.map((el) => [el, el.getAttribute('tabindex')] as const);
 		for (const el of all) if (el !== from) el.setAttribute('tabindex', '-1');
-		setTimeout(() => {
+		let done = false;
+		const restore = () => {
+			if (done) return;
+			done = true;
 			for (const [el, was] of kept) {
 				if (was === null) el.removeAttribute('tabindex');
 				else el.setAttribute('tabindex', was);
 			}
-		});
+		};
+		// By the time focus leaves, the browser has chosen where it goes. The
+		// timer is for a Tab that went nowhere: a window throttles it, so it
+		// can't be the first way back.
+		root.addEventListener('focusout', restore, { once: true });
+		setTimeout(restore);
 	}
 
 	function onkeydown(event: KeyboardEvent) {
@@ -67,7 +75,7 @@
 		const at = all.indexOf(target);
 		if (at < 0) return;
 
-		if (event.key === 'Tab') return leave(target, all);
+		if (event.key === 'Tab') return leave(root, target, all);
 		if (typing(target)) return;
 
 		const next =
