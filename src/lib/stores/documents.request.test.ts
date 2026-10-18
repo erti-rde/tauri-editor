@@ -62,3 +62,25 @@ describe('requesting a document', () => {
 		expect(get(requested)).toBeNull();
 	});
 });
+
+// M5-7: what's left once a document has gone to the bin.
+describe('a document removed', () => {
+	it('leaves nothing current, so a save has nowhere to go until another opens', () => {
+		documentsStore.add(doc('chapter-1'));
+		documentsStore.add(doc('chapter-2'));
+
+		documentsStore.removed(doc('chapter-2').path);
+
+		expect(get(documentsStore).current).toBeNull();
+		expect(get(documentsStore).documents.map((d) => d.title)).toEqual(['chapter-1']);
+	});
+
+	it('takes the rest from the folder as just read, which knew of one the list missed', () => {
+		documentsStore.add(doc('chapter-1'));
+
+		documentsStore.removed(doc('chapter-1').path, [doc('chapter-1'), doc('Untitled')]);
+
+		expect(get(documentsStore).documents.map((d) => d.title)).toEqual(['Untitled']);
+		expect(get(documentsStore).current).toBeNull();
+	});
+});

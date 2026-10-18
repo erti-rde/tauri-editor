@@ -20,7 +20,12 @@
 	import { countDocument, countSavedWords } from './wordCount';
 	import { documentStatus } from '$lib/statusFooter/documentStatus';
 	import { createExports } from '$lib/export/exports';
-	import { DOCUMENT_EXTENSION, toDocumentFileName, type ProjectDocument } from './documents';
+	import {
+		DOCUMENT_EXTENSION,
+		listDocuments,
+		toDocumentFileName,
+		type ProjectDocument
+	} from './documents';
 	import { documentsStore, requested } from '$lib/stores/documents.svelte';
 	import createEditor from './core/CreateEditor';
 	import DocumentBar from './DocumentBar.svelte';
@@ -757,12 +762,15 @@
 			return;
 		}
 
-		documentsStore.removed(doomed.path);
+		// The folder read again first, so the next document is one that's on
+		// disk and a new "Untitled" is checked against what's there. A listing
+		// that couldn't be read isn't used: it would still hold this document.
+		await fileSystemStore.readDirectory(currentDir);
+		const listing = get(fileSystemStore);
+		documentsStore.removed(doomed.path, listing.error ? undefined : listDocuments(listing.items));
 		const next = get(documentsStore).documents[0];
 		if (next) await openDocument(next);
 		else await createDocument('Untitled');
-		await fileSystemStore.readDirectory(currentDir);
-		documentsStore.refresh();
 		toast({
 			kind: 'success',
 			title: `Moved “${doomed.title}” to the bin`,

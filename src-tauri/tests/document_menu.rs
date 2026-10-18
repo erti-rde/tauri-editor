@@ -128,6 +128,36 @@ async fn renaming_into_a_kept_history_joins_it_and_loses_nothing() {
 }
 
 #[tokio::test]
+async fn a_history_that_cannot_join_is_put_back_and_the_name_kept() {
+    // Methods' kept history can't take an index (here, a folder sits where it
+    // goes). Chapter 1's snapshots moved into it come back, and so does its name.
+    let (state, root, doc) = project("rename-merge-fails").await;
+    let t = at("2026-10-12T16-00-00Z");
+    take_snapshot_in(&state, doc.clone(), Trigger::Close, Some(3), t)
+        .await
+        .unwrap()
+        .unwrap();
+    let kept = history(&root, "Methods");
+    std::fs::create_dir_all(kept.join("snapshots.json")).unwrap();
+    std::fs::write(kept.join("2026-10-11T09-00-00Z.erti.json"), "old methods").unwrap();
+
+    let refused = rename_document_in(&state, doc.clone(), "Methods.erti.json".into())
+        .await
+        .unwrap_err();
+
+    assert_eq!(refused.kind, ErrorKind::Io);
+    assert!(Path::new(&doc).exists());
+    assert!(!root.join("Methods.erti.json").exists());
+    let found = snapshot_history_in(&state, doc).await.unwrap();
+    assert_eq!(found.snapshots.len(), 1);
+    assert_eq!(found.snapshots[0].trigger, Some(Trigger::Close));
+    assert_eq!(
+        names_in(&kept),
+        ["2026-10-11T09-00-00Z.erti.json", "snapshots.json"]
+    );
+}
+
+#[tokio::test]
 async fn a_rename_is_a_name_not_a_path() {
     let (state, root, doc) = project("rename-path").await;
     for name in [
