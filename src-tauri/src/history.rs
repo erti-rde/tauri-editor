@@ -413,7 +413,8 @@ pub fn thin(dir: &Path, now: i64) -> io::Result<u32> {
 /// document of the new name was deleted and its history kept: then the
 /// snapshots join it, renamed a second on if one already holds that time, and
 /// nothing of either is lost. A case-only rename on a case-insensitive disk is
-/// the same folder, and is just renamed.
+/// the same folder, and is just renamed. If joining fails part way, what was
+/// moved is put back and the error returned.
 pub fn move_to(from: &Path, to: &Path) -> io::Result<()> {
     let _guard = lock();
     if !from.is_dir() {
@@ -432,19 +433,37 @@ pub fn move_to(from: &Path, to: &Path) -> io::Result<()> {
 
     let mut moving = read_index(from);
     let mut index = read_index(to);
+    // Every move made, so a failure part way puts them all back: the old name
+    // keeps its whole history, as its index still describes it, and the
+    // caller gives the manuscript its old name back to match.
+    let mut moved: Vec<(String, String)> = Vec::new();
+    let undo = |moved: &[(String, String)]| {
+        for (name, target) in moved.iter().rev() {
+            if let Err(e) = std::fs::rename(to.join(target), from.join(name)) {
+                log::error!("could not put a snapshot back: {e}");
+            }
+        }
+    };
     for (time, name) in snapshots_in(from) {
         let mut at = time;
         while to.join(name_for(at)).exists() {
             at += 1;
         }
         let target = name_for(at);
-        std::fs::rename(from.join(&name), to.join(&target))?;
-        if let Some(entry) = moving.snapshots.remove(&name) {
-            index.snapshots.insert(target, entry);
+        if let Err(e) = std::fs::rename(from.join(&name), to.join(&target)) {
+            undo(&moved);
+            return Err(e);
         }
+        if let Some(entry) = moving.snapshots.remove(&name) {
+            index.snapshots.insert(target.clone(), entry);
+        }
+        moved.push((name, target));
     }
+    // Put back too if the index can't be written: the old one is removed next,
+    // and the moved snapshots would lose what took them and their word counts.
     if let Err(e) = write_index(to, index, &snapshots_in(to)) {
-        log::warn!("could not update the history index: {e}");
+        undo(&moved);
+        return Err(e);
     }
     // Whatever's left is the old index and anything that wasn't a snapshot,
     // which stays where it was rather than be deleted.

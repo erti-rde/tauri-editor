@@ -110,11 +110,12 @@ function createDocumentsStore() {
 		/**
 		 * A manuscript gone from disk. Nothing is current until the editor opens
 		 * another: a save meanwhile has nowhere to go, rather than going into
-		 * whichever document `refresh()` would pick.
+		 * whichever document `refresh()` would pick. `listed` is the folder as
+		 * just read, when it could be, which the remaining documents come from.
 		 */
-		removed(path: string) {
+		removed(path: string, listed?: ProjectDocument[]) {
 			update((state) => ({
-				documents: state.documents.filter((d) => d.path !== path),
+				documents: (listed ?? state.documents).filter((d) => d.path !== path),
 				current: state.current?.path === path ? null : state.current
 			}));
 		},

@@ -70,6 +70,25 @@ fn same_file(a: &Path, b: &Path) -> bool {
     }
 }
 
+/// Rename `from` to `to`, never over a file at `to`.
+///
+/// `std::fs::rename` replaces whatever is at `to`, on every platform, so a
+/// file another program wrote there after a check (a sync client bringing a
+/// co-author's chapter down, say) would be lost. A hard link can't be made
+/// over a file: linking and then removing the old name is the check and the
+/// move in one step. Where a disk has no hard links (FAT, some network
+/// shares), checking first is the best there is.
+fn rename_no_replace(from: &Path, to: &Path) -> io::Result<()> {
+    match std::fs::hard_link(from, to) {
+        Ok(()) => std::fs::remove_file(from).inspect_err(|_| {
+            let _ = std::fs::remove_file(to);
+        }),
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Err(e),
+        Err(_) if to.exists() => Err(io::ErrorKind::AlreadyExists.into()),
+        Err(_) => std::fs::rename(from, to),
+    }
+}
+
 async fn blocking<T: Send + 'static>(
     work: impl FnOnce() -> Result<T, AppError> + Send + 'static,
 ) -> Result<T, AppError> {
@@ -104,18 +123,27 @@ pub async fn rename_document_in(
     let target = root.join(&file_name);
 
     blocking(move || {
-        // A case-only rename is the same file on macOS and Windows, and fine.
-        if target.exists() && !same_file(&target, &manuscript) {
-            return Err(already_here(&stem));
-        }
-        std::fs::rename(&manuscript, &target).map_err(|e| AppError::from_io(&e, &manuscript))?;
+        // A case-only rename is the same file on macOS and Windows, and fine:
+        // the one rename that's allowed to land on something already there.
+        let case_only = same_file(&target, &manuscript);
+        let rename = |from: &Path, to: &Path| {
+            if case_only {
+                std::fs::rename(from, to)
+            } else {
+                rename_no_replace(from, to)
+            }
+        };
+        rename(&manuscript, &target).map_err(|e| match e.kind() {
+            io::ErrorKind::AlreadyExists => already_here(&stem),
+            _ => AppError::from_io(&e, &manuscript),
+        })?;
 
         let moved = history::root_of(&root).join(&stem);
         if let Err(e) = history::move_to(&history, &moved) {
             log::warn!("could not move a document's history: {e}");
             // Its history is the point of keeping it: the old name back, so
             // History still finds every snapshot.
-            if let Err(back) = std::fs::rename(&target, &manuscript) {
+            if let Err(back) = rename(&target, &manuscript) {
                 log::error!("could not put a document's name back: {back}");
             }
             return Err(AppError::new(
@@ -219,4 +247,49 @@ pub async fn trash_document_in(
         })
     })
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rename_no_replace;
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("erti-documents-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_rename_never_lands_on_a_file_that_appeared_meanwhile() {
+        let dir = scratch("no-replace");
+        let (ours, theirs) = (
+            dir.join("Chapter 1.erti.json"),
+            dir.join("Methods.erti.json"),
+        );
+        std::fs::write(&ours, "ours").unwrap();
+        std::fs::write(&theirs, "theirs").unwrap();
+
+        let refused = rename_no_replace(&ours, &theirs).unwrap_err();
+
+        assert_eq!(refused.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(std::fs::read_to_string(&ours).unwrap(), "ours");
+        assert_eq!(std::fs::read_to_string(&theirs).unwrap(), "theirs");
+    }
+
+    #[test]
+    fn a_rename_to_a_free_name_moves_the_file() {
+        let dir = scratch("free");
+        let (from, to) = (
+            dir.join("Chapter 1.erti.json"),
+            dir.join("Methods.erti.json"),
+        );
+        std::fs::write(&from, "ours").unwrap();
+
+        rename_no_replace(&from, &to).unwrap();
+
+        assert!(!from.exists());
+        assert_eq!(std::fs::read_to_string(&to).unwrap(), "ours");
+    }
 }
