@@ -48,8 +48,30 @@ export async function readShare(label = windowLabel()): Promise<number> {
 	return typeof saved === 'number' && saved > 0 && saved < 1 ? saved : EVEN;
 }
 
-/** Keep this window's share, leaving the other windows' as they are. */
-export async function saveShare(share: number, label = windowLabel()): Promise<void> {
-	const all = await readSetting('splitRatio');
-	await writeSetting('splitRatio', { ...all, [label]: share });
+/** Shares chosen and not yet written, by window, and the write under way. */
+const wanted = new Map<string, number>();
+let writing: Promise<void> | null = null;
+
+/**
+ * Keep this window's share, leaving the other windows' as they are.
+ *
+ * One write at a time, of the latest share. A held arrow key chooses thirty
+ * a second, and side by side their reads and writes could land in any order,
+ * leaving an older share in the file than the one on screen.
+ */
+export function saveShare(share: number, label = windowLabel()): Promise<void> {
+	wanted.set(label, share);
+	writing ??= (async () => {
+		try {
+			while (wanted.size > 0) {
+				const shares = Object.fromEntries(wanted);
+				wanted.clear();
+				const all = await readSetting('splitRatio');
+				await writeSetting('splitRatio', { ...all, ...shares });
+			}
+		} finally {
+			writing = null;
+		}
+	})();
+	return writing;
 }
