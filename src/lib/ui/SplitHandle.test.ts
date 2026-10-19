@@ -94,4 +94,40 @@ describe('SplitHandle', () => {
 		const { handle } = mount({ value: 0.1 });
 		expect(handle).toHaveAttribute('aria-valuenow', '25');
 	});
+
+	it('M5-9 AC-1: keeps that share through a key that moves nothing', async () => {
+		// Bound, as the workspace binds it: the share it holds is the one it saves.
+		const user = userEvent.setup();
+		const onchange = vi.fn();
+		let kept = 0.1;
+		render(SplitHandle, {
+			props: {
+				label: 'Resize the split',
+				min: 0.25,
+				max: 0.75,
+				onchange,
+				get value() {
+					return kept;
+				},
+				set value(next: number) {
+					kept = next;
+				}
+			}
+		});
+		screen.getByRole('separator').focus();
+
+		await user.keyboard('{ArrowLeft}{Home}');
+
+		expect(onchange).not.toHaveBeenCalled();
+		expect(kept).toBe(0.1);
+	});
+
+	it('M5-9 AC-1: chooses nothing on a click, even where the share is drawn at a limit', async () => {
+		const { handle, onchange } = mount({ value: 0.1 });
+
+		await fireEvent(handle, pointer('pointerdown', 100));
+		await fireEvent(handle, pointer('pointerup', 100));
+
+		expect(onchange).not.toHaveBeenCalled();
+	});
 });

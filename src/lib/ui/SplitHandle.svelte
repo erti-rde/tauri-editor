@@ -46,7 +46,10 @@
 	}: Props = $props();
 
 	let dragging = $state(false);
-	/** The share when the drag began, to tell a drag from a click. */
+	/**
+	 * The share when the drag began, to tell a drag from a click. As kept, not
+	 * as drawn: a click on a share from a wider window chooses nothing.
+	 */
 	let from = 0;
 
 	const clamp = (n: number) => Math.min(max, Math.max(min, n));
@@ -59,9 +62,12 @@
 	}
 
 	function choose(next: number) {
-		const was = shown;
-		set(next);
-		if (value !== was) onchange?.(value);
+		const chosen = clamp(next);
+		// Nothing moved, so nothing's chosen: a share kept from a wider window,
+		// drawn at today's limit, stays kept for when the window is wide again.
+		if (chosen === shown) return;
+		value = chosen;
+		onchange?.(chosen);
 	}
 
 	/** The share under the pointer, measured across the row the handle divides. */
@@ -80,7 +86,7 @@
 		event.currentTarget.focus();
 		event.currentTarget.setPointerCapture?.(event.pointerId);
 		dragging = true;
-		from = shown;
+		from = value;
 	}
 
 	function pointermove(event: PointerEvent & { currentTarget: HTMLDivElement }) {
