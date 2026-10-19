@@ -39,6 +39,7 @@
 		SearchField,
 		Select,
 		Sidebar,
+		SplitHandle,
 		Switch,
 		Tabs,
 		TextArea,
@@ -465,6 +466,25 @@
 				<Specimen name="NumberField" state="disabled" target="input">
 					<NumberField label="Page size" value={16} min={8} max={72} unit="px" steppers disabled />
 				</Specimen>
+			</div>
+		</section>
+
+		<section class="grid gap-4">
+			{@render section('SplitHandle')}
+			<div class="grid grid-cols-2 gap-6">
+				{#each ['rest', ...FORCED] as state (state)}
+					<Specimen name="SplitHandle" {state}>
+						<div class="border-line flex h-24 rounded border">
+							<div class="bg-surface-sunken text-small text-ink-muted grow-3 basis-0 p-2">
+								Chapter 1
+							</div>
+							<SplitHandle label="Resize the split" value={0.6} min={0.25} max={0.75} />
+							<div class="bg-surface-sunken text-small text-ink-muted grow-2 basis-0 p-2">
+								vaswani-2017.pdf
+							</div>
+						</div>
+					</Specimen>
+				{/each}
 			</div>
 		</section>
 
