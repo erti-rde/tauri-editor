@@ -3,10 +3,12 @@
 	import PdfReader from '$lib/pdfreader/PdfReader.svelte';
 
 	import { documentsStore } from '$lib/stores/documents.svelte';
+	import { SplitHandle } from '$lib/ui';
 
 	import TabBar from './TabBar.svelte';
 	import { workspaceStore } from './workspaceStore';
 	import { activeTab } from './tabs';
+	import { EVEN, readShare, saveShare, shareLimits } from './split';
 
 	/**
 	 * The panes, side by side.
@@ -20,6 +22,29 @@
 	 * not reading, and the second pane is there to hold a paper open beside the
 	 * writing rather than to tile the screen.
 	 */
+
+	/** The first pane's share of the width, as this window last had it (M5-9). */
+	let share = $state(EVEN);
+	let width = $state(0);
+	/** Moved before the saved share arrived, so it isn't put back over the move. */
+	let moved = false;
+
+	const limits = $derived(shareLimits(width));
+	const shown = $derived(Math.min(limits.max, Math.max(limits.min, share)));
+
+	$effect(() => {
+		readShare()
+			.then((saved) => {
+				if (!moved) share = saved;
+			})
+			// Unread, the split starts even, as it always did.
+			.catch(() => {});
+	});
+
+	function chosen(next: number) {
+		moved = true;
+		saveShare(next).catch(() => {});
+	}
 
 	/**
 	 * The manuscript always has a tab.
@@ -45,16 +70,22 @@
 	});
 </script>
 
-<div class="flex h-full w-full min-w-0">
+<div class="flex h-full w-full min-w-0" bind:clientWidth={width}>
 	{#each $workspaceStore.panes as pane, index (pane.id)}
 		{#if index > 0}
-			<!-- Purely visual: the panes divide evenly. A draggable splitter is worth
-			     having, but a fixed divide is worth more than no second pane. -->
-			<div class="bg-line w-px shrink-0" aria-hidden="true"></div>
+			<SplitHandle
+				label="Resize the split"
+				bind:value={share}
+				min={limits.min}
+				max={limits.max}
+				reset={EVEN}
+				onchange={chosen}
+			/>
 		{/if}
 
 		<div
 			class="flex min-w-0 grow basis-0 flex-col"
+			style:flex-grow={$workspaceStore.panes.length < 2 ? 1 : index === 0 ? shown : 1 - shown}
 			onfocusincapture={() => workspaceStore.focus(pane.id)}
 			onpointerdowncapture={() => workspaceStore.focus(pane.id)}
 		>
