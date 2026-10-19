@@ -143,6 +143,13 @@ export const SETTINGS = {
 		default: {},
 		where: 'global',
 		accepts: object
+	}),
+	/** Each window's split between its two panes, by the window's label (M5-9). */
+	splitRatio: define<Record<string, number>>({
+		key: 'splitRatio',
+		default: {},
+		where: 'global',
+		accepts: object
 	})
 } as const;
 

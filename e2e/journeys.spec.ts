@@ -1225,3 +1225,63 @@ test('Check attribution first, from the Export menu, runs the check in its panel
 	// Run, not just opened: choosing it was the asking (UX-7 AC-6).
 	await expect(page.getByText(/sentences? checked against/)).toBeVisible();
 });
+
+test('the split between the manuscript and a paper is dragged, moved from the keyboard, and kept for the window', async ({
+	page
+}) => {
+	await launch(page);
+	await expect(page.getByRole('button', { name: /^Thesis/ })).toBeVisible();
+	// This window's split as a session before left it (M5-9 AC-1: per window).
+	await page.evaluate(() =>
+		window.__ERTI_FAKE__!.stores.get('settings-store.json')!.set('splitRatio', { main: 0.4 })
+	);
+	await openProject(page);
+	await openManuscript(page);
+	await page.getByRole('button', { name: 'Split the view' }).click();
+
+	const handle = page.getByRole('separator', { name: 'Resize the split' });
+	await expect(handle).toHaveAttribute('aria-valuenow', '40');
+
+	const widths = () =>
+		handle.evaluate((h) =>
+			[...h.parentElement!.children]
+				.filter((c) => c !== h)
+				.map((c) => c.getBoundingClientRect().width)
+		);
+	const saved = () =>
+		page.evaluate(
+			() =>
+				(
+					window.__ERTI_FAKE__!.stores.get('settings-store.json')!.get('splitRatio') as Record<
+						string,
+						number
+					>
+				).main
+		);
+
+	// Dragged as far right as it goes, the paper keeps 280 px (AC-1).
+	const box = (await handle.boundingBox())!;
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(page.viewportSize()!.width - 2, box.y + box.height / 2, { steps: 8 });
+	await page.mouse.up();
+	const [, paper] = await widths();
+	expect(paper).toBeGreaterThanOrEqual(280);
+	expect(paper).toBeLessThan(282);
+	expect(await saved()).toBeGreaterThan(0.6);
+
+	// From the keyboard: Home to the other limit, then 2% at a time.
+	await handle.focus();
+	await page.keyboard.press('Home');
+	const [manuscript] = await widths();
+	expect(manuscript).toBeGreaterThanOrEqual(280);
+	expect(manuscript).toBeLessThan(282);
+	const least = Number(await handle.getAttribute('aria-valuenow'));
+	await page.keyboard.press('ArrowRight');
+	await expect(handle).toHaveAttribute('aria-valuenow', String(least + 2));
+
+	// A double-click puts it back even, and that's what's kept.
+	await handle.dblclick();
+	await expect(handle).toHaveAttribute('aria-valuenow', '50');
+	expect(await saved()).toBe(0.5);
+});
