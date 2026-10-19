@@ -71,6 +71,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | An open file in a tab strip        | `DocumentTab`                          | Current: surface, accent rule, `aria-selected`; its ⋯ menu on the current tab only               |
 | Text in                            | `TextField`, `TextArea`, `SearchField` | Label, hint and error built in; the error says how to fix it                                     |
 | A number in a range                | `NumberField`                          | Typed and entered, or stepped (Shift ×10); out of range says the range; `floatNote` in a toolbar |
+| Two panes, resized                 | `SplitHandle`                          | A 1px rule; the grip on hover and focus; arrows 2%, Home/End to the limits, double-click even    |
 | A name changed where it is read    | `InlineRename`                         | Opens selected; Enter renames, Esc puts it back; why a name won’t do, beside it                  |
 | Find in a text                     | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change          |
 | One of a few                       | `RadioGroup`                           | Arrow keys; the Appearance settings pattern                                                      |
@@ -100,7 +101,6 @@ needs it. Paths are under `src/lib`.
 
 | Primitive                 | Replaces                                                                                                               | Needed by     |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `SplitHandle`             | The fixed even split in `workspace/Workspace.svelte`                                                                   | M5-9          |
 | `SettingRow`, `RadioCard` | The rows in `side-panel/settings/*.svelte`; the palette and page-setup cards built on bits-ui's `RadioGroup` directly  | M5-10, M7a-10 |
 | `Slider`                  | The `type="range"` inputs in `AppearanceSettings.svelte`                                                               | M6-8          |
 | `ColourField`             | The `type="color"` input in `ReadingSettings.svelte`; the swatches in `LabelPicker.svelte` and `AppearanceMenu.svelte` | M6-8          |

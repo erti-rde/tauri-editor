@@ -27,6 +27,7 @@ export { default as RadioGroup } from './RadioGroup.svelte';
 export { default as SearchField } from './SearchField.svelte';
 export { default as Select } from './Select.svelte';
 export { default as Sidebar } from './Sidebar.svelte';
+export { default as SplitHandle } from './SplitHandle.svelte';
 export { default as Switch } from './Switch.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as TextArea } from './TextArea.svelte';
