@@ -128,8 +128,18 @@ pub fn to_delete(names: &[String]) -> Vec<String> {
         .collect()
 }
 
+/// The schema a pre-migration backup was taken before, read from its name.
+pub fn before_version_of_name(name: &str) -> Option<i64> {
+    day_of_name(name)?;
+    name.strip_suffix(".db")?
+        .rsplit_once("-before-v")?
+        .1
+        .parse()
+        .ok()
+}
+
 /// Backup names in `dir`, or none if it doesn't exist yet.
-fn list(dir: &Path) -> Vec<String> {
+pub fn list(dir: &Path) -> Vec<String> {
     std::fs::read_dir(dir)
         .map(|entries| {
             entries
@@ -212,6 +222,20 @@ mod tests {
             assert_eq!(date_string(day(date)), date);
         }
         assert_eq!(day("1970-01-02"), 1);
+    }
+
+    #[test]
+    fn a_pre_migration_copy_says_which_schema_it_was_taken_before() {
+        assert_eq!(
+            before_version_of_name("library-2026-09-24-before-v4.db"),
+            Some(4)
+        );
+        assert_eq!(before_version_of_name("library-2026-09-24.db"), None);
+        assert_eq!(
+            before_version_of_name("library-2026-09-24-before-vx.db"),
+            None
+        );
+        assert_eq!(before_version_of_name("notes-before-v4.db"), None);
     }
 
     #[test]

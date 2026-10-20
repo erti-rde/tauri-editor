@@ -2,6 +2,7 @@ import { mockConvertFileSrc, mockIPC, mockWindows } from '@tauri-apps/api/mocks'
 
 import { commands } from '$lib/ipc';
 import { log } from '$lib/log';
+import { SETTINGS_FILE } from '$lib/settings';
 
 import { fakeCommands, stateFrom, type FakeCommands, type FakeState } from './fakeBackend';
 import { defaultFixture, HOME, type Fixture } from './fixture';
@@ -180,25 +181,30 @@ export function installFakeBackend(fixture: Fixture = defaultFixture()): FakeBac
 		}
 	};
 
-	const typed = fakeCommands(state, {
-		list: () => [...files.keys()],
-		has,
-		pdfUrl: (path) => {
-			const entry = files.get(path);
-			return entry && typeof entry === 'object' && 'pdf' in entry ? entry.pdf : undefined;
+	if (!stores.has(SETTINGS_FILE)) stores.set(SETTINGS_FILE, new Map());
+	const typed = fakeCommands(
+		state,
+		{
+			list: () => [...files.keys()],
+			has,
+			pdfUrl: (path) => {
+				const entry = files.get(path);
+				return entry && typeof entry === 'object' && 'pdf' in entry ? entry.pdf : undefined;
+			},
+			text: (path) => {
+				const entry = files.get(path);
+				return typeof entry === 'string' ? entry : undefined;
+			},
+			write: (path, text) => {
+				for (let at = parent(path); at !== '/' && at !== ''; at = parent(at)) dirs.add(at);
+				files.set(path, text);
+			},
+			remove: (path) => {
+				files.delete(path);
+			}
 		},
-		text: (path) => {
-			const entry = files.get(path);
-			return typeof entry === 'string' ? entry : undefined;
-		},
-		write: (path, text) => {
-			for (let at = parent(path); at !== '/' && at !== ''; at = parent(at)) dirs.add(at);
-			files.set(path, text);
-		},
-		remove: (path) => {
-			files.delete(path);
-		}
-	});
+		stores.get(SETTINGS_FILE)
+	);
 
 	/** The fs plugin's path, with `baseDir` applied. */
 	const resolvePath = (path: string, options?: { baseDir?: number }) =>

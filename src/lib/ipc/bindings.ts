@@ -286,6 +286,25 @@ export const commands = {
 	 *  webview learns nothing about a folder the user hasn't shown it.
 	 */
 	pdfsFound: (paths: string[]) => typedError<boolean[], AppError>(__TAURI_INVOKE("pdfs_found", { paths })),
+	/**  The library's file and its backups, newest first (M5-10 AC-2). */
+	libraryBackups: () => typedError<LibraryBackups, AppError>(__TAURI_INVOKE("library_backups")),
+	/**  Back the library up now, under today's name (M5-10 AC-2). */
+	backUpLibrary: () => typedError<null, AppError>(__TAURI_INVOKE("back_up_library")),
+	/**
+	 *  Put a backup, named as `library_backups` lists it, in the library's place,
+	 *  keeping the library it replaces in the backup folder (M5-10 AC-2, ADR 008).
+	 */
+	restoreLibrary: (name: string) => typedError<Restored, AppError>(__TAURI_INVOKE("restore_library", { name })),
+	/**
+	 *  Move the library, with its backups, into a folder the user picked, and
+	 *  open it there (M5-10 AC-1).
+	 */
+	moveLibrary: (folder: string) => typedError<Moved, AppError>(__TAURI_INVOKE("move_library", { folder })),
+	/**
+	 *  Open the backup folder in the file manager, making it first if no backup
+	 *  has been taken yet (M5-10 AC-2).
+	 */
+	openBackupFolder: () => typedError<null, AppError>(__TAURI_INVOKE("open_backup_folder")),
 	/**
 	 *  Remove a source from the library, with its files' records, marks and
 	 *  notes (M1b-4). The PDFs stay where they are.
@@ -392,6 +411,16 @@ export type AttributionMatches = {
 	documents: number,
 };
 
+/**  One backup, as Settings › Library lists it. */
+export type BackupFile = {
+	/**  The file's name in the backup folder, which `restore` is given back. */
+	name: string,
+	/**  When it was written, in milliseconds since 1970. */
+	takenAt: number | null,
+	/**  The schema it was taken before upgrading from, for a pre-migration copy. */
+	beforeVersion: number | null,
+};
+
 export type CompileResult = {
 	ok: boolean,
 	/**  Path to the PDF, when one was produced. */
@@ -495,6 +524,16 @@ export type ImportedSource = {
 	zotero_type: string,
 };
 
+/**  The library's file and its backups. */
+export type LibraryBackups = {
+	path: string,
+	folder: string,
+	/**  Newest first. */
+	backups: BackupFile[],
+	keepDays: number,
+	keepWeeks: number,
+};
+
 /**
  *  A work in the library, as matching an import against it needs (M1b-9
  *  AC-4): its canonical id, details and DOI.
@@ -522,6 +561,16 @@ export type MatchedPassage = {
 	/**  The page as printed, for a note. */
 	pageLabel: string | null,
 	text: string,
+};
+
+/**  Where a moved library ends up, and what didn't come with it. */
+export type Moved = {
+	path: string,
+	/**
+	 *  Backups that stayed in the old backup folder, because the new one
+	 *  already held a file of the same name or the move failed.
+	 */
+	backupsLeft: number,
 };
 
 /**  A source note with its work's name: what the notes export writes out. */
@@ -597,6 +646,12 @@ export type PassageKind =
 "note" | 
 /**  A paragraph of another manuscript in the project. */
 "document";
+
+/**  What a restore left behind, for the toast that says so. */
+export type Restored = {
+	/**  The library as it was just before, kept in the backup folder. */
+	replaced: string,
+};
 
 export type SalvageReport = {
 	/**  Rows carried forward. */

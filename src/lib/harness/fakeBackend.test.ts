@@ -451,3 +451,48 @@ describe('version history (M5-1)', () => {
 		});
 	});
 });
+
+describe('the library file, as db::relocate (M5-10)', () => {
+	it('lists the backups newest first, with the schema an upgrade copy was taken before', async () => {
+		await db.openLibrary('/fake/home/Erti/library.db');
+		const listed = await call(commands.libraryBackups());
+		expect(listed.path).toBe('/fake/home/Erti/library.db');
+		expect(listed.folder).toBe('/fake/home/Erti/backups');
+		const times = listed.backups.map((b) => b.takenAt);
+		expect(times).toEqual([...times].sort((a, b) => b - a));
+		expect(listed.backups.at(-1)?.beforeVersion).toBe(6);
+		expect(listed.backups[0].beforeVersion).toBeNull();
+	});
+
+	it('restores only a backup it lists', async () => {
+		await db.openLibrary('/fake/home/Erti/library.db');
+		const [newest] = (await call(commands.libraryBackups())).backups;
+		expect((await call(commands.restoreLibrary(newest.name))).replaced).toMatch(
+			/^library-replaced-\d{4}-\d\d-\d\d-\d{6}\.db$/
+		);
+		await expect(call(commands.restoreLibrary('../library.db'))).rejects.toMatchObject({
+			kind: 'NotFound'
+		});
+	});
+
+	it('moves only into a folder that was picked, records it, and refuses one with a library', async () => {
+		await db.openLibrary('/fake/home/Erti/library.db');
+		await expect(call(commands.moveLibrary('/fake/home/Dropbox'))).rejects.toMatchObject({
+			kind: 'PermissionDenied'
+		});
+
+		backend().state.granted.push('/fake/home/Dropbox', '/fake/home/Taken');
+		backend().files.set('/fake/home/Taken/library.db', 'theirs');
+		await expect(call(commands.moveLibrary('/fake/home/Taken'))).rejects.toMatchObject({
+			kind: 'Conflict'
+		});
+
+		expect(await call(commands.moveLibrary('/fake/home/Dropbox'))).toEqual({
+			path: '/fake/home/Dropbox/library.db',
+			backupsLeft: 0
+		});
+		const settings = await loadStore('settings-store.json');
+		expect(await settings.get('libraryPath')).toBe('/fake/home/Dropbox/library.db');
+		expect((await call(commands.libraryBackups())).folder).toBe('/fake/home/Dropbox/backups');
+	});
+});

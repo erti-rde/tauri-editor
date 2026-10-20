@@ -1,6 +1,7 @@
 pub mod backup;
 pub mod index;
 pub mod queries;
+pub mod relocate;
 pub mod salvage;
 pub mod schema;
 
@@ -253,20 +254,38 @@ impl DbState {
         use crate::ipc::Classify;
         self.backups_settled().await;
         let pool = self.library().await?;
+        let file = self.library_path().await?;
+        backup::write(&pool, &backup::dir_for(&file), SystemTime::now(), None)
+            .await
+            .or_database()
+    }
+
+    /// Where the open library's file is, as SQLite opened it.
+    pub async fn library_path(&self) -> Result<PathBuf, crate::ipc::AppError> {
+        use crate::ipc::Classify;
+        let pool = self.library().await?;
         let file: String =
             sqlx::query_scalar("SELECT file FROM pragma_database_list WHERE name = 'main'")
                 .fetch_one(&pool)
                 .await
                 .map_err(|e| e.to_string())
                 .or_database()?;
-        backup::write(
-            &pool,
-            &backup::dir_for(Path::new(&file)),
-            SystemTime::now(),
-            None,
-        )
-        .await
-        .or_database()
+        Ok(PathBuf::from(file))
+    }
+
+    /// Close the library, so its file can be replaced or moved (M5-10).
+    ///
+    /// Waits for every connection to come back: the last one to close
+    /// checkpoints the write-ahead log into the file, so what's on disk
+    /// afterwards is the whole library. Commands in the meantime are told it
+    /// isn't open, as at startup.
+    pub async fn close_library(&self) {
+        self.backups_settled().await;
+        let pool = self.library.write().await.take();
+        self.index.invalidate();
+        if let Some(pool) = pool {
+            pool.close().await;
+        }
     }
 
     /// Open `<root>/.erti/project.db`, creating it on first use.

@@ -24,6 +24,8 @@ export interface Fixture {
 	root: string;
 	/** Where the source library lives. */
 	libraryPath: string;
+	/** Its backups, as `library_backups` lists them. Four by default. */
+	backups?: FakeBackup[];
 	/** Sources in the library, all in the project. */
 	sources: LibrarySource[];
 	/** Alias → the work it belongs to (ADR 003). None by default. */
@@ -41,6 +43,35 @@ export interface Fixture {
 	stores: Record<string, Record<string, unknown>>;
 	/** What the folder picker answers, in order. `null` is a cancelled dialog. */
 	dialogAnswers: (string | null)[];
+}
+
+/** One backup in the library's backup folder (ADR 008). */
+export interface FakeBackup {
+	name: string;
+	/** When it was written, in milliseconds since 1970. */
+	takenAt: number;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * A week of backups, named as Rust names them: this morning's, the two days
+ * before, and the copy taken before last week's upgrade.
+ */
+export function defaultBackups(now = Date.now()): FakeBackup[] {
+	const morning = new Date(now);
+	morning.setHours(9, 12, 0, 0);
+	const today = Math.min(morning.getTime(), now);
+	return [
+		{ name: `library-${isoDay(today)}.db`, takenAt: today },
+		{ name: `library-${isoDay(today - DAY_MS)}.db`, takenAt: today - DAY_MS },
+		{ name: `library-${isoDay(today - 2 * DAY_MS)}.db`, takenAt: today - 2 * DAY_MS },
+		{
+			name: `library-${isoDay(today - 8 * DAY_MS)}-before-v6.db`,
+			takenAt: today - 8 * DAY_MS
+		}
+	];
 }
 
 export const ROOT = '/fake/home/Documents/Thesis';

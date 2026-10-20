@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use tauri::State;
 
 use crate::db::index::{Changed, HitKind};
+use crate::db::relocate::{self, LibraryBackups, Moved, Restored};
 use crate::db::{queries, salvage, DbState};
 use crate::ipc::{AppError, Classify};
 
@@ -26,17 +27,88 @@ pub async fn open_library(
     state: State<'_, DbState>,
     path: String,
 ) -> Result<(), AppError> {
-    // A failed backup is said once, as a toast, and never stops the library
-    // opening (M1a-5 AC-5). An event rather than a result: the daily backup
-    // finishes after this command has returned.
-    let report: crate::db::BackupReport = std::sync::Arc::new(move |message: String| {
-        log::warn!("Library backup failed: {message}");
-        let _ = tauri::Emitter::emit(&app, "library-backup-failed", message);
-    });
     state
-        .open_library_reporting(&PathBuf::from(path), report)
+        .open_library_reporting(&PathBuf::from(path), backup_reporter(app))
         .await
         .or_database()
+}
+
+/// A failed backup is said once, as a toast, and never stops the library
+/// opening (M1a-5 AC-5). An event rather than a result: the daily backup
+/// finishes after the command that opened the library has returned.
+fn backup_reporter(app: tauri::AppHandle) -> crate::db::BackupReport {
+    std::sync::Arc::new(move |message: String| {
+        log::warn!("Library backup failed: {message}");
+        let _ = tauri::Emitter::emit(&app, "library-backup-failed", message);
+    })
+}
+
+/// The library's file and its backups, newest first (M5-10 AC-2).
+#[tauri::command]
+#[specta::specta]
+pub async fn library_backups(state: State<'_, DbState>) -> Result<LibraryBackups, AppError> {
+    relocate::backups(&state).await
+}
+
+/// Back the library up now, under today's name (M5-10 AC-2).
+#[tauri::command]
+#[specta::specta]
+pub async fn back_up_library(state: State<'_, DbState>) -> Result<(), AppError> {
+    state.back_up_library().await.map(|_| ())
+}
+
+/// Put a backup, named as `library_backups` lists it, in the library's place,
+/// keeping the library it replaces in the backup folder (M5-10 AC-2, ADR 008).
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_library(
+    app: tauri::AppHandle,
+    state: State<'_, DbState>,
+    name: String,
+) -> Result<Restored, AppError> {
+    relocate::restore(&state, &name, backup_reporter(app)).await
+}
+
+/// Where the next launch finds the library: the `libraryPath` setting, in the
+/// file `src/lib/settings/index.ts` keeps it in.
+const SETTINGS_FILE: &str = "settings-store.json";
+const LIBRARY_PATH_KEY: &str = "libraryPath";
+
+/// Move the library, with its backups, into a folder the user picked, and
+/// open it there (M5-10 AC-1).
+#[tauri::command]
+#[specta::specta]
+pub async fn move_library(
+    app: tauri::AppHandle,
+    state: State<'_, DbState>,
+    folder: String,
+) -> Result<Moved, AppError> {
+    let folder = crate::scope::authorise(&state, &folder).await?;
+    let store = tauri_plugin_store::StoreExt::store(&app, SETTINGS_FILE)
+        .map_err(|e| AppError::internal(format!("could not read the settings: {e}")))?;
+    let remember = |path: &std::path::Path| {
+        store.set(LIBRARY_PATH_KEY, path.to_string_lossy().into_owned());
+        store.save().map_err(|e| e.to_string())
+    };
+    relocate::relocate(&state, &folder, backup_reporter(app.clone()), remember).await
+}
+
+/// Open the backup folder in the file manager, making it first if no backup
+/// has been taken yet (M5-10 AC-2).
+#[tauri::command]
+#[specta::specta]
+pub async fn open_backup_folder(
+    app: tauri::AppHandle,
+    state: State<'_, DbState>,
+) -> Result<(), AppError> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = crate::db::backup::dir_for(&state.library_path().await?);
+    tokio::fs::create_dir_all(&dir)
+        .await
+        .map_err(|e| AppError::from_io(&e, &dir))?;
+    app.opener()
+        .open_path(dir.to_string_lossy(), None::<&str>)
+        .map_err(AppError::io)
 }
 
 /// Open a project folder, creating `<root>/.erti/project.db` if needed.
