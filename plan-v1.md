@@ -232,7 +232,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [x] **M5-7** Document menu: rename, duplicate, history, delete (#23) (#251)
 - [ ] **M5-8** Font family and size in the toolbar (#103)
 - [x] **M5-9** Draggable split divider (#100) (#253)
-- [ ] **M5-10** Settings › Library (UX-10)
+- [x] **M5-10** Settings › Library (UX-10) (#254)
 
 ### M6 — Scale and quality gates _(M)_ · [spec](docs/specs/M6.md)
 
@@ -333,7 +333,10 @@ indexed, so **Cite** on a passage gives "p. 846" rather than the sheet, as a mar
 in M3-2; it needs a migration and re-indexing every paper) · the margin nudge searching for
 itself: it shows only what the Notes panel found, so it appears only while that panel is open
 and following, and **Margin nudge** on with **Follow my writing** off shows nothing (found in
-M3-4; it means moving the search out of the panel).
+M3-4; it means moving the search out of the panel) · pdf.js 6, on its legacy build unless
+every WebView is shown to have what the modern one calls, with the text-layer anchors checked
+again and a decision on WebAssembly under the CSP (security.md, "pdf.js version"; decided for
+1.0 in M6-3).
 
 ---
 
@@ -349,6 +352,7 @@ M3-4; it means moving the search out of the panel).
 | Architecture                   | ADR 001–009                                                                                                                                                                                           | docs/adr/                                                                                                                                                             |
 | BibTeX parser                  | `@retorquere/bibtex-parser`, not citation-js                                                                                                                                                          | citation-js's core depends on a network client (ADR 009)                                                                                                              |
 | Network allowlist              | CSP `connect-src` = the README's list, pinned by a test                                                                                                                                               | The privacy promise enforced rather than stated (#109)                                                                                                                |
+| pdf.js version                 | 4.10.38 for 1.0; 6.x after 1.0, or at once if an advisory reaches 4.x                                                                                                                                 | 6.x needs newer WebViews or the legacy build, and moves the text layer; no advisory affects 4.x (security.md, M6-3)                                                   |
 | Updater                        | Behind consent, like lookups                                                                                                                                                                          | It's a network call; the README promise covers it                                                                                                                     |
 | Library backups                | In M1a, not M5                                                                                                                                                                                        | M1b adds a library migration, and ADR 008 requires a backup before every migration                                                                                    |
 | Manuscript format shape        | Doc at the root + namespaced `erti` key (ADR 002 amendment)                                                                                                                                           | The first design made older versions overwrite the file with nothing                                                                                                  |
