@@ -102,7 +102,7 @@
 		"citeproc": "^2.4.63",
 		"docx": "9.8.1",
 		"dompurify": "^3.4.13",
-		"pdfjs-dist": "4.9.155",
+		"pdfjs-dist": "4.10.38",
 		"tippy.js": "^6.3.7",
 		"tiptap-pagination-plus": "^3.1.0"
 	},
