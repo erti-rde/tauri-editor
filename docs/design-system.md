@@ -75,6 +75,8 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | A name changed where it is read    | `InlineRename`                         | Opens selected; Enter renames, Esc puts it back; why a name won’t do, beside it                  |
 | Find in a text                     | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change          |
 | One of a few                       | `RadioGroup`                           | Arrow keys; the Appearance settings pattern                                                      |
+| One of a few, each needing more    | `RadioCardGroup` + `RadioCard`         | Checked: accent edge, accent-quiet ground and a check, words in ink; `leading` for a swatch      |
+| One setting                        | `SettingRow`                           | Label, one-line hint, control on the right (`stacked` below); a rule between rows, no cards      |
 | One of many                        | `Select`                               |                                                                                                  |
 | On/off                             | `Switch`                               | Takes effect at once; `Checkbox` is for choices submitted together                               |
 | A date                             | `DateField`                            |                                                                                                  |
@@ -99,15 +101,14 @@ drawn in the [component mockups](https://claude.ai/artifact/B3NikygFEYa14dQeoz5h
 applies: the primitive lands in `src/lib/ui`, with a catalogue entry, before the item that
 needs it. Paths are under `src/lib`.
 
-| Primitive                 | Replaces                                                                                                               | Needed by     |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `SettingRow`, `RadioCard` | The rows in `side-panel/settings/*.svelte`; the palette and page-setup cards built on bits-ui's `RadioGroup` directly  | M5-10, M7a-10 |
-| `Slider`                  | The `type="range"` inputs in `AppearanceSettings.svelte`                                                               | M6-8          |
-| `ColourField`             | The `type="color"` input in `ReadingSettings.svelte`; the swatches in `LabelPicker.svelte` and `AppearanceMenu.svelte` | M6-8          |
-| `Combobox`                | The hand-built listbox in `editor/extensions/citation/CitationSuggestion.svelte`                                       | M6-8          |
-| `FloatingToolbar`         | `editor/extensions/BubbleMenu.svelte`, `pdfreader/SelectionMenu.svelte`, `pdfreader/MarkMenu.svelte`                   | M6-8          |
-| `TreeRow`                 | `explorer/TreeItem.svelte` and the rows in `outline/Outline.svelte`                                                    | M6-8          |
-| `StatusItem`              | The spans in `statusFooter/StatusFooter.svelte`                                                                        | M6-8          |
+| Primitive         | Replaces                                                                                                               | Needed by |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- | --------- |
+| `Slider`          | The `type="range"` inputs in `AppearanceSettings.svelte`                                                               | M6-8      |
+| `ColourField`     | The `type="color"` input in `ReadingSettings.svelte`; the swatches in `LabelPicker.svelte` and `AppearanceMenu.svelte` | M6-8      |
+| `Combobox`        | The hand-built listbox in `editor/extensions/citation/CitationSuggestion.svelte`                                       | M6-8      |
+| `FloatingToolbar` | `editor/extensions/BubbleMenu.svelte`, `pdfreader/SelectionMenu.svelte`, `pdfreader/MarkMenu.svelte`                   | M6-8      |
+| `TreeRow`         | `explorer/TreeItem.svelte` and the rows in `outline/Outline.svelte`                                                    | M6-8      |
+| `StatusItem`      | The spans in `statusFooter/StatusFooter.svelte`                                                                        | M6-8      |
 
 When one lands, move its row into the table above.
 
