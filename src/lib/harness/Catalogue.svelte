@@ -35,9 +35,12 @@
 		Panel,
 		Popover,
 		ProgressLine,
+		RadioCard,
+		RadioCardGroup,
 		RadioGroup,
 		SearchField,
 		Select,
+		SettingRow,
 		Sidebar,
 		SplitHandle,
 		Switch,
@@ -566,6 +569,53 @@
 						/>
 					</Specimen>
 				{/each}
+			</div>
+		</section>
+
+		<section class="grid gap-4">
+			{@render section('SettingRow, RadioCard')}
+			<div class="grid grid-cols-2 gap-6">
+				<Specimen name="SettingRow" state="rest">
+					<div class="grid">
+						<SettingRow label="Location" hint="~/Erti/library.db">
+							<Button size="sm">Move library…</Button>
+						</SettingRow>
+						<SettingRow label="Last backup" hint="Today, 09:12 · 7 daily and 4 weekly kept">
+							<Button size="sm">Back up now</Button>
+						</SettingRow>
+					</div>
+				</Specimen>
+				<Specimen name="SettingRow stacked" state="rest" target="[role='radio']">
+					<SettingRow label="Density" hint="How much fits on screen at once." stacked>
+						{#snippet children({ labelId, hintId })}
+							<RadioCardGroup aria-labelledby={labelId} aria-describedby={hintId} value="compact">
+								<RadioCard value="compact" label="Compact" description="Rows like a code editor" />
+								<RadioCard
+									value="comfortable"
+									label="Comfortable"
+									description="More room to click"
+								/>
+							</RadioCardGroup>
+						{/snippet}
+					</SettingRow>
+				</Specimen>
+				{#each ['rest', ...FORCED] as state (state)}
+					<Specimen name="RadioCard" {state} target="[role='radio'][data-state='unchecked']">
+						<RadioCardGroup label="Restore from" value="today" columns={1}>
+							<RadioCard value="today" label="Today, 09:12" description="Daily backup" />
+							<RadioCard
+								value="before"
+								label="12 October, 18:40"
+								description="Taken before an upgrade"
+							/>
+						</RadioCardGroup>
+					</Specimen>
+				{/each}
+				<Specimen name="RadioCard" state="disabled">
+					<RadioCardGroup label="Restore from" value="today" columns={1} disabled>
+						<RadioCard value="today" label="Today, 09:12" description="Daily backup" />
+					</RadioCardGroup>
+				</Specimen>
 			</div>
 		</section>
 
