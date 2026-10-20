@@ -20,11 +20,7 @@ import { augmentSchema } from '$lib/metadata-explorer/adapterCslZotero';
 import type { AugmentedZoteroSchema } from '$lib/metadata-explorer/adapterCslZotero';
 import type { FileItem } from '$lib/stores/fileSystem.svelte';
 
-import * as pdfjsLib from 'pdfjs-dist';
-// Resolve the worker from the same package as the library above, so the two can
-// never drift apart. This previously pointed at a hand-copied worker in
-// static/pdfjs-2/, which pdf.js rejects outright when the versions disagree.
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { openPdf } from '$lib/pdfjs';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 import type { CitationItem } from '$lib/stores/citationStore';
 // Extraction and chunking live in $lib/ingest so the retrieval benchmark runs
@@ -36,8 +32,6 @@ import { lookupDoi, resolveMetadata, tidyRecord, type ResolvedVia } from '$lib/i
 import { findDoi } from '$lib/ingest/identifiers';
 import { getMailto, networkAllowed } from '$lib/stores/consent';
 import { log } from '$lib/log';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 /** The subset of pdf.js document info we read. pdf.js types this as bare `Object`. */
 interface PdfDocumentInfo {
@@ -71,7 +65,7 @@ async function processSinglePdf(filePath: string, fileName: string, sha256: stri
 	let pdfDoc: PDFDocumentProxy | undefined;
 	try {
 		const pdfBytes = await readFile(filePath);
-		pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+		pdfDoc = await openPdf({ data: pdfBytes }).promise;
 
 		const pages = await extractPages(pdfDoc);
 		const pdfMetadata = await getPdfMetadata(pages, sha256, fileName, pdfDoc);

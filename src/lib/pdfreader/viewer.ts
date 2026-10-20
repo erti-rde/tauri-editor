@@ -1,8 +1,3 @@
-import * as pdfjsLib from 'pdfjs-dist';
-// The worker resolves from the same package as the library, so the two cannot
-// drift. The viewer this replaced was a hand-copied build one minor version
-// ahead of `pdfjs-dist`, which is exactly the failure that convention avoids.
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import {
 	EventBus,
 	FindState,
@@ -17,6 +12,7 @@ import 'pdfjs-dist/web/pdf_viewer.css';
 import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
 
 import type { Line } from '$lib/ingest/extract';
+import { openPdf } from '$lib/pdfjs';
 import type { PdfAnnotationLike } from './importAnnotations';
 
 import { pageLinesFrom, pageTextFrom } from './pageText';
@@ -48,8 +44,6 @@ import {
  * Every pdf.js import in the reader lives in this file, so the rest of the
  * feature is testable without mounting a viewer.
  */
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 /**
  * Where pdf.js fetches character maps and font data at run time.
@@ -289,7 +283,7 @@ export function createReaderViewer(
 
 	return {
 		async load(data: Uint8Array) {
-			const task = pdfjsLib.getDocument({
+			const task = openPdf({
 				data,
 				cMapUrl: CMAP_URL,
 				cMapPacked: true,

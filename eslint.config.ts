@@ -14,6 +14,7 @@ import svelteConfig from './svelte.config.js';
  * - the settings store: one module declares every key, its type and default
  *   (M1a-11). A key spelt differently in two places failed quietly.
  * - the log plugin: one logger decides what may be written (M1a-12).
+ * - pdf.js: one module opens every PDF, with eval off (M6-3).
  *
  * A file may import what it owns and nothing else on the list. One rule entry
  * per group of files, because a later `no-restricted-imports` replaces an
@@ -33,22 +34,36 @@ function restrictedImports() {
 		name: '@tauri-apps/plugin-log',
 		message: "Log through '$lib/log', which keeps what the user wrote out of the file (M1a-12)."
 	};
+	const pdfjs = ['pdfjs-dist', 'pdfjs-dist/build/pdf.mjs', 'pdfjs-dist/legacy/build/pdf.mjs'].map(
+		(name) => ({ name, message: "Open a PDF with `openPdf` from '$lib/pdfjs' (M6-3)." })
+	);
 	const rule = (...paths: object[]) => ({
 		rules: { 'no-restricted-imports': ['error', { paths }] as const }
 	});
 	return [
 		{
 			files: ['src/**/*.{ts,svelte}'],
-			ignores: ['src/lib/ipc/**', 'src/lib/settings/**', 'src/lib/log.ts', 'src/**/*.test.ts'],
-			...rule(invoke, store, logPlugin)
+			ignores: [
+				'src/lib/ipc/**',
+				'src/lib/settings/**',
+				'src/lib/log.ts',
+				'src/lib/pdfjs.ts',
+				'src/**/*.test.ts'
+			],
+			...rule(invoke, store, logPlugin, ...pdfjs)
 		},
-		{ files: ['src/lib/ipc/**/*.ts'], ignores: ['src/**/*.test.ts'], ...rule(store, logPlugin) },
+		{
+			files: ['src/lib/ipc/**/*.ts'],
+			ignores: ['src/**/*.test.ts'],
+			...rule(store, logPlugin, ...pdfjs)
+		},
 		{
 			files: ['src/lib/settings/**/*.ts'],
 			ignores: ['src/**/*.test.ts'],
-			...rule(invoke, logPlugin)
+			...rule(invoke, logPlugin, ...pdfjs)
 		},
-		{ files: ['src/lib/log.ts'], ...rule(invoke, store) }
+		{ files: ['src/lib/log.ts'], ...rule(invoke, store, ...pdfjs) },
+		{ files: ['src/lib/pdfjs.ts'], ...rule(invoke, store, logPlugin) }
 	];
 }
 
