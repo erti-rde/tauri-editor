@@ -26,7 +26,8 @@ export function whenTaken(takenAt: number, now: number = Date.now()): string {
 }
 
 /** The second line under a backup in the restore list. */
-export function whatItIs(backup: { beforeVersion: number | null }): string {
+export function whatItIs(backup: { beforeVersion: number | null; replaced: boolean }): string {
+	if (backup.replaced) return 'Your library before a restore';
 	return backup.beforeVersion === null ? 'Daily backup' : 'Taken before an upgrade';
 }
 

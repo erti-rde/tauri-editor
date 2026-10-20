@@ -419,6 +419,11 @@ export type BackupFile = {
 	takenAt: number,
 	/**  The schema it was taken before upgrading from, for a pre-migration copy. */
 	beforeVersion: number | null,
+	/**
+	 *  The library a restore replaced, rather than a backup: kept, never
+	 *  pruned, and restored like one to undo that restore.
+	 */
+	replaced: boolean,
 };
 
 export type CompileResult = {

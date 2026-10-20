@@ -433,10 +433,11 @@ export function fakeCommands(
 			return {
 				path: state.libraryPath,
 				folder: backups,
-				backups: state.backups.map(({ name, takenAt }) => ({
+				backups: state.backups.map(({ name, takenAt, replaced = false }) => ({
 					name,
 					takenAt,
-					beforeVersion: Number(/-before-v(\d+)\.db$/.exec(name)?.[1]) || null
+					beforeVersion: Number(/-before-v(\d+)\.db$/.exec(name)?.[1]) || null,
+					replaced
 				})),
 				keepDays: 7,
 				keepWeeks: 4
@@ -459,10 +460,15 @@ export function fakeCommands(
 					"That backup isn't in the backup folder any more. Open the folder to see what's there."
 				);
 			}
-			const at = new Date().toISOString();
-			return {
-				replaced: `library-replaced-${at.slice(0, 10)}-${at.slice(11, 19).replaceAll(':', '')}.db`
-			};
+			const now = Date.now();
+			const at = new Date(now).toISOString();
+			const stem = `library-replaced-${at.slice(0, 10)}-${at.slice(11, 19).replaceAll(':', '')}`;
+			const taken = (n: string) => state.backups.some((b) => b.name === n);
+			let replaced = `${stem}.db`;
+			for (let n = 2; taken(replaced); n++) replaced = `${stem}-${n}.db`;
+			// Kept beside the backups, and listed with them so it can be restored.
+			state.backups = [{ name: replaced, takenAt: now, replaced: true }, ...state.backups];
+			return { replaced };
 		},
 
 		moveLibrary(folder) {

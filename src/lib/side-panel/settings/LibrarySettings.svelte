@@ -80,7 +80,9 @@
 	}
 
 	function startRestore() {
-		chosen = library?.backups[0]?.name ?? '';
+		// The newest backup, not the library a restore replaced: undoing one is
+		// there to pick, but it isn't what "restore from a backup" means.
+		chosen = (newest ?? library?.backups[0])?.name ?? '';
 		restoring = true;
 	}
 
@@ -105,7 +107,9 @@
 		}
 	}
 
-	const newest = $derived(library?.backups[0]);
+	// The libraries restores replaced are listed with the backups, so one can be
+	// undone, but they aren't backups: the last backup is the newest real one.
+	const newest = $derived(library?.backups.find((b) => !b.replaced));
 </script>
 
 <div class="grid">

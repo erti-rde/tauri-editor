@@ -124,9 +124,67 @@ async fn a_restore_puts_the_backup_in_place_and_keeps_the_library_it_replaced() 
     assert_eq!(sources(&kept).await, ["new", "old"]);
     // The backup itself is still there to restore again.
     assert!(dir.join("backups").join(&name).exists());
-    // And the kept copy isn't a backup, so pruning never takes it.
+    // Listed, as the library a restore replaced, but never read as a backup,
+    // so pruning never takes it.
     let listed = relocate::backups(&state).await.unwrap();
-    assert!(listed.backups.iter().all(|b| b.name != restored.replaced));
+    let copy = listed
+        .backups
+        .iter()
+        .find(|b| b.name == restored.replaced)
+        .expect("the replaced library is listed");
+    assert!(copy.replaced);
+    assert_eq!(copy.before_version, None);
+    assert!(listed
+        .backups
+        .iter()
+        .all(|b| b.replaced == (b.name == restored.replaced)));
+    assert!(backup::day_of_name(&restored.replaced).is_none());
+}
+
+// M5-10 AC-2
+#[tokio::test]
+async fn a_restore_is_undone_by_restoring_the_library_it_kept() {
+    let dir = scratch("restore-undone");
+    let (state, name) = library_with_a_backup(&dir).await;
+
+    let first = relocate::restore(&state, &name, quiet()).await.unwrap();
+    assert_eq!(sources(&state).await, ["old"]);
+    relocate::restore(&state, &first.replaced, quiet())
+        .await
+        .unwrap();
+
+    assert_eq!(sources(&state).await, ["new", "old"]);
+}
+
+/// A write begun before `during` starts and committed while it runs, as an
+/// import's would be: `during` must wait for it, and keep it.
+async fn written_during<F: std::future::Future>(state: &DbState, during: F) -> F::Output {
+    let pool = state.library().await.unwrap();
+    let mut late = pool.begin().await.unwrap();
+    sqlx::query("INSERT INTO sources (sha256) VALUES ('late')")
+        .execute(&mut *late)
+        .await
+        .unwrap();
+    let commit = async move {
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        late.commit().await.unwrap();
+    };
+    let (output, ()) = tokio::join!(during, commit);
+    output
+}
+
+// M5-10 AC-2
+#[tokio::test]
+async fn a_restore_keeps_what_was_written_while_it_ran() {
+    let dir = scratch("restore-late");
+    let (state, name) = library_with_a_backup(&dir).await;
+
+    let restored = written_during(&state, relocate::restore(&state, &name, quiet()))
+        .await
+        .unwrap();
+
+    let kept = open(&dir.join("backups").join(&restored.replaced)).await;
+    assert_eq!(sources(&kept).await, ["late", "new", "old"]);
 }
 
 // M5-10 AC-2
@@ -207,6 +265,41 @@ async fn a_move_takes_the_library_and_its_backups_and_reopens_it_there() {
     // The backups came too, and the old file is gone.
     assert!(to.join("backups").join(&name).exists());
     assert!(!dir.join("library.db").exists());
+    assert!(!dir.join("backups").exists());
+}
+
+// M5-10 AC-1
+#[tokio::test]
+async fn a_move_keeps_what_was_written_while_it_ran() {
+    let dir = scratch("move-late");
+    let (state, _) = library_with_a_backup(&dir).await;
+    let to = dir.join("Dropbox");
+    std::fs::create_dir_all(&to).unwrap();
+    let (remember, _) = recorder();
+
+    written_during(&state, relocate::relocate(&state, &to, quiet(), remember))
+        .await
+        .unwrap();
+
+    assert_eq!(sources(&state).await, ["late", "new", "old"]);
+}
+
+// M5-10 AC-1
+#[tokio::test]
+async fn a_move_takes_the_libraries_restores_replaced() {
+    let dir = scratch("move-replaced");
+    let (state, name) = library_with_a_backup(&dir).await;
+    let restored = relocate::restore(&state, &name, quiet()).await.unwrap();
+    let to = dir.join("Dropbox");
+    std::fs::create_dir_all(&to).unwrap();
+    let (remember, _) = recorder();
+
+    let moved = relocate::relocate(&state, &to, quiet(), remember)
+        .await
+        .unwrap();
+
+    assert_eq!(moved.backups_left, 0);
+    assert!(to.join("backups").join(&restored.replaced).exists());
     assert!(!dir.join("backups").exists());
 }
 

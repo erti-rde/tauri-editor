@@ -86,9 +86,21 @@ pub async fn move_library(
     let folder = crate::scope::authorise(&state, &folder).await?;
     let store = tauri_plugin_store::StoreExt::store(&app, SETTINGS_FILE)
         .map_err(|e| AppError::internal(format!("could not read the settings: {e}")))?;
+    // The webview reads and writes this same store, and its next save writes
+    // whatever is here: a path that failed to save is taken back out, or that
+    // save would record a library the move removed.
     let remember = |path: &std::path::Path| {
+        let before = store.get(LIBRARY_PATH_KEY);
         store.set(LIBRARY_PATH_KEY, path.to_string_lossy().into_owned());
-        store.save().map_err(|e| e.to_string())
+        store.save().map_err(|e| {
+            match before {
+                Some(value) => store.set(LIBRARY_PATH_KEY, value),
+                None => {
+                    store.delete(LIBRARY_PATH_KEY);
+                }
+            }
+            e.to_string()
+        })
     };
     relocate::relocate(&state, &folder, backup_reporter(app.clone()), remember).await
 }

@@ -475,6 +475,20 @@ describe('the library file, as db::relocate (M5-10)', () => {
 		});
 	});
 
+	it('lists the library a restore replaced, so the restore can be undone', async () => {
+		await db.openLibrary('/fake/home/Erti/library.db');
+		const [newest] = (await call(commands.libraryBackups())).backups;
+		const first = await call(commands.restoreLibrary(newest.name));
+
+		const listed = (await call(commands.libraryBackups())).backups;
+		expect(listed[0]).toMatchObject({ name: first.replaced, replaced: true });
+		expect(listed.slice(1).every((b) => !b.replaced)).toBe(true);
+
+		// Undone in the same second: its own copy doesn't take the name.
+		const undone = await call(commands.restoreLibrary(first.replaced));
+		expect(undone.replaced).not.toBe(first.replaced);
+	});
+
 	it('moves only into a folder that was picked, records it, and refuses one with a library', async () => {
 		await db.openLibrary('/fake/home/Erti/library.db');
 		await expect(call(commands.moveLibrary('/fake/home/Dropbox'))).rejects.toMatchObject({
