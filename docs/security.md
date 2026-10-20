@@ -46,7 +46,7 @@ Risk = impact × likelihood, High / Medium / Low.
 | T1  | E      | Script injection via a shared manuscript (citation HTML, new envelope `sources`)                           | DOMPurify allowlist on citation HTML (`sanitize.ts`); shape guards for envelope and CSL (M1b-10)                                                     | The guards reach manuscripts with format 1 (M1a-8); until then only lookups and sidecars pass through them                                                                                                                         | **High** |
 | T2  | E / I  | After T1: read any file via `read_pdf_file(path)` / `hash_file` / `read_directory`                         | Rust path commands and the fs plugin reach only the open project, dialog picks and recorded locations (M1a-3, M1a-4)                                 | A project opened earlier stays reachable until restart (Tauri's scope can't shrink); any folder with `.erti/project.db` opens without the picker, so a script reaches an Erti project whose path it knows                          | Medium   |
 | T3  | T / D  | After T1: delete or overwrite files via the fs plugin                                                      | No `remove`, `rename` or `write-all` (M1a-4); writes only where the fs scope reaches: the project, dialog picks, app folders                         | A script can still overwrite files inside the open project; version history (M5-1) is the recovery. A symlinked folder inside a project carries new-file writes out of it (Tauri matches a path that doesn't exist yet as written) | Medium   |
-| T4  | E      | Malicious PDF runs code in pdf.js (cf. CVE-2024-4367, font-based JS execution)                             | pdfjs-dist 4.9.155 is past the 4.2.67 fix                                                                                                            | `isEvalSupported` not set to `false` (defence in depth); 2 majors behind (plan.md §9)                                                                                                                                              | Medium   |
+| T4  | E      | Malicious PDF runs code in pdf.js (cf. CVE-2024-4367, font-based JS execution)                             | pdfjs-dist 4.10.38, past the 4.2.67 fix; one module opens every PDF with `isEvalSupported: false`, and the CSP refuses eval too (M6-3)               | 4.x is no longer maintained: a future advisory against it means two majors at once ([pdf.js version](#pdfjs-version-m6-3))                                                                                                         | Medium   |
 | T5  | I      | After T1: data leaves through the query string of an allowed host                                          | `connect-src` allowlist of 4 hosts (PR #109)                                                                                                         | Can't be closed by CSP alone; T1–T3 are the real defence                                                                                                                                                                           | Medium   |
 | T6  | T      | Malicious update                                                                                           | Updater verifies minisign signatures against the embedded pubkey                                                                                     | Key storage and rotation undocumented; release job uses tag-pinned actions with secrets                                                                                                                                            | Medium   |
 | T7  | T      | Build-time supply chain: npm/cargo deps; `ort` downloads ONNX Runtime binaries at build time               | Lockfiles; `--frozen-lockfile`; toolchain pinned                                                                                                     | No `pnpm audit` / `cargo audit` in CI; ort download integrity unverified by us                                                                                                                                                     | Medium   |
@@ -84,8 +84,10 @@ Ordered by what they cut off. Each lands in the milestone that touches the area.
    `__proto__`, 10⁶-entry arrays).
 4. **Input limits (T8)** — M1b/M6. PDF > 200 MB, `.bib` > 20 MB or > 50k entries, manuscript >
    50 MB: refused with a message, not a hang. Exact numbers set from M6 measurements.
-5. **pdf.js hardening (T4)** — M6. `isEvalSupported: false` on every `getDocument`; plan the
-   pdfjs-dist upgrade (4.9 → current) with the golden extraction tests as the guard.
+5. **pdf.js hardening (T4)** — done in M6-3. Every PDF opens through `openPdf` in
+   `src/lib/pdfjs.ts`, with `isEvalSupported: false`, and the linter refuses pdf.js's entry
+   points anywhere else. The upgrade was decided against for 1.0: see
+   [pdf.js version](#pdfjs-version-m6-3).
 6. **Remove `tauri-plugin-shell` (T13)** — M0. It's unused from JS; `opener` covers opening
    links.
 7. **Dependency audit in CI (T7)** — M7. `pnpm audit --prod` and `cargo audit` (RustSec) as a
@@ -104,6 +106,42 @@ Ordered by what they cut off. Each lands in the milestone that touches the area.
     `.bib` fields make it safe today, but imports and co-authors' manuscripts now feed
     third-party metadata into files Erti compiles on the user's machine. Safety shouldn't depend
     on each user's TeX configuration.
+
+## pdf.js version (M6-3)
+
+**Decision:** 1.0 ships on pdfjs-dist **4.10.38**, the last 4.x release, not on 6.x. Decided
+2026-10-20, with 6.4.299 current.
+
+**Why not 6.x now.** It was tried on a branch. The API changes were small: a handful of lines,
+for `PDFDocumentProxy.destroy` and the `canvas` render parameter. The rest is not small:
+
+- **The WebViews.** 6.x's modern build calls `Math.sumPrecise` (font rebuilding, in the worker),
+  `Map.prototype.getOrInsertComputed` (the main thread) and `RegExp.escape` (the find controller),
+  with no fallback. Erti runs on the system WebView: WKWebView on the oldest macOS it supports,
+  and WebKitGTK on Ubuntu 22.04. Whether those engines have all three wasn't established, so
+  the upgrade would mean the polyfilled legacy build, or measuring every platform first.
+- **The text layer.** 6.x merges text runs differently: page 1 of the anchoring test's paper
+  goes from 247 items to 206. One anchoring test failed, by 19 px, because its line had become
+  other words. Marks are stored as page geometry with their quote, not as text items, so
+  they'd survive. Every test and anchor written against the text layer would need checking
+  again.
+- **WebAssembly.** 6.x decodes JPEG 2000, JBIG2 and ICC colour in WebAssembly. Our CSP has no
+  `'wasm-unsafe-eval'`. Without it, pdf.js falls back to JavaScript for JPEG 2000 and JBIG2,
+  but the package has no fallback for ICC colour. That's a choice to make on purpose, not one
+  to inherit.
+
+**Why staying is safe enough.** No advisory in GitHub's database affects 4.9 or 4.10 (checked
+2026-10-20). GHSA-wgrm-67xf-hhpq (CVE-2024-4367) was fixed in 4.2.67. GHSA-hq66-cqwq-w95j
+(2026) affects 5.6.83 up to 6.2.108, and needs pdf.js's scripting, which Erti never sets up. 6.x has no eval at all; on 4.x the
+same path is now off twice, by `isEvalSupported` and by the CSP.
+
+**Why 4.10.38 rather than 4.9.155.** It's the same major with fixes, and it changes nothing
+measured. Extraction of the 20-paper retrieval corpus is byte-identical under both, and the
+golden extraction, anchoring and metadata-health tests pass unchanged.
+
+**When to upgrade.** Upgrade at once if an advisory affects 4.x, or a paper renders wrongly
+in a way 6.x fixes. Otherwise upgrade after 1.0, as planned work (plan-v1.md §5), on the
+legacy build unless the WebViews are shown to have what the modern build needs.
 
 ## Out of scope for 1.0
 
