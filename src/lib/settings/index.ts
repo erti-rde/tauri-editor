@@ -49,7 +49,11 @@ function define<T>(definition: Definition<T>): Definition<T> {
 }
 
 export const SETTINGS = {
-	/** Where the source library is. Unset means `~/Erti/library.db`. */
+	/**
+	 * Where the source library is. Unset means `~/Erti/library.db`. Rust's
+	 * `move_library` writes it too (`LIBRARY_PATH_KEY` in `db_commands.rs`), so
+	 * the file and the setting move together: keep the key as it is.
+	 */
 	libraryPath: define<string | null>({
 		key: 'libraryPath',
 		default: null,

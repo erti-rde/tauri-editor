@@ -21,7 +21,8 @@ pub struct BackupFile {
     /// The file's name in the backup folder, which `restore` is given back.
     pub name: String,
     /// When it was written, in milliseconds since 1970.
-    pub taken_at: f64,
+    #[specta(type = specta_typescript::Number)]
+    pub taken_at: u64,
     /// The schema it was taken before upgrading from, for a pre-migration copy.
     pub before_version: Option<u32>,
 }
@@ -46,10 +47,10 @@ pub struct Restored {
     pub replaced: String,
 }
 
-fn millis(time: SystemTime) -> f64 {
+fn millis(time: SystemTime) -> u64 {
     time.duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as f64)
-        .unwrap_or(0.0)
+        .map(|d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+        .unwrap_or(0)
 }
 
 /// Write-ahead log and shared-memory files beside a database.
@@ -88,7 +89,7 @@ pub async fn backups(state: &DbState) -> Result<LibraryBackups, AppError> {
             })
         })
         .collect();
-    backups.sort_by(|a, b| b.taken_at.total_cmp(&a.taken_at));
+    backups.sort_by_key(|b| std::cmp::Reverse(b.taken_at));
     Ok(LibraryBackups {
         path: path.to_string_lossy().into_owned(),
         folder: folder.to_string_lossy().into_owned(),

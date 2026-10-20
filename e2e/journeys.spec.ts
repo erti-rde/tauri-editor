@@ -1285,3 +1285,46 @@ test('the split between the manuscript and a paper is dragged, moved from the ke
 	await expect(handle).toHaveAttribute('aria-valuenow', '50');
 	expect(await saved()).toBe(0.5);
 });
+
+test('the library is moved to a picked folder, backed up, and restored from a backup in Settings', async ({
+	page
+}) => {
+	await launch(page);
+	await expect(page.getByRole('button', { name: /^Thesis/ })).toBeVisible();
+	await page.getByRole('button', { name: 'Settings' }).click();
+	await page.getByRole('tab', { name: 'Library' }).click();
+	const panel = page.getByRole('tabpanel', { name: 'Library' });
+	await expect(panel.getByText('~/Erti/library.db')).toBeVisible();
+
+	// M5-10 AC-1: moved, then open where it went.
+	await page.evaluate(() => window.__ERTI_FAKE__!.dialogAnswers.push('/fake/home/Dropbox'));
+	await panel.getByRole('button', { name: 'Move library…' }).click();
+	await expect(panel.getByText('~/Dropbox/library.db')).toBeVisible();
+	await expect(panel.getByText('~/Dropbox/backups')).toBeVisible();
+	await expect(
+		page.locator('[data-toasts]').getByText('Moved the library to ~/Dropbox/library.db')
+	).toBeVisible();
+
+	// M5-10 AC-2: backed up now, said in the last-backup line.
+	await panel.getByRole('button', { name: 'Back up now' }).click();
+	await expect(panel.getByText(/^Today, \d\d:\d\d · 7 daily and 4 weekly kept$/)).toBeVisible();
+
+	// Restored from the day before's, which starts the window again and says so.
+	await panel.getByRole('button', { name: 'Restore from a backup…' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Restore from a backup' });
+	await dialog.getByRole('radio', { name: /^Yesterday/ }).click();
+	await dialog.getByRole('button', { name: 'Restore this backup' }).click();
+
+	const restored = page
+		.locator('[data-toasts]')
+		.getByRole('status')
+		.filter({ hasText: 'Restored your library from a backup' });
+	await expect(restored).toBeVisible();
+	await expect(restored).toContainText(/kept in the backup folder as library-replaced-/);
+	await restored.getByRole('button', { name: 'Open backup folder' }).click();
+	await expect
+		.poll(() =>
+			page.evaluate(() => window.__ERTI_FAKE__!.calls.some((c) => c.cmd === 'open_backup_folder'))
+		)
+		.toBe(true);
+});

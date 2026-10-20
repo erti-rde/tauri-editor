@@ -3,6 +3,7 @@
 
 	import AppearanceSettings from './AppearanceSettings.svelte';
 	import PageSetupSettings from './PageSetupSettings.svelte';
+	import LibrarySettings from './LibrarySettings.svelte';
 	import LogSettings from './LogSettings.svelte';
 	import ReadingSettings from './ReadingSettings.svelte';
 	import { autoReferences } from '$lib/editor/references/referencesStore';
@@ -36,7 +37,8 @@
 		{ value: 'citations', label: 'Citations' },
 		{ value: 'reading', label: 'Reading' },
 		{ value: 'page', label: 'Page setup' },
-		{ value: 'appearance', label: 'Appearance' }
+		{ value: 'appearance', label: 'Appearance' },
+		{ value: 'library', label: 'Library' }
 	];
 
 	let activeTab = $state('general');
@@ -510,6 +512,9 @@
 
 					<AppearanceSettings />
 				</div>
+			{:else if tab === 'library'}
+				<h3 class="text-heading text-ink mb-3 font-medium">Library</h3>
+				<LibrarySettings />
 			{/if}
 		{/snippet}
 	</Tabs>

@@ -32,13 +32,15 @@
 <div
 	class={[
 		'border-line border-t py-3',
-		stacked ? 'grid gap-2' : 'flex flex-wrap items-center justify-between gap-x-6 gap-y-2'
+		stacked ? 'grid gap-2' : 'flex items-center justify-between gap-6'
 	]}
 >
-	<div class="grid min-w-0 gap-0.5">
+	<!-- A long hint (a path) wraps anywhere rather than pushing the control
+	     off the row. -->
+	<div class="grid min-w-0 flex-1 gap-0.5">
 		<span id={labelId} class="text-small text-ink font-medium">{label}</span>
 		{#if hint}
-			<span id={hintId} class="text-caption text-ink-muted">{hint}</span>
+			<span id={hintId} class="text-caption text-ink-muted wrap-anywhere">{hint}</span>
 		{/if}
 	</div>
 	<div class={stacked ? 'min-w-0' : 'flex shrink-0 flex-wrap items-center gap-2'}>

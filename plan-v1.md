@@ -231,7 +231,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M5-6** Export menu (UX-8)
 - [x] **M5-7** Document menu: rename, duplicate, history, delete (#23) (#251)
 - [ ] **M5-8** Font family and size in the toolbar (#103)
-- [ ] **M5-9** Draggable split divider (#100)
+- [x] **M5-9** Draggable split divider (#100) (#253)
 - [ ] **M5-10** Settings › Library (UX-10)
 
 ### M6 — Scale and quality gates _(M)_ · [spec](docs/specs/M6.md)

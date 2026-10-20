@@ -64,6 +64,15 @@ test('shots', async ({ page }) => {
 	await page.getByRole('tab', { name: 'Reading' }).click();
 	await expect(page.getByRole('switch', { name: 'Follow my writing' })).toBeChecked();
 	await page.screenshot(shot('22-settings-reading'));
+	// M5-10: where the library is, and its backups.
+	await page.getByRole('tab', { name: 'Library' }).click();
+	await expect(page.getByText(/· 7 daily and 4 weekly kept$/)).toBeVisible();
+	await page.screenshot(shot('36-settings-library'));
+	await page.getByRole('button', { name: 'Restore from a backup…' }).click();
+	const restore = page.getByRole('dialog', { name: 'Restore from a backup' });
+	await expect(restore.getByRole('radio')).toHaveCount(4);
+	await page.screenshot(shot('37-restore-backup'));
+	await restore.getByRole('button', { name: 'Cancel' }).click();
 	await page.keyboard.press('Escape');
 
 	// Asked before, never undone by accident (UX-4). Cancelled: later shots
