@@ -16,8 +16,9 @@ describe('the library’s words', () => {
 	});
 
 	it('M5-10 AC-2: tells an upgrade’s copy from a daily one, and says what’s kept', () => {
-		expect(whatItIs({ beforeVersion: null })).toBe('Daily backup');
-		expect(whatItIs({ beforeVersion: 6 })).toBe('Taken before an upgrade');
+		expect(whatItIs({ beforeVersion: null, replaced: false })).toBe('Daily backup');
+		expect(whatItIs({ beforeVersion: 6, replaced: false })).toBe('Taken before an upgrade');
+		expect(whatItIs({ beforeVersion: null, replaced: true })).toBe('Your library before a restore');
 		expect(keptLine(7, 4)).toBe('7 daily and 4 weekly kept');
 	});
 

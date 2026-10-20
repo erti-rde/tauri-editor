@@ -119,13 +119,45 @@ describe('Settings › Library', () => {
 		expect(cards[0]).toHaveAttribute('aria-checked', 'true');
 		expect(cards[3]).toHaveAccessibleName(/Taken before an upgrade/);
 
+		const name = backend().state.backups[1].name;
 		await user.click(cards[1]);
 		await user.click(within(dialog).getByRole('button', { name: 'Restore this backup' }));
 
 		await waitFor(() => expect(reopened).toHaveBeenCalledOnce());
-		const name = backend().state.backups[1].name;
 		expect(called('restore_library')).toEqual([{ cmd: 'restore_library', args: { name } }]);
 		expect(reopened.mock.calls[0][0]).toMatch(/^library-replaced-/);
+	});
+
+	it('M5-10 AC-2: offers the library a restore replaced, to undo it, without calling it a backup', async () => {
+		const user = userEvent.setup();
+		backend().state.backups = [
+			{
+				name: 'library-replaced-2026-01-06-101500.db',
+				takenAt: new Date(2026, 0, 6, 10, 15).getTime(),
+				replaced: true
+			},
+			{ name: 'library-2026-01-05.db', takenAt: new Date(2026, 0, 5, 18, 40).getTime() }
+		];
+		render(LibrarySettings);
+		// The last backup is still the backup, not the copy a restore kept.
+		expect(
+			await screen.findByText(/^5 January( 2026)?, 18:40 · 7 daily and 4 weekly kept$/)
+		).toBeInTheDocument();
+
+		await user.click(screen.getByRole('button', { name: 'Restore from a backup…' }));
+		const dialog = await screen.findByRole('dialog', { name: 'Restore from a backup' });
+		const [undo, backup] = within(dialog).getAllByRole('radio');
+		expect(undo).toHaveAccessibleName(/Your library before a restore/);
+		expect(undo).toHaveAttribute('aria-checked', 'false');
+		expect(backup).toHaveAttribute('aria-checked', 'true');
+
+		await user.click(undo);
+		await user.click(within(dialog).getByRole('button', { name: 'Restore this backup' }));
+		await waitFor(() =>
+			expect(called('restore_library')).toEqual([
+				{ cmd: 'restore_library', args: { name: 'library-replaced-2026-01-06-101500.db' } }
+			])
+		);
 	});
 
 	it('M5-10 AC-2: restores nothing when the open document can’t be saved first', async () => {

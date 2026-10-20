@@ -5,6 +5,11 @@
 //! opens it again after, and each one is undone if the next fails: the person
 //! should never be left with no library open, or with a setting pointing at a
 //! file that isn't there.
+//!
+//! The file is copied only once it's closed. A copy taken while it's open
+//! (`VACUUM INTO`, as the backups are) holds the library as it was when the
+//! copy began, and an import committing meanwhile lands only in the file
+//! that's then replaced or deleted.
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -12,7 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 
 use super::{backup, BackupReport, DbState};
-use crate::ipc::{AppError, Classify, ErrorKind};
+use crate::ipc::{AppError, ErrorKind};
 
 /// One backup, as Settings › Library lists it.
 #[derive(Debug, Clone, Serialize, specta::Type)]
@@ -25,6 +30,9 @@ pub struct BackupFile {
     pub taken_at: u64,
     /// The schema it was taken before upgrading from, for a pre-migration copy.
     pub before_version: Option<u32>,
+    /// The library a restore replaced, rather than a backup: kept, never
+    /// pruned, and restored like one to undo that restore.
+    pub replaced: bool,
 }
 
 /// The library's file and its backups.
@@ -70,11 +78,43 @@ async fn remove_sidecars(path: &Path) {
     }
 }
 
-/// The library's backups, newest first.
+/// `library-replaced-YYYY-MM-DD-HHMMSS.db`, or `…-HHMMSS-2.db` and on, as
+/// `replaced_name` and `unused_replaced_name` write it.
+fn is_replaced_name(name: &str) -> bool {
+    let Some(rest) = name
+        .strip_prefix("library-replaced-")
+        .and_then(|rest| rest.strip_suffix(".db"))
+    else {
+        return false;
+    };
+    let (stamp, count) = rest.split_at_checked(17).unwrap_or((rest, ""));
+    stamp.len() == 17
+        && stamp.chars().all(|c| c.is_ascii_digit() || c == '-')
+        && (count.is_empty()
+            || count
+                .strip_prefix('-')
+                .is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit())))
+}
+
+/// What the backup folder keeps: the backups, and the libraries restores
+/// replaced. Names read from the folder, so never a path elsewhere.
+fn kept(folder: &Path) -> Vec<String> {
+    let mut names = backup::list(folder);
+    names.extend(
+        std::fs::read_dir(folder)
+            .into_iter()
+            .flatten()
+            .filter_map(|e| e.ok()?.file_name().into_string().ok())
+            .filter(|n| is_replaced_name(n)),
+    );
+    names
+}
+
+/// The library's backups, and the libraries restores replaced, newest first.
 pub async fn backups(state: &DbState) -> Result<LibraryBackups, AppError> {
     let path = state.library_path().await?;
     let folder = backup::dir_for(&path);
-    let mut backups: Vec<BackupFile> = backup::list(&folder)
+    let mut backups: Vec<BackupFile> = kept(&folder)
         .into_iter()
         .filter_map(|name| {
             let modified = std::fs::metadata(folder.join(&name))
@@ -85,6 +125,7 @@ pub async fn backups(state: &DbState) -> Result<LibraryBackups, AppError> {
                 before_version: backup::before_version_of_name(&name)
                     .and_then(|v| u32::try_from(v).ok()),
                 taken_at: millis(modified),
+                replaced: is_replaced_name(&name),
                 name,
             })
         })
@@ -116,12 +157,52 @@ fn replaced_name(now: SystemTime) -> String {
     )
 }
 
+/// Close the library, and make the file on disk all of it.
+///
+/// Closing waits for every connection, those mid-write too. The last one to
+/// close would write the log into the file, but the pool closes them together
+/// and each can see another still open, so the log is often left beside it. A
+/// connection opened alone writes it in for certain (`TRUNCATE` empties it),
+/// and a copy of the file alone is then the whole library.
+async fn close_whole(state: &DbState, path: &Path) -> Result<(), String> {
+    use sqlx::{ConnectOptions, Connection};
+
+    state.close_library().await;
+    let mut alone = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(path)
+        .connect()
+        .await
+        .map_err(|e| e.to_string())?;
+    let (busy, _, _): (i64, i64, i64) = sqlx::query_as("PRAGMA wal_checkpoint(TRUNCATE)")
+        .fetch_one(&mut alone)
+        .await
+        .map_err(|e| e.to_string())?;
+    alone.close().await.map_err(|e| e.to_string())?;
+    let [wal, _] = sidecars(path);
+    let left = tokio::fs::metadata(&wal).await.map_or(0, |log| log.len());
+    if busy != 0 || left > 0 {
+        return Err("its log couldn't be written into it".into());
+    }
+    Ok(())
+}
+
+/// A name for the library a restore replaces that no copy in `folder` has:
+/// undoing a restore straight away is another restore in the same second, and
+/// its copy mustn't overwrite the one it's restoring from.
+fn unused_replaced_name(folder: &Path, now: SystemTime) -> String {
+    let first = replaced_name(now);
+    let stem = first.trim_end_matches(".db").to_owned();
+    std::iter::once(first)
+        .chain((2..).map(|n| format!("{stem}-{n}.db")))
+        .find(|name| !folder.join(name).exists())
+        .unwrap_or_default()
+}
+
 /// Put a backup in the library's place, keeping the library it replaces.
 ///
-/// The library as it stands is copied into the backup folder first, with
-/// `VACUUM INTO` while it's still open, so the copy is whole whatever the log
-/// holds. Nothing is replaced unless that copy was written. A backup that then
-/// won't open is taken back out, and the library it replaced put back.
+/// The library is closed and copied into the backup folder first, and
+/// nothing is replaced unless that copy was written. A backup that then won't
+/// open is taken back out, and the library it replaced put back.
 pub async fn restore(
     state: &DbState,
     name: &str,
@@ -130,7 +211,7 @@ pub async fn restore(
     let path = state.library_path().await?;
     let folder = backup::dir_for(&path);
     // Only a name the folder lists: a name is never a path to somewhere else.
-    if !backup::list(&folder).iter().any(|n| n == name) {
+    if !kept(&folder).iter().any(|n| n == name) {
         return Err(AppError::new(
             ErrorKind::NotFound,
             "That backup isn't in the backup folder any more. Open the folder to see what's there.",
@@ -138,21 +219,25 @@ pub async fn restore(
     }
     let source = folder.join(name);
 
-    let pool = state.library().await?;
-    let replaced = replaced_name(SystemTime::now());
-    sqlx::query("VACUUM INTO ?")
-        .bind(folder.join(&replaced).to_string_lossy().as_ref())
-        .execute(&pool)
-        .await
-        .map_err(|e| {
-            AppError::new(
-                ErrorKind::Database,
-                format!("Couldn't keep a copy of the library first, so nothing was restored: {e}"),
-            )
-        })?;
-    drop(pool);
-
-    state.close_library().await;
+    let replaced = unused_replaced_name(&folder, SystemTime::now());
+    let kept_copy = match close_whole(state, &path).await {
+        Ok(()) => put_in_place(&path, &folder.join(&replaced)).await,
+        Err(e) => Err(e),
+    };
+    if let Err(e) = kept_copy {
+        let reopened = state.open_library_reporting(&path, report).await;
+        return Err(AppError::new(
+            ErrorKind::Database,
+            format!(
+                "Couldn't keep a copy of the library first, so nothing was restored: {e}.{}",
+                if reopened.is_ok() {
+                    ""
+                } else {
+                    " Restart Erti to open it again."
+                }
+            ),
+        ));
+    }
     remove_sidecars(&path).await;
 
     let put = put_in_place(&source, &path).await;
@@ -191,14 +276,37 @@ pub async fn restore(
 /// written.
 async fn put_in_place(from: &Path, to: &Path) -> Result<(), String> {
     let mut partial = to.as_os_str().to_owned();
-    partial.push(".restoring");
+    partial.push(".copying");
     let partial = PathBuf::from(partial);
-    tokio::fs::copy(from, &partial)
-        .await
-        .map_err(|e| crate::fs_errors::describe(&e, from))?;
-    tokio::fs::rename(&partial, to)
-        .await
-        .map_err(|e| crate::fs_errors::describe(&e, to))
+    let copied = match tokio::fs::copy(from, &partial).await {
+        Ok(_) => tokio::fs::rename(&partial, to)
+            .await
+            .map_err(|e| crate::fs_errors::describe(&e, to)),
+        Err(e) => Err(crate::fs_errors::describe(&e, from)),
+    };
+    if copied.is_err() {
+        let _ = tokio::fs::remove_file(&partial).await;
+    }
+    copied
+}
+
+/// Copy a backup, keeping the time it was taken.
+///
+/// A copy is dated now, and a backup's date is what the restore list shows
+/// and what the next daily backup is judged by (`backup::daily_due`): a week
+/// of backups copied to another disk would all read as taken today, and none
+/// would be taken tomorrow.
+async fn copy_dated(from: &Path, to: &Path) -> std::io::Result<()> {
+    let taken = tokio::fs::metadata(from).await?.modified()?;
+    tokio::fs::copy(from, to).await?;
+    let dated = std::fs::File::options()
+        .write(true)
+        .open(to)
+        .and_then(|file| file.set_modified(taken));
+    if dated.is_err() {
+        let _ = tokio::fs::remove_file(to).await;
+    }
+    dated
 }
 
 /// Move one file, copying when it's going to another disk.
@@ -206,7 +314,7 @@ async fn move_file(from: &Path, to: &Path) -> std::io::Result<()> {
     if tokio::fs::rename(from, to).await.is_ok() {
         return Ok(());
     }
-    tokio::fs::copy(from, to).await?;
+    copy_dated(from, to).await?;
     tokio::fs::remove_file(from).await
 }
 
@@ -216,7 +324,7 @@ async fn move_backups(from: &Path, to: &Path) -> usize {
     if from == to {
         return 0;
     }
-    let names = backup::list(from);
+    let names = kept(from);
     if names.is_empty() {
         return 0;
     }
@@ -284,33 +392,34 @@ pub async fn relocate(
         ));
     }
 
-    // A consistent copy, written under a temporary name like a backup's.
-    let pool = state.library().await?;
-    let mut partial = to.as_os_str().to_owned();
-    partial.push(".moving");
-    let partial = PathBuf::from(partial);
-    let _ = tokio::fs::remove_file(&partial).await;
-    sqlx::query("VACUUM INTO ?")
-        .bind(partial.to_string_lossy().as_ref())
-        .execute(&pool)
-        .await
-        .map_err(|e| e.to_string())
-        .or_database()?;
-    drop(pool);
-    if let Err(e) = tokio::fs::rename(&partial, &to).await {
-        let _ = tokio::fs::remove_file(&partial).await;
-        return Err(AppError::from_io(&e, &to));
-    }
-
-    if let Err(e) = remember(&to) {
+    // Closed, so the copy is all of it; until it's recorded, the library
+    // goes back to being open where it was.
+    let copied = match close_whole(state, &from).await {
+        Ok(()) => put_in_place(&from, &to).await.map_err(|e| {
+            format!("Couldn't copy the library there, so it stayed where it was: {e}")
+        }),
+        Err(e) => Err(format!(
+            "Couldn't close the library to move it, so it stayed where it was: {e}"
+        )),
+    };
+    let recorded = copied.and_then(|()| {
+        remember(&to).map_err(|e| {
+            format!("Couldn't record where the library is now, so it stayed where it was: {e}")
+        })
+    });
+    if let Err(why) = recorded {
         let _ = tokio::fs::remove_file(&to).await;
+        let reopened = state.open_library_reporting(&from, report).await;
         return Err(AppError::new(
             ErrorKind::Io,
-            format!("Couldn't record where the library is now, so it stayed where it was: {e}"),
+            if reopened.is_ok() {
+                why
+            } else {
+                format!("{why} Restart Erti to open it again.")
+            },
         ));
     }
 
-    state.close_library().await;
     let left = move_backups(&backup::dir_for(&from), &backup::dir_for(&to)).await;
 
     if let Err(e) = state.open_library_reporting(&to, report.clone()).await {
@@ -350,5 +459,48 @@ mod tests {
         assert!(name.starts_with(&format!("library-replaced-{day}-")));
         // Never read back as a backup, so pruning leaves it alone.
         assert_eq!(backup::day_of_name(&name), None);
+    }
+
+    #[test]
+    fn only_the_names_a_restore_writes_are_read_as_replaced_libraries() {
+        assert!(is_replaced_name(&replaced_name(SystemTime::now())));
+        assert!(is_replaced_name("library-replaced-2026-10-20-091200.db"));
+        assert!(is_replaced_name("library-replaced-2026-10-20-091200-2.db"));
+        for name in [
+            "library-replaced-.db",
+            "library-replaced-2026-10-20-091200.db-wal",
+            "library-replaced-../../x.db",
+            "library-replaced-2026-10-20-09120x.db",
+            "library-replaced-2026-10-20-091200-.db",
+            "library-replaced-2026-10-20-091200-x.db",
+            "library-2026-10-20.db",
+        ] {
+            assert!(!is_replaced_name(name), "{name}");
+        }
+    }
+
+    // M5-10 AC-1: what a move to another disk does to each backup.
+    #[tokio::test]
+    async fn a_copied_backup_keeps_the_time_it_was_taken() {
+        let dir = std::env::temp_dir().join(format!("erti-copy-dated-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let from = dir.join("library-2026-10-14.db");
+        std::fs::write(&from, "a backup").unwrap();
+        let taken = SystemTime::now() - std::time::Duration::from_secs(6 * 24 * 60 * 60);
+        std::fs::File::options()
+            .write(true)
+            .open(&from)
+            .unwrap()
+            .set_modified(taken)
+            .unwrap();
+
+        let to = dir.join("copy.db");
+        copy_dated(&from, &to).await.unwrap();
+
+        let modified = std::fs::metadata(&to).unwrap().modified().unwrap();
+        assert_eq!(millis(modified) / 1000, millis(taken) / 1000);
+        assert_eq!(std::fs::read_to_string(&to).unwrap(), "a backup");
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

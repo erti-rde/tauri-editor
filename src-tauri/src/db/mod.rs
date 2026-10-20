@@ -275,9 +275,9 @@ impl DbState {
 
     /// Close the library, so its file can be replaced or moved (M5-10).
     ///
-    /// Waits for every connection to come back: the last one to close
-    /// checkpoints the write-ahead log into the file, so what's on disk
-    /// afterwards is the whole library. Commands in the meantime are told it
+    /// Waits for every connection to come back, those mid-write too. The log
+    /// may still be beside the file afterwards (`relocate::close_whole` writes
+    /// it in before the file is copied). Commands in the meantime are told it
     /// isn't open, as at startup.
     pub async fn close_library(&self) {
         self.backups_settled().await;

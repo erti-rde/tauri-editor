@@ -50,6 +50,8 @@ export interface FakeBackup {
 	name: string;
 	/** When it was written, in milliseconds since 1970. */
 	takenAt: number;
+	/** The library a restore replaced, kept beside the backups. */
+	replaced?: boolean;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
