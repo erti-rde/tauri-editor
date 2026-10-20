@@ -12,7 +12,7 @@
 	import { historyView } from '$lib/history/historyStore.svelte';
 	import { importLegacyMetadata, openLibrary, openProject } from '$lib/stores/db';
 	import { getConsent } from '$lib/stores/consent';
-	import { watchBackups } from '$lib/stores/backups';
+	import { sayIfRestored, watchBackups } from '$lib/stores/backups';
 	import { errorToast } from '$lib/ui/Toast.svelte';
 	import ConsentPrompt from '$lib/consent/ConsentPrompt.svelte';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
@@ -105,6 +105,7 @@
 			startupError = message(error);
 			return;
 		}
+		sayIfRestored();
 
 		// Carry forward whatever the pre-hybrid database resolved. Idempotent, so
 		// it can run on every launch; the old database is only read and is left

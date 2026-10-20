@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount, untrack } from 'svelte';
 
+	import { saveBeforeReopen } from '$lib/stores/backups';
 	import { citationStore } from '$lib/stores/citationStore';
 	import { errorToast, toast } from '$lib/ui/Toast.svelte';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -419,8 +420,13 @@
 		untrack(() => void openDocument(wanted));
 	});
 
+	// A restore starts the window again (M5-10), and nothing unsaved survives
+	// that: the document is written first, or the restore doesn't happen.
+	const stopSavingForReopen = saveBeforeReopen(() => autosave.flush());
+
 	onDestroy(() => {
 		destroyed = true;
+		stopSavingForReopen();
 		// The panel outlives the editor too, and a stale `navigate` would call into
 		// a destroyed view.
 		outlineStore.clear();

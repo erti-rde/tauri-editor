@@ -416,7 +416,7 @@ export type BackupFile = {
 	/**  The file's name in the backup folder, which `restore` is given back. */
 	name: string,
 	/**  When it was written, in milliseconds since 1970. */
-	takenAt: number | null,
+	takenAt: number,
 	/**  The schema it was taken before upgrading from, for a pre-migration copy. */
 	beforeVersion: number | null,
 };
