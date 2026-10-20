@@ -96,6 +96,20 @@ beforeEach(() => {
 	viewerStub.currentScaleValue = 'auto';
 });
 
+describe('opening a paper', () => {
+	it('M6-3 AC-1: opens it with eval off, and its fonts and character maps from the app', async () => {
+		const pdfjs = await import('pdfjs-dist');
+		await mounted().load(new Uint8Array([1]));
+		expect(pdfjs.getDocument).toHaveBeenCalledWith(
+			expect.objectContaining({
+				isEvalSupported: false,
+				cMapUrl: '/pdf-assets/cmaps/',
+				standardFontDataUrl: '/pdf-assets/standard_fonts/'
+			})
+		);
+	});
+});
+
 describe('jumping to a passage', () => {
 	it('goes to the page it was asked for', async () => {
 		const reader = mounted();
