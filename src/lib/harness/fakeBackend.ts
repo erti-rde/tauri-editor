@@ -21,7 +21,7 @@ import { words as normalisedWords } from '$lib/attribution/normalise';
 
 import { fakeHistory } from './fakeHistory';
 import { manuscriptParagraphs, matchSpans } from './fakeMatcher';
-import type { Fixture, LibrarySource } from './fixture';
+import { defaultBackups, type FakeBackup, type Fixture, type LibrarySource } from './fixture';
 
 /**
  * Erti's Rust side, in memory (M1a-1).
@@ -111,6 +111,10 @@ export interface FakeState {
 	/** What the user picked in a dialog this session, as `scope::Grants` holds it. */
 	granted: string[];
 	libraryOpen: boolean;
+	/** Where the library's file is, as Rust's `library_path` reads it. */
+	libraryPath: string;
+	/** Its backups, newest first. */
+	backups: FakeBackup[];
 	/** Every source the library knows, by hash. */
 	library: Map<string, LibrarySource>;
 	/** The open project's sources. */
@@ -141,6 +145,10 @@ export function stateFrom(fixture: Fixture): FakeState {
 		root: null,
 		granted: [],
 		libraryOpen: false,
+		libraryPath: fixture.libraryPath,
+		backups: structuredClone(fixture.backups ?? defaultBackups()).sort(
+			(a, b) => b.takenAt - a.takenAt
+		),
 		library,
 		project: new Set(library.keys()),
 		overrides: new Map(),
@@ -188,7 +196,15 @@ export interface Disk {
 const NOT_OPEN_LIBRARY = appError('Conflict', "The library isn't open yet.");
 const NOT_OPEN_PROJECT = appError('Conflict', 'No project is open.');
 
-export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
+/**
+ * @param settings The global settings store, which `move_library` records the
+ *   library's new path in as Rust does.
+ */
+export function fakeCommands(
+	state: FakeState,
+	disk: Disk,
+	settings: Map<string, unknown> = new Map()
+): FakeCommands {
 	const history = fakeHistory(disk);
 	/** A manuscript of the open project that's there, as `documents::existing`. */
 	const existing = (document: string) => {
@@ -404,8 +420,77 @@ export function fakeCommands(state: FakeState, disk: Disk): FakeCommands {
 			return chunks.map((chunk_text) => ({ chunk_text, embedding: vector(chunk_text) }));
 		},
 
-		openLibrary() {
+		openLibrary(path) {
 			state.libraryOpen = true;
+			state.libraryPath = path;
+			return null;
+		},
+
+		// As `db::relocate` (M5-10).
+		libraryBackups() {
+			library();
+			const backups = `${state.libraryPath.slice(0, state.libraryPath.lastIndexOf('/'))}/backups`;
+			return {
+				path: state.libraryPath,
+				folder: backups,
+				backups: state.backups.map(({ name, takenAt }) => ({
+					name,
+					takenAt,
+					beforeVersion: Number(/-before-v(\d+)\.db$/.exec(name)?.[1]) || null
+				})),
+				keepDays: 7,
+				keepWeeks: 4
+			};
+		},
+
+		backUpLibrary() {
+			library();
+			const now = Date.now();
+			const name = `library-${new Date(now).toISOString().slice(0, 10)}.db`;
+			state.backups = [{ name, takenAt: now }, ...state.backups.filter((b) => b.name !== name)];
+			return null;
+		},
+
+		restoreLibrary(name) {
+			library();
+			if (!state.backups.some((b) => b.name === name)) {
+				throw appError(
+					'NotFound',
+					"That backup isn't in the backup folder any more. Open the folder to see what's there."
+				);
+			}
+			const at = new Date().toISOString();
+			return {
+				replaced: `library-replaced-${at.slice(0, 10)}-${at.slice(11, 19).replaceAll(':', '')}.db`
+			};
+		},
+
+		moveLibrary(folder) {
+			library();
+			const within = (path: string, granted: string) =>
+				path === granted || path.startsWith(`${granted}/`);
+			if (![...(state.root ? [state.root] : []), ...state.granted].some((f) => within(folder, f))) {
+				throw appError(
+					'PermissionDenied',
+					'Erti can only open files inside the project folder or your library.'
+				);
+			}
+			const name = state.libraryPath.slice(state.libraryPath.lastIndexOf('/') + 1);
+			const to = `${folder}/${name}`;
+			if (to === state.libraryPath) return { path: to, backupsLeft: 0 };
+			if (disk.has(to)) {
+				throw appError(
+					'Conflict',
+					`There's already a ${name} in that folder. Choose another folder, or move that file out first.`
+				);
+			}
+			state.libraryPath = to;
+			settings.set('libraryPath', to);
+			return { path: to, backupsLeft: 0 };
+		},
+
+		openBackupFolder() {
+			library();
 			return null;
 		},
 
