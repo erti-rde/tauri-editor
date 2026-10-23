@@ -100,3 +100,37 @@ export async function snapshot(name) {
 		.catch((e) => String(e));
 	writeFileSync(resolve(dir, `${name}.txt`), text);
 }
+
+/** Answer the first-launch question about lookups (M6-4). */
+export async function answerConsent(choice) {
+	const button = $(`button=${choice}`);
+	await button.waitForDisplayed();
+	await button.click();
+	await button.waitForDisplayed({ reverse: true });
+}
+
+/**
+ * Pick a citation style, and optionally its language, in Settings and save.
+ * The selects are set the way a choice would set them, with the change event
+ * the page listens for.
+ */
+export async function chooseStyle(style, locale) {
+	await $('button[aria-label="Settings"]').click();
+	await $('button=Citations').click();
+	const select = $('#citation-style');
+	await select.waitForDisplayed();
+	await browser.execute(
+		(style, locale) => {
+			const pick = (id, value) => {
+				const element = document.getElementById(id);
+				element.value = value;
+				element.dispatchEvent(new Event('change', { bubbles: true }));
+			};
+			pick('citation-style', style);
+			if (locale) pick('language', locale);
+		},
+		style,
+		locale
+	);
+	await $('button=Save changes').click();
+}
