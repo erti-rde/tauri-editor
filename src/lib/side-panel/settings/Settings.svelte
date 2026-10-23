@@ -284,11 +284,19 @@
 		}
 	}
 
+	// Consent is read each time the dialog opens, not once on mount. Settings is
+	// mounted from launch, so on a first launch it mounted before the consent
+	// question was answered: after "Allow lookups" it still refused downloads,
+	// and saving wrote "declined" back over the answer (found by M6-4's capture).
+	$effect(() => {
+		if (!isOpen) return;
+		void getConsent().then((consent) => (allowNetwork = consent === 'granted'));
+	});
+
 	onMount(async () => {
 		wordCount = await readSetting('wordCount');
 		selectedStyle = (await readSetting('selectedStyle')) || '';
 		selectedLocale = (await readSetting('selectedLocale')) || 'en-GB';
-		allowNetwork = (await getConsent()) === 'granted';
 		crossrefMailto = (await getMailto()) ?? '';
 		// The editor initialises this too, but Settings opens from the landing
 		// screen where there is no editor — without this the box would show the
