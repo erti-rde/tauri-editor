@@ -97,14 +97,22 @@ describe('judging a journey', () => {
 		expect(row.hosts).toEqual(['doi.org:443 ×1']);
 	});
 
+	it('M6-4 AC-2: fails an address the app resolved itself, since only a name is on the list', () => {
+		const { problems } = judge(journey({ proxyLog: tunnel('172.67.69.3') }), ALLOWED);
+		expect(problems).toEqual(["reached 172.67.69.3, which the README doesn't list"]);
+	});
+
 	it('M6-4 AC-2: fails a host the README does not list', () => {
 		const { problems } = judge(journey({ proxyLog: tunnel('api.example.com') }), ALLOWED);
 		expect(problems).toEqual(["reached api.example.com, which the README doesn't list"]);
 	});
 
 	it('M6-4 AC-2: fails a listed host reached other than over HTTPS', () => {
-		const { problems } = judge(journey({ proxyLog: tunnel('doi.org', 80, 'GET') }), ALLOWED);
-		expect(problems).toEqual(['reached doi.org other than over HTTPS (GET doi.org:80)']);
+		const { problems } = judge(journey({ proxyLog: tunnel('doi.org', 80) }), ALLOWED);
+		expect(problems).toEqual(['reached doi.org other than over HTTPS (doi.org:80)']);
+		// Anything but a connection: binding a port, or relaying UDP.
+		const bound = judge(journey({ proxyLog: tunnel('doi.org', 443, 'SOCKS 2') }), ALLOWED);
+		expect(bound.problems).toEqual(['reached doi.org other than over HTTPS (SOCKS 2 doi.org:443)']);
 	});
 
 	it('M6-4 AC-2: fails a connection that went around the proxy, whatever the consent', () => {
