@@ -185,6 +185,11 @@ export function render(
 		),
 		''
 	];
+	lines.push(
+		'"Local plumbing" counts loopback connections other than to the proxy, such as the test',
+		"harness reaching WebKit's driver. None of it leaves the machine.",
+		''
+	);
 	const probes = results.filter(({ row }) => row.probe);
 	if (probes.length) {
 		lines.push(
