@@ -21,6 +21,8 @@ import svelteConfig from './svelte.config.js';
  * earlier one rather than adding to it.
  */
 const PDFJS_MESSAGE = "Open a PDF with `openPdf` from '$lib/pdfjs' (M6-3).";
+/** pdf.js itself or one of its builds, as an esquery regex: `.` stands for `/`. */
+const PDFJS_BUILD = '/^pdfjs-dist(.(legacy.)?build.|$)/';
 
 function restrictedImports() {
 	type Owned = { paths: object[]; patterns?: object[] };
@@ -78,14 +80,16 @@ function restrictedImports() {
 		{ files: ['src/lib/pdfjs.ts'], ...rule(invoke, store, logPlugin) },
 		{
 			// `no-restricted-imports` doesn't see `import()`, and a paper opened that
-			// way would have eval on.
+			// way would have eval on. A template literal has no `value`, so it's
+			// matched by its first part: `pdfjs-dist/build/${name}` is refused too.
 			files: ['src/**/*.{ts,svelte}'],
 			ignores: ['src/lib/pdfjs.ts', 'src/**/*.test.ts'],
 			rules: {
 				'no-restricted-syntax': [
 					'error',
+					{ selector: `ImportExpression[source.value=${PDFJS_BUILD}]`, message: PDFJS_MESSAGE },
 					{
-						selector: 'ImportExpression[source.value=/^pdfjs-dist(.(legacy.)?build.|$)/]',
+						selector: `ImportExpression > TemplateLiteral.source[quasis.0.value.cooked=${PDFJS_BUILD}]`,
 						message: PDFJS_MESSAGE
 					}
 				] as const
