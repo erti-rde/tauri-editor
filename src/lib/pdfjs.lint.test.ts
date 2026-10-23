@@ -34,9 +34,15 @@ describe('the one way to open a PDF', () => {
 	});
 
 	it('M6-3 AC-1: refuses pdf.js imported at run time, too', async () => {
-		for (const build of ['pdfjs-dist', 'pdfjs-dist/legacy/build/pdf.min.mjs']) {
-			const code = `export const pdfjs = () => import('${build}');\n`;
-			expect(await problems(code, 'src/lib/somewhere.ts'), build).toContain('no-restricted-syntax');
+		for (const call of [
+			"import('pdfjs-dist')",
+			"import('pdfjs-dist/legacy/build/pdf.min.mjs')",
+			'import(`pdfjs-dist`)',
+			'import(`pdfjs-dist/build/pdf.mjs`)',
+			'import(`pdfjs-dist/build/${name}`)'
+		]) {
+			const code = `const name = 'pdf.mjs';\nexport const pdfjs = () => ${call};\n`;
+			expect(await problems(code, 'src/lib/somewhere.ts'), call).toContain('no-restricted-syntax');
 		}
 		expect(
 			await problems("export const pdfjs = () => import('pdfjs-dist');\n", 'src/lib/pdfjs.ts')
@@ -49,6 +55,7 @@ describe('the one way to open a PDF', () => {
 			"import type { PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';",
 			'export type Both = [PDFViewer, PDFDocumentProxy];',
 			"export const viewer = () => import('pdfjs-dist/web/pdf_viewer.mjs');",
+			'export const css = () => import(`pdfjs-dist/web/pdf_viewer.css`);',
 			''
 		].join('\n');
 		const found = await problems(code, 'src/lib/pdfreader/viewer.ts');
