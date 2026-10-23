@@ -80,7 +80,10 @@ export function requests(/** @type {string} */ proxyLog) {
 	/** @type {Map<string, Request>} */
 	const seen = new Map();
 	for (const line of proxyLog.split('\n').filter(Boolean)) {
-		const { host, port, method } = JSON.parse(line);
+		const entry = JSON.parse(line);
+		// How a tunnel ended is a line of its own, not another request.
+		if ('closed' in entry) continue;
+		const { host, port, method } = entry;
 		const key = `${method} ${host} ${port}`;
 		const request = seen.get(key) ?? { method, host, port, count: 0 };
 		request.count++;

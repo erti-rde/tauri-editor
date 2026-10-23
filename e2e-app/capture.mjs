@@ -25,8 +25,9 @@ import { connect } from 'node:net';
  */
 export function startProxy(path) {
 	const log = createWriteStream(path, { flags: 'a' });
-	const record = (method, host, port) =>
-		log.write(`${JSON.stringify({ at: new Date().toISOString(), method, host, port })}\n`);
+	const write = (entry) =>
+		log.write(`${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`);
+	const record = (method, host, port) => write({ method, host, port });
 
 	const server = createServer((req, res) => {
 		// Plain HTTP: nothing in Erti should use it, but if something does, it's
@@ -46,14 +47,32 @@ export function startProxy(path) {
 		const host = req.url.slice(0, at).replace(/^\[|\]$/g, '');
 		const port = Number(req.url.slice(at + 1));
 		record('CONNECT', host, port);
+		// How each tunnel ended goes in the log too, as a line of its own: a
+		// journey that stalls on the network can then be told from one that
+		// was refused.
+		let failure;
 		const upstream = connect(port, host, () => {
 			client.write('HTTP/1.1 200 Connection Established\r\n\r\n');
 			upstream.write(head);
 			upstream.pipe(client);
 			client.pipe(upstream);
 		});
-		upstream.on('error', () => client.destroy());
-		client.on('error', () => upstream.destroy());
+		upstream.on('error', (error) => {
+			failure ??= `upstream: ${error.code ?? error.message}`;
+			client.destroy();
+		});
+		client.on('error', (error) => {
+			failure ??= `client: ${error.code ?? error.message}`;
+			upstream.destroy();
+		});
+		upstream.on('close', () =>
+			write({
+				closed: `${host}:${port}`,
+				sent: upstream.bytesWritten,
+				received: upstream.bytesRead,
+				...(failure ? { failure } : {})
+			})
+		);
 	});
 
 	return new Promise((resolve) => {
