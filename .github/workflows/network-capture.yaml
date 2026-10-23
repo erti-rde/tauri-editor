@@ -1,0 +1,104 @@
+name: Network capture
+
+# What the release build sends over the network, journey by journey (M6-4,
+# plan criterion 8). The real-app journeys run behind a logging proxy and
+# under strace, as CI's do for the debug build; the summary fails the run if
+# a host isn't in the README's list, or a journey without consent sent
+# anything. docs/network-capture.md is the summary of a run, committed.
+#
+# The setup follows CI's "Real app journeys (Linux)" job; keep the two in step.
+
+on:
+  workflow_dispatch:
+  # Any branch that changes the capture or what it checks against, and every
+  # release tag (path filters don't apply to tags).
+  push:
+    branches: ['**']
+    tags: ['v*']
+    paths:
+      - .github/workflows/network-capture.yaml
+      - e2e-app/**
+      - scripts/network-capture/**
+      - src-tauri/tauri.conf.json
+      - README.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Release build behind a logging proxy
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Tauri system dependencies, the WebKit driver and a display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            webkit2gtk-driver \
+            xvfb \
+            strace
+
+      - name: Install the pinned Rust toolchain
+        working-directory: ./src-tauri
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+          cache-bin: true
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install tauri-driver
+        run: command -v tauri-driver || cargo install tauri-driver --locked
+
+      # The release profile, as a release ships it; only the installers are
+      # left out, since they wrap this same binary.
+      - name: Build the app
+        run: pnpm tauri build --no-bundle
+
+      - name: Journeys
+        run: xvfb-run --auto-servernum pnpm e2e:app
+        env:
+          ERTI_APP: src-tauri/target/release/Erti
+          ERTI_CAPTURE: e2e-app/results/capture
+
+      - name: Check what the journeys sent against the README
+        env:
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node scripts/network-capture/summarise.mjs e2e-app/results/capture \
+            --build release --run "$RUN" --out e2e-app/results/network-capture.md
+          cat e2e-app/results/network-capture.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the capture
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: network-capture
+          path: e2e-app/results
+          if-no-files-found: ignore
+          retention-days: 90

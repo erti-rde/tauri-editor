@@ -143,7 +143,8 @@ jobs:
             libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev \
             webkit2gtk-driver \
-            xvfb
+            xvfb \
+            strace
 
       - name: Install the pinned Rust toolchain
         working-directory: ./src-tauri
@@ -172,8 +173,17 @@ jobs:
 
       # Journeys 1, 2 and 5 (M1a-2) through the real Rust backend, webview and
       # CSP. Journey 1 resolves metadata from doi.org, so it needs the network.
+      # Each journey's traffic is captured on the way (M6-4); the release build
+      # gets the same in network-capture.yaml.
       - name: Journeys
         run: xvfb-run --auto-servernum pnpm e2e:app
+        env:
+          ERTI_CAPTURE: e2e-app/results/capture
+
+      - name: Check what the journeys sent against the README
+        run: >-
+          node scripts/network-capture/summarise.mjs e2e-app/results/capture
+          --build debug --out "$GITHUB_STEP_SUMMARY"
 
       - name: Keep the screenshots
         if: always()
