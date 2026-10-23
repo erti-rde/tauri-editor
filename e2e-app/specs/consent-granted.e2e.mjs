@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { $ } from '@wdio/globals';
 
 import { answerConsent, chooseStyle, expect, ingested, openProject } from './app.mjs';
@@ -12,6 +14,15 @@ import { answerConsent, chooseStyle, expect, ingested, openProject } from './app
  * to be one the README names.
  */
 
+/** What the app has stored as the answer, read from its settings file. */
+const storedConsent = () =>
+	JSON.parse(
+		readFileSync(
+			join(process.env.ERTI_E2E_HOME, '.local/share/com.erti.app/settings-store.json'),
+			'utf8'
+		)
+	).allowNetworkLookups;
+
 describe('with lookups allowed', () => {
 	it('asks once, and resolves each paper online', async () => {
 		await answerConsent('Allow lookups');
@@ -21,8 +32,12 @@ describe('with lookups allowed', () => {
 
 	it('downloads a style and its language that do not come with Erti', async () => {
 		await chooseStyle('Nature', 'de-DE');
-		// Settings closes once both have been fetched and stored.
+		// Settings closes once both have been fetched and stored. It used to read
+		// consent at launch, before the question was answered, and so refuse
+		// this as if lookups were off.
 		await $('#citation-style').waitForDisplayed({ reverse: true, timeout: 60_000 });
 		await expect($('[role="alert"]')).not.toBeDisplayed();
+		// Saving Settings keeps the answer rather than writing "declined" over it.
+		expect(storedConsent()).toBe(true);
 	});
 });
