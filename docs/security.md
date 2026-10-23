@@ -132,8 +132,9 @@ for `PDFDocumentProxy.destroy` and the `canvas` render parameter. The rest is no
 
 **Why staying is safe enough.** No advisory in GitHub's database affects 4.9 or 4.10 (checked
 2026-10-20). GHSA-wgrm-67xf-hhpq (CVE-2024-4367) was fixed in 4.2.67. GHSA-hq66-cqwq-w95j
-(2026) affects 5.6.83 up to 6.2.108, and needs pdf.js's scripting, which Erti never sets up. 6.x has no eval at all; on 4.x the
-same path is now off twice, by `isEvalSupported` and by the CSP.
+(2026) affects 5.6.83 up to 6.2.108, and needs pdf.js's scripting, which Erti never sets up.
+6.x has no eval at all; on 4.x the same path is now off twice, by `isEvalSupported` and by the
+CSP.
 
 **Why 4.10.38 rather than 4.9.155.** It's the same major with fixes, and it changes nothing
 measured. Extraction of the 20-paper retrieval corpus is byte-identical under both, and the
