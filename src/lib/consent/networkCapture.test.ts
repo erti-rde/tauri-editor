@@ -87,6 +87,16 @@ describe('judging a journey', () => {
 		expect(row.hosts).toEqual(['doi.org:443 ×2', 'api.crossref.org:443 ×1']);
 	});
 
+	it('M6-4 AC-2: counts how a tunnel ended as part of that request, not another', () => {
+		const closed = JSON.stringify({ closed: 'doi.org:443', sent: 517, received: 4096 });
+		const { problems, row } = judge(
+			journey({ proxyLog: [tunnel('doi.org'), closed].join('\n') }),
+			ALLOWED
+		);
+		expect(problems).toEqual([]);
+		expect(row.hosts).toEqual(['doi.org:443 ×1']);
+	});
+
 	it('M6-4 AC-2: fails a host the README does not list', () => {
 		const { problems } = judge(journey({ proxyLog: tunnel('api.example.com') }), ALLOWED);
 		expect(problems).toEqual(["reached api.example.com, which the README doesn't list"]);
