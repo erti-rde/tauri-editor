@@ -20,7 +20,10 @@ import svelteConfig from './svelte.config.js';
  * per group of files, because a later `no-restricted-imports` replaces an
  * earlier one rather than adding to it.
  */
+const PDFJS_MESSAGE = "Open a PDF with `openPdf` from '$lib/pdfjs' (M6-3).";
+
 function restrictedImports() {
+	type Owned = { paths: object[]; patterns?: object[] };
 	const invoke = {
 		name: '@tauri-apps/api/core',
 		importNames: ['invoke'],
@@ -34,12 +37,21 @@ function restrictedImports() {
 		name: '@tauri-apps/plugin-log',
 		message: "Log through '$lib/log', which keeps what the user wrote out of the file (M1a-12)."
 	};
-	const pdfjs = ['pdfjs-dist', 'pdfjs-dist/build/pdf.mjs', 'pdfjs-dist/legacy/build/pdf.mjs'].map(
-		(name) => ({ name, message: "Open a PDF with `openPdf` from '$lib/pdfjs' (M6-3)." })
-	);
-	const rule = (...paths: object[]) => ({
-		rules: { 'no-restricted-imports': ['error', { paths }] as const }
-	});
+	// Every build pdf.js ships, minified or not, and spelt with or without
+	// `.mjs`: each is a `getDocument` that `openPdf` doesn't set. The viewer
+	// (`web/`) and the types aren't, so they stay open.
+	const pdfjs: Owned = {
+		paths: [{ name: 'pdfjs-dist', message: PDFJS_MESSAGE }],
+		patterns: [
+			{ group: ['pdfjs-dist/build/*', 'pdfjs-dist/legacy/build/*'], message: PDFJS_MESSAGE }
+		]
+	};
+	const rule = (...owned: (object | Owned)[]) => {
+		const all = owned.map((o): Owned => ('paths' in o ? (o as Owned) : { paths: [o] }));
+		const paths = all.flatMap((o) => o.paths);
+		const patterns = all.flatMap((o) => o.patterns ?? []);
+		return { rules: { 'no-restricted-imports': ['error', { paths, patterns }] as const } };
+	};
 	return [
 		{
 			files: ['src/**/*.{ts,svelte}'],
@@ -50,20 +62,35 @@ function restrictedImports() {
 				'src/lib/pdfjs.ts',
 				'src/**/*.test.ts'
 			],
-			...rule(invoke, store, logPlugin, ...pdfjs)
+			...rule(invoke, store, logPlugin, pdfjs)
 		},
 		{
 			files: ['src/lib/ipc/**/*.ts'],
 			ignores: ['src/**/*.test.ts'],
-			...rule(store, logPlugin, ...pdfjs)
+			...rule(store, logPlugin, pdfjs)
 		},
 		{
 			files: ['src/lib/settings/**/*.ts'],
 			ignores: ['src/**/*.test.ts'],
-			...rule(invoke, logPlugin, ...pdfjs)
+			...rule(invoke, logPlugin, pdfjs)
 		},
-		{ files: ['src/lib/log.ts'], ...rule(invoke, store, ...pdfjs) },
-		{ files: ['src/lib/pdfjs.ts'], ...rule(invoke, store, logPlugin) }
+		{ files: ['src/lib/log.ts'], ...rule(invoke, store, pdfjs) },
+		{ files: ['src/lib/pdfjs.ts'], ...rule(invoke, store, logPlugin) },
+		{
+			// `no-restricted-imports` doesn't see `import()`, and a paper opened that
+			// way would have eval on.
+			files: ['src/**/*.{ts,svelte}'],
+			ignores: ['src/lib/pdfjs.ts', 'src/**/*.test.ts'],
+			rules: {
+				'no-restricted-syntax': [
+					'error',
+					{
+						selector: 'ImportExpression[source.value=/^pdfjs-dist(.(legacy.)?build.|$)/]',
+						message: PDFJS_MESSAGE
+					}
+				] as const
+			}
+		}
 	];
 }
 
