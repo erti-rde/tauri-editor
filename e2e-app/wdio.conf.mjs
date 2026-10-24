@@ -98,7 +98,13 @@ export const config = {
 			driver?.kill();
 			return;
 		}
-		process.kill(-driver.pid);
+		try {
+			process.kill(-driver.pid);
+		} catch (error) {
+			// Already gone (strace or the driver died): the proxy still needs
+			// closing, and the journey still needs its record for the summary.
+			if (error.code !== 'ESRCH') throw error;
+		}
 		await capture.proxy.close();
 		// What the journey left consent at, read from where the app keeps it, so
 		// the summary judges each journey by what was actually chosen.

@@ -32,14 +32,25 @@ const root = resolve(import.meta.dirname, '../..');
 const csp = JSON.parse(readFileSync(join(root, 'src-tauri/tauri.conf.json'), 'utf8')).app.security
 	.csp;
 const allowed = allowedHosts(csp, readFileSync(join(root, 'README.md'), 'utf8'));
-const read = (path) => (existsSync(path) ? readFileSync(path, 'utf8') : '');
+// Both logs are opened before a journey starts, so a missing one means the
+// capture didn't run for it, not that nothing was sent.
+const read = (path) => {
+	if (!existsSync(path)) {
+		console.error(`${path} is missing, so that journey wasn't captured.`);
+		process.exit(1);
+	}
+	return readFileSync(path, 'utf8');
+};
 
 const journeys = readdirSync(folder)
 	.filter((name) => /^[\w-]+\.json$/.test(name))
 	.sort();
-if (journeys.length === 0) {
-	console.error(`No journeys were captured in ${folder}.`);
-	process.exit(1);
+// The two the rules are about (M6-4 AC-1); without them a pass proves little.
+for (const required of ['consent-declined', 'consent-granted']) {
+	if (!journeys.includes(`${required}.json`)) {
+		console.error(`The ${required} journey wasn't captured in ${folder}.`);
+		process.exit(1);
+	}
 }
 
 const results = journeys.map((file) => {
