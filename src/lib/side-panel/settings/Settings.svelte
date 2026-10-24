@@ -95,6 +95,9 @@
 	// Governs every outbound request: metadata lookups and citation-style
 	// downloads alike.
 	let allowNetwork = $state(false);
+	// Save waits for consent to be read, or it would refuse downloads and write
+	// "declined" over an answer it hadn't seen yet.
+	let consentRead = $state(false);
 	let crossrefMailto = $state('');
 
 	// Load citation styles and locales from resources folder
@@ -152,6 +155,7 @@
 
 	// Save settings
 	async function saveSettings() {
+		if (!consentRead) return;
 		try {
 			let styleHasChanged = false;
 			let localeHasChanged = false;
@@ -289,8 +293,12 @@
 	// question was answered: after "Allow lookups" it still refused downloads,
 	// and saving wrote "declined" back over the answer (found by M6-4's capture).
 	$effect(() => {
+		consentRead = false;
 		if (!isOpen) return;
-		void getConsent().then((consent) => (allowNetwork = consent === 'granted'));
+		void getConsent().then((consent) => {
+			allowNetwork = consent === 'granted';
+			consentRead = true;
+		});
 	});
 
 	onMount(async () => {
@@ -529,6 +537,6 @@
 
 	{#snippet footer()}
 		<Button onclick={closeSettings}>Cancel</Button>
-		<Button variant="primary" onclick={saveSettings}>Save changes</Button>
+		<Button variant="primary" disabled={!consentRead} onclick={saveSettings}>Save changes</Button>
 	{/snippet}
 </Dialog>

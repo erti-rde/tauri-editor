@@ -300,6 +300,23 @@ describe('Settings.svelte', () => {
 			expect(setConsent).not.toHaveBeenCalledWith(false);
 		});
 
+		it('M6-4 AC-1: holds Save until consent has been read, so it cannot write "declined" unseen', async () => {
+			let answer: (consent: 'granted') => void = () => {};
+			vi.mocked(getConsent).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+			vi.mocked(setConsent).mockClear();
+			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
+
+			const save = screen.getByRole('button', { name: 'Save changes' });
+			expect(save).toBeDisabled();
+			await fireEvent.click(save);
+			expect(setConsent).not.toHaveBeenCalled();
+
+			answer('granted');
+			await waitFor(() => expect(save).toBeEnabled());
+			await fireEvent.click(save);
+			await waitFor(() => expect(setConsent).toHaveBeenCalledWith(true));
+		});
+
 		// Test: the style list can be narrowed down
 		it('filters the style list while keeping the current selection selectable', async () => {
 			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
