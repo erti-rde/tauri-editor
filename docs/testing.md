@@ -140,6 +140,16 @@ bench`, recorded in `tests/fixtures/attribution/speed.json`.
   toasts) to `e2e-app/results`, which CI keeps. Two WebKitGTK quirks are handled in
   `specs/app.mjs`: type with `type()`, since the driver drops repeated keys, and find text with
   a `tag*=text` selector, since a bare `*=text` means link text.
+- **Network capture (M6-4).** With `ERTI_CAPTURE=<folder>`, each real-app journey runs behind a
+  logging proxy and under `strace` (`e2e-app/capture.mjs`), and
+  `scripts/network-capture/summarise.mjs` fails if a host isn't in the README's list, a
+  connection went around the proxy, or a journey that didn't grant consent sent anything, DNS
+  lookups included. Two journeys exist for it, `consent-declined` and `consent-granted`, each
+  starting from a first launch. CI captures the debug build on every PR.
+  `network-capture.yaml` captures the release build on release tags and when run by hand
+  (Actions → Network capture → Run workflow). Its summary is committed as
+  [network-capture.md](network-capture.md): run it again before each release, and commit the new
+  summary if it changed.
 - Coverage summary on PRs (report only, no threshold gate). The goal is that the orchestration
   files above stop being dark, not a number.
 - `pnpm audit --prod` / `cargo audit` (docs/security.md task 7).

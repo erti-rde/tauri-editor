@@ -2,6 +2,8 @@ import '@testing-library/jest-dom';
 import { render, fireEvent, waitFor, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 import Settings from './Settings.svelte';
+import { getConsent, setConsent } from '$lib/stores/consent';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 
 // Consent persistence has its own module and its own store handle; stub it so
 // this suite stays about the dialog rather than about plugin-store plumbing.
@@ -260,6 +262,59 @@ describe('Settings.svelte', () => {
 			// The dialog stays open so the user can pick a style that works.
 			expect(closeSettings).not.toHaveBeenCalled();
 			expect(mockStore.set).toHaveBeenCalledWith('selectedStyle', 'APA');
+		});
+
+		// Settings is mounted from launch, closed, so on a first launch it mounts
+		// before the consent question is answered. Found by the real-app capture.
+		it('M6-4 AC-1: takes consent given after it mounted, rather than refusing downloads and saving it as declined', async () => {
+			vi.mocked(getConsent).mockResolvedValue('unasked');
+			vi.mocked(readTextFile).mockClear();
+			const closeSettings = vi.fn();
+			const { rerender } = render(Settings, { props: { isOpen: false, closeSettings } });
+			// Mounted, closed, while the question is still unanswered.
+			// Mount reads the style lists last.
+			await waitFor(() =>
+				expect(readTextFile).toHaveBeenCalledWith(
+					expect.stringContaining('cslStyles.json'),
+					expect.anything()
+				)
+			);
+
+			// "Allow lookups", answered at the prompt; then Settings is opened.
+			vi.mocked(getConsent).mockResolvedValue('granted');
+			vi.mocked(global.fetch).mockClear();
+			vi.mocked(setConsent).mockClear();
+			await rerender({ isOpen: true, closeSettings });
+			await fireEvent.click(screen.getByRole('tab', { name: 'Citations' }));
+			await waitFor(() => {
+				expect(screen.getByRole('option', { name: 'Chicago' })).toBeInTheDocument();
+			});
+			await fireEvent.change(screen.getByLabelText('Citation Style'), {
+				target: { value: 'Chicago' }
+			});
+			await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+			await waitFor(() => expect(closeSettings).toHaveBeenCalled());
+			expect(global.fetch).toHaveBeenCalledWith('https://example.com/chicago.csl');
+			expect(setConsent).toHaveBeenCalledWith(true);
+			expect(setConsent).not.toHaveBeenCalledWith(false);
+		});
+
+		it('M6-4 AC-1: holds Save until consent has been read, so it cannot write "declined" unseen', async () => {
+			let answer: (consent: 'granted') => void = () => {};
+			vi.mocked(getConsent).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+			vi.mocked(setConsent).mockClear();
+			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
+
+			const save = screen.getByRole('button', { name: 'Save changes' });
+			expect(save).toBeDisabled();
+			await fireEvent.click(save);
+			expect(setConsent).not.toHaveBeenCalled();
+
+			answer('granted');
+			await waitFor(() => expect(save).toBeEnabled());
+			await fireEvent.click(save);
+			await waitFor(() => expect(setConsent).toHaveBeenCalledWith(true));
 		});
 
 		// Test: the style list can be narrowed down
