@@ -956,23 +956,39 @@ function chapterSnapshots(page: import('@playwright/test').Page) {
 // M5-1 AC-2: a snapshot while writing (the newest is a day old), and on
 // leaving the document; nothing for one opened and left unchanged.
 test('writing keeps a snapshot, and so does closing the document after more', async ({ page }) => {
+	// The page's clock, still running, so the ten-minute rule can be passed
+	// without waiting it out.
+	await page.clock.install();
 	await launch(page);
 	await openProject(page);
 	await openManuscript(page);
-	expect(await chapterSnapshots(page)).toHaveLength(2);
 
-	await page.locator('.ProseMirror').click();
-	await page.keyboard.press('End');
-	await page.keyboard.type(' A first new sentence.');
+	// Opening saves the chapter in format 1, half a second after it shows, and
+	// with the newest snapshot a day old that save keeps one. Typing raced it:
+	// a sentence that arrived in time was folded into that save, one that
+	// didn't missed the snapshot. So the opening save is waited for, and the
+	// writing comes eleven minutes later.
 	await expect
 		.poll(async () => (await chapterSnapshots(page)).map((s) => s.trigger))
 		.toEqual(['writing', 'close', 'writing']);
-	const [, , writing] = await chapterSnapshots(page);
+	expect((await chapterSnapshots(page))[2].words).toBe(39);
+	await page.clock.fastForward('11:00');
+
+	await page.locator('.ProseMirror').click();
+	await page.keyboard.press('End');
+	// One input, not a key at a time: the save after half a second's pause is
+	// the one that takes the snapshot, and on a busy machine a pause between
+	// keys would snapshot half a sentence.
+	await page.keyboard.insertText(' A first new sentence.');
+	await expect
+		.poll(async () => (await chapterSnapshots(page)).map((s) => s.trigger))
+		.toEqual(['writing', 'close', 'writing', 'writing']);
+	const writing = (await chapterSnapshots(page)).at(-1)!;
 	expect(writing.text).toContain('A first new sentence.');
 	expect(writing.words).toBe(43);
 
 	// Within ten minutes: saved, but no snapshot while writing.
-	await page.keyboard.type(' And a second.');
+	await page.keyboard.insertText(' And a second.');
 	await expect
 		.poll(() =>
 			page.evaluate(() =>
@@ -984,7 +1000,7 @@ test('writing keeps a snapshot, and so does closing the document after more', as
 			)
 		)
 		.toBe(true);
-	expect(await chapterSnapshots(page)).toHaveLength(3);
+	expect(await chapterSnapshots(page)).toHaveLength(4);
 
 	// Leaving it for another document keeps that on close.
 	await documentTab(page, 'Planted').click();
@@ -997,7 +1013,7 @@ test('writing keeps a snapshot, and so does closing the document after more', as
 	// A switch takes its close snapshot before the next document shows, so
 	// once Planted is on screen any snapshot of Chapter 1 has been asked for.
 	await expect(page.locator('.ProseMirror')).toContainText('almost overnight');
-	expect(await chapterSnapshots(page)).toHaveLength(4);
+	expect(await chapterSnapshots(page)).toHaveLength(5);
 });
 
 // M5-1 AC-4, M5 Verify: restore yesterday's snapshot in the harness.
