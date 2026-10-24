@@ -65,6 +65,18 @@ describe('reading a capture', () => {
 		]);
 	});
 
+	it('M6-4 AC-2: counts a lookup sent to a resolver elsewhere as going around the proxy', () => {
+		const remote =
+			'4180 connect(42, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("8.8.8.8")}, 16) = 0';
+		const kinds = classify(connections(remote), 40123);
+		expect(kinds.dns).toEqual([]);
+		expect(kinds.direct).toEqual([{ address: '8.8.8.8', port: 53 }]);
+		// So it fails a journey whatever its consent.
+		expect(judge(journey({ trace: [X11, remote].join('\n') }), ALLOWED).problems).toEqual([
+			'connected to 8.8.8.8:53 around the proxy'
+		]);
+	});
+
 	it('M6-4 AC-2: tells the proxy, DNS, the driver and the internet apart', () => {
 		const kinds = classify(connections([PROXY(40123), DRIVER, DNS, DIRECT].join('\n')), 40123);
 		expect(kinds.proxy).toBe(1);

@@ -67,8 +67,10 @@ export function classify(/** @type {Connection[]} */ found, /** @type {number} *
 	};
 	for (const c of found) {
 		const loopback = LOOPBACK.test(c.address);
-		if (c.port === 53) kinds.dns.push(c);
-		else if (loopback && c.port === proxyPort) kinds.proxy++;
+		if (loopback && c.port === proxyPort) kinds.proxy++;
+		// A lookup through this machine's resolver names a host; one sent to a
+		// resolver elsewhere leaves the machine around the proxy.
+		else if (loopback && c.port === 53) kinds.dns.push(c);
 		else if (loopback) kinds.local++;
 		else kinds.direct.push(c);
 	}
