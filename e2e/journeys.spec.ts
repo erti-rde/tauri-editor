@@ -96,6 +96,33 @@ test('Escape closes the @ picker and gives the keys back to the manuscript', asy
 	await expect(editor.locator('p')).toHaveCount(paragraphs + 1);
 });
 
+// The same picker, opened on a citation to edit it. The fixture's citation
+// has a bare id, as older documents stored one.
+test('a citation opens the picker on its work, and Escape gives Enter back', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	const editor = page.locator('.ProseMirror');
+	const citations = editor.locator('[data-type="citation"]');
+	await citations.first().click();
+
+	const picker = page.getByRole('listbox', { name: 'Citation suggestions' });
+	await expect(picker.getByRole('option', { name: /Attention Is All You Need/ })).toHaveAttribute(
+		'aria-selected',
+		'true'
+	);
+	await expect(editor).toHaveAttribute('aria-expanded', 'true');
+
+	await page.keyboard.press('Escape');
+	await expect(picker).toBeHidden();
+	await expect(editor).not.toHaveAttribute('aria-expanded');
+	const paragraphs = await editor.locator('p').count();
+	await page.keyboard.press('Enter');
+	await expect(editor.locator('p')).toHaveCount(paragraphs + 1);
+	await expect(citations).toHaveCount(1);
+});
+
 test('each rail panel opens', async ({ page }) => {
 	await launch(page);
 	await openProject(page);

@@ -226,7 +226,9 @@ export const Citation = Node.create({
 			this.storage.target = document.createElement('div');
 			const props = {
 				items: Object.values(citationStore.getAllSourcesAsJson()),
-				initialSelection: JSON.parse(attrs.id),
+				// Not JSON.parse: an older document stored a bare id, and that threw
+				// before the picker could open.
+				initialSelection: parseCitationIds(attrs.id),
 				owner: this.editor.view.dom,
 				cl: (id: string | null) => {
 					const { state: editorState } = this.editor;
@@ -386,20 +388,20 @@ export const Citation = Node.create({
 					(this.storage.handleKeyDown = (event: KeyboardEvent) => {
 						if (!this.storage.component) return;
 
-						// Prevent default action for Enter and Escape keys first
-						if (event.key === 'Enter' || event.key === 'Escape') {
+						if (event.key === 'Escape') {
 							event.preventDefault();
 							event.stopPropagation();
 
-							// For Escape key, hide the popup directly
-							if (event.key === 'Escape' && this.storage.popup && this.storage.popup[0]) {
+							if (this.storage.popup && this.storage.popup[0]) {
 								this.storage.popup[0].hide();
 								this.storage.component.dismiss();
 								return;
 							}
 						}
 
-						// Let the component handle the keydown event
+						// The picker takes Enter while it's open, and prevents it itself. Once
+						// it's dismissed, or while an input method is composing, it declines,
+						// and Enter is the manuscript's.
 						const handled =
 							this.storage.component.onKeyDown && this.storage.component.onKeyDown({ event });
 
