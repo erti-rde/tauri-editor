@@ -61,38 +61,40 @@ page they came from. Numbers that line up use `tabular-nums`.
 Import them from `$lib/ui`. In a component test, mount one with `UiHarness.svelte`, which supplies
 the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 
-| Need                               | Use                                    | Notes                                                                                            |
-| ---------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| An action with words               | `Button`                               | `primary` once per view · `secondary` · `ghost` · `danger`; `sm`/`md`; `loading`                 |
-| An action with an icon             | `IconButton`                           | `label` required: tooltip + accessible name                                                      |
-| An icon that’s on or off           | `ToggleButton`                         | `aria-pressed` always, one label on and off; pressed is ink on accent-quiet, edged (rule 6)      |
-| A row of controls on one thing     | `Toolbar` + `ToolbarGroup`             | One Tab stop; arrows, Home, End along it; groups ruled apart, named when unclear                 |
-| A list of actions                  | `Menu`                                 | One-line descriptions; `danger` last; `separated` groups; `dot` + words; `icon` alone            |
-| An open file in a tab strip        | `DocumentTab`                          | Current: surface, accent rule, `aria-selected`; its ⋯ menu on the current tab only               |
-| Text in                            | `TextField`, `TextArea`, `SearchField` | Label, hint and error built in; the error says how to fix it                                     |
-| A number in a range                | `NumberField`                          | Typed and entered, or stepped (Shift ×10); out of range says the range; `floatNote` in a toolbar |
-| Two panes, resized                 | `SplitHandle`                          | A 1px rule; the grip on hover and focus; arrows 2%, Home/End to the limits, double-click even    |
-| A name changed where it is read    | `InlineRename`                         | Opens selected; Enter renames, Esc puts it back; why a name won’t do, beside it                  |
-| Find in a text                     | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change          |
-| One of a few                       | `RadioGroup`                           | Arrow keys; the Appearance settings pattern                                                      |
-| One of a few, each needing more    | `RadioCardGroup` + `RadioCard`         | Checked: accent edge, accent-quiet ground and a check, words in ink; `leading` for a swatch      |
-| One setting                        | `SettingRow`                           | Label, one-line hint, control on the right (`stacked` below); a rule between rows, no cards      |
-| One of many                        | `Select`                               |                                                                                                  |
-| On/off                             | `Switch`                               | Takes effect at once; `Checkbox` is for choices submitted together                               |
-| A date                             | `DateField`                            |                                                                                                  |
-| A decision                         | `Dialog`, `ConfirmDialog`              | ConfirmDialog states what the action touches; the action button says the verb ("Remove")         |
-| Extra detail on demand             | `Popover`, `Tooltip`                   | A tooltip never holds the only copy of information                                               |
-| Sections of one surface            | `Tabs`                                 |                                                                                                  |
-| A rail panel                       | `Panel` + `PanelHeader`                | Header: title, one primary action, a scope line                                                  |
-| A right-hand detail view           | `Sidebar`                              | Close with Esc; its actions in `footer`, Save last                                               |
-| Something happened                 | `toast()`                              | The fact as title, past tense; one action if there's a way on ("Show in folder")                 |
-| Something needs attention in place | `Banner`                               | `info`/`warning`/`danger`/`success`, in words, optionally one action                             |
-| Nothing to show                    | `EmptyState`                           | Say which kind of nothing: none yet, none match, or failed                                       |
-| Working                            | `Loader`, `ProgressLine`               | ProgressLine when the count is known ("214 of 380")                                              |
-| A row in any list                  | `Item`                                 | Meta line (`LabelChip` · source · page), body, quote, actions; `onselect` to choose it           |
-| A label                            | `LabelChip`                            | The dot **and** the name, always                                                                 |
-| A short fact beside something      | `Chip`                                 | "Book", "2 files"; `accent` for the one that should draw the eye                                 |
-| A keyboard shortcut                | `Kbd`                                  | As the toolbar writes it: "Mod Shift Z"                                                          |
+| Need                               | Use                                    | Notes                                                                                              |
+| ---------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| An action with words               | `Button`                               | `primary` once per view · `secondary` · `ghost` · `danger`; `sm`/`md`; `loading`                   |
+| An action with an icon             | `IconButton`                           | `label` required: tooltip + accessible name                                                        |
+| An icon that’s on or off           | `ToggleButton`                         | `aria-pressed` always, one label on and off; pressed is ink on accent-quiet, edged (rule 6)        |
+| A row of controls on one thing     | `Toolbar` + `ToolbarGroup`             | One Tab stop; arrows, Home, End along it; groups ruled apart, named when unclear                   |
+| A list of actions                  | `Menu`                                 | One-line descriptions; `danger` last; `separated` groups; `dot` + words; `icon` alone              |
+| An open file in a tab strip        | `DocumentTab`                          | Current: surface, accent rule, `aria-selected`; its ⋯ menu on the current tab only                 |
+| Text in                            | `TextField`, `TextArea`, `SearchField` | Label, hint and error built in; the error says how to fix it                                       |
+| A number in a range                | `NumberField`                          | Typed and entered, or stepped (Shift ×10); out of range says the range; `floatNote` in a toolbar   |
+| Two panes, resized                 | `SplitHandle`                          | A 1px rule; the grip on hover and focus; arrows 2%, Home/End to the limits, double-click even      |
+| A name changed where it is read    | `InlineRename`                         | Opens selected; Enter renames, Esc puts it back; why a name won’t do, beside it                    |
+| Find in a text                     | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change            |
+| One of a few                       | `RadioGroup`                           | Arrow keys; the Appearance settings pattern                                                        |
+| One of a few, each needing more    | `RadioCardGroup` + `RadioCard`         | Checked: accent edge, accent-quiet ground and a check, words in ink; `leading` for a swatch        |
+| One setting                        | `SettingRow`                           | Label, one-line hint, control on the right (`stacked` below); a rule between rows, no cards        |
+| One of many                        | `Select`                               |                                                                                                    |
+| On/off                             | `Switch`                               | Takes effect at once; `Checkbox` is for choices submitted together                                 |
+| A date                             | `DateField`                            |                                                                                                    |
+| A decision                         | `Dialog`, `ConfirmDialog`              | ConfirmDialog states what the action touches; the action button says the verb ("Remove")           |
+| Extra detail on demand             | `Popover`, `Tooltip`                   | A tooltip never holds the only copy of information                                                 |
+| Sections of one surface            | `Tabs`                                 |                                                                                                    |
+| A rail panel                       | `Panel` + `PanelHeader`                | Header: title, one primary action, a scope line                                                    |
+| A right-hand detail view           | `Sidebar`                              | Close with Esc; its actions in `footer`, Save last                                                 |
+| Something happened                 | `toast()`                              | The fact as title, past tense; one action if there's a way on ("Show in folder")                   |
+| Something needs attention in place | `Banner`                               | `info`/`warning`/`danger`/`success`, in words, optionally one action                               |
+| Nothing to show                    | `EmptyState`                           | Say which kind of nothing: none yet, none match, or failed                                         |
+| Working                            | `Loader`, `ProgressLine`               | ProgressLine when the count is known ("214 of 380")                                                |
+| A row in a tree                    | `TreeRow`                              | In a `role="tree"`; `aria-level` for depth; one row `tabbable`; selected or current said in `meta` |
+| A fact in the status bar           | `StatusItem`                           | `busy`/`success`/`warning`/`danger`: the icon carries the colour, the words stay ink               |
+| A row in any list                  | `Item`                                 | Meta line (`LabelChip` · source · page), body, quote, actions; `onselect` to choose it             |
+| A label                            | `LabelChip`                            | The dot **and** the name, always                                                                   |
+| A short fact beside something      | `Chip`                                 | "Book", "2 files"; `accent` for the one that should draw the eye                                   |
+| A keyboard shortcut                | `Kbd`                                  | As the toolbar writes it: "Mod Shift Z"                                                            |
 
 ### Planned primitives
 
@@ -107,8 +109,6 @@ needs it. Paths are under `src/lib`.
 | `ColourField`     | The `type="color"` input in `ReadingSettings.svelte`; the swatches in `LabelPicker.svelte` and `AppearanceMenu.svelte` | M6-8      |
 | `Combobox`        | The hand-built listbox in `editor/extensions/citation/CitationSuggestion.svelte`                                       | M6-8      |
 | `FloatingToolbar` | `editor/extensions/BubbleMenu.svelte`, `pdfreader/SelectionMenu.svelte`, `pdfreader/MarkMenu.svelte`                   | M6-8      |
-| `TreeRow`         | `explorer/TreeItem.svelte` and the rows in `outline/Outline.svelte`                                                    | M6-8      |
-| `StatusItem`      | The spans in `statusFooter/StatusFooter.svelte`                                                                        | M6-8      |
 
 When one lands, move its row into the table above.
 
