@@ -2771,7 +2771,7 @@ pub fn colour_name(hsl: &str) -> &'static str {
 
     // Below this there is no hue worth naming, whatever the number says.
     if saturation < 15.0 {
-        return "Gray";
+        return "Grey";
     }
 
     match hue as i64 {
@@ -2782,7 +2782,7 @@ pub fn colour_name(hsl: &str) -> &'static str {
         170..=199 => "Teal",
         200..=254 => "Blue",
         255..=294 => "Purple",
-        295..=339 => "Magenta",
+        295..=339 => "Pink",
         _ => "Red",
     }
 }

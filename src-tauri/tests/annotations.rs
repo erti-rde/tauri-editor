@@ -527,7 +527,9 @@ async fn restoring_leaves_a_renamed_label_alone() {
 fn a_colour_is_named_the_way_a_reader_would_name_it() {
     // For the researcher who does not want Erti's opinion about what their
     // highlights mean. The eight defaults have to come out as eight distinct
-    // names, or the option is worse than not having it.
+    // names, or the option is worse than not having it. They are also what
+    // the colour picker in Settings calls them (labelColours.ts, M6-8), in
+    // British spelling.
     let named: Vec<&str> = queries::DEFAULT_LABELS
         .iter()
         .map(|(_, _, colour)| queries::colour_name(colour))
@@ -535,7 +537,7 @@ fn a_colour_is_named_the_way_a_reader_would_name_it() {
 
     assert_eq!(
         named,
-        vec!["Yellow", "Green", "Blue", "Red", "Teal", "Purple", "Magenta", "Gray"]
+        vec!["Yellow", "Green", "Blue", "Red", "Teal", "Purple", "Pink", "Grey"]
     );
 }
 
@@ -543,8 +545,8 @@ fn a_colour_is_named_the_way_a_reader_would_name_it() {
 fn a_washed_out_colour_is_grey_whatever_its_hue_says() {
     // Hue is meaningless below a certain saturation; 210 degrees of nothing is
     // not blue.
-    assert_eq!(queries::colour_name("210 4% 60%"), "Gray");
-    assert_eq!(queries::colour_name("0 0% 50%"), "Gray");
+    assert_eq!(queries::colour_name("210 4% 60%"), "Grey");
+    assert_eq!(queries::colour_name("0 0% 50%"), "Grey");
 }
 
 #[test]
@@ -556,8 +558,8 @@ fn red_is_red_at_both_ends_of_the_circle() {
 #[test]
 fn a_malformed_colour_still_gets_a_name() {
     // A label whose colour was edited by hand should not break the rename.
-    assert_eq!(queries::colour_name(""), "Gray");
-    assert_eq!(queries::colour_name("not a colour"), "Gray");
+    assert_eq!(queries::colour_name(""), "Grey");
+    assert_eq!(queries::colour_name("not a colour"), "Grey");
 }
 
 #[tokio::test]
