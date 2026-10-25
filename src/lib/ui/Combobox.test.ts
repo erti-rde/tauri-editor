@@ -76,6 +76,18 @@ describe('Combobox', () => {
 		expect(first).toHaveAttribute('aria-selected', 'false');
 	});
 
+	it("doesn't take the Enter that confirms an input method", () => {
+		const onchoose = vi.fn();
+		const { field } = setup({ onchoose });
+
+		for (const init of [{ isComposing: true }, { keyCode: 229 }]) {
+			const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, ...init });
+			field.dispatchEvent(event);
+			expect(event.defaultPrevented).toBe(false);
+		}
+		expect(onchoose).not.toHaveBeenCalled();
+	});
+
 	it('says what kind of nothing there is, and lets the keys pass', async () => {
 		const user = userEvent.setup();
 		const onkeydown = vi.fn();

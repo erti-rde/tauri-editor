@@ -145,6 +145,7 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 			onKeyDown: (props) => {
 				if (props.event.key === 'Escape') {
 					popup?.[0]?.hide();
+					component.dismiss();
 					return true;
 				}
 

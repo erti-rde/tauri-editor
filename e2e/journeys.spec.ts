@@ -75,6 +75,27 @@ test('cite from the @ picker without leaving the keyboard', async ({ page }) => 
 	await expect(paragraph).toContainText('wide range of tasks. (Vaswani, 2017)');
 });
 
+test('Escape closes the @ picker and gives the keys back to the manuscript', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	const editor = page.locator('.ProseMirror');
+	await caretAtEnd(page, 'Pre-trained bidirectional encoders');
+	await page.keyboard.type(' @att');
+	const picker = page.getByRole('listbox', { name: 'Citation suggestions' });
+	await expect(picker).toBeVisible();
+
+	await page.keyboard.press('Escape');
+	await expect(picker).toBeHidden();
+	await expect(editor).not.toHaveAttribute('aria-expanded');
+	await expect(editor).not.toHaveAttribute('aria-activedescendant');
+	// Enter is the manuscript's again: a new paragraph, not a source chosen.
+	const paragraphs = await editor.locator('p').count();
+	await page.keyboard.press('Enter');
+	await expect(editor.locator('p')).toHaveCount(paragraphs + 1);
+});
+
 test('each rail panel opens', async ({ page }) => {
 	await launch(page);
 	await openProject(page);

@@ -66,6 +66,10 @@
 
 	/** A key from the owner. True when it was this list's to handle. */
 	export function keydown(event: KeyboardEvent): boolean {
+		// An input method's keys are its own: the Enter that confirms a name typed
+		// in Japanese isn't a choice. WebKit sends that Enter after
+		// `compositionend`, with `isComposing` false, so 229 is checked too.
+		if (event.isComposing || event.keyCode === 229) return false;
 		if (!items.length) return false;
 		switch (event.key) {
 			case 'ArrowDown':
