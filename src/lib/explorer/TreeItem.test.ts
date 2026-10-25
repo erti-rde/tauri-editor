@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, cleanup } from '@testing-library/svelte';
+import { render, cleanup, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { get } from 'svelte/store';
+import type { ComponentProps } from 'svelte';
+
 import TreeItem from './TreeItem.svelte';
+import { workspaceStore } from '$lib/workspace/workspaceStore';
 
 vi.mock('$lib/stores/fileSystem.svelte', () => ({
 	fileSystemState: {
@@ -9,79 +14,67 @@ vi.mock('$lib/stores/fileSystem.svelte', () => ({
 }));
 
 describe('TreeItem Component', () => {
-	const mockFileItem = {
-		name: 'test-file.txt',
-		path: '/path/to/test-file.txt',
+	const paper = {
+		name: 'vaswani-2017.pdf',
+		path: '/thesis/papers/vaswani-2017.pdf',
 		is_dir: false,
 		children: []
 	};
 
-	const mockDirItem = {
-		name: 'test-dir',
-		path: '/path/to/test-dir',
+	const folder = {
+		name: 'papers',
+		path: '/thesis/papers',
 		is_dir: true,
-		children: [
-			{
-				name: 'child-file.txt',
-				path: '/path/to/test-dir/child-file.txt',
-				is_dir: false,
-				children: []
-			}
-		]
+		children: [paper]
 	};
+
+	const tree = (props: ComponentProps<typeof TreeItem>) => render(TreeItem, { props });
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		workspaceStore.reset();
 	});
 
 	afterEach(() => {
 		cleanup();
 	});
 
-	it('should render a file item correctly', () => {
-		const { getByText } = render(TreeItem, { props: { item: mockFileItem } });
-		expect(getByText('test-file.txt')).toBeTruthy();
+	it('is a row of the tree, named by the file', () => {
+		tree({ item: paper });
+		expect(screen.getByRole('treeitem', { name: /^vaswani-2017\.pdf/ })).toBeInTheDocument();
 	});
 
-	it('should render a directory item correctly', () => {
-		const { getByText } = render(TreeItem, { props: { item: mockDirItem } });
-		expect(getByText('test-dir')).toBeTruthy();
+	it('M6-8 AC-1: opens and closes a folder on a click', async () => {
+		const user = userEvent.setup();
+		tree({ item: folder });
+		const row = screen.getByRole('treeitem', { name: /^papers/ });
+
+		expect(row).toHaveAttribute('aria-expanded', 'false');
+		expect(screen.queryByRole('treeitem', { name: /^vaswani/ })).not.toBeInTheDocument();
+
+		await user.click(row);
+		expect(row).toHaveAttribute('aria-expanded', 'true');
+		expect(screen.getByRole('treeitem', { name: /^vaswani/ })).toHaveAttribute('aria-level', '2');
 	});
 
-	it('should toggle directory expansion on click', async () => {
-		const { getByText, container } = render(TreeItem, { props: { item: mockDirItem } });
-		const dirHeader = getByText('test-dir').closest('.item-header');
+	it('M6-8 AC-1: opens a paper in a tab, and then says it is open', async () => {
+		const user = userEvent.setup();
+		tree({ item: paper });
+		const row = screen.getByRole('treeitem', { name: /^vaswani/ });
 
-		// Directory should start collapsed
-		expect(container.querySelector('.children')).toBeNull();
+		expect(row).toHaveAttribute('aria-selected', 'false');
+		await user.click(row);
 
-		// Click to expand
-		await fireEvent.click(dirHeader!);
-
-		// Now children should be visible
-		// In a real component this would be tested more thoroughly,
-		// but in our mocked environment we're just testing the click event
-		expect(dirHeader).not.toBeNull();
+		expect(get(workspaceStore).tabs[paper.path]).toMatchObject({
+			kind: 'pdf',
+			title: 'vaswani-2017'
+		});
+		expect(row).toHaveAttribute('aria-selected', 'true');
+		expect(row).toHaveTextContent('open');
 	});
 
-	it('should update currentFile when a file is clicked', async () => {
-		// We'll just test that clicking on a file item doesn't cause errors
-		// Since we can't easily test the state change with the mocked module
-		const { getByText } = render(TreeItem, { props: { item: mockFileItem } });
-		const fileHeader = getByText('test-file.txt').closest('.item-header');
-
-		await fireEvent.click(fileHeader!);
-
-		// Verify the click handler executed without errors
-		expect(fileHeader).not.toBeNull();
-	});
-
-	it('should apply correct indentation based on depth', () => {
-		const { container } = render(TreeItem, { props: { item: mockFileItem, depth: 2 } });
-		const header = container.querySelector('.item-header');
-
-		// Check if padding-left style is applied correctly
-		// The style should reflect: `padding-left: ${depth * 1.25}rem`
-		expect(header?.getAttribute('style')).toContain('padding-left: 2.5rem');
+	it('indents by its depth', () => {
+		tree({ item: paper, depth: 2 });
+		expect(screen.getByRole('treeitem')).toHaveAttribute('aria-level', '3');
 	});
 });
