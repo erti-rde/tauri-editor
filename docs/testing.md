@@ -145,7 +145,10 @@ bench`, recorded in `tests/fixtures/attribution/speed.json`.
   `scripts/network-capture/summarise.mjs` fails if a host isn't in the README's list, a
   connection went around the proxy, or a journey that didn't grant consent sent anything, DNS
   lookups included. Two journeys exist for it, `consent-declined` and `consent-granted`, each
-  starting from a first launch. CI captures the debug build on every PR.
+  starting from a first launch. CI captures the debug build on every PR. `strace` records
+  `connect` only, so a UDP datagram sent without connecting first (HTTP/3, say) wouldn't show:
+  libsoup has no HTTP/3, and nothing in `Cargo.lock` speaks it (no `quinn`). Trace `sendto`
+  and `sendmsg` too if either changes.
   `network-capture.yaml` captures the release build on release tags and when run by hand
   (Actions → Network capture → Run workflow). Its summary is committed as
   [network-capture.md](network-capture.md): run it again before each release, and commit the new
