@@ -64,7 +64,10 @@ test('the type scale follows the interface size set in Appearance', async ({ pag
 	await page.getByRole('button', { name: 'Settings' }).click();
 	const settings = page.getByRole('dialog', { name: 'Settings' });
 	await settings.getByRole('tab', { name: 'Appearance' }).click();
-	await settings.getByRole('slider').first().fill('16');
+	// A Slider, so stepped as a reader would, from 13 to 16 (M6-8).
+	const size = settings.getByRole('slider', { name: 'Interface size' });
+	await size.focus();
+	for (let step = 0; step < 3; step++) await size.press('ArrowRight');
 
 	expect(await typeScale(page)).toEqual({
 		caption: 14,

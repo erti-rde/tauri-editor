@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { RadioGroup } from 'bits-ui';
-
+	import { Button, RadioCard, RadioCardGroup, SettingRow, Slider, Switch } from '$lib/ui';
 	import { appearanceStore } from '$lib/theme/appearanceStore';
 	import {
+		DEFAULT_APPEARANCE,
 		PAGE_SIZE_RANGE,
 		PALETTES,
 		UI_SIZE_RANGE,
@@ -32,27 +32,15 @@
 		{ value: 'comfortable', label: 'Comfortable', hint: 'Larger targets' }
 	];
 
-	const pageFonts: { value: Appearance['pageFont']; label: string; hint: string }[] = [
-		{ value: 'serif', label: 'Serif', hint: 'What journals print' },
-		{ value: 'sans', label: 'Sans', hint: 'Cleaner on screen' },
-		{ value: 'mono', label: 'Mono', hint: 'Fixed width' }
-	];
+	// Each shown in its own face, so the choice is seen as well as named.
+	const pageFonts: { value: Appearance['pageFont']; label: string; hint: string; face: string }[] =
+		[
+			{ value: 'serif', label: 'Serif', hint: 'What journals print', face: 'Georgia, serif' },
+			{ value: 'sans', label: 'Sans', hint: 'Cleaner on screen', face: 'sans-serif' },
+			{ value: 'mono', label: 'Mono', hint: 'Fixed width', face: 'monospace' }
+		];
 
 	const set = (patch: Partial<Appearance>) => void appearanceStore.update(patch);
-
-	/**
-	 * One card, three groups.
-	 *
-	 * These were `<button role="radio">` in a `role="radiogroup"` div with no
-	 * `tabindex` and no key handling: a screen reader announced a radio group,
-	 * and arrow keys did nothing. `RadioGroup` brings roving tabindex, arrow and
-	 * Home/End navigation and the ARIA wiring, so the selected style keys off
-	 * `data-state` — bits-ui's own attribute — rather than a re-derived boolean.
-	 */
-	const choice =
-		'border-line hover:border-line-strong data-[state=checked]:border-accent ' +
-		'data-[state=checked]:bg-accent-quiet ' +
-		'flex items-center gap-2 rounded border px-2 py-2 text-left transition-colors';
 
 	/**
 	 * Which palette `System` is currently showing.
@@ -78,161 +66,135 @@
 	);
 </script>
 
-<div class="space-y-8">
-	<section>
-		<h3 class="text-ink mb-1 text-sm font-medium">Theme</h3>
-		<p class="text-ink-muted mb-3 text-xs">
-			Follow the computer, or pick a palette. Catppuccin and Night Owl are the editor themes many
-			researchers already read code in.
-		</p>
+<!--
+	Rows with a rule between them, like every Settings tab (M6-8). The theme,
+	density and typeface were `RadioGroup.Item`s with a hand-set "choice" class
+	and captions at text-[11px]; they're `RadioCard`s now, which say the chosen
+	one with a check as well as the accent edge.
+-->
+<div class="grid">
+	<SettingRow
+		label="Theme"
+		hint="Follow the computer, or pick a palette. Catppuccin and Night Owl are the editor themes many researchers already read code in."
+		stacked
+	>
+		{#snippet children({ labelId, hintId })}
+			<RadioCardGroup
+				aria-labelledby={labelId}
+				aria-describedby={hintId}
+				value={$appearanceStore.theme}
+				onValueChange={(theme) => set({ theme: theme as Appearance['theme'] })}
+			>
+				<RadioCard
+					value="system"
+					label="System"
+					description="Follow this computer — showing {systemPalette} now, and switching with it"
+					class="col-span-2"
+				>
+					{#snippet leading()}
+						<span class="border-line-strong flex shrink-0 overflow-hidden rounded border">
+							<span class="h-5 w-3" data-theme="light" style="background: hsl(var(--surface))"
+							></span>
+							<span class="h-5 w-3" data-theme="dark" style="background: hsl(var(--surface))"
+							></span>
+						</span>
+					{/snippet}
+				</RadioCard>
 
-		<RadioGroup.Root
-			class="grid grid-cols-2 gap-2"
-			aria-label="Theme"
-			value={$appearanceStore.theme}
-			onValueChange={(theme) => set({ theme: theme as Appearance['theme'] })}
-		>
-			<RadioGroup.Item value="system" class="{choice} col-span-2 gap-3 px-3">
-				<span class="border-line-strong flex shrink-0 overflow-hidden rounded-sm border">
-					<span class="h-5 w-3" data-theme="light" style="background: hsl(var(--surface))"></span>
-					<span class="h-5 w-3" data-theme="dark" style="background: hsl(var(--surface))"></span>
-				</span>
-				<span>
-					<span class="text-ink block text-xs font-medium">System</span>
-					<span class="text-ink-muted block text-[11px]">
-						Follow this computer — showing {systemPalette} now, and switching with it
-					</span>
-				</span>
-			</RadioGroup.Item>
+				{#each PALETTES as palette (palette.id)}
+					<RadioCard value={palette.id} label={palette.label} description={paletteMode(palette.id)}>
+						{#snippet leading()}
+							<!-- The swatch is the palette applied to real elements, so it
+							     cannot drift from the tokens it is advertising. -->
+							<span
+								class="border-line-strong flex shrink-0 overflow-hidden rounded border"
+								data-theme={palette.id}
+							>
+								<span class="h-5 w-2.5" style="background: hsl(var(--surface))"></span>
+								<span class="h-5 w-2.5" style="background: hsl(var(--surface-raised))"></span>
+								<span class="h-5 w-2.5" style="background: hsl(var(--accent))"></span>
+								<span class="h-5 w-2.5" style="background: hsl(var(--ink))"></span>
+							</span>
+						{/snippet}
+					</RadioCard>
+				{/each}
+			</RadioCardGroup>
+		{/snippet}
+	</SettingRow>
 
-			{#each PALETTES as palette (palette.id)}
-				<RadioGroup.Item value={palette.id} class={choice}>
-					<!-- The swatch is the palette applied to real elements, so it cannot
-					     drift from the tokens it is advertising. -->
-					<span
-						class="border-line-strong flex shrink-0 overflow-hidden rounded-sm border"
-						data-theme={palette.id}
-					>
-						<span class="h-5 w-2.5" style="background: hsl(var(--surface))"></span>
-						<span class="h-5 w-2.5" style="background: hsl(var(--surface-raised))"></span>
-						<span class="h-5 w-2.5" style="background: hsl(var(--accent))"></span>
-						<span class="h-5 w-2.5" style="background: hsl(var(--ink))"></span>
-					</span>
-					<span class="min-w-0">
-						<span class="text-ink block truncate text-xs font-medium">{palette.label}</span>
-						<span class="text-ink-muted block text-[11px]">{paletteMode(palette.id)}</span>
-					</span>
-				</RadioGroup.Item>
-			{/each}
-		</RadioGroup.Root>
+	<!-- It takes effect at once, so a Switch rather than the checkbox it was. -->
+	<div class="border-line border-t py-3">
+		<Switch
+			label="Keep the manuscript on paper"
+			description="Long prose is harder to read inverted, and the page then matches the printed PDF. Turn this off to put the manuscript in the palette's own colours."
+			checked={$appearanceStore.paperPage}
+			onCheckedChange={(paperPage) => set({ paperPage })}
+		/>
+	</div>
 
-		<label class="mt-3 flex items-start gap-2">
-			<input
-				type="checkbox"
-				class="accent-accent mt-0.5"
-				checked={$appearanceStore.paperPage}
-				onchange={(e) => set({ paperPage: e.currentTarget.checked })}
-			/>
-			<span>
-				<span class="text-ink block text-xs">Keep the manuscript on paper</span>
-				<span class="text-ink-muted block text-[11px]">
-					Long prose is harder to read inverted, and the page then matches the printed PDF. Turn
-					this off to put the manuscript in the palette's own colours.
-				</span>
-			</span>
-		</label>
-	</section>
+	<SettingRow label="Density" hint="How much fits on screen at once." stacked>
+		{#snippet children({ labelId, hintId })}
+			<RadioCardGroup
+				aria-labelledby={labelId}
+				aria-describedby={hintId}
+				value={$appearanceStore.density}
+				onValueChange={(density) => set({ density: density as Density })}
+			>
+				{#each densities as option (option.value)}
+					<RadioCard value={option.value} label={option.label} description={option.hint} />
+				{/each}
+			</RadioCardGroup>
+		{/snippet}
+	</SettingRow>
 
-	<section>
-		<h3 class="text-ink mb-1 text-sm font-medium">Density</h3>
-		<p class="text-ink-muted mb-3 text-xs">How much fits on screen at once.</p>
+	<div class="border-line grid gap-4 border-t py-3">
+		<Slider
+			label="Interface size"
+			unit="px"
+			min={UI_SIZE_RANGE.min}
+			max={UI_SIZE_RANGE.max}
+			defaultValue={DEFAULT_APPEARANCE.uiSize}
+			value={$appearanceStore.uiSize}
+			onValueChange={(uiSize) => set({ uiSize })}
+		/>
+		<Slider
+			label="Manuscript size"
+			unit="px"
+			hint="Only what you see while writing. The exported PDF is unaffected."
+			min={PAGE_SIZE_RANGE.min}
+			max={PAGE_SIZE_RANGE.max}
+			defaultValue={DEFAULT_APPEARANCE.pageSize}
+			value={$appearanceStore.pageSize}
+			onValueChange={(pageSize) => set({ pageSize })}
+		/>
+	</div>
 
-		<RadioGroup.Root
-			class="grid grid-cols-2 gap-2"
-			aria-label="Density"
-			value={$appearanceStore.density}
-			onValueChange={(density) => set({ density: density as Density })}
-		>
-			{#each densities as option (option.value)}
-				<RadioGroup.Item value={option.value} class="{choice} block px-3">
-					<span class="text-ink block text-xs font-medium">{option.label}</span>
-					<span class="text-ink-muted block text-[11px]">{option.hint}</span>
-				</RadioGroup.Item>
-			{/each}
-		</RadioGroup.Root>
-	</section>
+	<SettingRow label="Manuscript typeface" stacked>
+		{#snippet children({ labelId })}
+			<RadioCardGroup
+				aria-labelledby={labelId}
+				columns={3}
+				value={$appearanceStore.pageFont}
+				onValueChange={(pageFont) => set({ pageFont: pageFont as Appearance['pageFont'] })}
+			>
+				{#each pageFonts as option (option.value)}
+					<RadioCard value={option.value ?? 'serif'} label={option.label} description={option.hint}>
+						{#snippet leading()}
+							<span
+								class="text-title text-ink shrink-0"
+								style:font-family={option.face}
+								aria-hidden="true">Aa</span
+							>
+						{/snippet}
+					</RadioCard>
+				{/each}
+			</RadioCardGroup>
+		{/snippet}
+	</SettingRow>
 
-	<section>
-		<h3 class="text-ink mb-3 text-sm font-medium">Text size</h3>
-
-		<label class="mb-4 block">
-			<span class="mb-1 flex items-baseline justify-between">
-				<span class="text-ink text-xs">Interface</span>
-				<span class="text-ink-muted font-mono text-[11px]">{$appearanceStore.uiSize}px</span>
-			</span>
-			<input
-				type="range"
-				class="accent-accent w-full"
-				min={UI_SIZE_RANGE.min}
-				max={UI_SIZE_RANGE.max}
-				value={$appearanceStore.uiSize}
-				oninput={(e) => set({ uiSize: Number(e.currentTarget.value) })}
-			/>
-		</label>
-
-		<label class="block">
-			<span class="mb-1 flex items-baseline justify-between">
-				<span class="text-ink text-xs">Manuscript</span>
-				<span class="text-ink-muted font-mono text-[11px]">{$appearanceStore.pageSize}px</span>
-			</span>
-			<input
-				type="range"
-				class="accent-accent w-full"
-				min={PAGE_SIZE_RANGE.min}
-				max={PAGE_SIZE_RANGE.max}
-				value={$appearanceStore.pageSize}
-				oninput={(e) => set({ pageSize: Number(e.currentTarget.value) })}
-			/>
-			<span class="text-ink-muted mt-1 block text-[11px]">
-				Only what you see while writing. The exported PDF is unaffected.
-			</span>
-		</label>
-	</section>
-
-	<section>
-		<h3 class="text-ink mb-3 text-sm font-medium">Manuscript typeface</h3>
-
-		<RadioGroup.Root
-			class="grid grid-cols-3 gap-2"
-			aria-label="Manuscript typeface"
-			value={$appearanceStore.pageFont}
-			onValueChange={(pageFont) => set({ pageFont: pageFont as Appearance['pageFont'] })}
-		>
-			{#each pageFonts as option (option.value)}
-				<RadioGroup.Item value={option.value ?? 'serif'} class="{choice} block px-3">
-					<span
-						class="text-ink block text-xs font-medium"
-						style="font-family: {option.value === 'serif'
-							? 'Georgia, serif'
-							: option.value === 'mono'
-								? 'monospace'
-								: 'sans-serif'}"
-					>
-						{option.label}
-					</span>
-					<span class="text-ink-muted block text-[11px]">{option.hint}</span>
-				</RadioGroup.Item>
-			{/each}
-		</RadioGroup.Root>
-	</section>
-
-	<section class="border-line border-t pt-4">
-		<button
-			type="button"
-			class="text-ink-muted hover:text-ink text-xs underline underline-offset-2"
-			onclick={() => void appearanceStore.reset()}
-		>
+	<div class="border-line border-t pt-3">
+		<Button variant="ghost" size="sm" onclick={() => void appearanceStore.reset()}>
 			Reset appearance to defaults
-		</button>
-	</section>
+		</Button>
+	</div>
 </div>

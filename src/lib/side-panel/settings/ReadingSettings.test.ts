@@ -80,4 +80,18 @@ describe('Settings › Reading', () => {
 		expect(screen.getByRole('switch', { name: 'Show' })).toBeChecked();
 		expect(screen.getByRole('button', { name: 'Remove the label Method' })).toBeInTheDocument();
 	});
+
+	it('M6-8 AC-1: recolours a label from the eight named colours, saying which it is in words', async () => {
+		const user = userEvent.setup();
+		const { saveLabel } = await import('$lib/stores/db');
+		await open();
+
+		// A colour from before there were swatches stays, called what it is.
+		await user.click(await screen.findByRole('button', { name: 'Colour for Method: Custom' }));
+		await user.click(await screen.findByLabelText('Blue'));
+
+		await waitFor(() =>
+			expect(saveLabel).toHaveBeenCalledWith(expect.objectContaining({ colour: '210 80% 65%' }))
+		);
+	});
 });
