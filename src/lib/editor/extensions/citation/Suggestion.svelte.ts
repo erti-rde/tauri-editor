@@ -64,21 +64,21 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 
 		if (!query) return Object.values(sources);
 
-		return Object.values(sources).filter((source) => {
-			const titleMatch =
-				source.title?.toString().toLowerCase().includes(query.toLowerCase()) || false;
+		const wanted = query.toLowerCase();
+		const matches = (text: unknown) =>
+			typeof text === 'string' && text.toLowerCase().includes(wanted);
 
-			const authorMatch =
-				Array.isArray(source.author) && source.author.length > 0
-					? source.author.some(
-							(author) =>
-								author.given.toLowerCase().includes(query.toLowerCase()) ||
-								author.family.toLowerCase().includes(query.toLowerCase())
-						)
-					: false;
-
-			return titleMatch || authorMatch;
-		});
+		// An organisation is an author with only `literal`, and CSL makes no
+		// promise of the other two; reading `given` off it threw, and the picker
+		// stopped offering anything past the first letter typed.
+		return Object.values(sources).filter(
+			(source) =>
+				matches(source.title) ||
+				(Array.isArray(source.author) &&
+					source.author.some(
+						(author) => matches(author.given) || matches(author.family) || matches(author.literal)
+					))
+		);
 	},
 	render: () => {
 		let wrapper: HTMLElement;
@@ -97,6 +97,9 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 				editor.view.dom.parentNode?.appendChild(wrapper);
 				componentProps = {
 					items: props.items,
+					query: props.query,
+					// The caret stays in the manuscript; it's told which option is active.
+					owner: editor.view.dom,
 					cl: (itemId) => {
 						props.command({ id: itemId });
 					}
@@ -123,6 +126,7 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 			},
 			onUpdate: (props) => {
 				componentProps.items = props.items;
+				componentProps.query = props.query;
 				// `props.command` is bound to the suggestion's current range, so the
 				// callback captured in onStart goes stale as soon as the user types
 				// another character — selecting an item would then insert at the old
@@ -141,6 +145,7 @@ export const suggestion = (editor: Editor): SuggestionOptions => ({
 			onKeyDown: (props) => {
 				if (props.event.key === 'Escape') {
 					popup?.[0]?.hide();
+					component.dismiss();
 					return true;
 				}
 

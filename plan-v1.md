@@ -336,7 +336,9 @@ and following, and **Margin nudge** on with **Follow my writing** off shows noth
 M3-4; it means moving the search out of the panel) · pdf.js 6, on its legacy build unless
 every WebView is shown to have what the modern one calls, with the text-layer anchors checked
 again and a decision on WebAssembly under the CSP (security.md, "pdf.js version"; decided for
-1.0 in M6-3).
+1.0 in M6-3) · the citation picker as the component mockup draws it: Enter cites the one work
+and Tab adds a page, and an empty list offers **Add from a DOI…** and **Enter details…** (found
+in M6-8, which kept today's several-works-at-once picker on the new `Combobox`).
 
 ---
 
