@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { Icon } from '$lib';
+	import File from '~icons/lucide/file';
+	import FileText from '~icons/lucide/file-text';
+	import FileType from '~icons/lucide/file-type-2';
+	import Folder from '~icons/lucide/folder';
+	import FolderOpen from '~icons/lucide/folder-open';
+
+	import { TreeRow } from '$lib/ui';
 	import type { FileItem } from '$lib/stores/fileSystem.svelte';
 	import { fileSystemState } from '$lib/stores/fileSystem.svelte';
 	import TreeItem from './TreeItem.svelte';
@@ -12,11 +18,31 @@
 	interface Props {
 		item: FileItem;
 		depth?: number;
+		/** The row a Tab into Files lands on: the first. */
+		tabbable?: boolean;
 	}
 
-	let { item, depth = 0 }: Props = $props();
+	let { item, depth = 0, tabbable = false }: Props = $props();
 
 	let isExpanded = $state(false);
+
+	// Open, in either pane: the tab strip's choice, said here in words as well
+	// as by the row's ground.
+	const open = $derived(
+		!item.is_dir && $workspaceStore.panes.some((pane) => pane.active === item.path)
+	);
+
+	const icon = $derived(
+		item.is_dir
+			? isExpanded
+				? FolderOpen
+				: Folder
+			: item.path.toLowerCase().endsWith('.pdf')
+				? FileType
+				: isDocumentFile(item.name)
+					? FileText
+					: File
+	);
 
 	function handleClick() {
 		if (item.is_dir) {
@@ -59,79 +85,22 @@
 		const base = path.split(/[\\/]/).pop() ?? path;
 		return base.replace(/\.pdf$/i, '');
 	}
-
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			handleClick();
-		}
-	}
-
-	let indentation = $derived(`padding-left: ${depth * 1.25}rem`);
 </script>
 
-<div class="file-item">
-	<div
-		class="item-header"
-		style={indentation}
-		class:is-dir={item.is_dir}
-		onclick={handleClick}
-		onkeydown={handleKeyDown}
-		role="button"
-		tabindex="0"
-	>
-		<span class="icon">
-			{#if item.is_dir}
-				{#if isExpanded}
-					<Icon icon="FolderOpen" size="s" />
-				{:else}
-					<Icon icon="Folder" size="s" />
-				{/if}
-			{:else}
-				<Icon icon="File" size="s" />
-			{/if}
-		</span>
-		<span class="name">{item.name}</span>
-	</div>
+<TreeRow
+	level={depth + 1}
+	label={item.name}
+	{icon}
+	expanded={item.is_dir ? isExpanded : undefined}
+	selected={open}
+	meta={open ? 'open' : undefined}
+	{tabbable}
+	onselect={handleClick}
+	ontoggle={() => (isExpanded = !isExpanded)}
+/>
 
-	{#if item.is_dir && isExpanded && item.children}
-		{#each item.children as child (child.path)}
-			<TreeItem item={child} depth={depth + 1} />
-		{/each}
-	{/if}
-</div>
-
-<style>
-	.file-item {
-		font-size: 0.9rem;
-		user-select: none;
-	}
-
-	.item-header {
-		display: flex;
-		align-items: center;
-		padding: 0.25rem;
-		cursor: pointer;
-		gap: 0.5rem;
-	}
-
-	.item-header:hover {
-		background-color: hsl(var(--surface-raised));
-	}
-
-	.icon {
-		display: flex;
-		align-items: center;
-		color: hsl(var(--ink-muted));
-	}
-
-	.is-dir {
-		font-weight: 500;
-	}
-
-	.name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-</style>
+{#if item.is_dir && isExpanded && item.children}
+	{#each item.children as child (child.path)}
+		<TreeItem item={child} depth={depth + 1} />
+	{/each}
+{/if}

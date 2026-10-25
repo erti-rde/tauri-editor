@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FileItem from './TreeItem.svelte';
+	import { EmptyState } from '$lib/ui';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
 
 	let rootPath = $state('');
@@ -7,16 +8,14 @@
 	rootPath = $fileSystemStore.currentPath;
 </script>
 
-<div class="text-ink flex h-[100%] w-[100%] flex-col rounded-xl">
+<div class="text-ink flex h-full w-full flex-col">
 	{#if rootPath}
 		{#if $fileSystemStore.error}
-			<div class="p-4 text-center">
-				{$fileSystemStore.error}
-			</div>
+			<EmptyState message={$fileSystemStore.error} />
 		{:else}
-			<div class="">
-				{#each $fileSystemStore.items as item (item.path)}
-					<FileItem {item} />
+			<div role="tree" aria-label="Files" class="py-1">
+				{#each $fileSystemStore.items as item, index (item.path)}
+					<FileItem {item} tabbable={index === 0} />
 				{/each}
 			</div>
 		{/if}

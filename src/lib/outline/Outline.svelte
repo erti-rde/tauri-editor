@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { EmptyState, PanelHeader, TreeRow } from '$lib/ui';
 	import { outlineStore } from './outlineStore';
 
 	/**
@@ -14,14 +15,17 @@
 	function go(pos: number) {
 		$outlineStore.navigate?.(pos);
 	}
+
+	// A Tab into the tree lands on the heading you're in, or the first.
+	const tabbablePos = $derived(
+		headings.some((heading) => heading.pos === $outlineStore.activePos)
+			? $outlineStore.activePos
+			: headings[0]?.pos
+	);
 </script>
 
 <nav class="bg-surface flex h-full w-full flex-col" aria-label="Document outline">
-	<h2
-		class="text-ink-muted border-line shrink-0 border-b px-3 py-2 text-[11px] font-medium tracking-wide uppercase"
-	>
-		Outline
-	</h2>
+	<PanelHeader title="Outline" />
 
 	{#if headings.length === 0}
 		<!--
@@ -29,27 +33,24 @@
 			that failed to load; this reads as a document that has no headings yet,
 			which is a fact about the manuscript and not about the app.
 		-->
-		<p class="text-ink-muted px-3 py-3 text-xs">
-			No headings yet. Use Heading 1, 2 or 3 and they will appear here.
-		</p>
+		<EmptyState
+			message="No headings yet"
+			detail="Use Heading 1, 2 or 3 and they will appear here."
+		/>
 	{:else}
-		<ul class="min-h-0 grow overflow-y-auto py-1">
+		<!-- Flat, as the headings are: each says its depth, and none folds. -->
+		<div role="tree" aria-label="Headings" class="min-h-0 grow overflow-y-auto py-1">
 			{#each headings as heading (heading.pos)}
 				{@const active = $outlineStore.activePos === heading.pos}
-				<li>
-					<button
-						type="button"
-						class="hover:bg-surface-hover focus-inset block w-full truncate px-3 py-1 text-left text-xs transition-colors {active
-							? 'bg-accent-quiet text-ink font-medium'
-							: 'text-ink-muted'}"
-						style="padding-left: {12 + heading.depth * 14}px"
-						aria-current={active ? 'location' : undefined}
-						onclick={() => go(heading.pos)}
-					>
-						{heading.text || 'Untitled section'}
-					</button>
-				</li>
+				<TreeRow
+					level={heading.depth + 1}
+					label={heading.text || 'Untitled section'}
+					current={active}
+					meta={active ? "you're here" : undefined}
+					tabbable={heading.pos === tabbablePos}
+					onselect={() => go(heading.pos)}
+				/>
 			{/each}
-		</ul>
+		</div>
 	{/if}
 </nav>
