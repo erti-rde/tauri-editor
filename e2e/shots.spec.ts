@@ -1,4 +1,5 @@
 import {
+	caretAtEnd,
 	documentTab,
 	expect,
 	launch,
@@ -29,6 +30,15 @@ test('shots', async ({ page }) => {
 	await openProject(page);
 	await openManuscript(page);
 	await page.screenshot(shot('03-editor'));
+
+	// The citation picker, open on what's been typed (M6-8).
+	await caretAtEnd(page, 'Pre-trained bidirectional encoders');
+	await page.keyboard.type(' @att');
+	await expect(page.getByRole('listbox', { name: 'Citation suggestions' })).toBeVisible();
+	await page.screenshot(shot('03-citation-picker'));
+	await page.keyboard.press('Escape');
+	// And the words typed for it, so the shots after are of the fixture.
+	for (let i = 0; i < ' @att'.length; i++) await page.keyboard.press('Backspace');
 
 	await page.getByRole('button', { name: 'Outline' }).click();
 	await page.screenshot(shot('04-outline'));

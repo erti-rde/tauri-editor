@@ -13,16 +13,6 @@
 		"radius": 1,
 		"shadow": 1
 	},
-	"src/lib/editor/extensions/citation/CitationSuggestion.svelte": {
-		"button": 1,
-		"textPx": 3,
-		"radius": 1,
-		"shadow": 3
-	},
-	"src/lib/editor/extensions/citation/Result.svelte": {
-		"button": 2,
-		"radius": 2
-	},
 	"src/lib/editor/extensions/LinkPopover.svelte": {
 		"button": 3,
 		"input": 1,

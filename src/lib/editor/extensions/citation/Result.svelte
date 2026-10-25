@@ -6,6 +6,7 @@
 
 	import { addToProject, searchSources, type ScoredChunk } from '$lib/stores/db';
 	import { citationStore } from '$lib/stores/citationStore';
+	import { Button } from '$lib/ui';
 	import { errorToast } from '$lib/ui/Toast.svelte';
 
 	import type { CitationItem } from '$lib/stores/citationStore';
@@ -153,19 +154,13 @@
 			any project stays one click away, rather than being invisible.
 		-->
 		{#if !includeLibrary}
-			<button
-				class="border-line-strong hover:bg-surface-hover m-4 rounded-md border px-3 py-2 text-sm"
-				onclick={() => (includeLibrary = true)}
-			>
+			<Button class="m-4" onclick={() => (includeLibrary = true)}>
 				Search the rest of my library
-			</button>
+			</Button>
 		{:else}
-			<button
-				class="text-ink-muted hover:bg-surface-hover m-4 rounded-md px-3 py-2 text-sm"
-				onclick={() => (includeLibrary = false)}
-			>
+			<Button variant="ghost" class="m-4" onclick={() => (includeLibrary = false)}>
 				Only this project
-			</button>
+			</Button>
 		{/if}
 	{:catch error}
 		<p class="p-4">Error: {error.message}</p>

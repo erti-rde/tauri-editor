@@ -227,6 +227,7 @@ export const Citation = Node.create({
 			const props = {
 				items: Object.values(citationStore.getAllSourcesAsJson()),
 				initialSelection: JSON.parse(attrs.id),
+				owner: this.editor.view.dom,
 				cl: (id: string | null) => {
 					const { state: editorState } = this.editor;
 					const { selection } = editorState;
