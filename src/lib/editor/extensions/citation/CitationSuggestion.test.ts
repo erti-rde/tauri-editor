@@ -47,14 +47,16 @@ function open(props: { initialSelection?: string[]; query?: string; items?: Cita
 	const owner = document.createElement('div');
 	document.body.append(owner);
 	const view = render(CitationSuggestion, { props: { items, cl, owner, ...props } });
-	const press = (key: string) => {
-		const event = new KeyboardEvent('keydown', { key, cancelable: true });
-		const handled = (
-			view.component as { onKeyDown: (p: { event: KeyboardEvent }) => boolean }
-		).onKeyDown({ event });
+	const picker = view.component as {
+		onKeyDown: (p: { event: KeyboardEvent }) => boolean;
+		dismiss: () => void;
+	};
+	const press = (key: string, init: KeyboardEventInit = {}) => {
+		const event = new KeyboardEvent('keydown', { key, cancelable: true, ...init });
+		const handled = picker.onKeyDown({ event });
 		return { handled, prevented: event.defaultPrevented };
 	};
-	return { cl, owner, press };
+	return { cl, owner, press, picker };
 }
 
 describe('the citation picker', () => {
@@ -85,6 +87,27 @@ describe('the citation picker', () => {
 
 		expect(press('Tab').handled).toBe(true);
 		expect(cl).toHaveBeenCalledWith(JSON.stringify(['vaswani']));
+	});
+
+	it('Escape leaves the keys and the manuscript to themselves', async () => {
+		const { owner, press, picker } = open();
+		expect(owner).toHaveAttribute('aria-expanded', 'true');
+
+		picker.dismiss();
+		await vi.waitFor(() => expect(owner).not.toHaveAttribute('aria-expanded'));
+		expect(owner).not.toHaveAttribute('aria-activedescendant');
+		expect(press('ArrowDown')).toEqual({ handled: false, prevented: false });
+		expect(press('Enter')).toEqual({ handled: false, prevented: false });
+	});
+
+	it('leaves the Enter that confirms an input method alone', () => {
+		const { press } = open();
+		const first = screen.getAllByRole('option')[0];
+
+		expect(press('Enter', { isComposing: true })).toEqual({ handled: false, prevented: false });
+		// WebKit's, after compositionend.
+		expect(press('Enter', { keyCode: 229 })).toEqual({ handled: false, prevented: false });
+		expect(first).toHaveAttribute('aria-selected', 'false');
 	});
 
 	it("M6-8 AC-1: a source with no author is offered, says why it can't be cited, and isn't", async () => {

@@ -18,6 +18,15 @@
 
 	let { items, initialSelection = [], cl, query = '', owner = null }: Props = $props();
 
+	// Escape hides the picker but leaves it mounted until the caret moves on.
+	// From then the keys are the manuscript's again, and the manuscript stops
+	// saying it controls a list nobody can see.
+	let dismissed = $state(false);
+
+	export function dismiss() {
+		dismissed = true;
+	}
+
 	// Read once, deliberately — `initialSelection` is the seed, and this set is
 	// then the user's own. Re-deriving it would undo their ticks every time the
 	// parent re-rendered. `untrack` says so, and silences the warning that would
@@ -60,6 +69,9 @@
 	}
 
 	export function onKeyDown({ event }: { event: KeyboardEvent }) {
+		// An input method's Enter confirms what's being composed (see `Combobox`).
+		if (dismissed || event.isComposing || event.keyCode === 229) return false;
+
 		// These are the picker's while it's open, never the manuscript's: Enter
 		// would split the paragraph and Tab would leave the editor.
 		if (['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
@@ -101,7 +113,7 @@
 	label="Citation suggestions"
 	{items}
 	key={(item) => item.id}
-	{owner}
+	owner={dismissed ? null : owner}
 	multiple
 	selected={(item) => selectedItems.has(item.id)}
 	disabled={(item) => !hasValidAuthor(item)}

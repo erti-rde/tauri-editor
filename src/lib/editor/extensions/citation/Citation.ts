@@ -394,6 +394,7 @@ export const Citation = Node.create({
 							// For Escape key, hide the popup directly
 							if (event.key === 'Escape' && this.storage.popup && this.storage.popup[0]) {
 								this.storage.popup[0].hide();
+								this.storage.component.dismiss();
 								return;
 							}
 						}
