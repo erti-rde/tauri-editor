@@ -239,7 +239,7 @@ Each item links to its spec: acceptance criteria, dependencies, and the evidence
 - [ ] **M6-1** The 200-paper run, committed
 - [ ] **M6-2** Input limits from measurements (SEC-4)
 - [x] **M6-3** pdf.js hardening and the upgrade decision (SEC-5) (#255)
-- [ ] **M6-4** Network capture of the release build
+- [x] **M6-4** Network capture of the release build (#256)
 - [ ] **M6-5** Accessibility and palettes on every new surface
 - [x] ~~**M6-6** Local error log~~ moved to M1a-12
 - [ ] **M6-7** Threat model re-run (SEC-10)
