@@ -34,19 +34,12 @@
 		"radius": 2,
 		"shadow": 1
 	},
-	"src/lib/explorer/Tree.svelte": {
-		"radius": 1
-	},
 	"src/lib/landing/Landing.svelte": {
 		"button": 3,
 		"textPx": 3
 	},
 	"src/lib/metadata-explorer/MetadataEditor.svelte": {
 		"button": 1
-	},
-	"src/lib/outline/Outline.svelte": {
-		"button": 1,
-		"textPx": 1
 	},
 	"src/lib/pdfreader/AdjustHandles.svelte": {
 		"button": 1
@@ -119,11 +112,5 @@
 	"src/lib/side-panel/settings/Settings.svelte": {
 		"input": 5,
 		"radius": 5
-	},
-	"src/lib/statusFooter/StatusFooter.svelte": {
-		"textPx": 1
-	},
-	"src/lib/workspace/TabBar.svelte": {
-		"button": 1
 	}
 }

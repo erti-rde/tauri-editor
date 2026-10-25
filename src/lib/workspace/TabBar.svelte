@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { DocumentTab } from '$lib/ui';
-	import Tooltip from '$lib/ui/Tooltip.svelte';
+	import { DocumentTab, IconButton } from '$lib/ui';
 	import FileText from '~icons/lucide/file-text';
 	import FileType from '~icons/lucide/file-type-2';
 	import SplitSquare from '~icons/lucide/columns-2';
@@ -66,20 +65,16 @@
 	</div>
 
 	{#if canSplit}
-		<Tooltip label="Split the view" side="bottom">
-			{#snippet children(tooltip)}
-				<button
-					{...tooltip}
-					class="text-ink-muted hover:bg-surface-hover hover:text-ink shrink-0 px-2 transition-colors"
-					onclick={() => {
-						workspaceStore.focus(pane.id);
-						workspaceStore.split();
-					}}
-				>
-					<SplitSquare class="h-3.5 w-3.5" />
-				</button>
-			{/snippet}
-		</Tooltip>
+		<IconButton
+			label="Split the view"
+			icon={SplitSquare}
+			side="bottom"
+			class="self-center"
+			onclick={() => {
+				workspaceStore.focus(pane.id);
+				workspaceStore.split();
+			}}
+		/>
 	{/if}
 
 	<!-- Which pane the next file opens into, shown only when there is a choice. -->
