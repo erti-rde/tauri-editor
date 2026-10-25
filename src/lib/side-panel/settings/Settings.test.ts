@@ -317,6 +317,19 @@ describe('Settings.svelte', () => {
 			await waitFor(() => expect(setConsent).toHaveBeenCalledWith(true));
 		});
 
+		it('M6-4 AC-1: holds the lookups checkbox until consent has been read, so a late read cannot undo a change', async () => {
+			let answer: (consent: 'granted') => void = () => {};
+			vi.mocked(getConsent).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
+
+			const lookups = screen.getByRole('checkbox', { name: /Look up citation details online/ });
+			expect(lookups).toBeDisabled();
+
+			answer('granted');
+			await waitFor(() => expect(lookups).toBeEnabled());
+			expect(lookups).toBeChecked();
+		});
+
 		it('M6-4 AC-1: ignores a consent read from an earlier opening that answers late', async () => {
 			let first: (consent: 'unasked') => void = () => {};
 			let second: (consent: 'granted') => void = () => {};

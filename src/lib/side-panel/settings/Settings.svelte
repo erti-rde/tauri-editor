@@ -367,9 +367,12 @@
 
 					<div class="mb-6">
 						<label class="flex items-start gap-3">
+							<!-- Held until consent has been read, or a late read would put back
+							     what the person had just changed. -->
 							<input
 								type="checkbox"
 								bind:checked={allowNetwork}
+								disabled={!consentRead}
 								class="accent-accent mt-1 h-4 w-4"
 							/>
 							<span>
