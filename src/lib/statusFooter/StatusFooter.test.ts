@@ -16,14 +16,28 @@ describe('StatusFooter Component', () => {
 		expect(screen.getByText('Status Footer')).toBeTruthy();
 	});
 
-	it('should render the component with error', async () => {
+	it('M6-8 AC-1: says an error in words, not with a red "X"', async () => {
 		render(StatusFooter);
 		await setStatus({
 			side: 'left',
-			message: 'Status Footer',
+			message: 'Error processing PDFs: the disk is full',
 			type: 'error'
 		});
-		expect(screen.getByText('Status Footer')).toBeTruthy();
+		const status = screen.getByText('Error processing PDFs: the disk is full');
+		expect(status).toBeTruthy();
+		expect(screen.queryByText('X')).toBeNull();
+		// The words are full ink; only the icon beside them carries the colour.
+		expect(status.closest('.text-ink')).not.toBeNull();
+	});
+
+	it('M6-8 AC-1: tells finished work from work under way', async () => {
+		const { container } = render(StatusFooter);
+		await setStatus({ side: 'left', message: 'Processing PDFs: 1/3', type: 'info' });
+		expect(container.querySelector('.motion-safe\\:animate-spin')).not.toBeNull();
+
+		await setStatus({ side: 'left', message: 'Completed processing 3 PDF files', type: 'done' });
+		expect(container.querySelector('.motion-safe\\:animate-spin')).toBeNull();
+		expect(container.querySelector('.text-success')).not.toBeNull();
 	});
 
 	it('should remove the status after 3 seconds', async () => {

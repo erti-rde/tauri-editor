@@ -245,7 +245,7 @@ export async function extractAndChunkPdfs(): Promise<void> {
 				message: unreadable.length
 					? `${alreadyIngested} of ${pdfFiles.length} PDFs are in your library; ${unreadable.length} could not be read`
 					: `All ${pdfFiles.length} PDFs are already in your library`,
-				type: unreadable.length ? 'error' : 'info'
+				type: unreadable.length ? 'error' : 'done'
 			});
 			if (!unreadable.length) setTimeout(() => removeStatus(), 3000);
 			return;
@@ -308,7 +308,7 @@ export async function ingestAll(
 	setStatus({
 		side: 'left',
 		message: `Completed processing ${processed} PDF files`,
-		type: 'info'
+		type: 'done'
 	});
 
 	setTimeout(() => {

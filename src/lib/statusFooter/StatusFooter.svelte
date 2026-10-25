@@ -3,7 +3,8 @@
 	export type StatusType = {
 		side: 'left' | 'right';
 		message: string;
-		type: 'info' | 'error';
+		/** Under way, finished, or failed. Each has its own icon as well as its words. */
+		type: 'info' | 'done' | 'error';
 	};
 
 	const statusData = writable<StatusType | undefined>({
@@ -22,32 +23,32 @@
 </script>
 
 <script lang="ts">
+	import { StatusItem } from '$lib/ui';
 	import { documentStatus } from './documentStatus';
 	import { pageCount } from '$lib/editor/pagination/pageCount';
+
+	const over = $derived(
+		$documentStatus.words && $documentStatus.target > 0
+			? $documentStatus.words.body - $documentStatus.target
+			: 0
+	);
 </script>
 
 <div
-	class="status-bar
-    border-line
-    bg-surface
-    text-ink-muted
-    flex
-    items-center
-    justify-between
-    border-t
-    px-3
-    text-[11px]"
+	class="border-line bg-surface text-ink-muted text-caption flex h-(--footer-status-bar-height) items-center justify-between gap-4 border-t px-3"
 >
 	<!-- Left: what the app is doing to your library. -->
-	<div class="flex items-center gap-2">
-		{#if $statusData}
-			{#if $statusData.type === 'error'}
-				<span class="error">X</span>
-				{$statusData.message}
-			{:else if $statusData.message}
-				<span class="loader"></span>
-				{$statusData.message}
-			{/if}
+	<div class="flex min-w-0 items-center gap-2">
+		{#if $statusData?.message}
+			<StatusItem
+				tone={$statusData.type === 'error'
+					? 'danger'
+					: $statusData.type === 'done'
+						? 'success'
+						: 'busy'}
+			>
+				<span class="truncate">{$statusData.message}</span>
+			</StatusItem>
 		{/if}
 	</div>
 
@@ -55,28 +56,27 @@
 	     status bar is for. -->
 	<div class="flex items-center gap-4">
 		{#if $documentStatus.words}
-			<span
-				class="font-mono"
+			<!-- Over the target is said in words, not only by the icon's colour. -->
+			<StatusItem
+				tone={over > 0 ? 'warning' : 'neutral'}
 				title="{$documentStatus.words
 					.references} words in references and notes, which journal limits usually exclude"
 			>
 				{$documentStatus.words.body.toLocaleString()}
 				{$documentStatus.words.body === 1 ? 'word' : 'words'}
 				{#if $documentStatus.target > 0}
-					<span class={$documentStatus.words.body > $documentStatus.target ? 'text-warning' : ''}>
-						/ {$documentStatus.target.toLocaleString()}
-					</span>
+					/ {$documentStatus.target.toLocaleString()}{#if over > 0}, {over.toLocaleString()} over{/if}
 				{/if}
-			</span>
+			</StatusItem>
 		{/if}
 
 		<!-- How long the thing actually is, in the unit a submission is measured
 		     in. Gated on the same open-document signal as the save state. -->
 		{#if $documentStatus.words !== null}
-			<span class="font-mono">
+			<StatusItem>
 				{$pageCount}
 				{$pageCount === 1 ? 'page' : 'pages'}
-			</span>
+			</StatusItem>
 		{/if}
 
 		<!-- Only once a manuscript is actually open. `clear()` resets save to
@@ -85,44 +85,15 @@
 		{#if $documentStatus.words !== null}
 			<span aria-live="polite">
 				{#if $documentStatus.save === 'error'}
-					<span class="text-danger font-medium">Not saved — retrying</span>
+					<StatusItem tone="danger">Not saved — retrying</StatusItem>
 				{:else if $documentStatus.save === 'saving'}
-					Saving…
+					<StatusItem tone="busy">Saving…</StatusItem>
 				{:else if $documentStatus.save === 'pending'}
-					<span class="text-ink-muted">Unsaved</span>
+					<StatusItem>Unsaved</StatusItem>
 				{:else}
-					<span class="text-ink-muted">Saved</span>
+					<StatusItem tone="success">Saved</StatusItem>
 				{/if}
 			</span>
 		{/if}
 	</div>
 </div>
-
-<style>
-	.status-bar {
-		height: var(--footer-status-bar-height);
-	}
-	.error {
-		color: hsl(var(--danger));
-		font-weight: 800;
-	}
-	.loader {
-		width: 20px;
-		height: 20px;
-		border: 2px solid hsl(var(--ink-muted));
-		border-bottom-color: transparent;
-		border-radius: 50%;
-		display: inline-block;
-		box-sizing: border-box;
-		animation: rotation 1s linear infinite;
-	}
-
-	@keyframes rotation {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
-	}
-</style>
