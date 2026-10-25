@@ -4,6 +4,7 @@
 	import BookOpen from '~icons/lucide/book-open';
 	import Copy from '~icons/lucide/copy';
 	import FileText from '~icons/lucide/file-text';
+	import Folder from '~icons/lucide/folder';
 	import History from '~icons/lucide/history';
 	import Pencil from '~icons/lucide/pencil';
 	import ImagePlus from '~icons/lucide/image-plus';
@@ -43,6 +44,7 @@
 		SettingRow,
 		Sidebar,
 		SplitHandle,
+		StatusItem,
 		Switch,
 		Tabs,
 		TextArea,
@@ -50,6 +52,7 @@
 		ToggleButton,
 		Toolbar,
 		ToolbarGroup,
+		TreeRow,
 		type MenuItem
 	} from '$lib/ui';
 	import { toasts } from '$lib/ui/Toast.svelte';
@@ -756,6 +759,60 @@
 					<Loader />
 				</Specimen>
 			</div>
+		</section>
+
+		<!-- Navigation -->
+		<section class="grid gap-4">
+			{@render section('TreeRow, StatusItem')}
+			<div class="grid grid-cols-3 gap-6">
+				{#each ['rest', ...FORCED] as state (state)}
+					<Specimen name="TreeRow" {state}>
+						<div role="tree" aria-label="Files {state}" class="bg-surface w-56">
+							<TreeRow level={2} label="Literature review" icon={FileText} onselect={() => {}} />
+						</div>
+					</Specimen>
+				{/each}
+				<Specimen name="TreeRow branch" state="rest">
+					<div role="tree" aria-label="Files branch" class="bg-surface w-56">
+						<TreeRow level={1} label="Thesis" icon={Folder} expanded onselect={() => {}} />
+						<TreeRow level={1} label="Drafts" icon={Folder} expanded={false} onselect={() => {}} />
+					</div>
+				</Specimen>
+				<Specimen name="TreeRow" state="selected">
+					<div role="tree" aria-label="Files selected" class="bg-surface w-56">
+						<TreeRow
+							level={2}
+							label="Chapter 1"
+							icon={FileText}
+							selected
+							meta="open"
+							onselect={() => {}}
+						/>
+					</div>
+				</Specimen>
+				<Specimen name="TreeRow" state="current">
+					<div role="tree" aria-label="Headings current" class="bg-surface w-56">
+						<TreeRow
+							level={2}
+							label="1.2 Attention"
+							current
+							meta="you're here"
+							onselect={() => {}}
+						/>
+					</div>
+				</Specimen>
+			</div>
+			<Specimen name="StatusItem" state="rest">
+				<div
+					class="border-line bg-surface text-ink-muted text-caption flex h-(--footer-status-bar-height) items-center gap-4 border-t px-3"
+				>
+					<StatusItem tone="busy">Processing PDFs: 214/380</StatusItem>
+					<StatusItem>4,812 words</StatusItem>
+					<StatusItem tone="warning">8,312 words / 8,000, 312 over</StatusItem>
+					<StatusItem tone="success">Saved</StatusItem>
+					<StatusItem tone="danger">Not saved — retrying</StatusItem>
+				</div>
+			</Specimen>
 		</section>
 
 		<!-- Content -->

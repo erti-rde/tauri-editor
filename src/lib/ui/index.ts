@@ -31,6 +31,7 @@ export { default as Select } from './Select.svelte';
 export { default as SettingRow } from './SettingRow.svelte';
 export { default as Sidebar } from './Sidebar.svelte';
 export { default as SplitHandle } from './SplitHandle.svelte';
+export { default as StatusItem } from './StatusItem.svelte';
 export { default as Switch } from './Switch.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as TextArea } from './TextArea.svelte';
@@ -38,6 +39,7 @@ export { default as TextField } from './TextField.svelte';
 export { default as ToggleButton } from './ToggleButton.svelte';
 export { default as Toolbar } from './Toolbar.svelte';
 export { default as ToolbarGroup } from './ToolbarGroup.svelte';
+export { default as TreeRow } from './TreeRow.svelte';
 export { default as Toast, toast, type ToastKind } from './Toast.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
 // Existing, aligned to the tokens, and kept where the app already imports it.
