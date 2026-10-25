@@ -19,6 +19,7 @@
 		Button,
 		Checkbox,
 		Chip,
+		ColourField,
 		ConfirmDialog,
 		DateField,
 		Dialog,
@@ -43,6 +44,7 @@
 		Select,
 		SettingRow,
 		Sidebar,
+		Slider,
 		SplitHandle,
 		StatusItem,
 		Switch,
@@ -58,6 +60,7 @@
 	import { toasts } from '$lib/ui/Toast.svelte';
 
 	import Specimen from './Specimen.svelte';
+	import { LABEL_COLOURS } from '$lib/stores/labelColours';
 
 	/**
 	 * Every primitive in every state (M1c-5 AC-1, ADR 010), at `/harness/catalogue`.
@@ -471,6 +474,68 @@
 				</Specimen>
 				<Specimen name="NumberField" state="disabled" target="input">
 					<NumberField label="Page size" value={16} min={8} max={72} unit="px" steppers disabled />
+				</Specimen>
+			</div>
+		</section>
+
+		<section class="grid gap-4">
+			{@render section('Slider, ColourField')}
+			<div class="grid grid-cols-2 gap-6">
+				{#each ['rest', ...FORCED] as state (state)}
+					<Specimen name="Slider" {state} target="[role=slider]">
+						<Slider
+							label="Interface size"
+							value={13}
+							min={11}
+							max={18}
+							unit="px"
+							defaultValue={13}
+						/>
+					</Specimen>
+				{/each}
+				<Specimen name="Slider with a hint" state="rest" target="[role=slider]">
+					<Slider
+						label="Manuscript size"
+						value={18}
+						min={13}
+						max={24}
+						unit="px"
+						hint="Only what you see while writing. The exported PDF is unaffected."
+					/>
+				</Specimen>
+				<Specimen name="Slider" state="disabled" target="[role=slider]">
+					<Slider label="Interface size" value={13} min={11} max={18} unit="px" disabled />
+				</Specimen>
+			</div>
+			<div class="flex flex-wrap gap-6">
+				{#each ['rest', ...FORCED] as state (state)}
+					<Specimen name="ColourField" {state}>
+						<ColourField
+							label="Colour for Claim"
+							value={LABEL_COLOURS[0].value}
+							swatches={LABEL_COLOURS}
+							onchange={() => {}}
+						/>
+					</Specimen>
+				{/each}
+				<Specimen name="ColourField of its own" state="rest">
+					<ColourField
+						label="Colour for Theory"
+						value="30 60% 50%"
+						swatches={LABEL_COLOURS}
+						onchange={() => {}}
+					/>
+				</Specimen>
+				<Specimen name="ColourField" state="open">
+					<div data-overlay="colour">
+						<ColourField
+							label="Colour for Evidence"
+							value={LABEL_COLOURS[1].value}
+							swatches={LABEL_COLOURS}
+							defaultValue={LABEL_COLOURS[1].value}
+							onchange={() => {}}
+						/>
+					</div>
 				</Specimen>
 			</div>
 		</section>

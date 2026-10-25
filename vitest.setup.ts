@@ -49,6 +49,20 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
 }
 
 /**
+ * jsdom does not implement ResizeObserver either, and bits-ui's `Slider`
+ * measures its thumb with one. Nothing in jsdom has a size to report, so an
+ * observer that never fires is what one would do anyway. A test that needs it
+ * to fire stubs its own over this (`viewer.test.ts`).
+ */
+if (typeof globalThis.ResizeObserver === 'undefined') {
+	globalThis.ResizeObserver = class ResizeObserver {
+		observe() {}
+		unobserve() {}
+		disconnect() {}
+	};
+}
+
+/**
  * jsdom does not implement matchMedia, and the appearance layer asks it which
  * theme the OS is in. Stubbed as "light" so components under test render the
  * branch a user on a light machine sees.

@@ -86,6 +86,11 @@ const OVERLAYS: { name: string; open: (page: Page) => Promise<unknown>; content:
 		content: '[data-popover-content]:not([data-rename-error])'
 	},
 	{
+		name: 'colour',
+		open: (page) => page.locator('[data-overlay="colour"] button').click(),
+		content: '[data-popover-content]:not([data-rename-error])'
+	},
+	{
 		name: 'tooltip',
 		open: (page) => page.locator('[data-overlay="tooltip"] button').hover(),
 		content: '[data-tooltip-content]'
