@@ -103,3 +103,21 @@ export async function replaceWord(
 	await page.mouse.dblclick(at.x, at.y);
 	await page.keyboard.type(replacement);
 }
+
+/**
+ * Put the caret at the end of a manuscript paragraph. Not End: on macOS that
+ * scrolls the page and leaves the caret where the click put it, so a journey
+ * typed mid-word there and at the end on Linux.
+ */
+export async function caretAtEnd(page: Page, paragraph: string) {
+	const p = page.locator('.ProseMirror p', { hasText: paragraph });
+	await p.click();
+	await p.evaluate((element) => {
+		const range = document.createRange();
+		range.selectNodeContents(element);
+		range.collapse(false);
+		getSelection()?.removeAllRanges();
+		getSelection()?.addRange(range);
+	});
+	return p;
+}

@@ -1,4 +1,5 @@
 import {
+	caretAtEnd,
 	documentTab,
 	expect,
 	launch,
@@ -41,6 +42,37 @@ test('with no citation style stored, the editor mounts and cites', async ({ page
 		...(window.__ERTI_FAKE__?.stores.get('settings-store.json')?.keys() ?? [])
 	]);
 	expect(fake).not.toContain('cslXml');
+});
+
+// M6-8: the picker is a Combobox the manuscript drives. The caret stays in
+// the text, and the manuscript says which source is active.
+test('cite from the @ picker without leaving the keyboard', async ({ page }) => {
+	await launch(page);
+	await openProject(page);
+	await openManuscript(page);
+
+	const editor = page.locator('.ProseMirror');
+	const citations = editor.locator('[data-type="citation"]');
+	const before = await citations.count();
+
+	const paragraph = await caretAtEnd(page, 'Pre-trained bidirectional encoders');
+	await page.keyboard.type(' @att');
+
+	const picker = page.getByRole('listbox', { name: 'Citation suggestions' });
+	const option = picker.getByRole('option', { name: /Attention Is All You Need/ });
+	await expect(option).toBeVisible();
+	await expect(editor).toHaveAttribute('aria-activedescendant', (await option.getAttribute('id'))!);
+
+	await page.keyboard.press('Enter');
+	await expect(option).toHaveAttribute('aria-selected', 'true');
+	await expect(editor).toBeFocused();
+	await page.keyboard.press('Tab');
+
+	await expect(picker).toBeHidden();
+	await expect(citations).toHaveCount(before + 1);
+	await expect(editor).not.toHaveAttribute('aria-activedescendant');
+	await expect(editor).not.toContainText('@att');
+	await expect(paragraph).toContainText('wide range of tasks. (Vaswani, 2017)');
 });
 
 test('each rail panel opens', async ({ page }) => {

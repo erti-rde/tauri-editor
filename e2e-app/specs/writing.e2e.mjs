@@ -31,7 +31,7 @@ describe('writing with sources', () => {
 		await suggestions.waitForDisplayed();
 		// The list is multi-select: pick, then insert.
 		await suggestions.$('[role="option"]*=Attention').click();
-		await $('button[aria-label="Insert selected citations"]').click();
+		await suggestions.parentElement().$('button=Insert').click();
 
 		await expect(editor).toHaveText(expect.stringContaining('Vaswani'));
 		// The works-cited list is part of the document.
