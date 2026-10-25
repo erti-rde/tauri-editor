@@ -317,6 +317,32 @@ describe('Settings.svelte', () => {
 			await waitFor(() => expect(setConsent).toHaveBeenCalledWith(true));
 		});
 
+		it('M6-4 AC-1: ignores a consent read from an earlier opening that answers late', async () => {
+			let first: (consent: 'unasked') => void = () => {};
+			let second: (consent: 'granted') => void = () => {};
+			vi.mocked(getConsent)
+				.mockReturnValueOnce(new Promise((resolve) => (first = resolve)))
+				.mockReturnValueOnce(new Promise((resolve) => (second = resolve)));
+			vi.mocked(setConsent).mockClear();
+			const closeSettings = vi.fn();
+			const { rerender } = render(Settings, { props: { isOpen: true, closeSettings } });
+			// Closed and opened again, "Allow lookups" answered in between, before
+			// the first read came back.
+			await rerender({ isOpen: false, closeSettings });
+			await rerender({ isOpen: true, closeSettings });
+
+			first('unasked');
+			const save = screen.getByRole('button', { name: 'Save changes' });
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(save).toBeDisabled();
+
+			second('granted');
+			await waitFor(() => expect(save).toBeEnabled());
+			await fireEvent.click(save);
+			await waitFor(() => expect(setConsent).toHaveBeenCalledWith(true));
+			expect(setConsent).not.toHaveBeenCalledWith(false);
+		});
+
 		// Test: the style list can be narrowed down
 		it('filters the style list while keeping the current selection selectable', async () => {
 			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });

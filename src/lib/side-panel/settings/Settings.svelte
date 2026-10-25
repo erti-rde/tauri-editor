@@ -295,10 +295,15 @@
 	$effect(() => {
 		consentRead = false;
 		if (!isOpen) return;
+		// A read from an earlier opening may answer late, with what consent was
+		// before the question was answered; only this opening's read counts.
+		let current = true;
 		void getConsent().then((consent) => {
+			if (!current) return;
 			allowNetwork = consent === 'granted';
 			consentRead = true;
 		});
+		return () => (current = false);
 	});
 
 	onMount(async () => {
