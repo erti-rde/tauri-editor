@@ -20,6 +20,7 @@
 		Checkbox,
 		Chip,
 		ColourField,
+		Combobox,
 		ConfirmDialog,
 		DateField,
 		Dialog,
@@ -75,6 +76,13 @@
 	 */
 
 	const FORCED = ['hover', 'focus', 'active'] as const;
+
+	// What the citation picker offers, as the Combobox specimens show it.
+	const sources = [
+		{ id: 'vaswani', title: 'Attention Is All You Need', line: 'Vaswani et al. · 2017' },
+		{ id: 'minutes', title: 'Minutes of a meeting', line: '' },
+		{ id: 'bahdanau', title: 'Neural Machine Translation', line: 'Bahdanau et al. · 2014' }
+	];
 
 	const VARIANTS = ['primary', 'secondary', 'ghost', 'danger'] as const;
 	const BUTTON_STATES = ['rest', ...FORCED, 'disabled', 'loading'] as const;
@@ -536,6 +544,49 @@
 							onchange={() => {}}
 						/>
 					</div>
+				</Specimen>
+			</div>
+		</section>
+
+		<section class="grid gap-4">
+			{@render section('Combobox')}
+			<div class="flex flex-wrap items-start gap-6">
+				{#snippet source({ item, disabled }: { item: (typeof sources)[number]; disabled: boolean })}
+					<span class="font-medium">{item.title}</span>
+					<span class="text-caption text-ink-muted">
+						{disabled ? "No author, so it can't be cited yet." : item.line}
+					</span>
+				{/snippet}
+				<Specimen name="Combobox" state="rest">
+					<Combobox
+						label="Sources"
+						items={sources}
+						key={(item) => item.id}
+						multiple
+						selected={(item) => item.id === 'bahdanau'}
+						disabled={(item) => !item.line}
+						option={source}
+						onchoose={() => {}}
+					>
+						{#snippet footer()}
+							<span class="flex items-center gap-1"><Kbd keys="Enter" /> select</span>
+							<span class="flex items-center gap-1"><Kbd keys="Tab" /> insert</span>
+							<Button variant="primary" size="sm" class="ml-auto">Insert</Button>
+						{/snippet}
+					</Combobox>
+				</Specimen>
+				<Specimen name="Combobox" state="empty">
+					<Combobox
+						label="Sources"
+						items={[] as typeof sources}
+						key={(item) => item.id}
+						option={source}
+						onchoose={() => {}}
+					>
+						{#snippet empty()}
+							<EmptyState message="No sources match “vasvani”." />
+						{/snippet}
+					</Combobox>
 				</Specimen>
 			</div>
 		</section>

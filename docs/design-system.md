@@ -73,6 +73,7 @@ the tooltip provider the app root does; `primitives.test.ts` shows the pattern.
 | A number in a range                      | `NumberField`                          | Typed and entered, or stepped (Shift ×10); out of range says the range; `floatNote` in a toolbar   |
 | A number chosen by feel, applied at once | `Slider`                               | Value beside the label with its unit, and read out so; `defaultValue` marked in words              |
 | One colour from a few                    | `ColourField`                          | Named swatches; the trigger says the colour in words; a colour of its own is kept as "Custom"      |
+| Choosing from a list as you type         | `Combobox`                             | The list alone: the field that keeps focus passes it its keys, and is told the active option       |
 | Two panes, resized                       | `SplitHandle`                          | A 1px rule; the grip on hover and focus; arrows 2%, Home/End to the limits, double-click even      |
 | A name changed where it is read          | `InlineRename`                         | Opens selected; Enter renames, Esc puts it back; why a name won’t do, beside it                    |
 | Find in a text                           | `FindBar`                              | The count beside the query; replace behind a disclosure, only where the text can change            |
@@ -107,7 +108,6 @@ needs it. Paths are under `src/lib`.
 
 | Primitive         | Replaces                                                                                             | Needed by |
 | ----------------- | ---------------------------------------------------------------------------------------------------- | --------- |
-| `Combobox`        | The hand-built listbox in `editor/extensions/citation/CitationSuggestion.svelte`                     | M6-8      |
 | `FloatingToolbar` | `editor/extensions/BubbleMenu.svelte`, `pdfreader/SelectionMenu.svelte`, `pdfreader/MarkMenu.svelte` | M6-8      |
 
 When one lands, move its row into the table above.
