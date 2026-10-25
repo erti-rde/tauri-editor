@@ -155,19 +155,42 @@ describe('Settings.svelte', () => {
 			// The panel is the tab's content now, so it is found through the role
 			// rather than by reaching for a class that said whether it was hidden.
 			expect(screen.getByRole('tabpanel')).toBeInTheDocument();
-			expect(screen.getByText('General Settings')).toBeVisible();
-			expect(screen.getByText('Word Count Target')).toBeVisible();
+			expect(screen.getByRole('heading', { name: 'General' })).toBeVisible();
+			expect(screen.getByText('Word-count target')).toBeVisible();
 
 			await fireEvent.click(screen.getByRole('tab', { name: 'Citations' }));
-			expect(screen.getByText('Citation Settings')).toBeVisible();
-			expect(screen.getByText('Citation Style')).toBeVisible();
+			expect(screen.getByRole('heading', { name: 'Citations' })).toBeVisible();
+			expect(screen.getByText('Citation style')).toBeVisible();
 			// The other panel stays mounted but hidden, which is how Tabs keeps
 			// scroll position and form state when you switch back.
-			expect(screen.getByText('Word Count Target')).not.toBeVisible();
+			expect(screen.getByText('Word-count target')).not.toBeVisible();
 
 			await fireEvent.click(screen.getByRole('tab', { name: 'Appearance' }));
 			expect(screen.getByRole('heading', { name: 'Appearance' })).toBeVisible();
 			expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+		});
+
+		it('M6-8 AC-1: each setting is its primitive, named by its label', async () => {
+			render(Settings, { props: { isOpen: true, closeSettings: vi.fn() } });
+
+			expect(await screen.findByRole('spinbutton', { name: 'Word-count target' })).toHaveAttribute(
+				'aria-valuetext',
+				expect.stringMatching(/ words$/)
+			);
+			// Waits for Save like the rest of the tab, so a checkbox, not a switch.
+			expect(
+				screen.getByRole('checkbox', { name: /Look up citation details online/ })
+			).toHaveAccessibleDescription(/doi\.org and crossref\.org/);
+
+			await fireEvent.click(screen.getByRole('tab', { name: 'Citations' }));
+			// Applied at once by its store, so a switch.
+			expect(
+				screen.getByRole('switch', { name: 'Add a reference list automatically' })
+			).toBeVisible();
+			expect(screen.getByRole('combobox', { name: 'Citation style' })).toHaveAccessibleDescription(
+				/available|match/
+			);
+			expect(screen.getByRole('searchbox', { name: 'Filter citation styles' })).toBeVisible();
 		});
 	});
 
@@ -205,7 +228,7 @@ describe('Settings.svelte', () => {
 
 			// Wait for component to initialize
 			await waitFor(() => {
-				expect(screen.getByText('Word Count Target')).toBeInTheDocument();
+				expect(screen.getByText('Word-count target')).toBeInTheDocument();
 			});
 
 			// Click the save button
@@ -244,7 +267,7 @@ describe('Settings.svelte', () => {
 			});
 
 			// Picking a different style is what triggers the download.
-			await fireEvent.change(screen.getByLabelText('Citation Style'), {
+			await fireEvent.change(screen.getByLabelText('Citation style'), {
 				target: { value: 'Chicago' }
 			});
 			vi.mocked(global.fetch).mockResolvedValueOnce({
@@ -289,7 +312,7 @@ describe('Settings.svelte', () => {
 			await waitFor(() => {
 				expect(screen.getByRole('option', { name: 'Chicago' })).toBeInTheDocument();
 			});
-			await fireEvent.change(screen.getByLabelText('Citation Style'), {
+			await fireEvent.change(screen.getByLabelText('Citation style'), {
 				target: { value: 'Chicago' }
 			});
 			await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));

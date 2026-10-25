@@ -3,7 +3,7 @@
 
 	import Trash from '~icons/lucide/trash-2';
 
-	import { Button, IconButton, Switch, TextField } from '$lib/ui';
+	import { Button, ColourField, IconButton, Switch, TextField } from '$lib/ui';
 	import { annotationsStore } from '$lib/stores/annotations.svelte';
 	import { followSetting, nudgeSetting } from '$lib/notes/writingSettings';
 	import {
@@ -13,6 +13,7 @@
 		saveLabel,
 		type AnnotationLabel
 	} from '$lib/stores/db';
+	import { LABEL_COLOURS, defaultColourFor } from '$lib/stores/labelColours';
 	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
 
 	/**
@@ -112,48 +113,6 @@
 			);
 		}
 	}
-
-	/**
-	 * A colour picker speaks hex; the theme speaks `H S% L%` so a label sits in
-	 * the same system as every other colour in the interface and can be written
-	 * straight into a CSS variable.
-	 */
-	function hexToHsl(hex: string): string {
-		const value = hex.replace('#', '');
-		const r = parseInt(value.slice(0, 2), 16) / 255;
-		const g = parseInt(value.slice(2, 4), 16) / 255;
-		const b = parseInt(value.slice(4, 6), 16) / 255;
-
-		const max = Math.max(r, g, b);
-		const min = Math.min(r, g, b);
-		const l = (max + min) / 2;
-		const d = max - min;
-
-		if (d === 0) return `0 0% ${Math.round(l * 100)}%`;
-
-		const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-		let h: number;
-		if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-		else if (max === g) h = ((b - r) / d + 2) / 6;
-		else h = ((r - g) / d + 4) / 6;
-
-		return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-	}
-
-	function hslToHex(hsl: string): string {
-		const [h, s, l] = hsl.split(/\s+/).map((part) => parseFloat(part));
-		const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
-
-		const channel = (n: number) => {
-			const k = (n + h / 30) % 12;
-			const value = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-			return Math.round(255 * value)
-				.toString(16)
-				.padStart(2, '0');
-		};
-
-		return `#${channel(0)}${channel(8)}${channel(4)}`;
-	}
 </script>
 
 <h4 class="text-ink mb-2 text-sm font-medium">While writing</h4>
@@ -188,13 +147,16 @@
 <ul class="flex flex-col gap-2">
 	{#each labels as label, index (label.id)}
 		<li class="border-line flex items-center gap-2 rounded border p-2">
-			<input
-				type="color"
-				class="border-line h-7 w-9 shrink-0 cursor-pointer rounded border bg-transparent"
-				aria-label="Colour for {label.name}"
-				value={hslToHex(label.colour)}
-				onchange={(event) => {
-					labels[index].colour = hexToHsl(event.currentTarget.value);
+			<!-- One of the eight checked colours, named, rather than any colour a
+			     native picker offers (M6-8). -->
+			<ColourField
+				label="Colour for {label.name}"
+				value={label.colour}
+				swatches={LABEL_COLOURS}
+				defaultValue={defaultColourFor(label.id)}
+				disabled={saving === label.id}
+				onchange={(colour) => {
+					labels[index].colour = colour;
 					void persist(labels[index]);
 				}}
 			/>

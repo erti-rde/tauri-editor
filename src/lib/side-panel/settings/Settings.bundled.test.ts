@@ -100,13 +100,13 @@ describe('Settings with the bundled styles (M0-3 AC-4)', () => {
 		).toEqual(['Nature']);
 
 		// A fresh install uses the bundled default, so that's what's selected.
-		expect(screen.getByLabelText('Citation Style')).toHaveValue('APA Style 7th edition');
+		expect(screen.getByLabelText('Citation style')).toHaveValue('APA Style 7th edition');
 	});
 
 	it('applies an included style and language without touching the network', async () => {
 		await openCitations();
 
-		await fireEvent.change(screen.getByLabelText('Citation Style'), {
+		await fireEvent.change(screen.getByLabelText('Citation style'), {
 			target: { value: 'IEEE Reference Guide' }
 		});
 		await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -125,7 +125,7 @@ describe('downloads respect consent', () => {
 	it('refuses to download a style while lookups are off, and says what to do', async () => {
 		await openCitations();
 
-		await fireEvent.change(screen.getByLabelText('Citation Style'), {
+		await fireEvent.change(screen.getByLabelText('Citation style'), {
 			target: { value: 'Nature' }
 		});
 		await fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));

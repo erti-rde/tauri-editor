@@ -1,5 +1,17 @@
 <script lang="ts">
-	import { Button, Dialog, Tabs } from '$lib/ui';
+	import ChevronDown from '~icons/lucide/chevron-down';
+
+	import {
+		Button,
+		Checkbox,
+		Dialog,
+		NumberField,
+		SearchField,
+		Switch,
+		Tabs,
+		TextField
+	} from '$lib/ui';
+	import { controlClass } from '$lib/ui/Field.svelte';
 
 	import AppearanceSettings from './AppearanceSettings.svelte';
 	import PageSetupSettings from './PageSetupSettings.svelte';
@@ -323,6 +335,13 @@
 			selectedStyle = manifest.styles.find((style) => style.id === manifest.default.style)!.name;
 		}
 	});
+
+	// Every tab's title, as Library's has been since M5-10.
+	const heading = 'text-heading text-ink mb-3 font-medium';
+	// A native select drawn as a field, its arrow the app's own.
+	const select = 'h-(--row-height) appearance-none pr-7 pl-2';
+	const chevron =
+		'text-ink-muted pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2';
 </script>
 
 <!--
@@ -344,108 +363,69 @@
 	<Tabs label="Settings sections" tabs={SECTIONS} bind:value={activeTab} orientation="vertical">
 		{#snippet panel(tab)}
 			{#if tab === 'general'}
-				<div class="mb-8">
-					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
-						General Settings
-					</h3>
+				<h3 class={heading}>General</h3>
+				<div class="grid gap-5">
+					<NumberField
+						label="Word-count target"
+						hint="The status bar counts towards it, and says when you're over."
+						unit="words"
+						min={0}
+						max={1000000}
+						step={100}
+						bind:value={wordCount}
+						class="w-40"
+					/>
 
-					<div class="mb-6">
-						<label for="word-count" class="text-ink mb-2 block font-medium">
-							Word Count Target
-						</label>
-						<div class="relative">
-							<input
-								id="word-count"
-								type="number"
-								bind:value={wordCount}
-								min="0"
-								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
-							/>
-						</div>
-						<p class="text-ink-muted mt-1 text-sm">Set your target word count for documents</p>
-					</div>
-
-					<div class="mb-6">
-						<label class="flex items-start gap-3">
-							<!-- Held until consent has been read, or a late read would put back
-							     what the person had just changed. -->
-							<input
-								type="checkbox"
-								bind:checked={allowNetwork}
-								disabled={!consentRead}
-								class="accent-accent mt-1 h-4 w-4"
-							/>
-							<span>
-								<span class="text-ink block font-medium">Look up citation details online</span>
-								<span class="text-ink-muted mt-1 block text-sm">
-									Sends a paper's identifier — or its title and the opening of its first page — to
-									doi.org and crossref.org, and allows citation styles to be downloaded. With this
-									off, Erti reads the identifier printed in each paper and nothing leaves your
-									machine.
-								</span>
-							</span>
-						</label>
-					</div>
+					<!-- Held until consent has been read, or a late read would put back
+					     what the person had just changed. A Checkbox rather than a
+					     Switch: like the rest of this tab, it waits for Save. -->
+					<Checkbox
+						label="Look up citation details online"
+						description="Sends a paper's identifier — or its title and the opening of its first page — to doi.org and crossref.org, and allows citation styles to be downloaded. With this off, Erti reads the identifier printed in each paper and nothing leaves your machine."
+						bind:checked={allowNetwork}
+						disabled={!consentRead}
+					/>
 
 					{#if allowNetwork}
-						<div class="mb-6">
-							<label for="crossref-mailto" class="text-ink mb-2 block font-medium">
-								Contact address for Crossref (optional)
-							</label>
-							<input
-								id="crossref-mailto"
-								type="email"
-								bind:value={crossrefMailto}
-								placeholder="you@university.edu"
-								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full rounded-md border px-4 py-2 transition-colors focus:ring-2"
-							/>
-							<p class="text-ink-muted mt-1 text-sm">
-								Crossref asks API users to identify themselves and gives those requests better
-								service. Yours to provide or leave blank.
-							</p>
-						</div>
+						<TextField
+							label="Contact address for Crossref (optional)"
+							hint="Crossref asks API users to identify themselves and gives those requests better service. Yours to provide or leave blank."
+							type="email"
+							bind:value={crossrefMailto}
+							placeholder="you@university.edu"
+						/>
 					{/if}
 
 					<LogSettings />
 				</div>
 			{:else if tab === 'citations'}
-				<div class="mb-8">
-					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">
-						Citation Settings
-					</h3>
+				<h3 class={heading}>Citations</h3>
+				<div class="grid gap-5">
+					<!-- Applied at once by the store, so a Switch. -->
+					<Switch
+						label="Add a reference list automatically"
+						description="The first citation in a document brings a works-cited list with it. Delete the list and it stays deleted — this only ever adds the first one."
+						checked={$autoReferences}
+						onCheckedChange={(on) => void autoReferences.update(on)}
+					/>
 
-					<label class="mb-6 flex items-start gap-3">
-						<input
-							type="checkbox"
-							class="accent-accent mt-1 h-4 w-4"
-							checked={$autoReferences}
-							onchange={(e) => void autoReferences.update(e.currentTarget.checked)}
-						/>
-						<span>
-							<span class="text-ink block font-medium">Add a reference list automatically</span>
-							<span class="text-ink-muted mt-1 block text-sm">
-								The first citation in a document brings a works-cited list with it. Delete the list
-								and it stays deleted — this only ever adds the first one.
-							</span>
-						</span>
-					</label>
-
-					<div class="mb-6">
-						<label for="citation-style" class="text-ink mb-2 block font-medium">
-							Citation Style
+					<!--
+						Native selects, styled as fields, rather than the Select primitive:
+						the style list runs to some three thousand, in two groups, and
+						Select has no groups and draws every option. The ids are what the
+						real-app journeys choose a style by (e2e-app/specs/app.mjs).
+					-->
+					<div class="grid gap-1">
+						<label for="citation-style" class="text-small text-ink font-medium">
+							Citation style
 						</label>
-						<input
-							type="search"
-							bind:value={styleFilter}
-							aria-label="Filter citation styles"
-							placeholder="Search styles"
-							class="border-line-strong bg-surface-raised text-ink mb-2 w-full rounded-md border px-4 py-2 transition-colors"
-						/>
+						<SearchField label="Filter citation styles" bind:value={styleFilter} />
 						<div class="relative">
 							<select
 								id="citation-style"
 								bind:value={selectedStyle}
-								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
+								aria-describedby="citation-style-note"
+								class={[controlClass, select]}
 							>
 								<option value="" disabled>Select a style</option>
 								{#if visibleBundled.length > 0}
@@ -461,23 +441,9 @@
 									{/each}
 								</optgroup>
 							</select>
-							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
-								<svg
-									class="text-ink-muted h-5 w-5"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M19 9l-7 7-7-7"
-									></path>
-								</svg>
-							</div>
+							<ChevronDown class={chevron} aria-hidden="true" />
 						</div>
-						<p class="text-ink-muted mt-1 text-sm">
+						<p id="citation-style-note" class="text-caption text-ink-muted">
 							{#if styleFilter.trim()}
 								{matchingBundled.length + matchingStyles.length} of {(bundled?.styles.length ?? 0) +
 									onlineStyles.length} styles match "{styleFilter.trim()}"
@@ -488,56 +454,38 @@
 							{/if}
 						</p>
 					</div>
-					<div class="mb-6">
-						<label for="language" class="text-ink mb-2 block font-medium">
-							Citation Language
-						</label>
+
+					<div class="grid gap-1">
+						<label for="language" class="text-small text-ink font-medium">Citation language</label>
 						<div class="relative">
 							<select
 								id="language"
 								bind:value={selectedLocale}
-								class="border-line-strong bg-surface-raised text-ink focus:border-accent focus:ring-accent w-full appearance-none rounded-md border px-4 py-2 pr-8 transition-colors focus:ring-2"
+								aria-describedby="language-note"
+								class={[controlClass, select]}
 							>
 								{#each Object.entries(locales) as [code, [native]] (code)}
 									<option value={code}>{native}</option>
 								{/each}
 							</select>
-							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
-								<svg
-									class="text-ink-muted h-5 w-5"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M19 9l-7 7-7-7"
-									></path>
-								</svg>
-							</div>
+							<ChevronDown class={chevron} aria-hidden="true" />
 						</div>
-						<p class="text-ink-muted mt-1 text-sm">Set the language for the citation</p>
+						<p id="language-note" class="text-caption text-ink-muted">
+							Set the language for the citation
+						</p>
 					</div>
 				</div>
 			{:else if tab === 'reading'}
-				<div class="mb-8">
-					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Reading</h3>
-
-					<ReadingSettings />
-				</div>
+				<h3 class={heading}>Reading</h3>
+				<ReadingSettings />
 			{:else if tab === 'page'}
-				<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Page setup</h3>
+				<h3 class={heading}>Page setup</h3>
 				<PageSetupSettings />
 			{:else if tab === 'appearance'}
-				<div class="mb-8">
-					<h3 class="border-line text-ink mb-4 border-b pb-2 text-lg font-medium">Appearance</h3>
-
-					<AppearanceSettings />
-				</div>
+				<h3 class={heading}>Appearance</h3>
+				<AppearanceSettings />
 			{:else if tab === 'library'}
-				<h3 class="text-heading text-ink mb-3 font-medium">Library</h3>
+				<h3 class={heading}>Library</h3>
 				<LibrarySettings />
 			{/if}
 		{/snippet}

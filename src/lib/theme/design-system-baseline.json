@@ -91,26 +91,5 @@
 		"button": 6,
 		"radius": 1,
 		"shadow": 1
-	},
-	"src/lib/side-panel/settings/AppearanceSettings.svelte": {
-		"button": 1,
-		"input": 3,
-		"textPx": 8,
-		"radius": 2
-	},
-	"src/lib/side-panel/settings/LogSettings.svelte": {
-		"button": 1
-	},
-	"src/lib/side-panel/settings/PageSetupSettings.svelte": {
-		"button": 1,
-		"input": 3,
-		"textPx": 7
-	},
-	"src/lib/side-panel/settings/ReadingSettings.svelte": {
-		"input": 1
-	},
-	"src/lib/side-panel/settings/Settings.svelte": {
-		"input": 5,
-		"radius": 5
 	}
 }

@@ -91,4 +91,31 @@ describe('the appearance panel', () => {
 		expect(screen.getByRole('radiogroup', { name: 'Density' })).toBeInTheDocument();
 		expect(screen.getByRole('radiogroup', { name: 'Manuscript typeface' })).toBeInTheDocument();
 	});
+
+	it('M6-8 AC-1: sizes are sliders that say their value and apply as they move', async () => {
+		const user = userEvent.setup();
+		update.mockClear();
+		render(AppearanceSettings);
+
+		const size = screen.getByRole('slider', { name: 'Interface size' });
+		expect(size).toHaveAttribute('aria-valuetext', '13 px');
+		size.focus();
+		await user.keyboard('{ArrowRight}');
+		expect(update).toHaveBeenLastCalledWith({ uiSize: 14 });
+
+		expect(screen.getByRole('slider', { name: 'Manuscript size' })).toHaveAccessibleDescription(
+			'Only what you see while writing. The exported PDF is unaffected.'
+		);
+	});
+
+	it('M6-8 AC-1: paper is a switch, since it takes effect at once', async () => {
+		const user = userEvent.setup();
+		update.mockClear();
+		render(AppearanceSettings);
+
+		const paper = screen.getByRole('switch', { name: 'Keep the manuscript on paper' });
+		expect(paper).toBeChecked();
+		await user.click(paper);
+		expect(update).toHaveBeenLastCalledWith({ paperPage: false });
+	});
 });
