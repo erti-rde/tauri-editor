@@ -1424,3 +1424,80 @@ test('the library is moved to a picked folder, backed up, and restored from a ba
 		)
 		.toBe(true);
 });
+
+// M1b-11: a project made from Zotero, then kept in step with it.
+test('a new project from Zotero: ticked, previewed, imported, then synced', async ({ page }) => {
+	await launch(page, '?recents=none');
+	await page.waitForFunction(() => window.__ERTI_FAKE__ !== undefined);
+	await page.evaluate(() => window.__ERTI_FAKE__!.dialogAnswers.push('/fake/home/Documents'));
+
+	await page.getByRole('button', { name: 'New project…' }).click();
+	const dialog = page.getByRole('dialog', { name: 'New project' });
+	await dialog.getByRole('textbox', { name: 'Name' }).fill('Social capital');
+	await dialog.getByRole('button', { name: 'Choose…' }).click();
+	await expect(dialog.getByText('Makes the folder “Social capital” there.')).toBeVisible();
+	await dialog.getByRole('radio', { name: /From Zotero/ }).click();
+
+	// AC-3, AC-4: Zotero's tree; a collection ticked whole, and one paper from another.
+	const tree = dialog.getByRole('tree', { name: 'Zotero library' });
+	await tree.getByRole('treeitem', { name: /^Thesis/ }).focus();
+	await page.keyboard.press('Space');
+	await tree.getByRole('treeitem', { name: /^Methods/ }).click();
+	await tree.getByRole('treeitem', { name: /^Bowling Alone/ }).click();
+	await expect(tree.getByRole('treeitem', { name: /^My Library/ })).toHaveAttribute(
+		'aria-checked',
+		'mixed'
+	);
+
+	// AC-5: what it comes to, before anything is written.
+	await expect(dialog.getByTestId('zotero-summary')).toHaveText(
+		'3 new works · 3 PDFs to attach · 1 PDF can’t be attached'
+	);
+	await dialog.getByRole('button', { name: 'Create project' }).click();
+
+	// AC-1, AC-6: the project opens on its sources, their PDFs where Zotero keeps them.
+	await expect(dialog).toBeHidden();
+	await expect(page.getByText(/Imported 3 sources from Zotero/)).toBeVisible();
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await expect(page.getByRole('heading', { name: 'Sources (3)' })).toBeVisible();
+	const state = await page.evaluate(() => {
+		const fake = window.__ERTI_FAKE__!;
+		return {
+			root: fake.state.root,
+			attached: [...fake.state.library.values()]
+				.map((s) => s.path)
+				.filter((p) => p?.startsWith('/fake/home/Zotero/'))
+				.sort()
+		};
+	});
+	expect(state.root).toBe('/fake/home/Documents/Social capital');
+	expect(state.attached).toEqual([
+		'/fake/home/Zotero/storage/ATTACHA2/putnam-2000.pdf',
+		'/fake/home/Zotero/storage/ATTACHB3/ostrom-1990.pdf',
+		'/fake/home/Zotero/storage/ATTACHC4/fukuyama-1995.pdf'
+	]);
+
+	// AC-8: in step, nothing new yet; a paper added in Zotero is, and Sync brings it.
+	const line = page.getByTestId('zotero-sync');
+	// Bowling Alone is all of Methods, so ticking it ticked the collection.
+	await expect(line).toContainText('Following Thesis, Methods in Zotero · nothing new');
+	await page.evaluate(() =>
+		window.__ERTI_FAKE__!.state.zotero.papers.push({
+			library: 'user',
+			key: 'NEWPAPR2',
+			item_type: 'book',
+			fields: [{ name: 'title', base: null, value: 'Making Democracy Work' }],
+			creators: [
+				{ creator_type: 'author', first_name: 'Robert D.', last_name: 'Putnam', single: false }
+			],
+			pdfs: [],
+			in: ['CHAPTER2']
+		})
+	);
+	await page.getByRole('button', { name: 'Files' }).click();
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await expect(line).toContainText('1 new');
+	await line.getByRole('button', { name: 'Sync' }).click();
+	await expect(page.getByRole('heading', { name: 'Sources (4)' })).toBeVisible();
+	await expect(line).toContainText('nothing new');
+});

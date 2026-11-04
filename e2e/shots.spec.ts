@@ -306,3 +306,49 @@ test('shots of renaming and deleting a document', async ({ page }) => {
 	await expect(page.getByRole('dialog', { name: 'Delete “Chapter 1”?' })).toBeVisible();
 	await page.screenshot({ ...shot('35-document-delete'), animations: 'disabled' });
 });
+
+// M1b-11: a project from Zotero, and keeping it in step.
+test('shots of a project from Zotero', async ({ page }) => {
+	await launch(page, '?recents=none');
+	await page.waitForFunction(() => window.__ERTI_FAKE__ !== undefined);
+	await page.screenshot({ ...shot('36-landing-new-project'), animations: 'disabled' });
+
+	await page.evaluate(() => window.__ERTI_FAKE__!.dialogAnswers.push('/fake/home/Documents'));
+	await page.getByRole('button', { name: 'New project…' }).click();
+	const dialog = page.getByRole('dialog', { name: 'New project' });
+	await dialog.getByRole('textbox', { name: 'Name' }).fill('Social capital');
+	await dialog.getByRole('button', { name: 'Choose…' }).click();
+	await dialog.getByRole('radio', { name: /From Zotero/ }).click();
+	const tree = dialog.getByRole('tree', { name: 'Zotero library' });
+	// Thesis opened, Chapter 2 opened and ticked: Thesis is then partly ticked.
+	await tree.getByRole('treeitem', { name: /^Thesis/ }).click();
+	await tree.getByRole('treeitem', { name: /^Chapter 2/ }).click();
+	await tree.getByRole('treeitem', { name: /^Chapter 2/ }).focus();
+	await page.keyboard.press('Space');
+	await expect(dialog.getByTestId('zotero-summary')).toBeVisible();
+	await page.screenshot({ ...shot('37-new-project-from-zotero'), animations: 'disabled' });
+
+	await dialog.getByRole('button', { name: 'Create project' }).click();
+	await expect(dialog).toBeHidden();
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await page.evaluate(() =>
+		window.__ERTI_FAKE__!.state.zotero.papers.push({
+			library: 'user',
+			key: 'NEWPAPR2',
+			item_type: 'book',
+			fields: [{ name: 'title', base: null, value: 'Making Democracy Work' }],
+			creators: [],
+			pdfs: [],
+			in: ['CHAPTER2']
+		})
+	);
+	await page.getByRole('button', { name: 'Files' }).click();
+	await page.getByRole('button', { name: 'Sources' }).click();
+	await expect(page.getByTestId('zotero-sync')).toContainText('1 new');
+	await page.screenshot({ ...shot('38-sources-zotero-sync'), animations: 'disabled' });
+
+	await page.getByRole('button', { name: 'Add', exact: true }).click();
+	await page.getByRole('menuitem', { name: /From Zotero…/ }).click();
+	await expect(page.getByRole('tree', { name: 'Zotero library' })).toBeVisible();
+	await page.screenshot({ ...shot('39-add-from-zotero'), animations: 'disabled' });
+});
