@@ -4,6 +4,7 @@ import type { Annotation, AnnotationLabel, Source, SourceNote } from '$lib/ipc';
 // can't be relied on here, and a paper of someone else's shouldn't be in the
 // repository. Emitted as an asset only by builds that include the harness.
 import paperUrl from '../../../tests/fixtures/harness/sample.pdf?url';
+import { defaultZotero, type FakeZotero } from './fakeZotero';
 
 /**
  * What the fake backend starts from: one project a researcher might have open.
@@ -43,6 +44,8 @@ export interface Fixture {
 	stores: Record<string, Record<string, unknown>>;
 	/** What the folder picker answers, in order. `null` is a cancelled dialog. */
 	dialogAnswers: (string | null)[];
+	/** The Zotero library on this computer (M1b-11); none when it has no Zotero. */
+	zotero?: FakeZotero | null;
 }
 
 /** One backup in the library's backup folder (ADR 008). */
@@ -326,6 +329,7 @@ function mark(
 }
 
 export function defaultFixture(): Fixture {
+	const zotero = defaultZotero(paperUrl);
 	const sources: LibrarySource[] = [
 		{
 			sha256: SHA.vaswani,
@@ -419,7 +423,8 @@ export function defaultFixture(): Fixture {
 			[`${ROOT}/.erti/project.db`]: '',
 			[`${ROOT}/papers/vaswani-2017.pdf`]: { pdf: paperUrl },
 			[`${ROOT}/papers/devlin-2019.pdf`]: { pdf: paperUrl },
-			[`${ROOT}/papers/scan-chapter.pdf`]: { pdf: paperUrl }
+			[`${ROOT}/papers/scan-chapter.pdf`]: { pdf: paperUrl },
+			...zotero.files
 		},
 		stores: {
 			'settings-store.json': {
@@ -429,6 +434,7 @@ export function defaultFixture(): Fixture {
 				recentProjects: [{ path: ROOT, name: 'Thesis', openedAt: '2026-09-24T09:00:00Z' }]
 			}
 		},
-		dialogAnswers: []
+		dialogAnswers: [],
+		zotero: zotero.zotero
 	};
 }

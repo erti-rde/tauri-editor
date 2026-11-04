@@ -894,6 +894,20 @@
 						<TreeRow level={1} label="Drafts" icon={Folder} expanded={false} onselect={() => {}} />
 					</div>
 				</Specimen>
+				<Specimen name="TreeRow check" state="rest">
+					<div role="tree" aria-label="Zotero" class="bg-surface w-56">
+						<TreeRow
+							level={1}
+							label="Thesis"
+							icon={Folder}
+							expanded
+							checked="mixed"
+							onselect={() => {}}
+						/>
+						<TreeRow level={2} label="Chapter 2" checked="checked" onselect={() => {}} />
+						<TreeRow level={2} label="Smith 2020" checked="unchecked" onselect={() => {}} />
+					</div>
+				</Specimen>
 				<Specimen name="TreeRow" state="selected">
 					<div role="tree" aria-label="Files selected" class="bg-surface w-56">
 						<TreeRow

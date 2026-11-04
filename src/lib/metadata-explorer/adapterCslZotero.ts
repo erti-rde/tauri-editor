@@ -263,6 +263,17 @@ export async function augmentSchema(): Promise<AugmentedZoteroSchema> {
 }
 
 /**
+ * Zotero's own map to CSL, from the same bundled schema: what a paper read
+ * from Zotero becomes (M1b-11, `import/zotero.ts`).
+ */
+export async function zoteroCslMaps(): Promise<OriginalZoteroSchema['csl']> {
+	const schemaJson = await readTextFile('resources/csl/schema.json', {
+		baseDir: BaseDirectory.Resource
+	});
+	return (JSON.parse(schemaJson) as OriginalZoteroSchema).csl;
+}
+
+/**
  * Zotero's schema, with each field's CSL variable and label worked out.
  *
  * Pure, so it's tested against the real `schema.json` without Tauri (M1a-6).

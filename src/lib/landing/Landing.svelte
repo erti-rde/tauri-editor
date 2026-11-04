@@ -3,9 +3,16 @@
 	import { documentDir } from '@tauri-apps/api/path';
 	import { onMount } from 'svelte';
 
+	import X from '~icons/lucide/x';
+
 	import { call, commands } from '$lib/ipc';
+	import type { Imported } from '$lib/metadata-explorer/bibliography';
 	import { fileSystemStore } from '$lib/stores/fileSystem.svelte';
-	import { errorToast } from '$lib/ui/Toast.svelte';
+	import { Button, IconButton } from '$lib/ui';
+	import { errorToast, successToast } from '$lib/ui/Toast.svelte';
+	import { announce } from '$lib/zotero/importZotero';
+	import { ingestAll } from '$utils/pdf_handlers';
+	import NewProject from './NewProject.svelte';
 	import {
 		describeWhen,
 		forgetProject,
@@ -33,6 +40,7 @@
 	let recents = $state<RecentProject[]>([]);
 	let missing = $state<Set<string>>(new Set());
 	let busy = $state<string | null>(null);
+	let creating = $state(false);
 
 	onMount(async () => {
 		recents = await readRecents();
@@ -79,6 +87,19 @@
 		if (typeof selected === 'string') await openProject(selected);
 	}
 
+	/** A project just made (M1b-11): opened as a recent one is, then its imports read. */
+	async function openNew(path: string, imported: Imported | null) {
+		await openProject(path);
+		if (imported) {
+			void announce(imported, {
+				into: 'the new project',
+				read: ingestAll,
+				success: successToast,
+				failure: errorToast
+			});
+		}
+	}
+
 	async function remove(path: string) {
 		recents = await forgetProject(path);
 	}
@@ -88,13 +109,13 @@
 	<div class="w-full max-w-lg">
 		<header class="mb-8">
 			<h1 class="text-ink text-2xl font-semibold tracking-tight">Erti</h1>
-			<p class="text-ink-muted mt-1 text-sm">
+			<p class="text-ink-muted text-small mt-1">
 				A project is a folder: your PDFs, your notes and your writing, all on this machine.
 			</p>
 		</header>
 
 		{#if recents.length > 0}
-			<h2 class="text-ink-muted mb-2 text-[11px] font-medium tracking-wide uppercase">Recent</h2>
+			<h2 class="text-ink-muted text-caption mb-2 font-medium tracking-wide uppercase">Recent</h2>
 
 			<ul class="border-line mb-6 divide-y rounded border">
 				{#each recents as project (project.path)}
@@ -107,12 +128,12 @@
 							disabled={gone || busy !== null}
 						>
 							<span class="min-w-0">
-								<span class="text-ink block truncate text-sm">{project.name}</span>
-								<span class="text-ink-muted block truncate font-mono text-[11px]">
+								<span class="text-ink text-small block truncate">{project.name}</span>
+								<span class="text-ink-muted text-caption block truncate font-mono">
 									{project.path}
 								</span>
 							</span>
-							<span class="text-ink-muted ml-auto shrink-0 text-[11px] whitespace-nowrap">
+							<span class="text-ink-muted text-caption ml-auto shrink-0 whitespace-nowrap">
 								{#if gone}
 									<!-- Said rather than hidden: someone whose project has moved wants
 									     to know where Erti last saw it. -->
@@ -125,34 +146,35 @@
 							</span>
 						</button>
 
-						<button
-							type="button"
-							class="text-ink-muted hover:text-ink px-3 text-xs transition-colors"
-							onclick={() => remove(project.path)}
-							aria-label="Remove {project.name} from this list"
-							title="Remove from this list"
-						>
-							×
-						</button>
+						<span class="flex items-center px-1">
+							<IconButton
+								size="sm"
+								icon={X}
+								label="Remove {project.name} from this list"
+								onclick={() => remove(project.path)}
+							/>
+						</span>
 					</li>
 				{/each}
 			</ul>
 		{/if}
 
-		<button
-			type="button"
-			class="bg-accent text-accent-ink hover:bg-accent-hover w-full rounded px-4 py-2 text-sm font-medium transition-colors"
-			onclick={chooseFolder}
-			disabled={busy !== null}
-		>
-			{recents.length > 0 ? 'Open another folder…' : 'Open a project folder…'}
-		</button>
+		<div class="grid grid-cols-2 gap-2">
+			<Button variant="primary" onclick={() => (creating = true)} disabled={busy !== null}>
+				New project…
+			</Button>
+			<Button variant="secondary" onclick={chooseFolder} disabled={busy !== null}>
+				{recents.length > 0 ? 'Open another folder…' : 'Open a project folder…'}
+			</Button>
+		</div>
 
 		{#if recents.length === 0}
-			<p class="text-ink-muted mt-3 text-xs">
-				Choose a folder containing your PDFs. Erti reads them, finds their citation details, and
-				keeps everything in that folder.
+			<p class="text-ink-muted text-caption mt-3">
+				Start a new project, from Zotero if you use it, or open a folder containing your PDFs. Erti
+				reads them, finds their citation details, and keeps your writing in that folder.
 			</p>
 		{/if}
 	</div>
 </div>
+
+<NewProject bind:open={creating} onready={openNew} />

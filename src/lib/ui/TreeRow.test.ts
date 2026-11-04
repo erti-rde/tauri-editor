@@ -83,4 +83,50 @@ describe('TreeRow', () => {
 		// A leaf has no expanded state to report.
 		expect(row('Notes.txt')).not.toHaveAttribute('aria-expanded');
 	});
+
+	describe('with boxes to tick (M1b-11)', () => {
+		it('M1b-11 AC-4: says each box as aria-checked, a part-ticked parent as mixed', async () => {
+			const user = userEvent.setup();
+			render(TreeHarness, { props: { checks: true } });
+
+			expect(row('Thesis')).toHaveAttribute('aria-checked', 'false');
+			row('Chapter 1').focus();
+			await user.keyboard(' ');
+			expect(row('Chapter 1')).toHaveAttribute('aria-checked', 'true');
+			expect(row('Thesis')).toHaveAttribute('aria-checked', 'mixed');
+
+			row('Thesis').focus();
+			await user.keyboard(' ');
+			expect(row('Chapter 2')).toHaveAttribute('aria-checked', 'true');
+			expect(row('Thesis')).toHaveAttribute('aria-checked', 'true');
+		});
+
+		it('M1b-11 AC-4: Space ticks and Enter still chooses', async () => {
+			const user = userEvent.setup();
+			const onselect = vi.fn();
+			render(TreeHarness, { props: { checks: true, onselect } });
+
+			row('Chapter 2').focus();
+			await user.keyboard(' ');
+			expect(onselect).not.toHaveBeenCalled();
+			await user.keyboard('{Enter}');
+			expect(onselect).toHaveBeenCalledWith('Chapter 2');
+		});
+
+		it('M1b-11 AC-4: a click on the box ticks without choosing', async () => {
+			const user = userEvent.setup();
+			const onselect = vi.fn();
+			render(TreeHarness, { props: { checks: true, onselect } });
+
+			const box = row('Chapter 2').querySelector('[data-testid="tree-check"]')!;
+			await user.click(box);
+			expect(row('Chapter 2')).toHaveAttribute('aria-checked', 'true');
+			expect(onselect).not.toHaveBeenCalled();
+		});
+
+		it('has no aria-checked on a row without a box', () => {
+			render(TreeHarness);
+			expect(row('Thesis')).not.toHaveAttribute('aria-checked');
+		});
+	});
 });
