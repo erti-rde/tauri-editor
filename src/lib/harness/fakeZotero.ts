@@ -33,7 +33,10 @@ export interface FakeZotero {
 	papers: FakeZoteroPaper[];
 	/** Where each stored PDF is on the fake disk, by attachment key. */
 	pdfs: Record<string, string>;
-	/** What the open project follows (`zotero_follow`). */
+	/**
+	 * What the open project follows (`zotero_follow`). Rust keeps this in each
+	 * project; a journey works in one project at a time, so here it's one list.
+	 */
 	follow: ZoteroPick[];
 	/** `library/key` → the work it became (`zotero_imported`). */
 	imported: Record<string, string>;

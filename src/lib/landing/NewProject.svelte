@@ -123,7 +123,7 @@
 		event.preventDefault();
 		body?.querySelector('input')?.focus();
 	}}
-	size="lg"
+	size="md"
 	title="New project"
 	description="A project is a folder for your writing. PDFs from Zotero stay where Zotero keeps them."
 	dismissible={!busy}

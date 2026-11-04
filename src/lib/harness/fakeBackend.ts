@@ -121,6 +121,8 @@ export interface FakeState {
 	library: Map<string, LibrarySource>;
 	/** The open project's sources. */
 	project: Set<string>;
+	/** Each project folder's sources, as each has its own `project.db`. */
+	projects: Map<string, Set<string>>;
 	/** Project-local metadata corrections. */
 	overrides: Map<string, string>;
 	/** Dismissed attribution findings, in the order dismissed (M4-7). */
@@ -145,6 +147,7 @@ export interface FakeState {
 
 export function stateFrom(fixture: Fixture): FakeState {
 	const library = new Map(fixture.sources.map((s) => [s.sha256, structuredClone(s)]));
+	const project = new Set(library.keys());
 	return {
 		root: null,
 		granted: [],
@@ -154,7 +157,8 @@ export function stateFrom(fixture: Fixture): FakeState {
 			(a, b) => b.takenAt - a.takenAt
 		),
 		library,
-		project: new Set(library.keys()),
+		project,
+		projects: new Map([[fixture.root, project]]),
 		overrides: new Map(),
 		dismissed: [],
 		aliases: new Map(Object.entries(fixture.aliases ?? {})),
@@ -516,6 +520,9 @@ export function fakeCommands(
 		openProject(projectRoot) {
 			library();
 			state.root = projectRoot;
+			// A folder opened for the first time starts with no sources.
+			if (!state.projects.has(projectRoot)) state.projects.set(projectRoot, new Set());
+			state.project = state.projects.get(projectRoot)!;
 			return null;
 		},
 

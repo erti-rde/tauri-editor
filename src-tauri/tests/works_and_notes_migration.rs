@@ -198,9 +198,10 @@ async fn a_v5_library_upgrades_after_a_backup_and_keeps_its_work() {
     assert!(failures.lock().unwrap().is_empty(), "{failures:?}");
     let library = state.library().await.unwrap();
 
+    // Through 6, and on to whatever is current.
     assert_eq!(
         count(&library, "SELECT MAX(version) FROM schema_version").await,
-        6
+        erti_lib::db::schema::LIBRARY_VERSION
     );
     for table in ["source_aliases", "source_notes", "source_note_embeddings"] {
         assert!(tables(&library).await.contains(&table.to_string()));

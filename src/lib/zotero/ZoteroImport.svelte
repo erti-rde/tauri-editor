@@ -59,7 +59,7 @@
 
 <Dialog
 	bind:open
-	size="lg"
+	size="md"
 	title="Add from Zotero"
 	description="PDFs stay where Zotero keeps them. Nothing is added until you say."
 	dismissible={!progress}
