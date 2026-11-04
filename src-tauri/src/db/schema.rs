@@ -17,8 +17,8 @@
 //! tables holding work that can't be regenerated.
 
 /// Schema version applied to a freshly created or upgraded database.
-pub const LIBRARY_VERSION: i64 = 6;
-pub const PROJECT_VERSION: i64 = 2;
+pub const LIBRARY_VERSION: i64 = 7;
+pub const PROJECT_VERSION: i64 = 3;
 
 /// One step up to schema version `to`.
 ///
@@ -75,6 +75,11 @@ pub const LIBRARY_MIGRATIONS: &[Migration] = &[
         sql: WORKS_AND_NOTES_SCHEMA,
         skip_if: None,
     },
+    Migration {
+        to: 7,
+        sql: ZOTERO_LINK_SCHEMA,
+        skip_if: None,
+    },
 ];
 
 pub const PROJECT_MIGRATIONS: &[Migration] = &[
@@ -86,6 +91,11 @@ pub const PROJECT_MIGRATIONS: &[Migration] = &[
     Migration {
         to: 2,
         sql: DISMISSED_FINDINGS_SCHEMA,
+        skip_if: None,
+    },
+    Migration {
+        to: 3,
+        sql: ZOTERO_FOLLOW_SCHEMA,
         skip_if: None,
     },
 ];
@@ -472,5 +482,45 @@ CREATE TABLE IF NOT EXISTS dismissed_findings (
     kind                     TEXT NOT NULL,
     dismissed_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (normalised_sentence_hash, canonical_id, kind)
+);
+"#;
+
+/// Where the person keeps Zotero (M1b-11, ADR 012).
+///
+/// In the library, since it's the person's, not a project's. One row at most:
+/// the folder Erti found itself or the user picked, never a path the webview
+/// chose. It's what lets a project sync in a later session.
+pub const ZOTERO_LINK_SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS zotero_link (
+    id        INTEGER PRIMARY KEY CHECK (id = 1),
+    data_dir  TEXT NOT NULL,
+    linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"#;
+
+/// What a project follows in Zotero, and what it has from there (M1b-11).
+///
+/// Keyed by Zotero's own keys, which a Zotero sync keeps, and its library:
+/// `user`, or `group:<groupID>`. `kind` is what was ticked: a whole library, a
+/// collection with everything under it, a library's unfiled papers, or one
+/// paper. `name` is Zotero's name for it then, for the Sources line.
+/// `zotero_imported` says which work each Zotero paper became, so a sync adds
+/// only what's new and never the same paper twice.
+pub const ZOTERO_FOLLOW_SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS zotero_follow (
+    library  TEXT NOT NULL,
+    kind     TEXT NOT NULL CHECK (kind IN ('library', 'collection', 'unfiled', 'item')),
+    key      TEXT NOT NULL DEFAULT '',
+    name     TEXT NOT NULL DEFAULT '',
+    added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (library, kind, key)
+);
+
+CREATE TABLE IF NOT EXISTS zotero_imported (
+    library     TEXT NOT NULL,
+    item_key    TEXT NOT NULL,
+    work        TEXT NOT NULL,
+    imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (library, item_key)
 );
 "#;

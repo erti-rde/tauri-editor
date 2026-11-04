@@ -61,6 +61,10 @@ fn shipped_project_migrations_are_frozen() {
             2,
             "6a856467f3276920629340d648ae7df676035d248bb257cd21d87c53601a329e",
         ),
+        (
+            3,
+            "08f5d3494a5c8ced890c9dbb0970833f5eedc6ec245f25d0cad11526d4ffcb69",
+        ),
     ];
     assert_eq!(schema::PROJECT_MIGRATIONS.len(), expected.len());
     for (migration, (to, hash)) in schema::PROJECT_MIGRATIONS.iter().zip(expected) {
@@ -91,7 +95,7 @@ async fn a_version_1_project_gains_dismissals_and_keeps_its_rows() {
         .fetch_one(&project)
         .await
         .unwrap();
-    assert_eq!(version, 2);
+    assert_eq!(version, schema::PROJECT_VERSION);
     let documents: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM documents")
         .fetch_one(&project)
         .await

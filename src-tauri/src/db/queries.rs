@@ -2937,3 +2937,99 @@ pub async fn quote_passages(pool: &SqlitePool) -> Result<Vec<CorpusPassage>, Str
         )
         .collect())
 }
+
+// ---------------------------------------------------------------------------
+// Zotero (M1b-11, ADR 012): where it is, and what a project follows from it.
+
+/// The Zotero data folder the person linked, if any.
+pub async fn zotero_data_dir(library: &SqlitePool) -> Result<Option<String>, String> {
+    sqlx::query_scalar("SELECT data_dir FROM zotero_link WHERE id = 1")
+        .fetch_optional(library)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+pub async fn set_zotero_data_dir(library: &SqlitePool, data_dir: &str) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO zotero_link (id, data_dir) VALUES (1, ?)
+         ON CONFLICT (id) DO UPDATE SET data_dir = excluded.data_dir, linked_at = CURRENT_TIMESTAMP",
+    )
+    .bind(data_dir)
+    .execute(library)
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+/// Has the library recorded a file at this path, for any work?
+pub async fn location_recorded(library: &SqlitePool, path: &str) -> Result<bool, String> {
+    sqlx::query_scalar::<_, i64>("SELECT 1 FROM locations WHERE path = ? LIMIT 1")
+        .bind(path)
+        .fetch_optional(library)
+        .await
+        .map(|found| found.is_some())
+        .map_err(|e| e.to_string())
+}
+
+/// One thing a project follows: (library, kind, key, name).
+pub type Followed = (String, String, String, String);
+
+pub async fn zotero_follow(project: &SqlitePool, picks: &[Followed]) -> Result<(), String> {
+    let mut tx = project.begin().await.map_err(|e| e.to_string())?;
+    for (library, kind, key, name) in picks {
+        sqlx::query(
+            "INSERT INTO zotero_follow (library, kind, key, name) VALUES (?, ?, ?, ?)
+             ON CONFLICT (library, kind, key) DO UPDATE SET name = excluded.name",
+        )
+        .bind(library)
+        .bind(kind)
+        .bind(key)
+        .bind(name)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+    tx.commit().await.map_err(|e| e.to_string())
+}
+
+pub async fn zotero_following(project: &SqlitePool) -> Result<Vec<Followed>, String> {
+    sqlx::query_as("SELECT library, kind, key, name FROM zotero_follow ORDER BY added_at, name")
+        .fetch_all(project)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Which work each Zotero paper became: (library, item key, work).
+pub type ImportedFromZotero = (String, String, String);
+
+pub async fn zotero_record(
+    project: &SqlitePool,
+    records: &[ImportedFromZotero],
+) -> Result<(), String> {
+    let mut tx = project.begin().await.map_err(|e| e.to_string())?;
+    for (library, key, work) in records {
+        sqlx::query(
+            "INSERT INTO zotero_imported (library, item_key, work) VALUES (?, ?, ?)
+             ON CONFLICT (library, item_key) DO UPDATE SET work = excluded.work",
+        )
+        .bind(library)
+        .bind(key)
+        .bind(work)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+        sqlx::query("INSERT OR IGNORE INTO source_set (sha256) VALUES (?)")
+            .bind(work)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    tx.commit().await.map_err(|e| e.to_string())
+}
+
+pub async fn zotero_imported(project: &SqlitePool) -> Result<Vec<ImportedFromZotero>, String> {
+    sqlx::query_as("SELECT library, item_key, work FROM zotero_imported")
+        .fetch_all(project)
+        .await
+        .map_err(|e| e.to_string())
+}

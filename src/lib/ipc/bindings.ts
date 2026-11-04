@@ -21,6 +21,12 @@ export const commands = {
 	/**  Open a project folder, creating `<root>/.erti/project.db` if needed. */
 	openProject: (root: string) => typedError<null, AppError>(__TAURI_INVOKE("open_project", { root })),
 	/**
+	 *  Make a new project folder, `<parent>/<name>`, and say where it is
+	 *  (M1b-11 AC-1, docs/ux.md UX-13). `parent` must be a folder the user picked:
+	 *  a new project is somewhere they chose. It's opened as any picked folder is.
+	 */
+	createProject: (parent: string, name: string) => typedError<string, AppError>(__TAURI_INVOKE("create_project", { parent, name })),
+	/**
 	 *  Add a cited source this library lacks, from the manuscript's snapshot, and
 	 *  put it in the open project (M1a-8 AC-6). The webview guards the snapshot as
 	 *  CSL first (M1b-10); this refuses anything that isn't a JSON object or an id
@@ -312,6 +318,21 @@ export const commands = {
 	removeSource: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_source", { id })),
 	/**  Attach the PDF at `path` to the work `work` (M1b-7, ADR 003). */
 	attachFile: (work: string, path: string) => typedError<AttachedFile, AppError>(__TAURI_INVOKE("attach_file", { work, path })),
+	zoteroStatus: () => typedError<ZoteroStatus, AppError>(__TAURI_INVOKE("zotero_status")),
+	/**
+	 *  Link Zotero's data folder (M1b-11 AC-2): the one Erti found when `path` is
+	 *  none, or one the user picked in the dialog. Only a dialog pick: the project
+	 *  folder, which a script can write to (T3), never holds a library Erti reads.
+	 */
+	zoteroLink: (path: string | null) => typedError<ZoteroStatus, AppError>(__TAURI_INVOKE("zotero_link", { path })),
+	zoteroTree: () => typedError<ZoteroLibrary[], AppError>(__TAURI_INVOKE("zotero_tree")),
+	zoteroItems: (library: string, collection: string | null) => typedError<ZoteroPaper[], AppError>(__TAURI_INVOKE("zotero_items", { library, collection })),
+	zoteroRead: (picks: ZoteroPick[]) => typedError<ZoteroItem[], AppError>(__TAURI_INVOKE("zotero_read", { picks })),
+	zoteroAttach: (pdfs: ZoteroAttach[]) => typedError<ZoteroAttached[], AppError>(__TAURI_INVOKE("zotero_attach", { pdfs })),
+	zoteroRecord: (records: ZoteroRecord[]) => typedError<null, AppError>(__TAURI_INVOKE("zotero_record", { records })),
+	zoteroFollow: (picks: ZoteroPick[]) => typedError<null, AppError>(__TAURI_INVOKE("zotero_follow", { picks })),
+	zoteroFollowing: () => typedError<ZoteroPick[], AppError>(__TAURI_INVOKE("zotero_following")),
+	zoteroSyncPlan: () => typedError<ZoteroSyncPlan, AppError>(__TAURI_INVOKE("zotero_sync_plan")),
 	/**  A work's files, for its sidebar's File tab (M1b-7 AC-3). */
 	sourceFiles: (id: string) => typedError<SourceFile[], AppError>(__TAURI_INVOKE("source_files", { id })),
 	restoreDefaultLabels: () => typedError<number, AppError>(__TAURI_INVOKE("restore_default_labels")),
@@ -892,6 +913,122 @@ export type WorkNotes = {
 	marks: Annotation[],
 	/**  The files the marks are on: the work's own first, then by name. */
 	files: NotedFile[],
+};
+
+/**  A PDF to attach: Zotero's key for it, and the work it's for. */
+export type ZoteroAttach = {
+	work: string,
+	library: string,
+	key: string,
+};
+
+export type ZoteroAttached = {
+	key: string,
+	work: string,
+	/**  Where it is, once attached. */
+	path: string | null,
+	file: AttachedFile | null,
+	reason: string | null,
+};
+
+export type ZoteroCollection = {
+	key: string,
+	name: string,
+	/**  Papers directly in it, not in its subcollections. */
+	papers: number,
+	children: ZoteroCollection[],
+};
+
+export type ZoteroCreator = {
+	creator_type: string,
+	first_name: string,
+	last_name: string,
+	/**  One field: an organisation, or a name Zotero keeps whole. */
+	single: boolean,
+};
+
+export type ZoteroField = {
+	name: string,
+	/**  The base field it's a kind of, when it's type-specific. */
+	base: string | null,
+	value: string,
+};
+
+/**  A paper read in full, for importing. */
+export type ZoteroItem = {
+	library: string,
+	key: string,
+	item_type: string,
+	fields: ZoteroField[],
+	creators: ZoteroCreator[],
+	pdfs: ZoteroPdf[],
+};
+
+export type ZoteroLibrary = {
+	/**  `user`, or `group:<groupID>`. */
+	id: string,
+	name: string,
+	papers: number,
+	/**  Papers in no collection. */
+	unfiled: number,
+	collections: ZoteroCollection[],
+};
+
+/**  A paper as a row of the tree. */
+export type ZoteroPaper = {
+	key: string,
+	title: string,
+	/**  "Smith", "Smith & Jones", "Smith et al.", or empty. */
+	creators: string,
+	year: string | null,
+	pdfs: number,
+};
+
+export type ZoteroPdf = {
+	key: string,
+	file_name: string,
+	/**  Why it can't be attached; none when it can. */
+	reason: string | null,
+};
+
+/**
+ *  Something ticked in the tree: a whole library, a collection with
+ *  everything under it, a library's unfiled papers, or one paper.
+ */
+export type ZoteroPick = {
+	library: string,
+	/**  `library`, `collection`, `unfiled` or `item`. */
+	kind: string,
+	key?: string | null,
+	/**  Zotero's name for it, for the Sources line. */
+	name?: string | null,
+};
+
+/**  Which work a Zotero paper became. */
+export type ZoteroRecord = {
+	library: string,
+	key: string,
+	work: string,
+};
+
+export type ZoteroStatus = {
+	/**  The data folder Erti reads, once linked. */
+	linked: string | null,
+	/**  Zotero's default data folder, when there's a library in it. */
+	detected: string | null,
+};
+
+/**  What a sync would do (M1b-11 AC-8). */
+export type ZoteroSyncPlan = {
+	/**  Papers in what the project follows that it hasn't got. */
+	items: ZoteroItem[],
+	/**  PDFs Zotero has for papers the project has, not yet attached. */
+	pdfs: ZoteroAttach[],
+	/**
+	 *  Papers the project got from Zotero that it no longer follows there.
+	 *  They stay in the project.
+	 */
+	gone: number,
 };
 
 /* Tauri Specta runtime */
