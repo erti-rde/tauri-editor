@@ -20,3 +20,4 @@ Format: **Context** (what forces the decision) · **Decision** · **Alternatives
 | [009](009-docx-export-and-bibliography-import.md) | DOCX export and bibliography import as pure TS modules     | Accepted | M1b, M5   |
 | [010](010-design-system.md)                       | One token source, a primitive layer, a catalogue           | Accepted | M1c       |
 | [011](011-typed-ipc.md)                           | One typed contract with Rust, generated from Rust          | Accepted | M1a       |
+| [012](012-reading-zotero.md)                      | Reading Zotero from a copy of its database                 | Accepted | M1b       |

@@ -105,6 +105,39 @@ Refs: ADR-9, UX-6 · Depends on: M1b-5, M1b-7, M1c-2, M1c-3, M1c-4
 - AC-5 The parser is loaded lazily (measured: 109 KB gzip) and adds nothing to startup.
 - AC-6 10k entries import in under 30 s on the dev machine, with progress shown.
 
+### M1b-11 Start a project from Zotero
+
+Refs: ADR-12, UX-13 · Depends on: M1b-7, M1b-9
+
+- AC-1 **New project…** on the landing screen asks for a name and a place, creates the folder
+  and opens it. A name that's empty, has a slash, or is taken is refused, saying which.
+- AC-2 Erti finds Zotero's data folder by itself (`~/Zotero`). Where it isn't there,
+  **Locate Zotero data folder…** picks one; a folder that wasn't picked is refused.
+- AC-3 The Zotero tree shows My Library and each group library, with their collections nested.
+  A collection's papers load when it's opened. Nothing in Zotero's bin is shown.
+- AC-4 Any mix of collections and papers can be ticked. Ticking a collection ticks what's in
+  it, its subcollections too; a collection partly ticked shows so (and says so to a screen
+  reader).
+- AC-5 Before anything is written, the dialog says how many works are new, how many the library
+  has already, how many PDFs will be attached, and which can't be, with the reason.
+- AC-6 The project holds every ticked work, the ones the library had already included. PDFs are
+  attached where Zotero keeps them, never copied, and open again after a restart.
+- AC-7 Zotero can be running throughout. A copy Zotero wrote to while it was taken is taken
+  again once, then refused as busy.
+- AC-8 With **Keep in step with Zotero** on, Sources says how many papers are new in what the
+  project follows, and **Sync** imports them and attaches PDFs added since. A sync never adds a
+  work twice and never removes one.
+- AC-9 The Zotero → CSL mapping is table-tested: journal article, book, book section, thesis,
+  report, web page; Zotero's dates ("2019-03-00 March 2019"); one-field names.
+- AC-10 Library migration 7 and project migration 3 are frozen, idempotent, and run after a
+  library backup.
+- AC-11 A Zotero database without a table or column Erti reads is refused with a plain message,
+  and nothing is imported.
+
+**Verify:** a project made from a collection in the maintainer's Zotero 10 while Zotero is
+open: its works are in Sources, a PDF opens, and after a restart it still opens; a paper added
+to the collection in Zotero shows as new, and Sync brings it in once.
+
 ### M1b-10 Shape guards and size limits
 
 Refs: SEC-3, SEC-4 · Depends on: —

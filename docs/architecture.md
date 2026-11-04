@@ -82,6 +82,15 @@ in the Tauri store `settings-store.json`.
   `pdfs_found`, which is scoped as `attach_file` is: one outside the project or a folder the user
   has picked is "not found", and the preview offers **Choose folder…**. Those found are attached
   with `attach_file` and read with `ingestAll`, as a folder scan reads them.
+- **A project from Zotero (M1b-11, ADR 012).** `landing/NewProject.svelte` → `create_project`
+  (the folder, inside a dialog pick) → `open_project`. The tree is `zotero/ZoteroPicker.svelte`,
+  over `zotero_tree` and `zotero_items`; Rust (`src-tauri/src/zotero/`) reads a checked copy of
+  `zotero.sqlite` each time and never takes a Zotero path from the webview. The ticked
+  selection (`zotero/selection.ts`) goes to `zotero_read`, whose raw items
+  `import/zotero.ts` maps to CSL with the Zotero schema's own maps; then the bibliography import
+  runs (`importEntries`), and `zotero_attach` attaches each PDF by its Zotero key. What the
+  project follows is `zotero_follow`, what it has is `zotero_imported` (project migration 3), and
+  `zotero_sync_plan` says what's new since. The data folder is in `library.db` (migration 7).
 - **Checking attribution (M4, ADR 006).** `attribution/sentences.ts` walks the manuscript into
   sentences → `check_attribution` (Rust indexes their word 6-grams, then streams every chunk,
   the quotes of marks and source notes, and the project's other manuscripts past them, in one

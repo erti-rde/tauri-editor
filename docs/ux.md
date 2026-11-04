@@ -35,6 +35,7 @@ These carry over from what the app already does, and every new surface is checke
 | Document bar | Tabs, "+ New"                                       | A **⋯ menu** per document: Rename, Duplicate, History…, Delete (UX-9)                                     |
 | Editor       | Citations, nudge                                    | **Find & replace** bar (UX-11); citations not in your library (UX-12)                                     |
 | Settings     | General, Citations, Reading, Page setup, Appearance | **Library** (location, backups) and **About** (UX-10)                                                     |
+| Landing      | Recent projects, open a folder                      | **New project…**, empty or from Zotero (UX-13)                                                            |
 | First run    | Lookup consent                                      | Consent for lookups **and** update checks, then a **bundled style** choice (UX-1)                         |
 
 ## UX-1 First run
@@ -214,6 +215,37 @@ never matched or replaced. Replace all is one undo step. Esc closes it.
 Citations render from the manuscript's embedded sources (ADR 002) with a dotted underline.
 Hovering shows "From the manuscript: not in your library" with **Add to library**. In the
 bibliography, those entries render normally. Nothing is marked as an error.
+
+## UX-13 A project from Zotero
+
+**Landing → New project…** opens one dialog:
+
+> **New project**
+> Name `Thesis` · Location `~/Documents` [Choose…]
+> Start with: ( ) **Empty** (•) **From Zotero**
+> ┌ My Library ▾ ─────────────────────────────┐
+> │ ☑ Methods (12) │
+> │ ◪ Thesis (40) ▾ │
+> │ ☑ Chapter 2 (9) │
+> │ ☐ Smith 2020 · Trust in institutions │
+> │ Group: Lab reading (31) ▸ │
+> └───────────────────────────────────────────┘
+> 21 works · 19 PDFs · 4 already in your library · 1 PDF can't be attached (listed)
+> ☑ Keep in step with Zotero
+> [Cancel] [Create project]
+
+- The tree is Zotero's: My Library and each group, collections nested, papers inside a
+  collection once it's opened. A collection's box takes everything in it; one partly ticked shows
+  a half box (◪) and is "partly selected" to a screen reader.
+- PDFs stay where Zotero keeps them. Nothing is copied; the project folder holds the writing.
+- No Zotero found: "Erti didn't find Zotero on this computer." with **Locate Zotero data
+  folder…**. A Zotero Erti can't read: "This version of Zotero stores its library in a way Erti
+  can't read yet." Zotero mid-write: "Zotero is busy. Try again in a moment."
+- **Create project** makes the folder, opens it and imports with a progress line ("Importing 14
+  of 21…"), then shows Sources, as UX-6 does.
+- In a project, **Sources → Add ▾ → From Zotero…** opens the same tree. A project that keeps in
+  step shows one quiet line in Sources: "Following Methods, Thesis in Zotero · 3 new · **Sync**".
+  Sync adds and attaches; it never removes. Removing a work from the project stays UX-4's job.
 
 ## Copy
 
