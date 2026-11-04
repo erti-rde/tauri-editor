@@ -1,6 +1,8 @@
 <script lang="ts">
+	import Check from '~icons/lucide/check';
 	import ChevronDown from '~icons/lucide/chevron-down';
 	import ChevronRight from '~icons/lucide/chevron-right';
+	import Minus from '~icons/lucide/minus';
 
 	import type { IconComponent } from './icon';
 
@@ -18,6 +20,12 @@
 	 * goes into it when it's open; Left closes it, or goes up to the parent.
 	 * Enter, Space and a click choose, and choosing a folder is the caller's to
 	 * decide: Files opens and closes it.
+	 *
+	 * A row can carry a box to tick (M1b-11, the Zotero picker): `checked` is
+	 * said as `aria-checked`, "mixed" when only some of what's under it is
+	 * ticked, and drawn with a tick or a dash as well as colour. Space ticks it
+	 * and Enter still chooses, as the WAI-ARIA tree with checkboxes does; a
+	 * click on the box ticks, a click on the rest of the row chooses.
 	 */
 	interface Props {
 		/** Depth from 1, for the indent and `aria-level`. */
@@ -34,6 +42,9 @@
 		meta?: string;
 		/** The row a Tab into the tree lands on. Give it to exactly one. */
 		tabbable?: boolean;
+		/** A box to tick, and its state. Leave it out for a row without one. */
+		checked?: 'checked' | 'mixed' | 'unchecked';
+		oncheck?: () => void;
 		onselect: () => void;
 		ontoggle?: () => void;
 	}
@@ -47,11 +58,16 @@
 		current = false,
 		meta,
 		tabbable = false,
+		checked,
+		oncheck,
 		onselect,
 		ontoggle
 	}: Props = $props();
 
 	const branch = $derived(expanded !== undefined);
+	const ariaChecked = $derived(
+		checked === undefined ? undefined : checked === 'mixed' ? 'mixed' : checked === 'checked'
+	);
 
 	function rows(from: HTMLElement): HTMLElement[] {
 		const tree = from.closest('[role="tree"]');
@@ -97,8 +113,11 @@
 					all.slice(0, at).findLast((other) => Number(other.getAttribute('aria-level')) < level)
 				);
 				break;
-			case 'Enter':
 			case ' ':
+				if (checked !== undefined) oncheck?.();
+				else onselect();
+				break;
+			case 'Enter':
 				onselect();
 				break;
 			default:
@@ -115,6 +134,7 @@
 	aria-level={level}
 	aria-expanded={expanded}
 	aria-selected={selected}
+	aria-checked={ariaChecked}
 	aria-current={current ? 'location' : undefined}
 	tabindex={tabbable ? 0 : -1}
 	style:padding-inline-start="calc(0.375rem + {level - 1} * 1.25rem)"
@@ -134,6 +154,30 @@
 			{/if}
 		{/if}
 	</span>
+	{#if checked !== undefined}
+		<!-- Not a control of its own: the row is, says `aria-checked`, and takes
+		     Space. The click is for a pointer. -->
+		<span
+			aria-hidden="true"
+			data-testid="tree-check"
+			class={[
+				'grid size-3.5 shrink-0 place-items-center rounded-sm border',
+				checked === 'unchecked'
+					? 'border-line-control bg-surface-raised'
+					: 'bg-accent border-accent text-accent-ink'
+			]}
+			onclick={(event) => {
+				event.stopPropagation();
+				oncheck?.();
+			}}
+		>
+			{#if checked === 'mixed'}
+				<Minus class="size-3" />
+			{:else if checked === 'checked'}
+				<Check class="size-3" />
+			{/if}
+		</span>
+	{/if}
 	{#if Icon}
 		<Icon class="text-ink-muted size-3.5 shrink-0" aria-hidden="true" />
 	{/if}

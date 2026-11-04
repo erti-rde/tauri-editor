@@ -25,8 +25,7 @@
 		"shadow": 1
 	},
 	"src/lib/landing/Landing.svelte": {
-		"button": 3,
-		"textPx": 3
+		"button": 1
 	},
 	"src/lib/metadata-explorer/MetadataEditor.svelte": {
 		"button": 1

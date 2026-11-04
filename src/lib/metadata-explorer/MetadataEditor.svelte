@@ -15,6 +15,8 @@
 	import { Banner, Button, Chip, EmptyState, Loader, Menu, SearchField, TextField } from '$lib/ui';
 	import AddFromDoi from './AddFromDoi.svelte';
 	import ImportBibliography from './ImportBibliography.svelte';
+	import ZoteroImport from '$lib/zotero/ZoteroImport.svelte';
+	import ZoteroSyncLine from '$lib/zotero/ZoteroSyncLine.svelte';
 	import SourceSidebar from './SourceSidebar.svelte';
 	import { augmentSchema } from './adapterCslZotero';
 	import { attachPdf } from './attach';
@@ -64,6 +66,9 @@
 	 */
 	let sidebar = $state<{ mode: 'edit'; id: string } | { mode: 'new'; doi?: string } | null>(null);
 	let addingFromDoi = $state(false);
+	let addingFromZotero = $state(false);
+	/** Bumped when the project gains something to follow in Zotero, so the sync line looks again. */
+	let zoteroRevision = $state(0);
 	const selectedSourceId = $derived(sidebar?.mode === 'edit' ? sidebar.id : null);
 	let augmentedSchema: AugmentedZoteroSchema | null = $state(null);
 
@@ -289,6 +294,26 @@
 		}
 	}
 
+	/** Sources › Add › From Zotero… (M1b-11): said as a bibliography import is. */
+	async function afterZotero(imported: Imported) {
+		await afterImport(imported, true);
+		zoteroRevision++;
+	}
+
+	/** A sync (M1b-11 AC-8): what it added, and what it left alone. */
+	async function afterZoteroSync(imported: Imported, gone: number) {
+		if (imported.added.length > 0 || imported.attached.length > 0) {
+			await afterImport(imported, true);
+		} else {
+			await loadSources();
+		}
+		if (gone > 0) {
+			successToast(
+				`${gone.toLocaleString('en-GB')} ${gone === 1 ? 'paper is' : 'papers are'} no longer in what this project follows in Zotero. ${gone === 1 ? 'It stays' : 'They stay'} in the project.`
+			);
+		}
+	}
+
 	async function afterChange() {
 		sidebar = null;
 		await loadSources();
@@ -325,6 +350,11 @@
 						onSelect: () => (addingFromDoi = true)
 					},
 					{
+						label: 'From Zotero…',
+						description: 'Collections and papers from your Zotero library',
+						onSelect: () => (addingFromZotero = true)
+					},
+					{
 						label: 'Import a bibliography…',
 						description: 'BibTeX, RIS or CSL-JSON, from Zotero, Mendeley or EndNote',
 						onSelect: pickBibliography
@@ -340,6 +370,14 @@
 				/>
 			</div>
 		</div>
+
+		{#if augmentedSchema}
+			<ZoteroSyncLine
+				schema={augmentedSchema}
+				revision={zoteroRevision}
+				onimported={afterZoteroSync}
+			/>
+		{/if}
 
 		<!--
 			Failure has to be visible to be fixable. The old pipeline registered a
@@ -567,6 +605,7 @@
 		onsource={openFromDoi}
 		onbyhand={(doi) => (sidebar = { mode: 'new', doi })}
 	/>
+	<ZoteroImport bind:open={addingFromZotero} schema={augmentedSchema} onimported={afterZotero} />
 	<ImportBibliography
 		path={importing}
 		schema={augmentedSchema}

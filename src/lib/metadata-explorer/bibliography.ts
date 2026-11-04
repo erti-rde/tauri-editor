@@ -120,7 +120,7 @@ export function commonFolder(paths: string[]): string | undefined {
  * A work as `dedupe` matches it. The DOI column wins over the details' own:
  * a PDF's DOI is often only there.
  */
-function known(work: { id: string; csl_json: string | null; doi: string | null }): Known {
+export function known(work: { id: string; csl_json: string | null; doi: string | null }): Known {
 	let csl: Record<string, unknown> | null = null;
 	try {
 		const parsed: unknown = work.csl_json ? JSON.parse(work.csl_json) : null;

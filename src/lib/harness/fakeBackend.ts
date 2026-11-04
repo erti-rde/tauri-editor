@@ -1,4 +1,5 @@
 import type {
+	AttachedFile,
 	commands,
 	Annotation,
 	AttributionMatches,
@@ -20,6 +21,7 @@ import type {
 import { words as normalisedWords } from '$lib/attribution/normalise';
 
 import { fakeHistory } from './fakeHistory';
+import { fakeZoteroCommands, type FakeZotero } from './fakeZotero';
 import { manuscriptParagraphs, matchSpans } from './fakeMatcher';
 import { defaultBackups, type FakeBackup, type Fixture, type LibrarySource } from './fixture';
 
@@ -137,6 +139,8 @@ export interface FakeState {
 	embeddingMeta: { model_id: string; dims: number } | null;
 	/** Manuscripts moved to the system's trash, newest last (M5-7). */
 	trashed: string[];
+	/** Zotero on this computer (M1b-11), or none. */
+	zotero: FakeZotero;
 }
 
 export function stateFrom(fixture: Fixture): FakeState {
@@ -176,7 +180,16 @@ export function stateFrom(fixture: Fixture): FakeState {
 		images: new Map(),
 		positions: new Map(),
 		embeddingMeta: { model_id: 'all-MiniLM-L6-v2', dims: 384 },
-		trashed: []
+		trashed: [],
+		zotero: structuredClone(fixture.zotero) ?? {
+			detected: null,
+			linked: null,
+			libraries: [],
+			papers: [],
+			pdfs: {},
+			follow: [],
+			imported: {}
+		}
 	};
 }
 
@@ -383,7 +396,7 @@ export function fakeCommands(
 	};
 	const notFound = (path: string) => appError('NotFound', `${path} doesn't exist any more.`);
 
-	return {
+	const fake: FakeCommands = {
 		readDirectory(path) {
 			const prefix = path.endsWith('/') ? path : `${path}/`;
 			if (!disk.has(path)) throw notFound(path);
@@ -1328,8 +1341,47 @@ export function fakeCommands(
 
 		restoreDefaultLabels: () => (library(), 0),
 
-		nameLabelsAfterColours: () => (library(), 0)
+		nameLabelsAfterColours: () => (library(), 0),
+
+		// As `create_project_in` (M1b-11 AC-1): a named folder in a picked one.
+		createProject(parent, name) {
+			const trimmed = name.trim();
+			if (!trimmed) throw appError('InvalidInput', 'Give the project a name.');
+			if (/[/\\:*?"<>|]/.test(trimmed)) {
+				throw appError('InvalidInput', 'A project’s name can’t have / \\ : * ? " < > or | in it.');
+			}
+			if (trimmed.startsWith('.')) {
+				throw appError('InvalidInput', 'A project’s name can’t start with a full stop.');
+			}
+			if (!state.granted.some((g) => parent === g || parent.startsWith(`${g}/`))) {
+				throw appError(
+					'PermissionDenied',
+					'Erti can’t open this folder yet. Choose it with “Open another folder…” to let Erti use it.'
+				);
+			}
+			const folder = `${parent.replace(/\/$/, '')}/${trimmed}`;
+			if (disk.has(folder)) {
+				throw appError('Conflict', `There’s already a folder called “${trimmed}” there.`);
+			}
+			// An empty folder, which the fake disk knows by what's in it.
+			disk.write(`${folder}/.erti/project.db`, '');
+			return folder;
+		},
+
+		...fakeZoteroCommands(() => state.zotero, {
+			granted: () => state.granted,
+			has: (path) => disk.has(path),
+			// The fake's own `attachFile`, which answers at once.
+			attach: (work, path) => fake.attachFile(work, path) as AttachedFile,
+			recorded: (path) => [...state.library.values()].some((s) => s.path === path),
+			addToProject: (work) => {
+				root();
+				state.project.add(work);
+			},
+			fail: (kind, message) => appError(kind, message)
+		})
 	};
+	return fake;
 }
 
 const sameFinding = (a: DismissedFinding, b: DismissedFinding) =>
