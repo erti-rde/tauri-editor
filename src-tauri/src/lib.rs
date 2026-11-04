@@ -9,6 +9,7 @@ pub mod ipc;
 pub mod latex;
 pub mod ml;
 pub mod scope;
+pub mod zotero;
 
 use commands::*;
 use db_commands::*;
@@ -126,6 +127,7 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         // Database surface. No statement is accepted from the frontend.
         open_library,
         open_project,
+        create_project,
         add_source_from_manuscript,
         recent_projects_present,
         project_root,
@@ -196,6 +198,16 @@ pub fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
         open_backup_folder,
         remove_source,
         attach_file,
+        zotero::zotero_status,
+        zotero::zotero_link,
+        zotero::zotero_tree,
+        zotero::zotero_items,
+        zotero::zotero_read,
+        zotero::zotero_attach,
+        zotero::zotero_record,
+        zotero::zotero_follow,
+        zotero::zotero_following,
+        zotero::zotero_sync_plan,
         source_files,
         restore_default_labels,
         name_labels_after_colours,

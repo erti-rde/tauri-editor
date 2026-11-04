@@ -5,7 +5,7 @@
 //! `sql:allow-execute` from its capabilities — previously any frontend code
 //! could run arbitrary statements.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::State;
 
 use crate::db::index::{Changed, HitKind};
@@ -149,6 +149,79 @@ pub async fn open_project(
         .map_err(|e| AppError::internal(format!("could not grant the project folder: {e}")))?;
 
     open_project_in(&state, root).await
+}
+
+/// What a new project's name can't be (M1b-11 AC-1).
+fn refused_name(name: &str) -> Option<&'static str> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        Some("Give the project a name.")
+    } else if trimmed.chars().any(|c| {
+        matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')
+            || trimmed.chars().any(char::is_control)
+    }) {
+        Some("A project\u{2019}s name can\u{2019}t have / \\ : * ? \" < > or | in it.")
+    } else if trimmed == "." || trimmed == ".." || trimmed.starts_with('.') {
+        Some("A project\u{2019}s name can\u{2019}t start with a full stop.")
+    } else if trimmed.len() > 200 {
+        Some("That name is too long.")
+    } else {
+        None
+    }
+}
+
+/// Make a new project folder, `<parent>/<name>`, and say where it is
+/// (M1b-11 AC-1, docs/ux.md UX-13). `parent` must be a folder the user picked:
+/// a new project is somewhere they chose. It's opened as any picked folder is.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_project(
+    state: State<'_, DbState>,
+    parent: String,
+    name: String,
+) -> Result<String, AppError> {
+    create_project_in(&state, &parent, &name).await
+}
+
+pub async fn create_project_in(
+    state: &DbState,
+    parent: &str,
+    name: &str,
+) -> Result<String, AppError> {
+    use crate::ipc::ErrorKind;
+
+    if let Some(reason) = refused_name(name) {
+        return Err(AppError::new(ErrorKind::InvalidInput, reason));
+    }
+    if crate::scope::refused_form(parent) {
+        return Err(AppError::new(
+            ErrorKind::PermissionDenied,
+            crate::scope::NOT_PICKED,
+        ));
+    }
+    let parent = tokio::fs::canonicalize(parent)
+        .await
+        .map_err(|e| AppError::from_io(&e, Path::new(parent)))?;
+    if !state.grants.cover(&parent) {
+        return Err(AppError::new(
+            ErrorKind::PermissionDenied,
+            crate::scope::NOT_PICKED,
+        ));
+    }
+    let folder = parent.join(name.trim());
+    // `create_dir`, not `create_dir_all`: one that's there already, even
+    // empty, is someone's, and a name that's taken is said as such.
+    match tokio::fs::create_dir(&folder).await {
+        Ok(()) => Ok(folder.to_string_lossy().to_string()),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Err(AppError::new(
+            ErrorKind::Conflict,
+            format!(
+                "There\u{2019}s already a folder called \u{201c}{}\u{201d} there.",
+                name.trim()
+            ),
+        )),
+        Err(e) => Err(AppError::from_io(&e, &folder)),
+    }
 }
 
 /// Which of these folders are still Erti projects: there, with the
@@ -810,9 +883,19 @@ pub async fn attach_file_in(
     work: &str,
     path: String,
 ) -> Result<AttachedFile, AppError> {
+    crate::scope::authorise(state, &path).await?;
+    attach_resolved(state, work, path).await
+}
+
+/// Attach a PDF at a path Rust has already vouched for: one `attach_file`
+/// authorised, or one Zotero's database names (`zotero_attach`, ADR 012).
+pub(crate) async fn attach_resolved(
+    state: &DbState,
+    work: &str,
+    path: String,
+) -> Result<AttachedFile, AppError> {
     use crate::ipc::ErrorKind;
 
-    crate::scope::authorise(state, &path).await?;
     let sha256 = crate::db::hash_file(&PathBuf::from(&path)).await?;
     // A PDF, and only a PDF: its place is recorded, and a recorded place is
     // one `scope::authorise` accepts in later sessions too. Anything else
