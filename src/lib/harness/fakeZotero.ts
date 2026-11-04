@@ -35,10 +35,10 @@ export interface FakeZotero {
 	pdfs: Record<string, string>;
 	/**
 	 * What the open project follows (`zotero_follow`). Rust keeps this in each
-	 * project; a journey works in one project at a time, so here it's one list.
+	 * project, so opening another swaps it (`fakeBackend`'s `openProject`).
 	 */
 	follow: ZoteroPick[];
-	/** `library/key` → the work it became (`zotero_imported`). */
+	/** `library/key` → the work it became (`zotero_imported`), the open project's. */
 	imported: Record<string, string>;
 }
 
@@ -66,7 +66,12 @@ function paper(
 		item_type,
 		fields: Object.entries(fields).map(([name, value]) => ({ name, base: null, value })),
 		creators,
-		pdfs: pdfs.map((p) => ({ key: p.key, file_name: p.file_name, reason: p.reason ?? null })),
+		pdfs: pdfs.map((p) => ({
+			key: p.key,
+			file_name: p.file_name,
+			reason: p.reason ?? null,
+			attached: false
+		})),
 		in: inCollections
 	};
 }
@@ -174,6 +179,7 @@ export function fakeZoteroCommands(
 		has,
 		attach,
 		recorded,
+		known,
 		addToProject,
 		fail
 	}: {
@@ -181,6 +187,8 @@ export function fakeZoteroCommands(
 		has: (path: string) => boolean;
 		attach: (work: string, path: string) => AttachedFile;
 		recorded: (path: string) => boolean;
+		/** Whether the library has this work, by its id or an alias. */
+		known: (work: string) => boolean;
 		addToProject: (work: string) => void;
 		fail: Fail;
 	}
@@ -239,8 +247,17 @@ export function fakeZoteroCommands(
 		return out;
 	}
 
-	// The paper as Rust sends it: without the fake's own bookkeeping.
-	const item = ({ in: _, ...rest }: FakeZoteroPaper): ZoteroItem => structuredClone(rest);
+	// The paper as Rust sends it: without the fake's own bookkeeping, and each
+	// PDF saying whether the library knows it at that place already.
+	const item = ({ in: _, ...rest }: FakeZoteroPaper): ZoteroItem => {
+		const out = structuredClone(rest);
+		const z = zotero();
+		for (const pdf of out.pdfs) {
+			const path = z.pdfs[pdf.key];
+			pdf.attached = !pdf.reason && !!path && recorded(path);
+		}
+		return out;
+	};
 
 	return {
 		zoteroStatus: status,
@@ -310,6 +327,9 @@ export function fakeZoteroCommands(
 		},
 		zoteroRecord(records: { library: string; key: string; work: string }[]) {
 			const z = zotero();
+			if (records.some((r) => !known(r.work))) {
+				throw fail('NotFound', 'That source isn’t in your library.');
+			}
 			for (const r of records) {
 				z.imported[`${r.library}/${r.key}`] = r.work;
 				addToProject(r.work);

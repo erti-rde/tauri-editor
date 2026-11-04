@@ -35,14 +35,18 @@
 	let failed = $state<string | null>(null);
 	let progress = $state<{ done: number; total: number } | null>(null);
 
+	/** Whether it has been asked yet what the project follows. */
+	let asked = $state(false);
+
 	async function check() {
 		failed = null;
 		try {
 			following = await call(commands.zoteroFollowing());
+			asked = true;
 			if (following.length === 0) return;
 			sync = await previewSync(await zoteroCslMaps());
 		} catch (error) {
-			failed = describeError(error);
+			failed = `couldn’t check: ${describeError(error)}`;
 		}
 	}
 
@@ -63,6 +67,7 @@
 		if (!sync || progress) return;
 		progress = { done: 0, total: fresh };
 		let imported: Imported;
+		let stopped: string | null = null;
 		try {
 			imported = await importZotero(sync.preview, schema, {
 				extra: sync.pdfs,
@@ -73,21 +78,24 @@
 				error instanceof ImportStopped
 					? error.imported
 					: { added: [], skipped: 0, pdfs: [], attached: [], unattached: [] };
-			failed = describeError(error instanceof ImportStopped ? error.reason : error);
+			stopped = `the sync stopped: ${describeError(error instanceof ImportStopped ? error.reason : error)}`;
 		}
 		const gone = sync.gone;
 		progress = null;
 		onimported(imported, gone);
 		await check();
+		// Checking again mustn't hide why the sync stopped.
+		if (stopped && !failed) failed = stopped;
 	}
 </script>
 
-{#if following.length > 0}
+<!-- A first check that failed still shows, so it can be tried again. -->
+{#if following.length > 0 || (failed && !asked)}
 	<div class="text-small text-ink-muted mb-4 grid gap-2" data-testid="zotero-sync">
 		<p class="flex flex-wrap items-center gap-x-2">
-			<span>Following {names} in Zotero</span>
+			<span>{following.length > 0 ? `Following ${names} in Zotero` : 'Zotero'}</span>
 			{#if failed}
-				<span>· couldn’t check: {failed}</span>
+				<span>· {failed}</span>
 			{:else if sync}
 				<span>· {fresh === 0 ? 'nothing new' : `${fresh.toLocaleString('en-GB')} new`}</span>
 			{/if}

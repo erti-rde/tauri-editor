@@ -25,8 +25,11 @@
 	 */
 	interface Props {
 		open?: boolean;
-		/** Open the project made at `path`, as a recent one is opened. */
-		onready: (path: string, imported: Imported | null) => Promise<void>;
+		/**
+		 * Open the project made at `path`, as a recent one is opened, and say
+		 * what was imported, and why an import stopped (`failure`).
+		 */
+		onready: (path: string, imported: Imported | null, failure: string | null) => Promise<void>;
 	}
 
 	let { open = $bindable(false), onready }: Props = $props();
@@ -65,7 +68,9 @@
 	}
 
 	const fromZotero = $derived(start === 'zotero');
-	const papers = $derived(preview ? preview.fresh.length + preview.known.length : 0);
+	const papers = $derived(
+		preview ? preview.fresh.length + preview.known.length + preview.repeated.length : 0
+	);
 	const ready = $derived(
 		name.trim() !== '' && location !== null && !busy && (!fromZotero || papers > 0)
 	);
@@ -85,6 +90,7 @@
 		}
 
 		let imported: Imported | null = null;
+		let stopped: string | null = null;
 		if (fromZotero && preview) {
 			try {
 				await openProject(path);
@@ -100,11 +106,11 @@
 			} catch (error) {
 				// What was added stays added; the project opens on it.
 				imported = error instanceof ImportStopped ? error.imported : null;
-				failed = describeError(error instanceof ImportStopped ? error.reason : error);
+				stopped = describeError(error instanceof ImportStopped ? error.reason : error);
 			}
 		}
 		try {
-			await onready(path, imported);
+			await onready(path, imported, stopped);
 			close();
 		} catch (error) {
 			failed = describeError(error);

@@ -5,7 +5,7 @@
 //! The copy is checked before it's trusted: Zotero may write while it's taken,
 //! and the tables Erti reads must be the ones it knows.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::SystemTime;
@@ -141,6 +141,7 @@ pub async fn open(data: &Path, cache: &Path) -> Result<Snapshot, AppError> {
         ));
     }
 
+    sweep(cache).await;
     let now = stamp(data).await;
     let reuse = {
         let taken = taken().lock().unwrap_or_else(|e| e.into_inner());
@@ -165,14 +166,22 @@ pub async fn open(data: &Path, cache: &Path) -> Result<Snapshot, AppError> {
         let copy = dir.join(DB_FILE);
 
         let before = stamp(data).await;
-        tokio::fs::copy(&source, &copy)
-            .await
-            .map_err(|e| AppError::from_io(&e, &source))?;
-        match tokio::fs::copy(data.join(WAL_FILE), dir.join(WAL_FILE)).await {
-            Ok(_) => {}
-            // No WAL is a library Zotero has checkpointed and closed.
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => return Err(AppError::from_io(&e, &data.join(WAL_FILE))),
+        let copied = async {
+            tokio::fs::copy(&source, &copy)
+                .await
+                .map_err(|e| AppError::from_io(&e, &source))?;
+            match tokio::fs::copy(data.join(WAL_FILE), dir.join(WAL_FILE)).await {
+                Ok(_) => Ok(()),
+                // No WAL is a library Zotero has checkpointed and closed.
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(e) => Err(AppError::from_io(&e, &data.join(WAL_FILE))),
+            }
+        }
+        .await;
+        if let Err(e) = copied {
+            // Half a copy of someone's library isn't left lying about.
+            let _ = tokio::fs::remove_dir_all(&dir).await;
+            return Err(e);
         }
         let after = stamp(data).await;
         if before != after {
@@ -223,6 +232,30 @@ pub async fn open(data: &Path, cache: &Path) -> Result<Snapshot, AppError> {
         return Ok(Snapshot { pool });
     }
     Err(busy())
+}
+
+/// Remove the copies an earlier run of Erti left in the cache, once a run:
+/// each is a whole copy of the person's library, and only this run's are
+/// reused. A copy is named `<process id>-<…>`.
+async fn sweep(cache: &Path) {
+    static SWEPT: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
+    let first = SWEPT
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(cache.to_path_buf());
+    if !first {
+        return;
+    }
+    let ours = format!("{}-", std::process::id());
+    let Ok(mut entries) = tokio::fs::read_dir(cache.join("zotero")).await else {
+        return;
+    };
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        if !entry.file_name().to_string_lossy().starts_with(&ours) {
+            let _ = tokio::fs::remove_dir_all(entry.path()).await;
+        }
+    }
 }
 
 fn busy() -> AppError {
@@ -277,13 +310,10 @@ pub async fn library_id(pool: &SqlitePool, library: &str) -> Result<i64, AppErro
     } else {
         None
     };
-    found.ok_or_else(|| {
-        AppError::new(
-            ErrorKind::NotFound,
-            "That Zotero library isn\u{2019}t on this computer any more.",
-        )
-    })
+    found.ok_or_else(|| AppError::new(ErrorKind::NotFound, LIBRARY_GONE))
 }
+
+pub const LIBRARY_GONE: &str = "That Zotero library isn\u{2019}t on this computer any more.";
 
 pub fn db_error(e: sqlx::Error) -> AppError {
     AppError::new(ErrorKind::Database, format!("Could not read Zotero: {e}"))

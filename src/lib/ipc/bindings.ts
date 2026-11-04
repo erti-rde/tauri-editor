@@ -989,6 +989,8 @@ export type ZoteroPdf = {
 	file_name: string,
 	/**  Why it can't be attached; none when it can. */
 	reason: string | null,
+	/**  The library knows it already, at that place: there's nothing to attach. */
+	attached: boolean,
 };
 
 /**

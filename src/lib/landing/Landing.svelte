@@ -2,6 +2,7 @@
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { documentDir } from '@tauri-apps/api/path';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	import X from '~icons/lucide/x';
 
@@ -32,7 +33,8 @@
 	 */
 
 	interface Props {
-		handleProjectOpening: () => void;
+		/** Open the folder just read as the project; says whether it opened. */
+		handleProjectOpening: () => Promise<boolean>;
 	}
 
 	const { handleProjectOpening }: Props = $props();
@@ -59,19 +61,26 @@
 		}
 	});
 
-	async function openProject(path: string) {
-		if (busy) return;
+	/** Whether the workspace opened on `path`. */
+	async function openProject(path: string): Promise<boolean> {
+		if (busy) return false;
 		busy = path;
 
 		try {
+			// The store keeps a failed read to itself, and the folder read last.
 			await fileSystemStore.readDirectory(path);
+			const read = get(fileSystemStore);
+			if (read.error || read.currentPath !== path) {
+				throw new Error(read.error ?? 'Erti could not read the folder.');
+			}
 			await rememberProject(path);
-			handleProjectOpening();
+			return await handleProjectOpening();
 		} catch (error) {
 			log.error('Could not open the project', error);
 			errorToast(
 				`Could not open ${path}: ${error instanceof Error ? error.message : String(error)}`
 			);
+			return false;
 		} finally {
 			busy = null;
 		}
@@ -87,9 +96,13 @@
 		if (typeof selected === 'string') await openProject(selected);
 	}
 
-	/** A project just made (M1b-11): opened as a recent one is, then its imports read. */
-	async function openNew(path: string, imported: Imported | null) {
-		await openProject(path);
+	/**
+	 * A project just made (M1b-11): opened as a recent one is, then what was
+	 * imported into it said, and its PDFs read. An import that stopped says
+	 * why as well, here: the dialog has closed by then.
+	 */
+	async function openNew(path: string, imported: Imported | null, failure: string | null) {
+		if (!(await openProject(path))) return;
 		if (imported) {
 			void announce(imported, {
 				into: 'the new project',
@@ -98,6 +111,7 @@
 				failure: errorToast
 			});
 		}
+		if (failure) errorToast(`The import from Zotero stopped: ${failure}`);
 	}
 
 	async function remove(path: string) {

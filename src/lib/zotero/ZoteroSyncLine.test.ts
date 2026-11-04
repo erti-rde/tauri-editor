@@ -90,6 +90,24 @@ describe('ZoteroSyncLine', () => {
 		await waitFor(() => expect(line).toHaveTextContent('3 new'));
 	});
 
+	it('M1b-11 AC-8: a first check that fails says so, and can be tried again', async () => {
+		backend().state.libraryOpen = true;
+		backend().state.root = '/fake/project';
+		const failing = vi.spyOn(commands, 'zoteroFollowing').mockResolvedValueOnce({
+			status: 'error',
+			error: { kind: 'Database', message: 'The project can’t be read.' }
+		} as never);
+		const user = userEvent.setup();
+		render(ZoteroSyncLine, { props: { schema: await augmentSchema(), onimported: vi.fn() } });
+
+		const line = await screen.findByTestId('zotero-sync');
+		expect(line).toHaveTextContent(/^Zotero · couldn’t check: .*The project can’t be read\./);
+		await user.click(screen.getByRole('button', { name: 'Check again' }));
+		// It follows nothing, so once it's asked there's nothing to say.
+		await waitFor(() => expect(screen.queryByTestId('zotero-sync')).not.toBeInTheDocument());
+		failing.mockRestore();
+	});
+
 	it('shows nothing for a project that follows nothing', async () => {
 		backend().state.libraryOpen = true;
 		backend().state.root = '/fake/project';

@@ -25,7 +25,9 @@
 	let follow = $state(true);
 	let progress = $state<{ label: string; done: number; total: number } | null>(null);
 
-	const papers = $derived(preview ? preview.fresh.length + preview.known.length : 0);
+	const papers = $derived(
+		preview ? preview.fresh.length + preview.known.length + preview.repeated.length : 0
+	);
 	const count = (n: number) => n.toLocaleString('en-GB');
 
 	async function start() {

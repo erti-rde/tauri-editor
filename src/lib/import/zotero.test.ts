@@ -191,7 +191,7 @@ describe('zoteroDate', () => {
 describe('readZoteroItems', () => {
 	it('guards each paper and keeps where it came from', () => {
 		const paper = { ...item('book', { title: 'T' }), library: 'group:4242', key: 'PAPERBB2' };
-		paper.pdfs = [{ key: 'ATTACHA2', file_name: 'a.pdf', reason: null }];
+		paper.pdfs = [{ key: 'ATTACHA2', file_name: 'a.pdf', reason: null, attached: false }];
 		const { entries, unreadable } = readZoteroItems([paper], maps);
 		expect(unreadable).toEqual([]);
 		expect(entries).toEqual([
