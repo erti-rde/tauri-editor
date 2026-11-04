@@ -28,8 +28,10 @@ Checked on the maintainer's machine, 2026-11-04, Zotero 10.0.7 (`userdata` schem
   `PRAGMA quick_check`. A torn copy (Zotero wrote mid-copy) is taken again once; a second
   failure is "Zotero is busy". Before any query, the tables and columns Erti reads are checked
   with `pragma table_info`; a database without them is refused, so a future Zotero that
-  reshapes its tables gives a plain message, never a wrong or empty tree. The copy is deleted
-  after each read.
+  reshapes its tables gives a plain message, never a wrong or empty tree. The copy is reused
+  while Zotero's two files are unchanged, so opening a collection doesn't copy the library
+  again; a newer copy replaces it, a failed copy is deleted at once, and copies an earlier run
+  of Erti left are deleted at its first read.
 - **The mapping to CSL is TS's**, from the Zotero schema's own `csl` maps that Erti already
   ships (`resources/csl/schema.json`, `adapterCslZotero.ts`). Rust returns raw fields and
   creators; `src/lib/import/zotero.ts` turns them into `ImportEntry`s, and from there the

@@ -52,7 +52,8 @@
 		});
 	});
 
-	async function handleProjectOpening() {
+	/** Open the folder just read as the project; says whether it opened. */
+	async function handleProjectOpening(): Promise<boolean> {
 		// A history left open belongs to the project that was open then.
 		historyView.close();
 		// The project database lives at <project>/.erti/project.db and is created
@@ -63,7 +64,7 @@
 		} catch (error) {
 			// Leave the project closed rather than showing an empty workspace.
 			errorToast(`Could not open this project: ${message(error)}`);
-			return;
+			return false;
 		}
 
 		vaultIsOpen = true;
@@ -73,6 +74,7 @@
 		} catch (error) {
 			errorToast(`Could not scan this folder: ${message(error)}`);
 		}
+		return true;
 	}
 
 	const message = (error: unknown) => (error instanceof Error ? error.message : String(error));

@@ -30,15 +30,27 @@ import { importSources, libraryWorks } from '$lib/stores/db';
 export interface ZoteroPreview {
 	fresh: ZoteroEntry[];
 	known: { entry: ZoteroEntry; match: Match }[];
+	/**
+	 * Papers that are another ticked paper again (two Zotero items with one
+	 * DOI): each is noted against the work the first becomes, and its PDFs go
+	 * there too. `of` is the first's `key`.
+	 */
+	repeated: { entry: ZoteroEntry; of: string }[];
 	unreadable: Unreadable[];
-	/** New papers' PDFs that will be attached. */
+	/** PDFs that will be attached: every ticked paper's, less those already. */
 	pdfs: number;
-	/** New papers' PDFs that can't be, and why. */
+	/** PDFs that can't be, and why. */
 	unattachable: { file: string; title: string; reason: string }[];
 }
 
 /** Rust attaches at most 200 at a time (`ATTACH_BATCH`); fewer, so progress moves. */
 const ATTACH_BATCH = 25;
+
+/** The PDFs of a paper there are to attach to `work`. */
+const toAttach = (entry: ZoteroEntry, work: string): ZoteroAttach[] =>
+	entry.pdfs
+		.filter((pdf) => !pdf.reason && !pdf.attached)
+		.map((pdf) => ({ work, library: entry.library, key: pdf.key }));
 
 export async function sortAgainstLibrary(
 	items: ZoteroItem[],
@@ -49,16 +61,17 @@ export async function sortAgainstLibrary(
 		libraryWorks()
 	]);
 	const sorted = dedupe(works.map(known), read.entries);
-	// A paper twice in what was read is one paper; the reader gives each once,
-	// so `repeated` is empty here, and the first is kept if it ever isn't.
 	const fresh = sorted.fresh as ZoteroEntry[];
-	const attachable = fresh.flatMap((entry) => entry.pdfs.filter((pdf) => !pdf.reason));
+	const knownPapers = sorted.known as ZoteroPreview['known'];
+	const repeated = sorted.repeated as ZoteroPreview['repeated'];
+	const every = [...fresh, ...knownPapers.map((k) => k.entry), ...repeated.map((r) => r.entry)];
 	return {
 		fresh,
-		known: sorted.known as ZoteroPreview['known'],
+		known: knownPapers,
+		repeated,
 		unreadable: read.unreadable,
-		pdfs: attachable.length,
-		unattachable: fresh.flatMap((entry) =>
+		pdfs: every.reduce((n, entry) => n + toAttach(entry, '').length, 0),
+		unattachable: every.flatMap((entry) =>
 			entry.pdfs
 				.filter((pdf) => pdf.reason)
 				.map((pdf) => ({
@@ -79,8 +92,13 @@ export type Progress = (step: 'importing' | 'attaching', done: number, total: nu
 
 /**
  * Import the new papers into the library and this project, note what each
- * became, follow the picks if asked, and attach the PDFs (AC-6, AC-8).
- * `extra` are PDFs to attach to works the project has already: a sync's.
+ * became, follow the picks if asked, and attach the PDFs (AC-6, AC-8): those
+ * of the new works, and of the works the library had already. `extra` are
+ * PDFs to attach to works the project has already: a sync's.
+ *
+ * An import that stops part way still notes, follows and attaches what it
+ * got to, so a later sync, or the same import again, brings in the rest;
+ * then it throws `ImportStopped`.
  */
 export async function importZotero(
 	preview: ZoteroPreview,
@@ -97,8 +115,18 @@ export async function importZotero(
 		key: entry.zoteroKey,
 		work: match.id
 	}));
-	const attach: ZoteroAttach[] = [...extra];
+	const attach: ZoteroAttach[] = [
+		...extra,
+		...preview.known.flatMap(({ entry, match }) => toAttach(entry, match.id))
+	];
+	const workOf = new Map<string, string>();
+	const skipped: ZoteroEntry[] = [];
+	const note = (entry: ZoteroEntry, work: string) => {
+		records.push({ library: entry.library, key: entry.zoteroKey, work });
+		attach.push(...toAttach(entry, work));
+	};
 
+	let stopped: { error: unknown } | null = null;
 	const sources = preview.fresh.map((entry) => toSource(entry, schema));
 	for (let start = 0; start < sources.length; start += BATCH) {
 		const batch = sources.slice(start, start + BATCH);
@@ -106,21 +134,33 @@ export async function importZotero(
 		try {
 			result = await importSources(batch, true);
 		} catch (error) {
-			await call(commands.zoteroRecord(records));
-			throw new ImportStopped(error, imported);
+			stopped = { error };
+			break;
 		}
 		const added = new Set(result.added);
 		batch.forEach((source, i) => {
-			if (!added.has(source.id)) return;
 			const entry = preview.fresh[start + i];
-			imported.added.push(source.id);
-			records.push({ library: entry.library, key: entry.zoteroKey, work: source.id });
-			for (const pdf of entry.pdfs) {
-				if (!pdf.reason) attach.push({ work: source.id, library: entry.library, key: pdf.key });
+			if (!added.has(source.id)) {
+				skipped.push(entry);
+				return;
 			}
+			imported.added.push(source.id);
+			if (!workOf.has(entry.key)) workOf.set(entry.key, source.id);
+			note(entry, source.id);
 		});
 		imported.skipped += result.skipped.length;
 		onprogress('importing', Math.min(start + BATCH, sources.length), sources.length);
+	}
+
+	// The library gained these between the preview and the import: they join
+	// the project as the work that has them now.
+	if (skipped.length > 0) {
+		const again = dedupe((await libraryWorks()).map(known), skipped);
+		for (const { entry, match } of again.known) note(entry as ZoteroEntry, match.id);
+	}
+	for (const { entry, of } of preview.repeated) {
+		const work = workOf.get(of);
+		if (work) note(entry, work);
 	}
 
 	await call(commands.zoteroRecord(records));
@@ -155,6 +195,7 @@ export async function importZotero(
 		}
 		onprogress('attaching', Math.min(start + ATTACH_BATCH, attach.length), attach.length);
 	}
+	if (stopped) throw new ImportStopped(stopped.error, imported);
 	return imported;
 }
 
@@ -172,7 +213,10 @@ export async function previewSync(
 
 /** How many papers a sync would add or give a PDF: the "3 new" in Sources. */
 export const newInSync = (sync: { preview: ZoteroPreview; pdfs: ZoteroAttach[] }) =>
-	sync.preview.fresh.length + sync.preview.known.length + sync.pdfs.length;
+	sync.preview.fresh.length +
+	sync.preview.known.length +
+	sync.preview.repeated.length +
+	sync.pdfs.length;
 
 /**
  * Say what an import from Zotero did, and read the PDFs it attached in the

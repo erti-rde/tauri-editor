@@ -157,8 +157,7 @@ fn refused_name(name: &str) -> Option<&'static str> {
     if trimmed.is_empty() {
         Some("Give the project a name.")
     } else if trimmed.chars().any(|c| {
-        matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')
-            || trimmed.chars().any(char::is_control)
+        matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') || c.is_control()
     }) {
         Some("A project\u{2019}s name can\u{2019}t have / \\ : * ? \" < > or | in it.")
     } else if trimmed == "." || trimmed == ".." || trimmed.starts_with('.') {

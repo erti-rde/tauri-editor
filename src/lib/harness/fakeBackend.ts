@@ -123,6 +123,8 @@ export interface FakeState {
 	project: Set<string>;
 	/** Each project folder's sources, as each has its own `project.db`. */
 	projects: Map<string, Set<string>>;
+	/** Each project folder's Zotero follows and imports, kept while another is open. */
+	zoteroProjects: Map<string, Pick<FakeZotero, 'follow' | 'imported'>>;
 	/** Project-local metadata corrections. */
 	overrides: Map<string, string>;
 	/** Dismissed attribution findings, in the order dismissed (M4-7). */
@@ -159,6 +161,7 @@ export function stateFrom(fixture: Fixture): FakeState {
 		library,
 		project,
 		projects: new Map([[fixture.root, project]]),
+		zoteroProjects: new Map(),
 		overrides: new Map(),
 		dismissed: [],
 		aliases: new Map(Object.entries(fixture.aliases ?? {})),
@@ -519,6 +522,17 @@ export function fakeCommands(
 
 		openProject(projectRoot) {
 			library();
+			// What a project follows in Zotero is in its own `project.db` too:
+			// kept with the project being left, and the one opened brings its own.
+			// Before any is open, what the fixture set is the first one's.
+			const { follow, imported } = state.zotero;
+			if (state.root !== null) state.zoteroProjects.set(state.root, { follow, imported });
+			const kept =
+				state.zoteroProjects.get(projectRoot) ??
+				(state.root === null ? { follow, imported } : { follow: [], imported: {} });
+			state.zotero.follow = kept.follow;
+			state.zotero.imported = kept.imported;
+
 			state.root = projectRoot;
 			// A folder opened for the first time starts with no sources.
 			if (!state.projects.has(projectRoot)) state.projects.set(projectRoot, new Set());
@@ -1381,6 +1395,7 @@ export function fakeCommands(
 			// The fake's own `attachFile`, which answers at once.
 			attach: (work, path) => fake.attachFile(work, path) as AttachedFile,
 			recorded: (path) => [...state.library.values()].some((s) => s.path === path),
+			known: (work) => state.library.has(state.aliases.get(work) ?? work),
 			addToProject: (work) => {
 				root();
 				state.project.add(work);

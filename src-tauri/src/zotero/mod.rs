@@ -129,6 +129,8 @@ pub struct ZoteroPdf {
     pub file_name: String,
     /// Why it can't be attached; none when it can.
     pub reason: Option<String>,
+    /// The library knows it already, at that place: there's nothing to attach.
+    pub attached: bool,
 }
 
 /// A paper read in full, for importing.
@@ -219,6 +221,27 @@ fn shown(path: &Path) -> String {
     path.to_string_lossy().to_string()
 }
 
+const LINKED_OUTSIDE: &str = "It\u{2019}s a file Zotero links to outside the folders Erti may open. Open its folder in Erti once, or have Zotero store it.";
+
+/// Where a PDF is, if Erti may attach it there.
+///
+/// Zotero's own copies are inside its data folder, which the user linked. A
+/// linked file is wherever the database says, and the database can be one a
+/// script wrote into a folder Erti may write to (T3); so a linked file must
+/// be somewhere Erti may open already: the project, a pick this session, or
+/// a place the library has recorded.
+async fn place_for(state: &DbState, data: &Path, pdf: &read::PdfRow) -> Place {
+    match read::place(data, pdf).await {
+        Place::File(path) if pdf.link_mode == 2 => {
+            match crate::scope::authorise(state, &shown(&path)).await {
+                Ok(_) => Place::File(path),
+                Err(_) => Place::Not(LINKED_OUTSIDE),
+            }
+        }
+        place => place,
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn zotero_status(
@@ -274,7 +297,13 @@ pub async fn zotero_link_in(
             let canonical = tokio::fs::canonicalize(&path)
                 .await
                 .map_err(|_| AppError::new(ErrorKind::PermissionDenied, NOT_PICKED))?;
-            if !state.grants.cover(&canonical) {
+            let in_project = match state.project_root().await {
+                Ok(root) => tokio::fs::canonicalize(root)
+                    .await
+                    .is_ok_and(|root| canonical.starts_with(root)),
+                Err(_) => false,
+            };
+            if in_project || !state.grants.cover(&canonical) {
                 return Err(AppError::new(ErrorKind::PermissionDenied, NOT_PICKED));
             }
             if !tokio::fs::try_exists(canonical.join(read::DB_FILE))
@@ -505,7 +534,9 @@ async fn picked(
     for pick in picks {
         let id = match read::library_id(&snap.pool, &pick.library).await {
             Ok(id) => id,
-            Err(_) if lenient => continue,
+            // Only a library that's gone: one that can't be read is an error,
+            // or its papers would be counted as gone from Zotero.
+            Err(e) if lenient && e.kind == ErrorKind::NotFound => continue,
             Err(e) => return Err(e),
         };
         for item in read::pick_items(&snap.pool, id, &pick.kind, pick.key.as_deref()).await? {
@@ -525,6 +556,7 @@ async fn picked(
 
 /// Read papers in full: fields, creators, and their PDFs with where each is.
 async fn assemble(
+    state: &DbState,
     snap: &Snapshot,
     data: &Path,
     ids: &[i64],
@@ -549,9 +581,16 @@ async fn assemble(
             single,
         });
     }
+    let library = state.library().await?;
     let mut pdfs: HashMap<i64, Vec<ZoteroPdf>> = HashMap::new();
     for pdf in read::pdfs(&snap.pool, ids).await? {
-        let place = read::place(data, &pdf).await;
+        let place = place_for(state, data, &pdf).await;
+        let attached = match &place {
+            Place::File(path) => queries::location_recorded(&library, &shown(path))
+                .await
+                .or_database()?,
+            Place::Not(_) => false,
+        };
         let file_name = pdf
             .path
             .as_deref()
@@ -565,6 +604,7 @@ async fn assemble(
                 Place::File(_) => None,
                 Place::Not(reason) => Some(reason.to_string()),
             },
+            attached,
         });
     }
     Ok(read::items(&snap.pool, ids)
@@ -601,7 +641,7 @@ pub async fn zotero_read_in(
     let (data, snap) = snapshot(state, env).await?;
     let result = async {
         let (ids, library_of) = picked(&snap, picks, false).await?;
-        assemble(&snap, &data, &ids, &library_of).await
+        assemble(state, &snap, &data, &ids, &library_of).await
     }
     .await;
     snap.close().await;
@@ -642,14 +682,18 @@ pub async fn zotero_attach_in(
     for pdf in &pdfs {
         let place = match read::library_id(&snap.pool, &pdf.library).await {
             Ok(library) => match read::pdf_by_key(&snap.pool, library, &pdf.key).await {
-                Ok(Some(row)) => read::place(&data, &row).await,
+                Ok(Some(row)) => place_for(state, &data, &row).await,
                 Ok(None) => Place::Not("That PDF isn\u{2019}t in Zotero any more."),
                 Err(e) => {
                     snap.close().await;
                     return Err(e);
                 }
             },
-            Err(_) => Place::Not("That Zotero library isn\u{2019}t on this computer any more."),
+            Err(e) if e.kind == ErrorKind::NotFound => Place::Not(read::LIBRARY_GONE),
+            Err(e) => {
+                snap.close().await;
+                return Err(e);
+            }
         };
         places.push(place);
     }
@@ -713,6 +757,19 @@ pub async fn zotero_record_in(state: &DbState, records: Vec<ZoteroRecord>) -> Re
                 "That isn\u{2019}t a source id.",
             ));
         }
+    }
+    // A paper noted against a work the library hasn't got would never count
+    // as new again, so a sync would never bring it in.
+    let works: Vec<String> = records.iter().map(|r| r.work.clone()).collect();
+    if !queries::missing_works(&state.library().await?, &works)
+        .await
+        .or_database()?
+        .is_empty()
+    {
+        return Err(AppError::new(
+            ErrorKind::NotFound,
+            "That source isn\u{2019}t in your library.",
+        ));
     }
     let rows: Vec<queries::ImportedFromZotero> = records
         .into_iter()
@@ -811,14 +868,14 @@ pub async fn zotero_sync_plan_in(state: &DbState, env: &Env) -> Result<ZoteroSyn
                 None => fresh.push(row.id),
             }
         }
-        let items = assemble(&snap, &data, &fresh, &library_of).await?;
+        let items = assemble(state, &snap, &data, &fresh, &library_of).await?;
 
         let kept_ids: Vec<i64> = kept.iter().map(|(id, _)| *id).collect();
         let work_of: HashMap<i64, String> = kept.into_iter().collect();
         let library = state.library().await?;
         let mut pdfs = Vec::new();
         for pdf in read::pdfs(&snap.pool, &kept_ids).await? {
-            let Place::File(path) = read::place(&data, &pdf).await else {
+            let Place::File(path) = place_for(state, &data, &pdf).await else {
                 continue;
             };
             if queries::location_recorded(&library, &shown(&path))

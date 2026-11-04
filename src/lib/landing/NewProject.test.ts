@@ -4,7 +4,14 @@ import userEvent from '@testing-library/user-event';
 
 import { defaultFixture } from '$lib/harness/fixture';
 import { useFakeBackend } from '$lib/harness/testing';
+import * as db from '$lib/stores/db';
 import NewProject from './NewProject.svelte';
+
+// The real store over the fake backend, with `importSources` there to stop.
+vi.mock('$lib/stores/db', async (original) => {
+	const real = await original<typeof import('$lib/stores/db')>();
+	return { ...real, importSources: vi.fn(real.importSources) };
+});
 
 /**
  * Landing › New project… (M1b-11, docs/ux.md UX-13), on the fake backend:
@@ -41,7 +48,7 @@ describe('NewProject', () => {
 		await named(user, 'Thesis two');
 		await user.click(screen.getByRole('button', { name: 'Create project' }));
 
-		await waitFor(() => expect(onready).toHaveBeenCalledWith(`${PLACE}/Thesis two`, null));
+		await waitFor(() => expect(onready).toHaveBeenCalledWith(`${PLACE}/Thesis two`, null, null));
 		expect(backend().files.has(`${PLACE}/Thesis two/.erti/project.db`)).toBe(true);
 	});
 
@@ -93,6 +100,24 @@ describe('NewProject', () => {
 		expect(state.zotero.follow).toEqual([
 			{ library: 'user', kind: 'collection', key: 'THESIS22', name: 'Thesis' }
 		]);
+	});
+
+	it('M1b-11 AC-6: an import that stops still opens the project, and says why there', async () => {
+		const { user, onready } = setup(backend());
+		await named(user, 'Stopped');
+		await user.click(screen.getByRole('radio', { name: /From Zotero/ }));
+		await screen.findByRole('tree', { name: 'Zotero library' });
+		row('Thesis').focus();
+		await user.keyboard(' ');
+		await screen.findByTestId('zotero-summary');
+
+		vi.mocked(db.importSources).mockRejectedValueOnce(new Error('The disk is full.'));
+		await user.click(screen.getByRole('button', { name: 'Create project' }));
+		await waitFor(() => expect(onready).toHaveBeenCalled());
+		const [path, , failure] = onready.mock.calls[0] as unknown as [string, unknown, string];
+		expect(path).toBe(`${PLACE}/Stopped`);
+		// Said by the landing screen once the project is open: the dialog has gone.
+		expect(failure).toBe('The disk is full.');
 	});
 
 	it('M1b-11 AC-4: a collection opened shows its papers, and one paper can be ticked', async () => {

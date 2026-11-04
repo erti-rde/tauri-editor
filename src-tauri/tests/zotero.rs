@@ -173,8 +173,10 @@ async fn a_folder_is_linked_only_once_the_user_has_picked_it() {
         .unwrap_err();
     assert_eq!(refused.kind, ErrorKind::PermissionDenied);
 
-    // The project folder isn't a pick: a script can write there (T3).
+    // The project folder isn't a pick, even when it was picked to open it: a
+    // script can write there (T3).
     let project = w.state.project_root().await.unwrap();
+    w.state.grants.grant(&project);
     std::fs::copy(w.data.join("zotero.sqlite"), project.join("zotero.sqlite")).unwrap();
     let refused = zotero_link_in(&w.state, &w.env, Some(project.to_string_lossy().into()))
         .await
@@ -404,6 +406,9 @@ async fn pdfs_are_attached_where_zotero_keeps_them_and_open_again_later() {
         .await
         .unwrap();
 
+    // The group's PDF is a file Zotero links to, in a folder the user opened.
+    w.state.grants.grant(&w.root.join("linked"));
+
     let attached = zotero_attach_in(
         &w.state,
         &w.env,
@@ -459,6 +464,56 @@ async fn pdfs_are_attached_where_zotero_keeps_them_and_open_again_later() {
         .await
         .unwrap();
     assert!(erti_lib::scope::authorise(&later, &path).await.is_ok());
+
+    // Read again, it says it's attached, so it isn't offered twice.
+    let items = zotero_read_in(&w.state, &w.env, &[pick("user", "item", Some("PAPERAA2"))])
+        .await
+        .unwrap();
+    assert!(items[0].pdfs[0].attached);
+}
+
+// M1b-11 AC-6, threat T3: a script can write a database of its own into a
+// folder Erti may write to, naming any file as a linked PDF. One outside the
+// folders Erti may open already is refused, in the preview and on attaching.
+#[tokio::test]
+async fn a_linked_pdf_outside_the_folders_erti_may_open_is_refused() {
+    let w = linked("linked-outside").await;
+    let group = ImportedSource {
+        id: work(3),
+        csl_json: r#"{"type":"article-journal","title":"A group paper"}"#.into(),
+        zotero_type: "journalArticle".into(),
+    };
+    import_sources_in(&w.state, vec![group], true)
+        .await
+        .unwrap();
+
+    let items = zotero_read_in(&w.state, &w.env, &[pick("group:4242", "library", None)])
+        .await
+        .unwrap();
+    let pdf = &items.iter().find(|i| i.key == "GROUPPA2").unwrap().pdfs[0];
+    assert!(pdf
+        .reason
+        .as_deref()
+        .unwrap()
+        .contains("outside the folders"));
+
+    let attached = zotero_attach_in(
+        &w.state,
+        &w.env,
+        vec![ZoteroAttach {
+            work: work(3),
+            library: "group:4242".into(),
+            key: "GROUPAT2".into(),
+        }],
+    )
+    .await
+    .unwrap();
+    assert!(attached[0].file.is_none());
+    let library = w.state.library().await.unwrap();
+    let place = attached[0].path.clone().unwrap_or_default();
+    assert!(!erti_lib::db::queries::location_recorded(&library, &place)
+        .await
+        .unwrap());
 }
 
 // M1b-11 AC-6
@@ -552,6 +607,41 @@ async fn works_the_library_had_join_the_project_too() {
         .await
         .unwrap();
     assert_eq!(ids, [work(7)]);
+
+    // A paper noted against a work the library hasn't got would never be new
+    // to a sync again.
+    let refused = zotero_record_in(
+        &w.state,
+        vec![ZoteroRecord {
+            library: "user".into(),
+            key: "PAPERAA2".into(),
+            work: work(99),
+        }],
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(refused.kind, ErrorKind::NotFound);
+    let had = erti_lib::db::queries::zotero_imported(&project)
+        .await
+        .unwrap();
+    assert_eq!(had.len(), 1);
+}
+
+// ADR 012: each copy is a whole copy of someone's library. One a failed or
+// earlier run left behind is removed at this run's first read.
+#[tokio::test]
+async fn copies_an_earlier_run_left_are_removed() {
+    let w = linked("sweep").await;
+    let left = w.env.cache.join("zotero").join("1-left-behind");
+    std::fs::create_dir_all(&left).unwrap();
+    std::fs::write(left.join("zotero.sqlite"), "a copy").unwrap();
+
+    zotero_tree_in(&w.state, &w.env).await.unwrap();
+    assert!(!left.exists());
+    let copies = std::fs::read_dir(w.env.cache.join("zotero"))
+        .unwrap()
+        .count();
+    assert_eq!(copies, 1);
 }
 
 // M1b-11 AC-7

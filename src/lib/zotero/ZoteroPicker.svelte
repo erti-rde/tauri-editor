@@ -194,7 +194,8 @@
 		<p class="text-caption text-ink-muted">
 			From Zotero’s library in <span class="font-mono">{readingFrom}</span>. Erti reads it and
 			changes nothing there.
-			<Button variant="ghost" size="sm" onclick={locate}>Use another folder…</Button>
+			<!-- Not while importing: the PDFs still to attach are read from this folder. -->
+			<Button variant="ghost" size="sm" onclick={locate} {disabled}>Use another folder…</Button>
 		</p>
 	</div>
 {/if}

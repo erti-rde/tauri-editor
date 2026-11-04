@@ -50,8 +50,10 @@
 		const asked = picks;
 		const using = maps;
 		preview = null;
+		// Without the maps there's nothing to read with, and why stays said.
+		if (!using) return;
 		failed = null;
-		if (!using || asked.length === 0) return;
+		if (asked.length === 0) return;
 		reading = true;
 		const timer = setTimeout(async () => {
 			try {

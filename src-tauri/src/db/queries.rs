@@ -2971,6 +2971,25 @@ pub async fn location_recorded(library: &SqlitePool, path: &str) -> Result<bool,
         .map_err(|e| e.to_string())
 }
 
+/// Which of `ids` name no work in the library, by their own id or an alias.
+pub async fn missing_works(library: &SqlitePool, ids: &[String]) -> Result<Vec<String>, String> {
+    let mut missing = Vec::new();
+    for id in ids {
+        let found: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM sources WHERE sha256 =
+                 COALESCE((SELECT canonical FROM source_aliases WHERE alias = ?1), ?1))",
+        )
+        .bind(id)
+        .fetch_one(library)
+        .await
+        .map_err(|e| e.to_string())?;
+        if !found {
+            missing.push(id.clone());
+        }
+    }
+    Ok(missing)
+}
+
 /// One thing a project follows: (library, kind, key, name).
 pub type Followed = (String, String, String, String);
 
